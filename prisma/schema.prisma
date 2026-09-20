@@ -1,0 +1,491 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model assignments {
+  assignment_id                        BigInt                @id @default(autoincrement())
+  grievance_id                         BigInt
+  grievance_department_id              BigInt                @unique(map: "uq_active_assignment", where: raw("((assignment_status)::text = 'ASSIGNED'::text)"))
+  staff_id                             BigInt
+  recommendation_score                 Decimal?              @db.Decimal(5, 2)
+  recommendation_reasons               Json?
+  assignment_status                    String                @default("ASSIGNED") @db.VarChar(30)
+  assigned_by                          BigInt
+  assigned_at                          DateTime              @default(now()) @db.Timestamptz(6)
+  completed_at                         DateTime?             @db.Timestamptz(6)
+  users_assignments_assigned_byTousers users                 @relation("assignments_assigned_byTousers", fields: [assigned_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  grievance_departments                grievance_departments @relation(fields: [grievance_department_id], references: [grievance_department_id], onDelete: Cascade, onUpdate: NoAction)
+  grievances                           grievances            @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  users_assignments_staff_idTousers    users                 @relation("assignments_staff_idTousers", fields: [staff_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_assignments_grievance_id")
+  @@index([staff_id], map: "idx_assignments_staff_id")
+  @@index([staff_id, assignment_status], map: "idx_assignments_staff_status")
+  @@index([assignment_status], map: "idx_assignments_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model attachments {
+  attachment_id           BigInt                 @id @default(autoincrement())
+  grievance_id            BigInt
+  grievance_department_id BigInt?
+  file_name               String                 @db.VarChar(255)
+  file_path               String                 @db.VarChar(500)
+  file_type               String                 @db.VarChar(100)
+  file_size               BigInt?
+  uploaded_by             BigInt
+  uploaded_at             DateTime               @default(now()) @db.Timestamptz(6)
+  resolution_id           BigInt?
+  grievance_departments   grievance_departments? @relation(fields: [grievance_department_id], references: [grievance_department_id], onUpdate: NoAction)
+  grievances              grievances             @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  resolutions             resolutions?           @relation(fields: [resolution_id], references: [resolution_id], onUpdate: NoAction)
+  users                   users                  @relation(fields: [uploaded_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_attachments_grievance_id")
+  @@index([resolution_id], map: "idx_attachments_resolution_id")
+}
+
+model audit_logs {
+  audit_log_id BigInt      @id @default(autoincrement())
+  user_id      BigInt?
+  grievance_id BigInt?
+  action       String      @db.VarChar(100)
+  entity_type  String      @db.VarChar(50)
+  entity_id    BigInt?
+  old_value    Json?
+  new_value    Json?
+  ip_address   String?     @db.VarChar(45)
+  created_at   DateTime    @default(now()) @db.Timestamptz(6)
+  grievances   grievances? @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  users        users?      @relation(fields: [user_id], references: [user_id], onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_audit_logs_created_at")
+  @@index([grievance_id], map: "idx_audit_logs_grievance_id")
+  @@index([user_id], map: "idx_audit_logs_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model categories {
+  category_id        BigInt               @id @default(autoincrement())
+  category_name      String               @unique @db.VarChar(150)
+  description        String?              @db.VarChar(255)
+  status             String               @default("ACTIVE") @db.VarChar(20)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  grievances         grievances[]
+  knowledge_articles knowledge_articles[]
+  routing_rules      routing_rules[]
+  subcategories      subcategories[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model departments {
+  department_id         BigInt                  @id @default(autoincrement())
+  department_name       String                  @unique @db.VarChar(100)
+  description           String?                 @db.VarChar(255)
+  status                String                  @default("ACTIVE") @db.VarChar(20)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  grievance_departments grievance_departments[]
+  routing_rules         routing_rules[]
+  users                 users[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model escalations {
+  escalation_id    BigInt        @id @default(autoincrement())
+  grievance_id     BigInt
+  sla_policy_id    BigInt?
+  escalation_level Int           @default(1)
+  escalated_to     BigInt
+  reason           String
+  status           String        @default("OPEN") @db.VarChar(20)
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  resolved_at      DateTime?     @db.Timestamptz(6)
+  users            users         @relation(fields: [escalated_to], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  grievances       grievances    @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  sla_policies     sla_policies? @relation(fields: [sla_policy_id], references: [sla_policy_id], onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_escalations_grievance_id")
+  @@index([status], map: "idx_escalations_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model grievance_departments {
+  grievance_department_id BigInt        @id @default(autoincrement())
+  grievance_id            BigInt        @unique(map: "uq_grievance_single_primary", where: raw("((involvement_type)::text = 'PRIMARY'::text)"))
+  department_id           BigInt
+  involvement_type        String        @db.VarChar(20)
+  status                  String        @default("PENDING_ASSIGNMENT") @db.VarChar(30)
+  assigned_at             DateTime?     @db.Timestamptz(6)
+  completed_at            DateTime?     @db.Timestamptz(6)
+  assignments             assignments?
+  attachments             attachments[]
+  departments             departments   @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
+  grievances              grievances    @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([grievance_id, department_id], map: "uq_grievance_department")
+  @@index([department_id], map: "idx_grievance_dept_dept_id")
+  @@index([department_id, status], map: "idx_grievance_dept_dept_status")
+  @@index([grievance_id], map: "idx_grievance_dept_grievance_id")
+  @@index([status], map: "idx_grievance_dept_status")
+}
+
+model grievance_status_history {
+  history_id   BigInt     @id @default(autoincrement())
+  grievance_id BigInt
+  old_status   String?    @db.VarChar(30)
+  new_status   String     @db.VarChar(30)
+  changed_by   BigInt
+  remarks      String?
+  changed_at   DateTime   @default(now()) @db.Timestamptz(6)
+  users        users      @relation(fields: [changed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  grievances   grievances @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model grievances {
+  grievance_id             BigInt                     @id @default(autoincrement())
+  grievance_number         String                     @unique @db.VarChar(50)
+  submitted_by             BigInt
+  category_id              BigInt
+  subcategory_id           BigInt
+  title                    String                     @db.VarChar(200)
+  description              String
+  priority                 String                     @db.VarChar(20)
+  priority_rule_id         BigInt?
+  status                   String                     @default("SUBMITTED") @db.VarChar(30)
+  reopen_count             Int                        @default(0)
+  manual_review_count      Int                        @default(0)
+  sla_status               String?                    @db.VarChar(20)
+  due_at                   DateTime?                  @db.Timestamptz(6)
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  closed_at                DateTime?                  @db.Timestamptz(6)
+  assignments              assignments[]
+  attachments              attachments[]
+  audit_logs               audit_logs[]
+  escalations              escalations[]
+  grievance_departments    grievance_departments?
+  grievance_status_history grievance_status_history[]
+  categories               categories                 @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
+  priority_rules           priority_rules?            @relation(fields: [priority_rule_id], references: [priority_rule_id], onUpdate: NoAction)
+  subcategories            subcategories              @relation(fields: [subcategory_id], references: [subcategory_id], onDelete: NoAction, onUpdate: NoAction)
+  users                    users                      @relation(fields: [submitted_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  notifications            notifications[]
+  resolutions              resolutions[]
+  sla_tracking             sla_tracking[]
+
+  @@index([category_id], map: "idx_grievances_category_id")
+  @@index([created_at], map: "idx_grievances_created_at")
+  @@index([priority], map: "idx_grievances_priority")
+  @@index([status], map: "idx_grievances_status")
+  @@index([submitted_by], map: "idx_grievances_submitted_by")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model knowledge_articles {
+  article_id           BigInt         @id @default(autoincrement())
+  title                String         @db.VarChar(255)
+  content              String
+  category_id          BigInt?
+  subcategory_id       BigInt?
+  source_resolution_id BigInt?
+  created_by           BigInt
+  status               String         @default("DRAFT") @db.VarChar(20)
+  created_at           DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime       @default(now()) @db.Timestamptz(6)
+  categories           categories?    @relation(fields: [category_id], references: [category_id], onUpdate: NoAction)
+  users                users          @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  resolutions          resolutions?   @relation(fields: [source_resolution_id], references: [resolution_id], onUpdate: NoAction)
+  subcategories        subcategories? @relation(fields: [subcategory_id], references: [subcategory_id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notifications {
+  notification_id   BigInt      @id @default(autoincrement())
+  user_id           BigInt
+  grievance_id      BigInt?
+  notification_type String      @db.VarChar(50)
+  channel           String      @db.VarChar(20)
+  title             String      @db.VarChar(255)
+  message           String
+  status            String      @default("PENDING") @db.VarChar(20)
+  created_at        DateTime    @default(now()) @db.Timestamptz(6)
+  sent_at           DateTime?   @db.Timestamptz(6)
+  read_at           DateTime?   @db.Timestamptz(6)
+  grievances        grievances? @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  users             users       @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_notifications_grievance_id")
+  @@index([user_id, status], map: "idx_notifications_user_status")
+}
+
+model password_reset_tokens {
+  password_reset_token_id BigInt    @id @default(autoincrement())
+  user_id                 BigInt
+  token_hash              String    @unique @db.VarChar(255)
+  expires_at              DateTime  @db.Timestamptz(6)
+  used_at                 DateTime? @db.Timestamptz(6)
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  users                   users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_password_reset_tokens_expires_at")
+  @@index([user_id], map: "idx_password_reset_tokens_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model permissions {
+  permission_id    BigInt             @id @default(autoincrement())
+  permission_name  String             @unique @db.VarChar(100)
+  permission_code  String             @unique @db.VarChar(100)
+  description      String?            @db.VarChar(255)
+  status           String             @default("ACTIVE") @db.VarChar(20)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model priority_rules {
+  priority_rule_id BigInt       @id @default(autoincrement())
+  rule_name        String       @db.VarChar(150)
+  conditions       Json
+  priority_level   String       @db.VarChar(20)
+  rule_order       Int
+  is_default       Boolean      @unique(map: "uq_active_default_priority", where: raw("((is_default = true) AND ((status)::text = 'ACTIVE'::text))")) @default(false)
+  status           String       @default("ACTIVE") @db.VarChar(20)
+  created_by       BigInt
+  created_at       DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime     @default(now()) @db.Timestamptz(6)
+  grievances       grievances[]
+  users            users        @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reopen_policies {
+  reopen_policy_id        BigInt   @id @default(autoincrement())
+  policy_name             String   @db.VarChar(150)
+  reopen_window_hours     Int?
+  max_reopen_count        Int
+  max_manual_review_count Int
+  applicable_condition    Json?
+  status                  String   @default("ACTIVE") @db.VarChar(20)
+  created_by              BigInt
+  created_at              DateTime @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime @default(now()) @db.Timestamptz(6)
+  users                   users    @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model resolution_reviews {
+  review_id        BigInt      @id @default(autoincrement())
+  resolution_id    BigInt
+  reviewed_by      BigInt
+  decision         String      @db.VarChar(20)
+  rejection_reason String?
+  reviewed_at      DateTime    @default(now()) @db.Timestamptz(6)
+  resolutions      resolutions @relation(fields: [resolution_id], references: [resolution_id], onDelete: Cascade, onUpdate: NoAction)
+  users            users       @relation(fields: [reviewed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model resolutions {
+  resolution_id      BigInt               @id @default(autoincrement())
+  grievance_id       BigInt
+  submitted_by       BigInt
+  problem_summary    String
+  findings           String
+  action_taken       String
+  outcome            String
+  evidence           String?
+  submitted_at       DateTime             @default(now()) @db.Timestamptz(6)
+  attachments        attachments[]
+  knowledge_articles knowledge_articles[]
+  resolution_reviews resolution_reviews[]
+  grievances         grievances           @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  users              users                @relation(fields: [submitted_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model role_permissions {
+  role_permission_id BigInt      @id @default(autoincrement())
+  role_id            BigInt
+  permission_id      BigInt
+  created_at         DateTime    @default(now()) @db.Timestamptz(6)
+  permissions        permissions @relation(fields: [permission_id], references: [permission_id], onDelete: Cascade, onUpdate: NoAction)
+  roles              roles       @relation(fields: [role_id], references: [role_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([role_id, permission_id], map: "uq_role_permissions")
+  @@index([permission_id], map: "idx_role_permissions_permission_id")
+  @@index([role_id], map: "idx_role_permissions_role_id")
+}
+
+model roles {
+  role_id          BigInt             @id @default(autoincrement())
+  role_name        String             @unique @db.VarChar(50)
+  description      String?            @db.VarChar(255)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+  users            users[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model routing_rules {
+  routing_rule_id        BigInt         @id @default(autoincrement())
+  rule_name              String         @db.VarChar(150)
+  category_id            BigInt?
+  subcategory_id         BigInt?
+  conditions             Json?
+  department_id          BigInt
+  involvement_type       String         @db.VarChar(20)
+  supporting_departments Json?
+  rule_order             Int
+  status                 String         @default("ACTIVE") @db.VarChar(20)
+  created_by             BigInt
+  created_at             DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime       @default(now()) @db.Timestamptz(6)
+  categories             categories?    @relation(fields: [category_id], references: [category_id], onUpdate: NoAction)
+  users                  users          @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  departments            departments    @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
+  subcategories          subcategories? @relation(fields: [subcategory_id], references: [subcategory_id], onUpdate: NoAction)
+
+  @@index([category_id, subcategory_id], map: "idx_routing_rules_category")
+}
+
+model sessions {
+  session_id       String    @id @db.Uuid
+  user_id          BigInt
+  session_token    String    @unique @db.VarChar(255)
+  expires_at       DateTime  @db.Timestamptz(6)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  last_accessed_at DateTime? @db.Timestamptz(6)
+  revoked_at       DateTime? @db.Timestamptz(6)
+  users            users     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_sessions_expires_at")
+  @@index([user_id], map: "idx_sessions_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model skills {
+  skill_id    BigInt        @id @default(autoincrement())
+  skill_name  String        @unique @db.VarChar(100)
+  description String?       @db.VarChar(255)
+  status      String        @default("ACTIVE") @db.VarChar(20)
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  user_skills user_skills[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sla_policies {
+  sla_policy_id                BigInt         @id @default(autoincrement())
+  policy_name                  String         @db.VarChar(150)
+  priority_level               String?        @db.VarChar(20)
+  sla_type                     String         @default("RESOLUTION") @db.VarChar(30)
+  target_duration_minutes      Int
+  warning_threshold_percent    Decimal        @db.Decimal(5, 2)
+  trigger_condition            Json?
+  escalation_level             Int            @default(1)
+  target_role                  String         @default("DEPARTMENT_HEAD") @db.VarChar(30)
+  status                       String         @default("ACTIVE") @db.VarChar(20)
+  created_by                   BigInt
+  created_at                   DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime       @default(now()) @db.Timestamptz(6)
+  escalation_threshold_percent Decimal        @db.Decimal(5, 2)
+  escalations                  escalations[]
+  users                        users          @relation(fields: [created_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  sla_tracking                 sla_tracking[]
+
+  @@unique([priority_level, sla_type], map: "uq_active_sla_policy_priority", where: raw("(((status)::text = 'ACTIVE'::text) AND (priority_level IS NOT NULL))"))
+  @@index([priority_level, sla_type, status], map: "idx_sla_policies_lookup")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sla_tracking {
+  sla_tracking_id BigInt       @id @default(autoincrement())
+  grievance_id    BigInt
+  sla_policy_id   BigInt
+  cycle_number    Int          @default(1)
+  started_at      DateTime     @default(now()) @db.Timestamptz(6)
+  due_at          DateTime     @db.Timestamptz(6)
+  status          String       @default("ON_TRACK") @db.VarChar(20)
+  paused_at       DateTime?    @db.Timestamptz(6)
+  resumed_at      DateTime?    @db.Timestamptz(6)
+  completed_at    DateTime?    @db.Timestamptz(6)
+  grievances      grievances   @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  sla_policies    sla_policies @relation(fields: [sla_policy_id], references: [sla_policy_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_sla_tracking_grievance_id")
+  @@index([grievance_id, status], map: "idx_sla_tracking_grievance_status")
+  @@index([status, due_at], map: "idx_sla_tracking_status_due")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model subcategories {
+  subcategory_id     BigInt               @id @default(autoincrement())
+  category_id        BigInt
+  subcategory_name   String               @db.VarChar(150)
+  description        String?              @db.VarChar(255)
+  status             String               @default("ACTIVE") @db.VarChar(20)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  grievances         grievances[]
+  knowledge_articles knowledge_articles[]
+  routing_rules      routing_rules[]
+  categories         categories           @relation(fields: [category_id], references: [category_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([category_id, subcategory_name], map: "uq_subcategory_category_name")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_skills {
+  user_skill_id     BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  skill_id          BigInt
+  experience_years  Decimal? @db.Decimal(4, 1)
+  proficiency_level String?  @db.VarChar(30)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  skills            skills   @relation(fields: [skill_id], references: [skill_id], onDelete: Cascade, onUpdate: NoAction)
+  users             users    @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, skill_id], map: "uq_user_skill")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  user_id                                    BigInt                     @id @default(autoincrement())
+  employee_code                              String                     @unique @db.VarChar(50)
+  first_name                                 String                     @db.VarChar(100)
+  last_name                                  String?                    @db.VarChar(100)
+  email                                      String                     @unique @db.VarChar(255)
+  password_hash                              String                     @db.VarChar(255)
+  role_id                                    BigInt
+  department_id                              BigInt?
+  status                                     String                     @default("ACTIVE") @db.VarChar(20)
+  created_at                                 DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                 DateTime                   @default(now()) @db.Timestamptz(6)
+  assignments_assignments_assigned_byTousers assignments[]              @relation("assignments_assigned_byTousers")
+  assignments_assignments_staff_idTousers    assignments[]              @relation("assignments_staff_idTousers")
+  attachments                                attachments[]
+  audit_logs                                 audit_logs[]
+  escalations                                escalations[]
+  grievance_status_history                   grievance_status_history[]
+  grievances                                 grievances[]
+  knowledge_articles                         knowledge_articles[]
+  notifications                              notifications[]
+  password_reset_tokens                      password_reset_tokens[]
+  priority_rules                             priority_rules[]
+  reopen_policies                            reopen_policies[]
+  resolution_reviews                         resolution_reviews[]
+  resolutions                                resolutions[]
+  routing_rules                              routing_rules[]
+  sessions                                   sessions[]
+  sla_policies                               sla_policies[]
+  user_skills                                user_skills[]
+  departments                                departments?               @relation(fields: [department_id], references: [department_id], onUpdate: NoAction)
+  roles                                      roles                      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+}
