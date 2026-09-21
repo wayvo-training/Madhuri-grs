@@ -21,6 +21,8 @@ CREATE TABLE roles (
     role_id BIGSERIAL PRIMARY KEY,
     role_name VARCHAR(50) UNIQUE NOT NULL,
     description VARCHAR(255),
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
+        CHECK (status IN ('ACTIVE', 'INACTIVE')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

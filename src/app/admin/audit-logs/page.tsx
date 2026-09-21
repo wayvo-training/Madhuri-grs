@@ -10,26 +10,57 @@ export default async function AdminAuditLogsPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const rawAuditLogs = await prisma.audit_logs.findMany({
-    take: 200,
-    orderBy: { created_at: "desc" },
-    include: {
-      users: {
-        select: {
-          user_id: true,
-          employee_code: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-          roles: {
+  const [totalCount, sessionCount, apiCount, errorCount, rawAuditLogs] =
+    await Promise.all([
+      prisma.audit_logs.count(),
+      prisma.audit_logs.count({
+        where: {
+          OR: [
+            { entity_type: "SESSION" },
+            { action: { contains: "LOGIN", mode: "insensitive" } },
+            { action: { contains: "LOGOUT", mode: "insensitive" } },
+          ],
+        },
+      }),
+      prisma.audit_logs.count({
+        where: {
+          OR: [
+            { entity_type: "API_CALL" },
+            { action: { contains: "API_REQUEST", mode: "insensitive" } },
+          ],
+        },
+      }),
+      prisma.audit_logs.count({
+        where: {
+          OR: [
+            { entity_type: "ERROR" },
+            { action: { contains: "ERROR", mode: "insensitive" } },
+            { action: { contains: "FAILED", mode: "insensitive" } },
+          ],
+        },
+      }),
+      prisma.audit_logs.findMany({
+        take: 10,
+        skip: 0,
+        orderBy: { created_at: "desc" },
+        include: {
+          users: {
             select: {
-              role_name: true,
+              user_id: true,
+              employee_code: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+              roles: {
+                select: {
+                  role_name: true,
+                },
+              },
             },
           },
         },
-      },
-    },
-  });
+      }),
+    ]);
 
   const serializedAuditLogs: SerializedAuditLog[] = rawAuditLogs.map((l) => {
     const payload = l.new_value as
@@ -91,7 +122,16 @@ export default async function AdminAuditLogsPage() {
       title="Enterprise Audit Trail & Observability Logs"
       subtitle="Comprehensive ledger of user sessions, API calls, errors, navigation, and administrative governance"
     >
-      <AdminAuditTrail initialLogs={serializedAuditLogs} />
+      <AdminAuditTrail
+        initialLogs={serializedAuditLogs}
+        initialTotalCount={totalCount}
+        stats={{
+          total: totalCount,
+          sessions: sessionCount,
+          apis: apiCount,
+          errors: errorCount,
+        }}
+      />
     </DashboardShell>
   );
 }

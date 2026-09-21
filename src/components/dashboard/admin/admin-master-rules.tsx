@@ -90,17 +90,17 @@ function PaginationFooter({
   currentPage,
   totalItems,
   pageSize,
+  itemLabel = "rules",
   onPageChange,
 }: {
   currentPage: number;
   totalItems: number;
   pageSize: number;
+  itemLabel?: string;
   onPageChange: (p: number) => void;
 }) {
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  if (totalItems <= pageSize) return null;
-
-  const start = (currentPage - 1) * pageSize + 1;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const end = Math.min(currentPage * pageSize, totalItems);
 
   return (
@@ -108,7 +108,8 @@ function PaginationFooter({
       <div>
         Showing <span className="font-semibold text-slate-700">{start}</span> to{" "}
         <span className="font-semibold text-slate-700">{end}</span> of{" "}
-        <span className="font-semibold text-slate-700">{totalItems}</span> rules
+        <span className="font-semibold text-slate-700">{totalItems}</span>{" "}
+        {itemLabel}
       </div>
       <div className="flex items-center gap-1.5">
         <button
@@ -198,14 +199,82 @@ export function AdminMasterRules({
     }
 
     try {
-      await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyPayload),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        // Revert optimistic update
+        if (ruleType === "priority") {
+          setPriorityRules((prev) =>
+            prev.map((r) =>
+              r.priority_rule_id === id ? { ...r, status: currentStatus } : r,
+            ),
+          );
+        } else if (ruleType === "routing") {
+          setRoutingRules((prev) =>
+            prev.map((r) =>
+              r.routing_rule_id === id ? { ...r, status: currentStatus } : r,
+            ),
+          );
+        } else if (ruleType === "sla") {
+          setSlaPolicies((prev) =>
+            prev.map((s) =>
+              s.sla_policy_id === id ? { ...s, status: currentStatus } : s,
+            ),
+          );
+        } else if (ruleType === "reopen") {
+          setReopenPolicies((prev) =>
+            prev.map((p) =>
+              p.reopen_policy_id === id ? { ...p, status: currentStatus } : p,
+            ),
+          );
+        }
+        setTableFeedback({
+          type: "error",
+          text: data.message || "Failed to update rule status.",
+        });
+        return;
+      }
+      setTableFeedback({
+        type: "success",
+        text: data.message || "Rule status updated successfully.",
+      });
       router.refresh();
     } catch (err) {
       console.error("Failed to toggle status:", err);
+      // Revert optimistic update
+      if (ruleType === "priority") {
+        setPriorityRules((prev) =>
+          prev.map((r) =>
+            r.priority_rule_id === id ? { ...r, status: currentStatus } : r,
+          ),
+        );
+      } else if (ruleType === "routing") {
+        setRoutingRules((prev) =>
+          prev.map((r) =>
+            r.routing_rule_id === id ? { ...r, status: currentStatus } : r,
+          ),
+        );
+      } else if (ruleType === "sla") {
+        setSlaPolicies((prev) =>
+          prev.map((s) =>
+            s.sla_policy_id === id ? { ...s, status: currentStatus } : s,
+          ),
+        );
+      } else if (ruleType === "reopen") {
+        setReopenPolicies((prev) =>
+          prev.map((p) =>
+            p.reopen_policy_id === id ? { ...p, status: currentStatus } : p,
+          ),
+        );
+      }
+      setTableFeedback({
+        type: "error",
+        text: "Network error updating rule status. Please try again.",
+      });
     }
   }
 
@@ -213,16 +282,28 @@ export function AdminMasterRules({
     ruleType: "priority" | "routing" | "sla" | "reopen",
     id: string,
   ) {
-    if (!window.confirm("Are you sure you want to delete this configuration?"))
+    if (
+      !window.confirm(
+        "Are you sure you want to deactivate this rule configuration? (Deactivation preserves historical routing and audit trails)",
+      )
+    )
       return;
 
     let endpoint = "";
     if (ruleType === "priority") {
       endpoint = `/api/admin/rules/priority?id=${id}`;
-      setPriorityRules((prev) => prev.filter((r) => r.priority_rule_id !== id));
+      setPriorityRules((prev) =>
+        prev.map((r) =>
+          r.priority_rule_id === id ? { ...r, status: "INACTIVE" } : r,
+        ),
+      );
     } else if (ruleType === "routing") {
       endpoint = `/api/admin/rules/routing?id=${id}`;
-      setRoutingRules((prev) => prev.filter((r) => r.routing_rule_id !== id));
+      setRoutingRules((prev) =>
+        prev.map((r) =>
+          r.routing_rule_id === id ? { ...r, status: "INACTIVE" } : r,
+        ),
+      );
     } else if (ruleType === "sla") {
       endpoint = `/api/admin/rules/sla?id=${id}`;
       setSlaPolicies((prev) => prev.filter((s) => s.sla_policy_id !== id));
@@ -237,7 +318,7 @@ export function AdminMasterRules({
       await fetch(endpoint, { method: "DELETE" });
       router.refresh();
     } catch (err) {
-      console.error("Failed to delete rule:", err);
+      console.error("Failed to deactivate rule:", err);
     }
   }
 
@@ -245,6 +326,10 @@ export function AdminMasterRules({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [tableFeedback, setTableFeedback] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
@@ -262,7 +347,7 @@ export function AdminMasterRules({
   const [routingPage, setRoutingPage] = useState(1);
   const [slaPage, setSlaPage] = useState(1);
   const [reopenPage, setReopenPage] = useState(1);
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 10;
 
   const paginatedPriorityRules = priorityRules.slice(
     (priorityPage - 1) * PAGE_SIZE,
@@ -290,6 +375,9 @@ export function AdminMasterRules({
   const [selectedCatId, setSelectedCatId] = useState("");
   const [selectedRoutingSubcatId, setSelectedRoutingSubcatId] = useState("");
   const [involvementType, setInvolvementType] = useState("PRIMARY");
+  const [selectedSupportingDepts, setSelectedSupportingDepts] = useState<
+    string[]
+  >([]);
 
   const [_slaType, _setSlaType] = useState("RESOLUTION");
   const [durationHours, setDurationHours] = useState("24");
@@ -395,6 +483,7 @@ export function AdminMasterRules({
     setSelectedRoutingSubcatId("");
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
+    setSelectedSupportingDepts([]);
     setRuleStatus("ACTIVE");
     setFeedback(null);
   }
@@ -411,7 +500,15 @@ export function AdminMasterRules({
       let payload: Record<string, unknown> = {};
 
       if (activeTab === "priority") {
-        endpoint = "/api/admin/rules/priority";
+        if (!isDefault && !selectedPriorityCatId) {
+          setFeedback({
+            type: "error",
+            text: "Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         const prioCat = categories.find(
           (c) => c.category_id === selectedPriorityCatId,
         );
@@ -419,12 +516,115 @@ export function AdminMasterRules({
           (s) => s.subcategory_id === selectedPrioritySubcatId,
         );
 
+        // Client-side Duplicate Checks
+        if (ruleStatus === "ACTIVE") {
+          // 1. Rule Name duplicate
+          const nameConflict = priorityRules.find(
+            (r) =>
+              r.status === "ACTIVE" &&
+              r.rule_name.trim().toLowerCase() ===
+                ruleName.trim().toLowerCase(),
+          );
+          if (nameConflict) {
+            setFeedback({
+              type: "error",
+              text: `A priority rule named "${ruleName.trim()}" already exists. Please choose a unique rule name.`,
+            });
+            setIsSubmitting(false);
+            return;
+          }
+
+          // 2. Default Fallback duplicate
+          if (isDefault) {
+            const defaultConflict = priorityRules.find(
+              (r) => r.status === "ACTIVE" && r.is_default,
+            );
+            if (defaultConflict) {
+              setFeedback({
+                type: "error",
+                text: `A default fallback priority rule already exists ("${defaultConflict.rule_name}"). Please update or deactivate the existing default rule instead of creating a duplicate.`,
+              });
+              setIsSubmitting(false);
+              return;
+            }
+          } else if (selectedPriorityCatId) {
+            // 3. Taxonomy Scope duplicate
+            const catName =
+              prioCat?.category_name?.trim().toLowerCase() || null;
+            const subcatName =
+              prioSubcat?.subcategory_name?.trim().toLowerCase() || null;
+
+            const scopeConflict = priorityRules.find((r) => {
+              if (r.status !== "ACTIVE" || r.is_default) return false;
+              const cond = r.conditions as Record<string, unknown> | null;
+              if (!cond) return false;
+
+              const rCatId = cond.category_id?.toString() || null;
+              const rCatName =
+                (cond.category as string)?.trim().toLowerCase() || null;
+              const rSubcatId = cond.subcategory_id?.toString() || null;
+              const rSubcatName =
+                (
+                  (cond.subcategory as string) ||
+                  (cond.subcategory_name as string)
+                )
+                  ?.trim()
+                  .toLowerCase() || null;
+
+              // Subcategory duplicate
+              if (
+                (selectedPrioritySubcatId || subcatName) &&
+                (rSubcatId || rSubcatName)
+              ) {
+                return (
+                  (selectedPrioritySubcatId &&
+                    rSubcatId &&
+                    selectedPrioritySubcatId === rSubcatId) ||
+                  (subcatName && rSubcatName && subcatName === rSubcatName)
+                );
+              }
+
+              // Category-wide duplicate
+              if (
+                !selectedPrioritySubcatId &&
+                !subcatName &&
+                !rSubcatId &&
+                !rSubcatName
+              ) {
+                return (
+                  (selectedPriorityCatId &&
+                    rCatId &&
+                    selectedPriorityCatId === rCatId) ||
+                  (catName && rCatName && catName === rCatName)
+                );
+              }
+
+              return false;
+            });
+
+            if (scopeConflict) {
+              const scopeDesc = prioSubcat
+                ? `"${prioCat?.category_name} → ${prioSubcat.subcategory_name}"`
+                : `"${prioCat?.category_name} (All Subcategories)"`;
+              setFeedback({
+                type: "error",
+                text: `A priority rule already exists for ${scopeDesc}. Existing rule "${scopeConflict.rule_name}" assigns priority level ${scopeConflict.priority_level}. Please update or deactivate the existing rule instead of creating a duplicate.`,
+              });
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        }
+
+        endpoint = "/api/admin/rules/priority";
         payload = {
-          rule_name: ruleName,
+          rule_name: ruleName.trim(),
           priority_level: priorityLevel,
           rule_order: Number(ruleOrder),
           is_default: isDefault,
           status: ruleStatus,
+          category_id: selectedPriorityCatId || undefined,
+          subcategory_id: selectedPrioritySubcatId || undefined,
           conditions: isDefault
             ? { default: true }
             : {
@@ -432,19 +632,44 @@ export function AdminMasterRules({
                 category: prioCat?.category_name || undefined,
                 subcategory_id: selectedPrioritySubcatId || undefined,
                 subcategory: prioSubcat?.subcategory_name || undefined,
-                ...(keywords
-                  ? { contains: keywords.split(",").map((s) => s.trim()) }
-                  : {}),
               },
         };
       } else if (activeTab === "routing") {
+        if (!selectedCatId) {
+          setFeedback({
+            type: "error",
+            text: "Category Scope is required. Every routing rule must belong to a Category.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!selectedRoutingSubcatId) {
+          setFeedback({
+            type: "error",
+            text: "Subcategory Scope is required. Every routing rule must target an exact Subcategory.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!selectedDeptId) {
+          setFeedback({
+            type: "error",
+            text: "Primary Target Department is required.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         endpoint = "/api/admin/rules/routing";
         payload = {
           rule_name: ruleName,
           department_id: selectedDeptId,
-          category_id: selectedCatId || null,
+          category_id: selectedCatId,
           subcategory_id: selectedRoutingSubcatId || null,
           involvement_type: involvementType,
+          supporting_departments: selectedSupportingDepts,
           rule_order: Number(ruleOrder),
           status: ruleStatus,
           conditions: keywords
@@ -532,6 +757,7 @@ export function AdminMasterRules({
             department_name:
               assignedDept?.department_name || "Assigned Department",
             involvement_type: involvementType,
+            supporting_departments: selectedSupportingDepts,
             rule_order: Number(ruleOrder),
             status: data.rule.status,
             conditions: payload.conditions,
@@ -658,7 +884,32 @@ export function AdminMasterRules({
       </div>
 
       {/* Tab Panels */}
-      <div className="p-5 sm:p-6">
+      <div className="p-5 sm:p-6 space-y-4">
+        {tableFeedback && (
+          <div
+            className={`flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-medium ${
+              tableFeedback.type === "success"
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border border-rose-200 bg-rose-50 text-rose-800"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {tableFeedback.type === "success" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
+              )}
+              <span>{tableFeedback.text}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTableFeedback(null)}
+              className="text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         {/* ========================================================================= */}
         {/* 1. PRIORITY RULES TAB                                                     */}
         {/* ========================================================================= */}
@@ -1093,6 +1344,7 @@ export function AdminMasterRules({
               currentPage={slaPage}
               totalItems={slaPolicies.length}
               pageSize={PAGE_SIZE}
+              itemLabel="policies"
               onPageChange={setSlaPage}
             />
           </div>
@@ -1225,6 +1477,7 @@ export function AdminMasterRules({
               currentPage={reopenPage}
               totalItems={reopenPolicies.length}
               pageSize={PAGE_SIZE}
+              itemLabel="policies"
               onPageChange={setReopenPage}
             />
           </div>
@@ -1234,14 +1487,20 @@ export function AdminMasterRules({
       {/* Interactive Policy Creation Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-          <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl">
+          <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900">
                   Configure New {tabTitles[activeTab]}
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Define governance rules, conditions, and compliance targets.
+                  {activeTab === "priority"
+                    ? "Define rules and conditions that determine grievance priority."
+                    : activeTab === "routing"
+                      ? "Define automated primary and supporting department routing for grievances."
+                      : activeTab === "sla"
+                        ? "Define resolution deadlines and warning/escalation thresholds."
+                        : "Define allowable windows and review limits for reopened grievances."}
                 </p>
               </div>
 
@@ -1268,7 +1527,13 @@ export function AdminMasterRules({
                 <input
                   id="rule-name-input"
                   type="text"
-                  placeholder="e.g. Critical Safety Escalate, Facilities Auto-Router..."
+                  placeholder={
+                    activeTab === "priority"
+                      ? "e.g. Workplace Safety - Critical"
+                      : activeTab === "routing"
+                        ? "e.g. Facilities Auto-Router, Compensation to Finance"
+                        : "e.g. Standard Resolution Policy"
+                  }
                   value={ruleName}
                   onChange={(e) => setRuleName(e.target.value)}
                   required
@@ -1279,7 +1544,7 @@ export function AdminMasterRules({
               {/* Priority Form Fields */}
               {activeTab === "priority" && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3.5 items-start">
                     <div>
                       <label
                         htmlFor="priority-level-select"
@@ -1298,6 +1563,9 @@ export function AdminMasterRules({
                         <option value="MEDIUM">Medium</option>
                         <option value="LOW">Low</option>
                       </select>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Urgency & SLA escalation target.
+                      </p>
                     </div>
 
                     <div>
@@ -1315,12 +1583,15 @@ export function AdminMasterRules({
                         onChange={(e) => setRuleOrder(e.target.value)}
                         className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
                       />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Lower numbers are evaluated first.
+                      </p>
                     </div>
                   </div>
 
                   {/* Taxonomy Condition: Category & Subcategory */}
                   {!isDefault && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3.5 items-start">
                       <div>
                         <label
                           htmlFor="priority-category-select"
@@ -1331,6 +1602,7 @@ export function AdminMasterRules({
                         <select
                           id="priority-category-select"
                           value={selectedPriorityCatId}
+                          required={!isDefault}
                           onChange={(e) => {
                             const catId = e.target.value;
                             setSelectedPriorityCatId(catId);
@@ -1344,13 +1616,18 @@ export function AdminMasterRules({
                           }}
                           className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
                         >
-                          <option value="">-- Select Category --</option>
+                          <option value="">
+                            -- Select Category * (Required) --
+                          </option>
                           {categories.map((c) => (
                             <option key={c.category_id} value={c.category_id}>
                               {c.category_name}
                             </option>
                           ))}
                         </select>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          Required primary category scope.
+                        </p>
                       </div>
 
                       <div>
@@ -1377,6 +1654,8 @@ export function AdminMasterRules({
                               setRuleName(
                                 `${cat.category_name} - ${sub.subcategory_name}`,
                               );
+                            } else if (cat) {
+                              setRuleName(`${cat.category_name} Priority`);
                             }
                           }}
                           className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600 disabled:opacity-50"
@@ -1397,46 +1676,39 @@ export function AdminMasterRules({
                               </option>
                             ))}
                         </select>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          Applies to all subcategories if not selected.
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  <div>
-                    <label
-                      htmlFor="trigger-keywords-input"
-                      className="block font-semibold text-slate-700"
-                    >
-                      Trigger Keywords (Optional refinement)
+                  <div className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3 transition hover:bg-slate-50">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isDefault}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setIsDefault(checked);
+                          if (checked) {
+                            setRuleName("Default Medium Priority Fallback");
+                            setPriorityLevel("MEDIUM");
+                          }
+                        }}
+                        className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div>
+                        <span className="text-xs font-semibold text-slate-800">
+                          Set as Default Fallback Priority Rule
+                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          Evaluated when no other priority rules match the
+                          grievance intake.
+                        </p>
+                      </div>
                     </label>
-                    <input
-                      id="trigger-keywords-input"
-                      type="text"
-                      placeholder="e.g. emergency, fire, danger, critical"
-                      value={keywords}
-                      onChange={(e) => setKeywords(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
-                    />
                   </div>
-
-                  <label className="flex items-center gap-2 pt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isDefault}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setIsDefault(checked);
-                        if (checked) {
-                          setRuleName("Default Medium Priority Fallback");
-                          setPriorityLevel("MEDIUM");
-                        }
-                      }}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-slate-700 font-medium">
-                      Set as Default Fallback Priority Rule (Evaluated when no
-                      other rules match)
-                    </span>
-                  </label>
                 </>
               )}
 
@@ -1449,16 +1721,29 @@ export function AdminMasterRules({
                         htmlFor="target-dept-select"
                         className="block font-semibold text-slate-700"
                       >
-                        Target Department *
+                        Primary Target Department *
                       </label>
                       <select
                         id="target-dept-select"
                         value={selectedDeptId}
-                        onChange={(e) => setSelectedDeptId(e.target.value)}
+                        onChange={(e) => {
+                          const newDeptId = e.target.value;
+                          setSelectedDeptId(newDeptId);
+                          const dept = departments.find(
+                            (d) => d.department_id === newDeptId,
+                          );
+                          if (dept) {
+                            setSelectedSupportingDepts((prev) =>
+                              prev.filter(
+                                (name) => name !== dept.department_name,
+                              ),
+                            );
+                          }
+                        }}
                         required
                         className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
                       >
-                        <option value="">-- Select Department --</option>
+                        <option value="">-- Select Department * --</option>
                         {departments.map((d) => (
                           <option key={d.department_id} value={d.department_id}>
                             {d.department_name}
@@ -1472,7 +1757,7 @@ export function AdminMasterRules({
                         htmlFor="involvement-type-select"
                         className="block font-semibold text-slate-700"
                       >
-                        Involvement Type
+                        Involvement Type *
                       </label>
                       <select
                         id="involvement-type-select"
@@ -1480,10 +1765,65 @@ export function AdminMasterRules({
                         onChange={(e) => setInvolvementType(e.target.value)}
                         className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
                       >
-                        <option value="PRIMARY">PRIMARY</option>
+                        <option value="PRIMARY">
+                          PRIMARY (Lead Redressal)
+                        </option>
                         <option value="SUPPORTING">SUPPORTING</option>
-                        <option value="EQUAL">EQUAL</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block font-semibold text-slate-700">
+                      Supporting Department(s) (Optional Cross-Functional
+                      Collaboration)
+                    </span>
+                    <p className="text-[11px] text-slate-500 mb-1.5">
+                      Select any supporting department(s) that assist the
+                      primary lead department on resolution.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {departments
+                        .filter((d) => d.department_id !== selectedDeptId)
+                        .map((d) => {
+                          const isChecked = selectedSupportingDepts.includes(
+                            d.department_name,
+                          );
+                          return (
+                            <button
+                              key={d.department_id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSupportingDepts((prev) =>
+                                  isChecked
+                                    ? prev.filter(
+                                        (name) => name !== d.department_name,
+                                      )
+                                    : [...prev, d.department_name],
+                                );
+                              }}
+                              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border ${
+                                isChecked
+                                  ? "bg-sky-50 border-sky-300 text-sky-700 font-semibold"
+                                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                              }`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  isChecked ? "bg-sky-500" : "bg-slate-300"
+                                }`}
+                              />
+                              {d.department_name}
+                            </button>
+                          );
+                        })}
+                      {departments.filter(
+                        (d) => d.department_id !== selectedDeptId,
+                      ).length === 0 && (
+                        <span className="text-xs text-slate-400 italic">
+                          Select a primary department above first.
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1493,11 +1833,12 @@ export function AdminMasterRules({
                         htmlFor="category-scope-select"
                         className="block font-semibold text-slate-700"
                       >
-                        Category Scope
+                        Category Scope *
                       </label>
                       <select
                         id="category-scope-select"
                         value={selectedCatId}
+                        required
                         onChange={(e) => {
                           const catId = e.target.value;
                           setSelectedCatId(catId);
@@ -1511,7 +1852,9 @@ export function AdminMasterRules({
                         }}
                         className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
                       >
-                        <option value="">All Categories (Fallback)</option>
+                        <option value="">
+                          -- Select Category * (Required) --
+                        </option>
                         {categories.map((c) => (
                           <option key={c.category_id} value={c.category_id}>
                             {c.category_name}
@@ -1525,12 +1868,13 @@ export function AdminMasterRules({
                         htmlFor="routing-subcategory-select"
                         className="block font-semibold text-slate-700"
                       >
-                        Subcategory Scope
+                        Subcategory Scope *
                       </label>
                       <select
                         id="routing-subcategory-select"
                         value={selectedRoutingSubcatId}
                         disabled={!selectedCatId}
+                        required
                         onChange={(e) => {
                           const subId = e.target.value;
                           setSelectedRoutingSubcatId(subId);
@@ -1549,7 +1893,9 @@ export function AdminMasterRules({
                         className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600 disabled:opacity-50"
                       >
                         <option value="">
-                          All Subcategories (Category Rule)
+                          {selectedCatId
+                            ? "-- Select Subcategory * (Required) --"
+                            : "-- Select a Category first --"}
                         </option>
                         {categories
                           .find((c) => c.category_id === selectedCatId)
@@ -1570,12 +1916,13 @@ export function AdminMasterRules({
                       htmlFor="routing-rule-order-input"
                       className="block font-semibold text-slate-700"
                     >
-                      Rule Order
+                      Rule Order (1 - 100,000)
                     </label>
                     <input
                       id="routing-rule-order-input"
                       type="number"
                       min="1"
+                      max="100000"
                       value={ruleOrder}
                       onChange={(e) => setRuleOrder(e.target.value)}
                       className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
@@ -1669,58 +2016,88 @@ export function AdminMasterRules({
 
               {/* Reopen Form Fields */}
               {activeTab === "reopen" && (
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label
-                      htmlFor="reopen-window-hours-input"
-                      className="block font-semibold text-slate-700"
-                    >
-                      Reopen Window (Hours)
-                    </label>
-                    <input
-                      id="reopen-window-hours-input"
-                      type="number"
-                      min="1"
-                      value={reopenWindowHours}
-                      onChange={(e) => setReopenWindowHours(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
-                    />
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                      <div className="flex-1">
+                        <label
+                          htmlFor="reopen-window-hours-input"
+                          className="block font-semibold text-slate-800"
+                        >
+                          Reopen Window (Hours)
+                        </label>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Time allowed after resolution for the end user to
+                          challenge the outcome.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-28">
+                        <input
+                          id="reopen-window-hours-input"
+                          type="number"
+                          min="1"
+                          value={reopenWindowHours}
+                          onChange={(e) => setReopenWindowHours(e.target.value)}
+                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="max-reopens-input"
-                      className="block font-semibold text-slate-700"
-                    >
-                      Max Reopens
-                    </label>
-                    <input
-                      id="max-reopens-input"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={maxReopens}
-                      onChange={(e) => setMaxReopens(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
-                    />
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                      <div className="flex-1">
+                        <label
+                          htmlFor="max-reopens-input"
+                          className="block font-semibold text-slate-800"
+                        >
+                          Max End User Reopens
+                        </label>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Maximum number of times an end user can reject the
+                          resolution and reopen the grievance.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-28">
+                        <input
+                          id="max-reopens-input"
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={maxReopens}
+                          onChange={(e) => setMaxReopens(e.target.value)}
+                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="max-reviews-input"
-                      className="block font-semibold text-slate-700"
-                    >
-                      Max Reviews
-                    </label>
-                    <input
-                      id="max-reviews-input"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={maxReviews}
-                      onChange={(e) => setMaxReviews(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-blue-600"
-                    />
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                      <div className="flex-1">
+                        <label
+                          htmlFor="max-reviews-input"
+                          className="block font-semibold text-slate-800"
+                        >
+                          Max Manual Reviews
+                        </label>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Maximum number of Department Head reviews allowed
+                          after the maximum end user reopen limit is reached.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-28">
+                        <input
+                          id="max-reviews-input"
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={maxReviews}
+                          onChange={(e) => setMaxReviews(e.target.value)}
+                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

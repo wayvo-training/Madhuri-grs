@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   PriorityBadge,
   SlaBadge,
@@ -39,19 +39,49 @@ export interface SerializedGrievance {
   manual_review_count: number;
 }
 
+export interface TabCounts {
+  all: number;
+  exceptions: number;
+  active: number;
+  slaRisk: number;
+  closed: number;
+}
+
 interface AdminGrievanceTableProps {
   initialGrievances: SerializedGrievance[];
+  initialTotalCount?: number;
+  initialCounts?: TabCounts;
   departments: { department_id: string; department_name: string }[];
 }
 
+const PAGE_SIZE = 10;
+
 export function AdminGrievanceTable({
   initialGrievances,
+  initialTotalCount = 0,
+  initialCounts,
   departments,
 }: AdminGrievanceTableProps) {
   const router = useRouter();
   const [grievancesList, setGrievancesList] =
     useState<SerializedGrievance[]>(initialGrievances);
+  const [totalCount, setTotalCount] = useState<number>(
+    initialTotalCount || initialGrievances.length,
+  );
+  const [counts, setCounts] = useState<TabCounts>(
+    initialCounts || {
+      all: initialTotalCount || initialGrievances.length,
+      exceptions: 0,
+      active: 0,
+      slaRisk: 0,
+      closed: 0,
+    },
+  );
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<string>("ALL");
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedDept, setSelectedDept] = useState<string>("ALL");
@@ -65,6 +95,61 @@ export function AdminGrievanceTable({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Table tabs
+  type TableTab = "ALL" | "EXCEPTIONS" | "ACTIVE" | "SLA_RISK" | "CLOSED";
+  const [activeTab, setActiveTab] = useState<TableTab>("ALL");
+
+  const isInitialMount = useRef(true);
+
+  // Debounce search query to avoid frequent server hits
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Fetch paginated grievances from server API
+  const fetchGrievances = useCallback(
+    async (
+      page: number,
+      tab: TableTab,
+      search: string,
+      priority: string,
+      status: string,
+      dept: string,
+    ) => {
+      try {
+        setIsLoading(true);
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: PAGE_SIZE.toString(),
+          tab,
+          search,
+          priority,
+          status,
+          department: dept,
+        });
+
+        const res = await fetch(`/api/admin/grievances?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch grievances");
+        const data = await res.json();
+        if (data.success) {
+          setGrievancesList(data.grievances);
+          setTotalCount(data.pagination.total);
+          if (data.counts) {
+            setCounts(data.counts);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching grievances:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
 
   async function handleManualRoute(grievanceId: string) {
     if (!targetDeptId) return;
@@ -130,6 +215,16 @@ export function AdminGrievanceTable({
         );
       }
 
+      // Re-fetch page to refresh counts and list
+      fetchGrievances(
+        currentPage,
+        activeTab,
+        debouncedSearch,
+        selectedPriority,
+        selectedStatus,
+        selectedDept,
+      );
+
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -141,10 +236,6 @@ export function AdminGrievanceTable({
       setIsRouting(false);
     }
   }
-
-  // Table tabs
-  type TableTab = "ALL" | "EXCEPTIONS" | "ACTIVE" | "SLA_RISK" | "CLOSED";
-  const [activeTab, setActiveTab] = useState<TableTab>("ALL");
 
   // Sync with hash navigation (e.g. #routing-exceptions)
   useEffect(() => {
@@ -161,113 +252,57 @@ export function AdminGrievanceTable({
     return () => window.removeEventListener("hashchange", handleHash);
   }, []);
 
-  // Compute counts for tab counters
-  const exceptionCount = useMemo(
-    () =>
-      grievancesList.filter(
-        (g) => g.status === "SUBMITTED" || !g.department_name,
-      ).length,
-    [grievancesList],
-  );
-
-  const activeCount = useMemo(
-    () =>
-      grievancesList.filter((g) =>
-        [
-          "ROUTED",
-          "ASSIGNED",
-          "IN_PROGRESS",
-          "UNDER_REVIEW",
-          "REOPENED",
-          "REOPEN_REVIEW",
-        ].includes(g.status),
-      ).length,
-    [grievancesList],
-  );
-
-  const slaRiskCount = useMemo(
-    () =>
-      grievancesList.filter((g) =>
-        ["AT_RISK", "BREACHED"].includes(g.sla_status || ""),
-      ).length,
-    [grievancesList],
-  );
-
-  const closedCount = useMemo(
-    () => grievancesList.filter((g) => g.status === "CLOSED").length,
-    [grievancesList],
-  );
-
-  // Filtered grievances
-  const filteredGrievances = useMemo(() => {
-    return grievancesList.filter((g) => {
-      // Tab matching
-      if (activeTab === "EXCEPTIONS") {
-        if (g.status !== "SUBMITTED" && g.department_name) return false;
-      } else if (activeTab === "ACTIVE") {
-        if (
-          ![
-            "ROUTED",
-            "ASSIGNED",
-            "IN_PROGRESS",
-            "UNDER_REVIEW",
-            "REOPENED",
-            "REOPEN_REVIEW",
-          ].includes(g.status)
-        )
-          return false;
-      } else if (activeTab === "SLA_RISK") {
-        if (!["AT_RISK", "BREACHED"].includes(g.sla_status || "")) return false;
-      } else if (activeTab === "CLOSED") {
-        if (g.status !== "CLOSED") return false;
+  // Filter or tab changes: reset to page 1 and fetch from server
+  useEffect(() => {
+    if (isInitialMount.current) {
+      if (activeTab !== "ALL") {
+        isInitialMount.current = false;
+        fetchGrievances(
+          1,
+          activeTab,
+          debouncedSearch,
+          selectedPriority,
+          selectedStatus,
+          selectedDept,
+        );
+      } else {
+        isInitialMount.current = false;
       }
+      return;
+    }
 
-      // Search matching
-      const matchesSearch =
-        !searchQuery ||
-        g.grievance_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.submitted_by_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.category_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        g.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Priority matching
-      const matchesPriority =
-        selectedPriority === "ALL" || g.priority === selectedPriority;
-
-      // Status matching
-      const matchesStatus =
-        selectedStatus === "ALL" || g.status === selectedStatus;
-
-      // Department matching
-      const matchesDept =
-        selectedDept === "ALL" || g.department_name === selectedDept;
-
-      return matchesSearch && matchesPriority && matchesStatus && matchesDept;
-    });
+    setCurrentPage(1);
+    fetchGrievances(
+      1,
+      activeTab,
+      debouncedSearch,
+      selectedPriority,
+      selectedStatus,
+      selectedDept,
+    );
   }, [
-    grievancesList,
     activeTab,
-    searchQuery,
+    debouncedSearch,
     selectedPriority,
     selectedStatus,
     selectedDept,
+    fetchGrievances,
   ]);
 
-  const PAGE_SIZE = 8;
-  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  // Reset to page 1 on filter changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset page when filter criteria changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, searchQuery, selectedPriority, selectedStatus, selectedDept]);
-
-  const totalPages = Math.ceil(filteredGrievances.length / PAGE_SIZE) || 1;
-  const paginatedGrievances = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredGrievances.slice(start, start + PAGE_SIZE);
-  }, [filteredGrievances, currentPage]);
+  function handlePageChange(newPage: number) {
+    if (newPage < 1 || newPage > totalPages || isLoading) return;
+    setCurrentPage(newPage);
+    fetchGrievances(
+      newPage,
+      activeTab,
+      debouncedSearch,
+      selectedPriority,
+      selectedStatus,
+      selectedDept,
+    );
+  }
 
   return (
     <div
@@ -280,12 +315,15 @@ export function AdminGrievanceTable({
       <div className="border-b border-slate-100 p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-base font-bold tracking-tight text-slate-900">
-              Live Grievance Oversight Queue
+            <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
+              <span>Live Grievance Oversight Queue</span>
+              {isLoading && (
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              )}
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              Showing {filteredGrievances.length} of {initialGrievances.length}{" "}
-              total records across all departments.
+              Showing page {currentPage} of {totalPages} ({totalCount} total
+              records across all departments).
             </p>
           </div>
 
@@ -300,7 +338,7 @@ export function AdminGrievanceTable({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              All ({grievancesList.length})
+              All ({counts.all})
             </button>
 
             <button
@@ -309,13 +347,13 @@ export function AdminGrievanceTable({
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition ${
                 activeTab === "EXCEPTIONS"
                   ? "bg-amber-500 text-white shadow-xs"
-                  : exceptionCount > 0
+                  : counts.exceptions > 0
                     ? "text-amber-700 bg-amber-50/80 hover:bg-amber-100"
                     : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <AlertTriangle className="h-3.5 w-3.5" />
-              <span>Exceptions ({exceptionCount})</span>
+              <span>Exceptions ({counts.exceptions})</span>
             </button>
 
             <button
@@ -327,7 +365,7 @@ export function AdminGrievanceTable({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Active ({activeCount})
+              Active ({counts.active})
             </button>
 
             <button
@@ -336,12 +374,12 @@ export function AdminGrievanceTable({
               className={`flex items-center gap-1 rounded-lg px-3 py-1.5 transition ${
                 activeTab === "SLA_RISK"
                   ? "bg-rose-600 text-white shadow-xs"
-                  : slaRiskCount > 0
+                  : counts.slaRisk > 0
                     ? "text-rose-700 bg-rose-50 hover:bg-rose-100"
                     : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>SLA Risk ({slaRiskCount})</span>
+              <span>SLA Risk ({counts.slaRisk})</span>
             </button>
 
             <button
@@ -353,7 +391,7 @@ export function AdminGrievanceTable({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Closed ({closedCount})
+              Closed ({counts.closed})
             </button>
           </div>
         </div>
@@ -435,8 +473,12 @@ export function AdminGrievanceTable({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-            {filteredGrievances.length === 0 ? (
+          <tbody
+            className={`divide-y divide-slate-100 font-medium text-slate-700 transition-opacity duration-150 ${
+              isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
+            }`}
+          >
+            {grievancesList.length === 0 ? (
               <tr>
                 <td
                   colSpan={8}
@@ -447,7 +489,7 @@ export function AdminGrievanceTable({
                 </td>
               </tr>
             ) : (
-              paginatedGrievances.map((g) => {
+              grievancesList.map((g) => {
                 const isException =
                   g.status === "SUBMITTED" || !g.department_name;
 
@@ -545,48 +587,43 @@ export function AdminGrievanceTable({
       </div>
 
       {/* Pagination Footer */}
-      {filteredGrievances.length > PAGE_SIZE && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 px-6 py-3.5 text-xs text-slate-500">
-          <div>
-            Showing{" "}
-            <span className="font-semibold text-slate-700">
-              {(currentPage - 1) * PAGE_SIZE + 1}
-            </span>{" "}
-            to{" "}
-            <span className="font-semibold text-slate-700">
-              {Math.min(currentPage * PAGE_SIZE, filteredGrievances.length)}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-slate-700">
-              {filteredGrievances.length}
-            </span>{" "}
-            tickets
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              <span>Prev</span>
-            </button>
-            <span className="px-2 font-semibold text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
-            >
-              <span>Next</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 px-6 py-3.5 text-xs text-slate-500">
+        <div>
+          Showing{" "}
+          <span className="font-semibold text-slate-700">
+            {totalCount === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}
+          </span>{" "}
+          to{" "}
+          <span className="font-semibold text-slate-700">
+            {Math.min(currentPage * PAGE_SIZE, totalCount)}
+          </span>{" "}
+          of <span className="font-semibold text-slate-700">{totalCount}</span>{" "}
+          tickets
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1 || isLoading}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <span>Prev</span>
+          </button>
+          <span className="px-2 font-semibold text-slate-700">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages || isLoading}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 transition"
+          >
+            <span>Next</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
 
       {/* Detail Modal / Drawer */}
       {activeModalGrievance && (

@@ -19,7 +19,8 @@ export async function POST(request: Request) {
       target_role,
     } = body;
 
-    if (!policy_name || !target_duration_minutes) {
+    const trimmedName = policy_name?.trim();
+    if (!trimmedName || !target_duration_minutes) {
       return NextResponse.json(
         {
           success: false,
@@ -29,22 +30,89 @@ export async function POST(request: Request) {
       );
     }
 
+    const requestedStatus = body.status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
+    const slaTypeVal = sla_type || "RESOLUTION";
+
+    // 1. Check duplicate policy name (case-insensitive)
+    const nameConflict = await prisma.sla_policies.findFirst({
+      where: {
+        policy_name: { equals: trimmedName, mode: "insensitive" },
+      },
+    });
+
+    if (nameConflict) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `An SLA policy named "${trimmedName}" already exists. Please choose a unique policy name.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    // 2. Check active priority scope conflict
+    if (requestedStatus === "ACTIVE" && priority_level) {
+      const scopeConflict = await prisma.sla_policies.findFirst({
+        where: {
+          status: "ACTIVE",
+          priority_level: priority_level,
+          sla_type: slaTypeVal,
+        },
+      });
+
+      if (scopeConflict) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `An active SLA policy for "${priority_level}" priority already exists ("${scopeConflict.policy_name}"). Please update or deactivate the existing policy instead of creating a conflicting duplicate.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const durationNum = Number(target_duration_minutes);
     const warnPercent = Number(warning_threshold_percent) || 75;
     const escPercent = Number(escalation_threshold_percent) || 100;
     const tgtRole = target_role || "DEPARTMENT_HEAD";
-    const slaTypeVal = sla_type || "RESOLUTION";
+
+    // 3. Check duplicate configuration across all functional fields
+    const configConflict = await prisma.sla_policies.findFirst({
+      where: {
+        priority_level: priority_level || null,
+        sla_type: slaTypeVal,
+        target_duration_minutes: durationNum,
+        warning_threshold_percent: warnPercent,
+        escalation_threshold_percent: escPercent,
+      },
+    });
+
+    if (configConflict) {
+      const priorityDesc = priority_level
+        ? `"${priority_level}" priority`
+        : "all priorities";
+      const durationHours = (durationNum / 60).toFixed(1).replace(".0", "");
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: `An SLA policy with identical configuration already exists ("${configConflict.policy_name}": ${durationHours}h target duration, ${warnPercent}% warning, and ${escPercent}% escalation threshold for ${priorityDesc}). Please modify the parameters or use the existing policy.`,
+        },
+        { status: 409 },
+      );
+    }
 
     const policy = await prisma.$transaction(async (tx) => {
       const created = await tx.sla_policies.create({
         data: {
-          policy_name: policy_name.trim(),
+          policy_name: trimmedName,
           priority_level: priority_level || null,
           sla_type: slaTypeVal,
           target_duration_minutes: durationNum,
           warning_threshold_percent: warnPercent,
           escalation_threshold_percent: escPercent,
           target_role: tgtRole,
+          status: requestedStatus,
           created_by: user.user_id,
         },
       });
@@ -102,6 +170,34 @@ export async function PATCH(request: Request) {
     }
 
     const policyId = BigInt(sla_policy_id);
+
+    if (status === "ACTIVE") {
+      const policyToActivate = await prisma.sla_policies.findUnique({
+        where: { sla_policy_id: policyId },
+      });
+
+      if (policyToActivate?.priority_level) {
+        const scopeConflict = await prisma.sla_policies.findFirst({
+          where: {
+            status: "ACTIVE",
+            priority_level: policyToActivate.priority_level,
+            sla_type: policyToActivate.sla_type,
+            sla_policy_id: { not: policyId },
+          },
+        });
+
+        if (scopeConflict) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Cannot activate this policy because "${scopeConflict.policy_name}" is already active for "${policyToActivate.priority_level}" priority. Please deactivate the existing active policy first.`,
+            },
+            { status: 409 },
+          );
+        }
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       const policy = await tx.sla_policies.update({
         where: { sla_policy_id: policyId },

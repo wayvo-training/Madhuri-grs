@@ -22,7 +22,6 @@ export default async function AdminRolesPage() {
       },
     }),
     prisma.permissions.findMany({
-      where: { status: "ACTIVE" },
       orderBy: { permission_id: "asc" },
     }),
   ]);
@@ -31,6 +30,7 @@ export default async function AdminRolesPage() {
     role_id: r.role_id.toString(),
     role_name: r.role_name,
     description: r.description,
+    status: (r.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
     user_count: r._count.users,
     permissions: r.role_permissions.map((rp) => ({
       permission_id: rp.permissions.permission_id.toString(),
@@ -45,6 +45,7 @@ export default async function AdminRolesPage() {
       permission_code: p.permission_code,
       permission_name: p.permission_name,
       description: p.description,
+      status: (p.status as "ACTIVE" | "INACTIVE") || "ACTIVE",
     }),
   );
 

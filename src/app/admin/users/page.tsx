@@ -10,14 +10,34 @@ export default async function AdminUsersPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const [rawUsers, departments, rawRoles] = await Promise.all([
+  const [
+    rawUsers,
+    totalCount,
+    activeCount,
+    adminCount,
+    inactiveCount,
+    departments,
+    rawRoles,
+  ] = await Promise.all([
     prisma.users.findMany({
+      take: 10,
+      skip: 0,
       orderBy: { created_at: "desc" },
       include: {
         roles: true,
         departments: true,
       },
     }),
+    prisma.users.count(),
+    prisma.users.count({ where: { status: "ACTIVE" } }),
+    prisma.users.count({
+      where: {
+        roles: {
+          role_name: { in: ["ADMIN", "DEPARTMENT_HEAD"] },
+        },
+      },
+    }),
+    prisma.users.count({ where: { status: "INACTIVE" } }),
     prisma.departments.findMany({
       where: { status: "ACTIVE" },
       select: {
@@ -42,7 +62,9 @@ export default async function AdminUsersPage() {
     last_name: u.last_name,
     email: u.email,
     role_name: u.roles.role_name,
+    role_id: u.role_id.toString(),
     department_name: u.departments?.department_name || null,
+    department_id: u.department_id ? u.department_id.toString() : null,
     status: u.status,
     created_at: u.created_at.toISOString(),
   }));
@@ -68,8 +90,15 @@ export default async function AdminUsersPage() {
     >
       <AdminUserDirectory
         initialUsers={serializedUsers}
+        initialTotalCount={totalCount}
         departments={serializedDepartments}
         roles={serializedRoles}
+        stats={{
+          total: totalCount,
+          active: activeCount,
+          admins: adminCount,
+          inactive: inactiveCount,
+        }}
       />
     </DashboardShell>
   );

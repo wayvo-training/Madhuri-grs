@@ -7,7 +7,8 @@ export interface RoutingCalculationInput {
 
 export interface RoutingCalculationResult {
   departmentId: bigint;
-  involvementType: string;
+  departmentName?: string;
+  involvementType: "PRIMARY" | "SUPPORTING";
   supportingDepartments: string[];
   routingRuleId: bigint;
   matchedRuleName: string;
@@ -15,44 +16,67 @@ export interface RoutingCalculationResult {
 }
 
 /**
- * 1. Exact match: Category + Subcategory
- * 2. Category Fallback: Category only (subcategory is null)
- * 3. No match: Returns null -> Grievance is routed to Manual Routing Queue (Admin Exception Workflow)
+ * Evaluates routing rules against a Category + Subcategory combination.
+ *
+ * Rules:
+ * 1. Every grievance must have a Category and Subcategory selected.
+ * 2. Subcategory must strictly belong to the selected Category.
+ * 3. Exact match on (Category + Subcategory) takes precedence (ordered by rule_order ASC).
+ * 4. Fallback match on Category (subcategory_id is null) is evaluated next.
+ * 5. If no active rule matches -> Returns null (Grievance enters Manual Routing Queue).
  */
 export async function determineDepartmentRouting(
   input: RoutingCalculationInput,
 ): Promise<RoutingCalculationResult | null> {
-  const catId = input.categoryId ? BigInt(input.categoryId) : null;
-  const subcatId = input.subcategoryId ? BigInt(input.subcategoryId) : null;
+  if (!input.categoryId || !input.subcategoryId) {
+    // Missing category or subcategory -> Cannot auto-route, enters Manual Routing Queue
+    return null;
+  }
 
-  if (!catId) return null;
+  const catId = BigInt(input.categoryId);
+  const subcatId = BigInt(input.subcategoryId);
 
-  // 1. Fetch active routing rules ordered by priority order
+  // Validate that subcategory strictly belongs to the specified category
+  const subcategory = await prisma.subcategories.findUnique({
+    where: { subcategory_id: subcatId },
+    select: { category_id: true, status: true },
+  });
+
+  if (subcategory?.status !== "ACTIVE" || subcategory?.category_id !== catId) {
+    // Subcategory mismatch or inactive -> Route to Manual Routing Queue
+    return null;
+  }
+
+  // Fetch active routing rules ordered by rule_order ASC with department details
   const activeRules = await prisma.routing_rules.findMany({
     where: { status: "ACTIVE" },
+    include: {
+      departments: {
+        select: { department_name: true },
+      },
+    },
     orderBy: { rule_order: "asc" },
   });
 
   // Step 1: Exact match on Category + Subcategory
-  if (subcatId) {
-    const exactMatch = activeRules.find(
-      (r) => r.category_id === catId && r.subcategory_id === subcatId,
-    );
+  const exactMatch = activeRules.find(
+    (r) => r.category_id === catId && r.subcategory_id === subcatId,
+  );
 
-    if (exactMatch) {
-      const supporting = Array.isArray(exactMatch.supporting_departments)
-        ? (exactMatch.supporting_departments as string[])
-        : [];
+  if (exactMatch) {
+    const supporting = Array.isArray(exactMatch.supporting_departments)
+      ? (exactMatch.supporting_departments as string[])
+      : [];
 
-      return {
-        departmentId: exactMatch.department_id,
-        involvementType: exactMatch.involvement_type,
-        supportingDepartments: supporting,
-        routingRuleId: exactMatch.routing_rule_id,
-        matchedRuleName: exactMatch.rule_name,
-        matchType: "EXACT_SUBCATEGORY",
-      };
-    }
+    return {
+      departmentId: exactMatch.department_id,
+      departmentName: exactMatch.departments.department_name,
+      involvementType: exactMatch.involvement_type as "PRIMARY" | "SUPPORTING",
+      supportingDepartments: supporting,
+      routingRuleId: exactMatch.routing_rule_id,
+      matchedRuleName: exactMatch.rule_name,
+      matchType: "EXACT_SUBCATEGORY",
+    };
   }
 
   // Step 2: Fallback to Category only (rule has category_id matched and subcategory_id is null)
@@ -67,7 +91,10 @@ export async function determineDepartmentRouting(
 
     return {
       departmentId: categoryMatch.department_id,
-      involvementType: categoryMatch.involvement_type,
+      departmentName: categoryMatch.departments.department_name,
+      involvementType: categoryMatch.involvement_type as
+        | "PRIMARY"
+        | "SUPPORTING",
       supportingDepartments: supporting,
       routingRuleId: categoryMatch.routing_rule_id,
       matchedRuleName: categoryMatch.rule_name,
@@ -75,7 +102,6 @@ export async function determineDepartmentRouting(
     };
   }
 
-  // Step 3: No applicable routing rule found
-  // Returns null -> Placed into Manual Routing Queue for Admin Exception Allocation
+  // Step 3: No active routing rule matched -> Returns null for Manual Routing Queue
   return null;
 }

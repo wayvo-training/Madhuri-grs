@@ -1,21 +1,72 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { CACHE_TAGS, serverCache } from "@/lib/cache";
+import { getPaginationParams, paginatedJsonResponse } from "@/lib/pagination";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await authorizeApi({ role: "ADMIN" });
   if ("error" in auth) return auth.error;
 
   try {
-    const users = await prisma.users.findMany({
-      orderBy: { created_at: "desc" },
-      include: {
-        roles: true,
-        departments: true,
-      },
-    });
+    const { searchParams } = new URL(request.url);
+    const { page, limit, skip } = getPaginationParams(request, 10);
+
+    const search = searchParams.get("search")?.trim();
+    const departmentId = searchParams.get("department_id")?.trim();
+    const roleId = searchParams.get("role_id")?.trim();
+    const status = searchParams.get("status")?.trim().toUpperCase();
+
+    // Build dynamic Prisma where clause
+    const conditions: Record<string, unknown>[] = [];
+
+    if (search) {
+      conditions.push({
+        OR: [
+          { first_name: { contains: search, mode: "insensitive" } },
+          { last_name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { employee_code: { contains: search, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    if (departmentId && departmentId !== "ALL") {
+      try {
+        conditions.push({ department_id: BigInt(departmentId) });
+      } catch {
+        // Ignore invalid bigint
+      }
+    }
+
+    if (roleId && roleId !== "ALL") {
+      try {
+        conditions.push({ role_id: BigInt(roleId) });
+      } catch {
+        // Ignore invalid bigint
+      }
+    }
+
+    if (status && status !== "ALL") {
+      conditions.push({ status });
+    }
+
+    const where = conditions.length > 0 ? { AND: conditions } : {};
+
+    const [total, users] = await Promise.all([
+      prisma.users.count({ where }),
+      prisma.users.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: "desc" },
+        include: {
+          roles: true,
+          departments: true,
+        },
+      }),
+    ]);
 
     const serialized = users.map((u) => ({
       user_id: u.user_id.toString(),
@@ -31,7 +82,7 @@ export async function GET() {
       created_at: u.created_at.toISOString(),
     }));
 
-    return NextResponse.json({ success: true, users: serialized });
+    return paginatedJsonResponse("users", serialized, total, page, limit);
   } catch (error) {
     console.error("Failed to fetch users:", error);
     return NextResponse.json(

@@ -21,7 +21,6 @@ export async function GET() {
         },
       }),
       prisma.permissions.findMany({
-        where: { status: "ACTIVE" },
         orderBy: { permission_id: "asc" },
       }),
     ]);
@@ -30,6 +29,7 @@ export async function GET() {
       role_id: r.role_id.toString(),
       role_name: r.role_name,
       description: r.description,
+      status: r.status || "ACTIVE",
       user_count: r._count.users,
       permissions: r.role_permissions.map((rp) => ({
         permission_id: rp.permissions.permission_id.toString(),
@@ -43,6 +43,7 @@ export async function GET() {
       permission_code: p.permission_code,
       permission_name: p.permission_name,
       description: p.description,
+      status: p.status || "ACTIVE",
     }));
 
     return NextResponse.json({
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { role_name, description, permission_ids } = body;
+    const { role_name, description, permission_ids, status } = body;
 
     if (!role_name || typeof role_name !== "string" || !role_name.trim()) {
       return NextResponse.json(
@@ -95,18 +96,28 @@ export async function POST(request: Request) {
       );
     }
 
+    const roleStatus = status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
+
     const permissionBigInts: bigint[] = Array.isArray(permission_ids)
       ? permission_ids.map((id: string | number) => BigInt(id))
       : [];
 
     // Create role and attach role_permissions in a single transaction
     const newRole = await prisma.$transaction(async (tx) => {
-      const createdRole = await tx.roles.create({
-        data: {
-          role_name: normalizedRoleName,
-          description: description?.trim() || null,
-        },
-      });
+      const rows = await tx.$queryRawUnsafe<
+        {
+          role_id: bigint;
+          role_name: string;
+          description: string | null;
+          status: string;
+        }[]
+      >(
+        "INSERT INTO roles (role_name, description, status) VALUES ($1, $2, $3) RETURNING role_id, role_name, description, status",
+        normalizedRoleName,
+        description?.trim() || null,
+        roleStatus,
+      );
+      const createdRole = rows[0];
 
       if (permissionBigInts.length > 0) {
         await tx.role_permissions.createMany({
@@ -126,6 +137,7 @@ export async function POST(request: Request) {
           new_value: {
             role_name: normalizedRoleName,
             description: description?.trim() || null,
+            status: roleStatus,
             assigned_permissions: permission_ids,
             created_by: user.email,
           },
@@ -144,6 +156,7 @@ export async function POST(request: Request) {
         role_id: newRole.role_id.toString(),
         role_name: newRole.role_name,
         description: newRole.description,
+        status: newRole.status,
       },
     });
   } catch (error) {
@@ -162,7 +175,7 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { role_id, description, permission_ids } = body;
+    const { role_id, description, permission_ids, status } = body;
 
     if (!role_id) {
       return NextResponse.json(
@@ -184,20 +197,46 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Security check: Never allow deactivating the ADMIN system role
+    if (existingRole.role_name === "ADMIN" && status === "INACTIVE") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "The System Administrator (ADMIN) role cannot be deactivated.",
+        },
+        { status: 400 },
+      );
+    }
+
     const permissionBigInts: bigint[] = Array.isArray(permission_ids)
       ? permission_ids.map((id: string | number) => BigInt(id))
       : [];
 
+    const targetStatus =
+      status === "ACTIVE" || status === "INACTIVE"
+        ? status
+        : existingRole.status;
+
+    const newDesc =
+      description !== undefined
+        ? description?.trim() || null
+        : existingRole.description;
+
     const updated = await prisma.$transaction(async (tx) => {
-      const roleUpdate = await tx.roles.update({
-        where: { role_id: roleIdBigInt },
-        data: {
-          description:
-            description !== undefined
-              ? description?.trim() || null
-              : existingRole.description,
-        },
-      });
+      await tx.$executeRawUnsafe(
+        "UPDATE roles SET description = $1, status = $2 WHERE role_id = $3",
+        newDesc,
+        targetStatus,
+        roleIdBigInt,
+      );
+
+      const roleUpdate = {
+        role_id: existingRole.role_id,
+        role_name: existingRole.role_name,
+        description: newDesc,
+        status: targetStatus,
+      };
 
       if (Array.isArray(permission_ids)) {
         await tx.role_permissions.deleteMany({
@@ -223,11 +262,13 @@ export async function PATCH(request: Request) {
           old_value: {
             role_name: existingRole.role_name,
             description: existingRole.description,
+            status: existingRole.status,
             permissions_count: existingRole.role_permissions.length,
           },
           new_value: {
             role_name: roleUpdate.role_name,
             description: roleUpdate.description,
+            status: roleUpdate.status,
             assigned_permissions: permission_ids,
             updated_by: user.email,
           },
@@ -246,12 +287,17 @@ export async function PATCH(request: Request) {
         role_id: updated.role_id.toString(),
         role_name: updated.role_name,
         description: updated.description,
+        status: updated.status,
       },
     });
   } catch (error) {
     console.error("Failed to update role:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to update role." },
+      {
+        success: false,
+        message: "Failed to update role.",
+        error: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }

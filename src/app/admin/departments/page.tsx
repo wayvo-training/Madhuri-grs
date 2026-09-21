@@ -10,22 +10,24 @@ export default async function AdminDepartmentsPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const [totalGrievances, departments] = await Promise.all([
-    prisma.grievances.count(),
-    prisma.departments.findMany({
-      where: { status: "ACTIVE" },
-      select: {
-        department_id: true,
-        department_name: true,
-        description: true,
-        status: true,
-        _count: {
-          select: { grievance_departments: true, users: true },
+  const [totalGrievances, departments, activeCount, inactiveCount] =
+    await Promise.all([
+      prisma.grievances.count(),
+      prisma.departments.findMany({
+        select: {
+          department_id: true,
+          department_name: true,
+          description: true,
+          status: true,
+          _count: {
+            select: { grievance_departments: true, users: true },
+          },
         },
-      },
-      orderBy: { department_name: "asc" },
-    }),
-  ]);
+        orderBy: { department_name: "asc" },
+      }),
+      prisma.departments.count({ where: { status: "ACTIVE" } }),
+      prisma.departments.count({ where: { status: "INACTIVE" } }),
+    ]);
 
   const serializedDepartments: SerializedDepartment[] = departments.map(
     (d) => ({
@@ -51,6 +53,12 @@ export default async function AdminDepartmentsPage() {
         <AdminDepartments
           initialDepartments={serializedDepartments}
           totalGrievances={totalGrievances}
+          stats={{
+            total: departments.length,
+            active: activeCount,
+            inactive: inactiveCount,
+            totalGrievances,
+          }}
         />
       </div>
     </DashboardShell>

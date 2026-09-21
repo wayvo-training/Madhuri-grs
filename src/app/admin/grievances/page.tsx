@@ -10,9 +10,14 @@ export default async function AdminGrievancesPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const [rawGrievances, departments] = await Promise.all([
+  const [
+    rawGrievances,
+    departments,
+    totalGrievancesCount,
+    [allCount, exceptionCount, activeCount, slaRiskCount, closedCount],
+  ] = await Promise.all([
     prisma.grievances.findMany({
-      take: 100,
+      take: 10,
       orderBy: { created_at: "desc" },
       include: {
         categories: true,
@@ -43,6 +48,38 @@ export default async function AdminGrievancesPage() {
       },
       orderBy: { department_name: "asc" },
     }),
+    prisma.grievances.count(),
+    Promise.all([
+      prisma.grievances.count(),
+      prisma.grievances.count({
+        where: {
+          OR: [
+            { status: "SUBMITTED" },
+            { grievance_departments: { is: null } },
+          ],
+        },
+      }),
+      prisma.grievances.count({
+        where: {
+          status: {
+            in: [
+              "ROUTED",
+              "ASSIGNED",
+              "IN_PROGRESS",
+              "UNDER_REVIEW",
+              "REOPENED",
+              "REOPEN_REVIEW",
+            ],
+          },
+        },
+      }),
+      prisma.grievances.count({
+        where: { sla_status: { in: ["AT_RISK", "BREACHED"] } },
+      }),
+      prisma.grievances.count({
+        where: { status: "CLOSED" },
+      }),
+    ]),
   ]);
 
   const serializedGrievances: SerializedGrievance[] = rawGrievances.map(
@@ -85,6 +122,14 @@ export default async function AdminGrievancesPage() {
     >
       <AdminGrievanceTable
         initialGrievances={serializedGrievances}
+        initialTotalCount={totalGrievancesCount}
+        initialCounts={{
+          all: allCount,
+          exceptions: exceptionCount,
+          active: activeCount,
+          slaRisk: slaRiskCount,
+          closed: closedCount,
+        }}
         departments={serializedDepartments}
       />
     </DashboardShell>
