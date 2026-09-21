@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { CACHE_TAGS, serverCache } from "@/lib/cache";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -134,6 +135,8 @@ export async function POST(request: Request) {
       return createdRole;
     });
 
+    serverCache.invalidateTags([CACHE_TAGS.ROLES]);
+
     return NextResponse.json({
       success: true,
       message: `Role '${normalizedRoleName}' created successfully.`,
@@ -147,6 +150,108 @@ export async function POST(request: Request) {
     console.error("Failed to create role:", error);
     return NextResponse.json(
       { success: false, message: "Internal error creating role." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = await authorizeApi({ role: "ADMIN" });
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
+  try {
+    const body = await request.json();
+    const { role_id, description, permission_ids } = body;
+
+    if (!role_id) {
+      return NextResponse.json(
+        { success: false, message: "role_id is required." },
+        { status: 400 },
+      );
+    }
+
+    const roleIdBigInt = BigInt(role_id);
+    const existingRole = await prisma.roles.findUnique({
+      where: { role_id: roleIdBigInt },
+      include: { role_permissions: true },
+    });
+
+    if (!existingRole) {
+      return NextResponse.json(
+        { success: false, message: "Role not found." },
+        { status: 404 },
+      );
+    }
+
+    const permissionBigInts: bigint[] = Array.isArray(permission_ids)
+      ? permission_ids.map((id: string | number) => BigInt(id))
+      : [];
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const roleUpdate = await tx.roles.update({
+        where: { role_id: roleIdBigInt },
+        data: {
+          description:
+            description !== undefined
+              ? description?.trim() || null
+              : existingRole.description,
+        },
+      });
+
+      if (Array.isArray(permission_ids)) {
+        await tx.role_permissions.deleteMany({
+          where: { role_id: roleIdBigInt },
+        });
+
+        if (permissionBigInts.length > 0) {
+          await tx.role_permissions.createMany({
+            data: permissionBigInts.map((pid) => ({
+              role_id: roleIdBigInt,
+              permission_id: pid,
+            })),
+          });
+        }
+      }
+
+      await tx.audit_logs.create({
+        data: {
+          user_id: user.user_id,
+          action: "UPDATE_ROLE",
+          entity_type: "ROLE",
+          entity_id: roleIdBigInt,
+          old_value: {
+            role_name: existingRole.role_name,
+            description: existingRole.description,
+            permissions_count: existingRole.role_permissions.length,
+          },
+          new_value: {
+            role_name: roleUpdate.role_name,
+            description: roleUpdate.description,
+            assigned_permissions: permission_ids,
+            updated_by: user.email,
+          },
+        },
+      });
+
+      return roleUpdate;
+    });
+
+    serverCache.invalidateTags([CACHE_TAGS.ROLES]);
+
+    return NextResponse.json({
+      success: true,
+      message: `Role '${updated.role_name}' updated successfully.`,
+      role: {
+        role_id: updated.role_id.toString(),
+        role_name: updated.role_name,
+        description: updated.description,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update role:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to update role." },
       { status: 500 },
     );
   }

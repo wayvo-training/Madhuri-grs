@@ -181,13 +181,16 @@ export async function DELETE(request: Request) {
       success: true,
       message: "Reopen policy deleted successfully.",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete reopen policy:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error deleting reopen policy.";
     return NextResponse.json(
       {
         success: false,
-        message:
-          error.message || "Internal server error deleting reopen policy.",
+        message,
       },
       { status: 500 },
     );

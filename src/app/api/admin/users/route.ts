@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { CACHE_TAGS, serverCache } from "@/lib/cache";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -158,6 +159,8 @@ export async function POST(request: Request) {
       return created;
     });
 
+    serverCache.invalidateTags([CACHE_TAGS.USERS]);
+
     return NextResponse.json({
       success: true,
       message: `User ${newUser.first_name} (${newUser.employee_code}) created successfully.`,
@@ -177,6 +180,152 @@ export async function POST(request: Request) {
     console.error("Failed to create user:", error);
     return NextResponse.json(
       { success: false, message: "Internal server error creating user." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  const auth = await authorizeApi({ role: "ADMIN" });
+  if ("error" in auth) return auth.error;
+  const { user } = auth;
+
+  try {
+    const body = await request.json();
+    const {
+      user_id,
+      first_name,
+      last_name,
+      email,
+      role_id,
+      department_id,
+      status,
+    } = body;
+
+    if (!user_id) {
+      return NextResponse.json(
+        { success: false, message: "user_id is required for update." },
+        { status: 400 },
+      );
+    }
+
+    const userIdBigInt = BigInt(user_id);
+    const existing = await prisma.users.findUnique({
+      where: { user_id: userIdBigInt },
+      include: { roles: true, departments: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, message: "User not found." },
+        { status: 404 },
+      );
+    }
+
+    const updateData: {
+      first_name?: string;
+      last_name?: string | null;
+      email?: string;
+      status?: string;
+      role_id?: bigint;
+      department_id?: bigint | null;
+    } = {};
+
+    if (first_name !== undefined) updateData.first_name = first_name.trim();
+    if (last_name !== undefined)
+      updateData.last_name = last_name?.trim() || null;
+    if (email !== undefined) updateData.email = email.trim().toLowerCase();
+    if (status !== undefined) updateData.status = status;
+
+    if (role_id !== undefined) {
+      const rId = BigInt(role_id);
+      const roleExists = await prisma.roles.findUnique({
+        where: { role_id: rId },
+      });
+      if (!roleExists) {
+        return NextResponse.json(
+          { success: false, message: "Role does not exist." },
+          { status: 404 },
+        );
+      }
+      updateData.role_id = rId;
+    }
+
+    if (department_id !== undefined) {
+      if (department_id === null || department_id === "") {
+        updateData.department_id = null;
+      } else {
+        const dId = BigInt(department_id);
+        const deptExists = await prisma.departments.findUnique({
+          where: { department_id: dId },
+        });
+        if (!deptExists) {
+          return NextResponse.json(
+            { success: false, message: "Department does not exist." },
+            { status: 404 },
+          );
+        }
+        updateData.department_id = dId;
+      }
+    }
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const result = await tx.users.update({
+        where: { user_id: userIdBigInt },
+        data: updateData,
+        include: { roles: true, departments: true },
+      });
+
+      await tx.audit_logs.create({
+        data: {
+          user_id: user.user_id,
+          action:
+            status !== undefined && status !== existing.status
+              ? "TOGGLE_USER_STATUS"
+              : "UPDATE_USER",
+          entity_type: "USER",
+          entity_id: result.user_id,
+          old_value: {
+            name: `${existing.first_name} ${existing.last_name || ""}`.trim(),
+            email: existing.email,
+            role: existing.roles.role_name,
+            department: existing.departments?.department_name || null,
+            status: existing.status,
+          },
+          new_value: {
+            name: `${result.first_name} ${result.last_name || ""}`.trim(),
+            email: result.email,
+            role: result.roles.role_name,
+            department: result.departments?.department_name || null,
+            status: result.status,
+          },
+        },
+      });
+
+      return result;
+    });
+
+    serverCache.invalidateTags([CACHE_TAGS.USERS]);
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${updatedUser.first_name} updated successfully.`,
+      user: {
+        user_id: updatedUser.user_id.toString(),
+        employee_code: updatedUser.employee_code,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        role_name: updatedUser.roles.role_name,
+        department_name: updatedUser.departments?.department_name || null,
+        status: updatedUser.status,
+        created_at: updatedUser.created_at.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update user:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to update user." },
       { status: 500 },
     );
   }

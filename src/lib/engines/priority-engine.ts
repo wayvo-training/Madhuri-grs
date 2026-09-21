@@ -17,7 +17,6 @@ export interface PriorityCalculationResult {
 }
 
 /**
- * Priority Engine (Step 8 of GRS Specification)
  * Evaluates active priority rules ordered by rule_order ascending (top-to-bottom, first match wins).
  * Matches by Category + Subcategory, then falls back to the configured System Default (MEDIUM).
  */

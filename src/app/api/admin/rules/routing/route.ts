@@ -195,13 +195,16 @@ export async function DELETE(request: Request) {
       success: true,
       message: "Routing rule deleted successfully.",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete routing rule:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error deleting routing rule.";
     return NextResponse.json(
       {
         success: false,
-        message:
-          error.message || "Internal server error deleting routing rule.",
+        message,
       },
       { status: 500 },
     );

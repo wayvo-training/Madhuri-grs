@@ -8,14 +8,13 @@ export interface RoutingCalculationInput {
 export interface RoutingCalculationResult {
   departmentId: bigint;
   involvementType: string;
+  supportingDepartments: string[];
   routingRuleId: bigint;
   matchedRuleName: string;
   matchType: "EXACT_SUBCATEGORY" | "CATEGORY_FALLBACK";
 }
 
 /**
- * Routing Engine (Steps 9, 10 & 11 of GRS Specification)
- * Matches grievance category & subcategory against active routing rules ordered by rule_order.
  * 1. Exact match: Category + Subcategory
  * 2. Category Fallback: Category only (subcategory is null)
  * 3. No match: Returns null -> Grievance is routed to Manual Routing Queue (Admin Exception Workflow)
@@ -41,9 +40,14 @@ export async function determineDepartmentRouting(
     );
 
     if (exactMatch) {
+      const supporting = Array.isArray(exactMatch.supporting_departments)
+        ? (exactMatch.supporting_departments as string[])
+        : [];
+
       return {
         departmentId: exactMatch.department_id,
         involvementType: exactMatch.involvement_type,
+        supportingDepartments: supporting,
         routingRuleId: exactMatch.routing_rule_id,
         matchedRuleName: exactMatch.rule_name,
         matchType: "EXACT_SUBCATEGORY",
@@ -57,9 +61,14 @@ export async function determineDepartmentRouting(
   );
 
   if (categoryMatch) {
+    const supporting = Array.isArray(categoryMatch.supporting_departments)
+      ? (categoryMatch.supporting_departments as string[])
+      : [];
+
     return {
       departmentId: categoryMatch.department_id,
       involvementType: categoryMatch.involvement_type,
+      supportingDepartments: supporting,
       routingRuleId: categoryMatch.routing_rule_id,
       matchedRuleName: categoryMatch.rule_name,
       matchType: "CATEGORY_FALLBACK",

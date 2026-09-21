@@ -1,9 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { getClientRequestMeta, logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
+  const { ip, userAgent } = await getClientRequestMeta();
+
   try {
+    const user = await getCurrentUser();
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session_token")?.value;
 
@@ -13,6 +18,15 @@ export async function POST() {
           where: { session_token: sessionToken },
         })
         .catch(() => {});
+    }
+
+    if (user) {
+      await logger.logSession({
+        action: "LOGOUT",
+        user,
+        ip,
+        userAgent,
+      });
     }
 
     const response = NextResponse.json({

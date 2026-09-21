@@ -197,12 +197,16 @@ export async function DELETE(request: Request) {
       success: true,
       message: "Priority rule deleted successfully.",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete priority rule:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error deleting rule.";
     return NextResponse.json(
       {
         success: false,
-        message: error.message || "Internal server error deleting rule.",
+        message,
       },
       { status: 500 },
     );

@@ -79,6 +79,9 @@ export default async function AdminRulesPage() {
       subcategory_name: r.subcategories?.subcategory_name || null,
       department_name: r.departments.department_name,
       involvement_type: r.involvement_type,
+      supporting_departments: Array.isArray(r.supporting_departments)
+        ? (r.supporting_departments as string[])
+        : [],
       rule_order: r.rule_order,
       status: r.status,
       conditions: r.conditions,

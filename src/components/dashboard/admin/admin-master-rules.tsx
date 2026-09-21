@@ -37,6 +37,7 @@ export interface SerializedRoutingRule {
   subcategory_name: string | null;
   department_name: string;
   involvement_type: string;
+  supporting_departments?: string[];
   rule_order: number;
   status: string;
   conditions: unknown;
@@ -861,10 +862,28 @@ export function AdminMasterRules({
                           )}
                         </td>
                         <td className="px-3 py-3.5">
-                          <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-800">
-                            <Building2 className="h-3 w-3 text-blue-600" />
-                            {rule.department_name}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-800 w-fit">
+                              <Building2 className="h-3 w-3 text-blue-600" />
+                              {rule.department_name}
+                            </span>
+                            {rule.supporting_departments &&
+                              rule.supporting_departments.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    Support:
+                                  </span>
+                                  {rule.supporting_departments.map((sd) => (
+                                    <span
+                                      key={sd}
+                                      className="rounded bg-sky-50 px-1.5 py-0.2 text-[10px] font-medium text-sky-700 border border-sky-200/60"
+                                    >
+                                      {sd}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                          </div>
                         </td>
                         <td className="px-3 py-3.5">
                           <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">

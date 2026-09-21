@@ -17,6 +17,9 @@ importers:
       '@prisma/client':
         specifier: ^7.10.0
         version: 7.10.0(prisma@7.10.0(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(magicast@0.5.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@5.9.3))(typescript@5.9.3)
+      '@tanstack/react-query':
+        specifier: ^5.103.1
+        version: 5.103.1(react@19.2.8)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -849,6 +852,14 @@ packages:
 
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
+
+  '@tanstack/query-core@5.103.1':
+    resolution: {integrity: sha512-rms8HqTGp6zA00dM+cUQ2eBcgzNJefuu5CAMB37i/6MiGT1zulPOytCFu2a0qjLqVR2n1jENPj9woqFQNuCzWA==}
+
+  '@tanstack/react-query@5.103.1':
+    resolution: {integrity: sha512-rmAPPApNEK17VXRJhtE1rja53n23VV5w30C0saCgJhhX+EpdUnVqMGV/s5nnzV43X75KTHKzuoiuxSzGTBIkag==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
@@ -3289,6 +3300,13 @@ snapshots:
       '@tailwindcss/oxide': 4.3.3
       postcss: 8.5.28
       tailwindcss: 4.3.3
+
+  '@tanstack/query-core@5.103.1': {}
+
+  '@tanstack/react-query@5.103.1(react@19.2.8)':
+    dependencies:
+      '@tanstack/query-core': 5.103.1
+      react: 19.2.8
 
   '@ts-morph/common@0.27.0':
     dependencies:

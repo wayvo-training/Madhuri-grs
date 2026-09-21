@@ -2,12 +2,13 @@
 
 import {
   Building2,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Loader2,
   Mail,
+  Pencil,
   Plus,
+  Power,
   Search,
   UserCheck,
   Users,
@@ -23,7 +24,9 @@ export interface SerializedUser {
   last_name: string | null;
   email: string;
   role_name: string;
+  role_id?: string;
   department_name: string | null;
+  department_id?: string | null;
   status: string;
   created_at: string;
 }
@@ -59,7 +62,7 @@ export function AdminUserDirectory({
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [selectedDept, setSelectedDept] = useState<string>("ALL");
 
-  // Modal State
+  // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
@@ -67,7 +70,7 @@ export function AdminUserDirectory({
     text: string;
   } | null>(null);
 
-  // Form State
+  // Create Form State
   const [empCode, setEmpCode] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -75,6 +78,21 @@ export function AdminUserDirectory({
   const [password, setPassword] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [selectedDeptId, setSelectedDeptId] = useState("");
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRoleId, setEditRoleId] = useState("");
+  const [editDeptId, setEditDeptId] = useState("");
+  const [editStatus, setEditStatus] = useState("ACTIVE");
+  const [editFeedback, setEditFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   const filteredUsers = useMemo(() => {
     return usersList.filter((u) => {
@@ -178,6 +196,107 @@ export function AdminUserDirectory({
     }
   }
 
+  function openEditModal(u: SerializedUser) {
+    setEditingUserId(u.user_id);
+    setEditFirstName(u.first_name);
+    setEditLastName(u.last_name || "");
+    setEditEmail(u.email);
+    setEditStatus(u.status);
+
+    // Find role id
+    const foundRole = roles.find((r) => r.role_name === u.role_name);
+    setEditRoleId(foundRole?.role_id || "");
+
+    // Find dept id
+    const foundDept = departments.find(
+      (d) => d.department_name === u.department_name,
+    );
+    setEditDeptId(foundDept?.department_id || "");
+
+    setEditFeedback(null);
+    setIsEditModalOpen(true);
+  }
+
+  async function handleSaveEditUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUserId || !editFirstName || !editEmail) return;
+
+    try {
+      setIsEditSubmitting(true);
+      setEditFeedback(null);
+
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: editingUserId,
+          first_name: editFirstName,
+          last_name: editLastName,
+          email: editEmail,
+          role_id: editRoleId || undefined,
+          department_id: editDeptId || null,
+          status: editStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setEditFeedback({
+          type: "error",
+          text: data.message || "Failed to update user.",
+        });
+        setIsEditSubmitting(false);
+        return;
+      }
+
+      setUsersList((prev) =>
+        prev.map((u) => (u.user_id === editingUserId ? data.user : u)),
+      );
+
+      setEditFeedback({
+        type: "success",
+        text: "User profile updated successfully.",
+      });
+
+      setTimeout(() => {
+        setIsEditModalOpen(false);
+        setEditingUserId(null);
+        setEditFeedback(null);
+        router.refresh();
+      }, 1000);
+    } catch (err) {
+      console.error("Failed to update user:", err);
+      setEditFeedback({
+        type: "error",
+        text: "An unexpected error occurred while updating user.",
+      });
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  }
+
+  async function handleToggleStatus(u: SerializedUser) {
+    const nextStatus = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: u.user_id,
+          status: nextStatus,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUsersList((prev) =>
+          prev.map((usr) => (usr.user_id === u.user_id ? data.user : usr)),
+        );
+      }
+    } catch (err) {
+      console.error("Failed to toggle status:", err);
+    }
+  }
+
   return (
     <div
       id="users"
@@ -196,8 +315,8 @@ export function AdminUserDirectory({
               </h2>
             </div>
             <p className="mt-0.5 text-xs text-slate-500">
-              Directory of {usersList.length} authenticated enterprise users and
-              role assignments.
+              Directory of {usersList.length} authenticated enterprise users,
+              roles, and status controls.
             </p>
           </div>
 
@@ -266,14 +385,15 @@ export function AdminUserDirectory({
               <th className="px-3 py-3.5">Assigned Role</th>
               <th className="px-3 py-3.5">Department</th>
               <th className="px-3 py-3.5">Status</th>
-              <th className="py-3.5 pl-3 pr-6 text-right">Registered</th>
+              <th className="px-3 py-3.5">Registered</th>
+              <th className="py-3.5 pl-3 pr-6 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
             {filteredUsers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="py-10 text-center text-slate-400 font-normal"
                 >
                   No users match the search criteria.
@@ -343,22 +463,61 @@ export function AdminUserDirectory({
                         className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
                           u.status === "ACTIVE"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-slate-100 text-slate-600"
+                            : "bg-rose-50 text-rose-700 border border-rose-200"
                         }`}
                       >
                         <span
-                          className={`h-1.5 w-1.5 rounded-full ${u.status === "ACTIVE" ? "bg-emerald-500" : "bg-slate-400"}`}
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            u.status === "ACTIVE"
+                              ? "bg-emerald-500"
+                              : "bg-rose-500"
+                          }`}
                         />
                         {u.status}
                       </span>
                     </td>
 
-                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right font-mono text-[11px] text-slate-400">
+                    <td className="whitespace-nowrap px-3 py-3.5 font-mono text-[11px] text-slate-400">
                       {new Date(u.created_at).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       })}
+                    </td>
+
+                    {/* Quick Action Buttons */}
+                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(u)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition"
+                          title="Edit User"
+                        >
+                          <Pencil className="h-3 w-3 text-blue-600" />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(u)}
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
+                            u.status === "ACTIVE"
+                              ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          }`}
+                          title={
+                            u.status === "ACTIVE"
+                              ? "Deactivate User"
+                              : "Activate User"
+                          }
+                        >
+                          <Power className="h-3 w-3" />
+                          <span>
+                            {u.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                          </span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -530,13 +689,13 @@ export function AdminUserDirectory({
                   htmlFor="new-user-password"
                   className="block text-xs font-semibold text-slate-700"
                 >
-                  Initial Password <span className="text-rose-500">*</span>
+                  Temporary Password <span className="text-rose-500">*</span>
                 </label>
                 <input
                   id="new-user-password"
                   type="password"
                   required
-                  placeholder="Min. 8 characters"
+                  placeholder="Min 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
@@ -556,9 +715,9 @@ export function AdminUserDirectory({
                     required
                     value={selectedRoleId}
                     onChange={(e) => setSelectedRoleId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
                   >
-                    <option value="">Select Role...</option>
+                    <option value="">Select a role...</option>
                     {roles.map((r) => (
                       <option key={r.role_id} value={r.role_id}>
                         {roleLabels[r.role_name] || r.role_name}
@@ -569,18 +728,18 @@ export function AdminUserDirectory({
 
                 <div>
                   <label
-                    htmlFor="new-user-dept"
+                    htmlFor="new-user-department"
                     className="block text-xs font-semibold text-slate-700"
                   >
-                    Department Assignment
+                    Department
                   </label>
                   <select
-                    id="new-user-dept"
+                    id="new-user-department"
                     value={selectedDeptId}
                     onChange={(e) => setSelectedDeptId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
                   >
-                    <option value="">Organization-wide / None</option>
+                    <option value="">None (Organization-wide)</option>
                     {departments.map((d) => (
                       <option key={d.department_id} value={d.department_id}>
                         {d.department_name}
@@ -590,30 +749,201 @@ export function AdminUserDirectory({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <div className="mt-5 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Onboarding...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Onboard User</span>
-                    </>
+                  {isSubmitting && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   )}
+                  <span>Create Account</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Existing User */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                  <Pencil className="h-4 w-4" />
+                </div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Edit User Account
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditFeedback(null);
+                }}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {editFeedback && (
+              <div
+                className={`mt-4 rounded-xl border p-3 text-xs ${
+                  editFeedback.type === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-rose-200 bg-rose-50 text-rose-800"
+                }`}
+              >
+                {editFeedback.text}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEditUser} className="mt-4 space-y-3.5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="edit-user-firstname"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    First Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="edit-user-firstname"
+                    type="text"
+                    required
+                    value={editFirstName}
+                    onChange={(e) => setEditFirstName(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="edit-user-lastname"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Last Name
+                  </label>
+                  <input
+                    id="edit-user-lastname"
+                    type="text"
+                    value={editLastName}
+                    onChange={(e) => setEditLastName(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-user-email"
+                  className="block text-xs font-semibold text-slate-700"
+                >
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="edit-user-email"
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="edit-user-role"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Assigned Role
+                  </label>
+                  <select
+                    id="edit-user-role"
+                    value={editRoleId}
+                    onChange={(e) => setEditRoleId(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
+                  >
+                    <option value="">Select a role...</option>
+                    {roles.map((r) => (
+                      <option key={r.role_id} value={r.role_id}>
+                        {roleLabels[r.role_name] || r.role_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="edit-user-department"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Department
+                  </label>
+                  <select
+                    id="edit-user-department"
+                    value={editDeptId}
+                    onChange={(e) => setEditDeptId(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
+                  >
+                    <option value="">None (Organization-wide)</option>
+                    {departments.map((d) => (
+                      <option key={d.department_id} value={d.department_id}>
+                        {d.department_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-user-status"
+                  className="block text-xs font-semibold text-slate-700"
+                >
+                  Account Status
+                </label>
+                <select
+                  id="edit-user-status"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
+                >
+                  <option value="ACTIVE">ACTIVE (Full access)</option>
+                  <option value="INACTIVE">INACTIVE (Access blocked)</option>
+                </select>
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEditSubmitting}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isEditSubmitting && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  )}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>

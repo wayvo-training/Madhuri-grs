@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { department_name, description } = body;
 
-    if (!department_name || !department_name.trim()) {
+    if (!department_name?.trim()) {
       return NextResponse.json(
         { success: false, message: "Department name is required." },
         { status: 400 },

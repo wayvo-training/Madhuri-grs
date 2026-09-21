@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { getClientRequestMeta, logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
+  const { ip, userAgent } = await getClientRequestMeta();
+
   try {
     const { email, password } = await request.json();
 
@@ -27,6 +30,14 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
+      await logger.logSession({
+        action: "LOGIN_FAILED",
+        emailAttempted: email,
+        reason: "User email not found",
+        ip,
+        userAgent,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -37,6 +48,15 @@ export async function POST(request: Request) {
     }
 
     if (user.status !== "ACTIVE") {
+      await logger.logSession({
+        action: "LOGIN_FAILED",
+        user,
+        emailAttempted: email,
+        reason: "Account is inactive",
+        ip,
+        userAgent,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -49,6 +69,15 @@ export async function POST(request: Request) {
     const passwordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordValid) {
+      await logger.logSession({
+        action: "LOGIN_FAILED",
+        user,
+        emailAttempted: email,
+        reason: "Invalid password",
+        ip,
+        userAgent,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -71,6 +100,14 @@ export async function POST(request: Request) {
         session_token: sessionToken,
         expires_at: expiresAt,
       },
+    });
+
+    // Log successful session
+    await logger.logSession({
+      action: "LOGIN_SUCCESS",
+      user,
+      ip,
+      userAgent,
     });
 
     const response = NextResponse.json({
