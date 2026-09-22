@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -49,7 +50,7 @@ interface AdminUserDirectoryProps {
 
 const rolePills: Record<string, string> = {
   ADMIN: "bg-purple-50 text-purple-700 border-purple-200",
-  DEPARTMENT_HEAD: "bg-blue-50 text-blue-700 border-blue-200",
+  DEPARTMENT_HEAD: "bg-sky-50 text-sky-700 border-sky-200",
   STAFF: "bg-amber-50 text-amber-700 border-amber-200",
   END_USER: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
@@ -335,7 +336,7 @@ export function AdminUserDirectory({
             <span className="text-xs font-semibold text-slate-500">
               Total Enrolled Users
             </span>
-            <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
+            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-800">
               <Users className="h-4 w-4" />
             </div>
           </div>
@@ -347,8 +348,8 @@ export function AdminUserDirectory({
               Registered
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-blue-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-800 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
             Active enterprise directory
           </div>
         </div>
@@ -364,45 +365,25 @@ export function AdminUserDirectory({
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-emerald-600">
-              {stats?.active ?? "-"}
+              {stats?.active ??
+                usersList.filter(
+                  (u: SerializedUser) => (u.status || "ACTIVE") === "ACTIVE",
+                ).length}
             </span>
             <span className="text-[11px] font-medium text-slate-400">
-              Operational
+              Can authenticate
             </span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Full platform access
+            Access permitted
           </div>
         </div>
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
-              Officers & Admins
-            </span>
-            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-purple-700">
-              {stats?.admins ?? "-"}
-            </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              Elevated roles
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-purple-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500" />
-            Governance & Dept Heads
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Inactive / Suspended
+              Suspended Accounts
             </span>
             <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
               <UserX className="h-4 w-4" />
@@ -410,29 +391,61 @@ export function AdminUserDirectory({
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-black tracking-tight text-rose-600">
-              {stats?.inactive ?? "-"}
+              {stats?.inactive ??
+                usersList.filter((u: SerializedUser) => u.status === "INACTIVE")
+                  .length}
             </span>
             <span className="text-[11px] font-medium text-slate-400">
-              Blocked
+              Locked
             </span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
-            Credentials suspended
+            Revoked access
+          </div>
+        </div>
+
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Department Heads & Staff
+            </span>
+            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-black tracking-tight text-purple-700">
+              {stats?.admins ??
+                usersList.filter(
+                  (u: SerializedUser) =>
+                    u.role_name === "ADMIN" ||
+                    u.role_name === "DEPARTMENT_HEAD" ||
+                    u.role_name === "STAFF",
+                ).length}
+            </span>
+            <span className="text-[11px] font-medium text-slate-400">
+              Operational
+            </span>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-purple-600 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500" />
+            Resolution staff
           </div>
         </div>
       </div>
 
+      {/* Main Table Container */}
       <div
-        id="users"
-        className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
+        id="user-table"
+        className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs"
       >
         {/* Header & Controls */}
         <div className="border-b border-slate-100 p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
                   <Users className="h-4 w-4" />
                 </span>
                 <h2 className="text-base font-bold tracking-tight text-slate-900">
@@ -459,7 +472,7 @@ export function AdminUserDirectory({
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-blue-600 focus:bg-white"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
                 />
               </div>
 
@@ -470,7 +483,7 @@ export function AdminUserDirectory({
                   setSelectedRole(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white"
+                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
               >
                 <option value="ALL">All Roles</option>
                 <option value="ADMIN">Administrator</option>
@@ -486,7 +499,7 @@ export function AdminUserDirectory({
                   setSelectedDept(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white"
+                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
               >
                 <option value="ALL">All Departments</option>
                 {departments.map((d) => (
@@ -500,7 +513,7 @@ export function AdminUserDirectory({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add User</span>
@@ -566,7 +579,7 @@ export function AdminUserDirectory({
                 <tr>
                   <td colSpan={7} className="py-14 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-8 ring-blue-50/50">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-8 ring-emerald-50/50">
                         <Users className="h-6 w-6" />
                       </div>
                       <h3 className="mt-4 text-sm font-bold text-slate-900">
@@ -613,7 +626,7 @@ export function AdminUserDirectory({
                     >
                       <td className="whitespace-nowrap py-3.5 pl-6 pr-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-xs font-bold text-[#064E3B]">
                             {initials}
                           </div>
                           <div>
@@ -691,10 +704,10 @@ export function AdminUserDirectory({
                           <button
                             type="button"
                             onClick={() => openEditModal(u)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-800 transition"
                             title="Edit User"
                           >
-                            <Pencil className="h-3 w-3 text-blue-600" />
+                            <Pencil className="h-3 w-3 text-emerald-800" />
                             <span>Edit</span>
                           </button>
 
@@ -775,7 +788,7 @@ export function AdminUserDirectory({
             <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                  <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
                     <UserCheck className="h-4 w-4" />
                   </div>
                   <h3 className="text-base font-bold text-slate-900">
@@ -822,7 +835,7 @@ export function AdminUserDirectory({
                       placeholder="e.g. EMP-1055"
                       value={empCode}
                       onChange={(e) => setEmpCode(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 uppercase outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 uppercase outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
 
@@ -840,7 +853,7 @@ export function AdminUserDirectory({
                       placeholder="user@enterprise.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
                 </div>
@@ -857,10 +870,10 @@ export function AdminUserDirectory({
                       id="new-user-firstname"
                       type="text"
                       required
-                      placeholder="First name"
+                      placeholder="e.g. Jane"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
 
@@ -874,70 +887,48 @@ export function AdminUserDirectory({
                     <input
                       id="new-user-lastname"
                       type="text"
-                      placeholder="Last name"
+                      placeholder="e.g. Doe"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="new-user-password"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Temporary Password <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="new-user-password"
-                    type="password"
-                    required
-                    placeholder="Min 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
-                  />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label
-                      htmlFor="new-user-role"
+                      htmlFor="new-user-password"
                       className="block text-xs font-semibold text-slate-700"
                     >
-                      Role Assignment <span className="text-rose-500">*</span>
+                      Temporary Password{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      id="new-user-role"
+                    <input
+                      id="new-user-password"
+                      type="password"
                       required
-                      value={selectedRoleId}
-                      onChange={(e) => setSelectedRoleId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
-                    >
-                      <option value="">Select a role...</option>
-                      {roles.map((r) => (
-                        <option key={r.role_id} value={r.role_id}>
-                          {roleLabels[r.role_name] || r.role_name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Min. 8 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
+                    />
                   </div>
 
                   <div>
                     <label
-                      htmlFor="new-user-department"
+                      htmlFor="new-user-dept"
                       className="block text-xs font-semibold text-slate-700"
                     >
-                      Department
+                      Assigned Department
                     </label>
                     <select
-                      id="new-user-department"
+                      id="new-user-dept"
                       value={selectedDeptId}
                       onChange={(e) => setSelectedDeptId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
                     >
-                      <option value="">None (Organization-wide)</option>
+                      <option value="">Select department (optional)...</option>
                       {departments.map((d) => (
                         <option key={d.department_id} value={d.department_id}>
                           {d.department_name}
@@ -947,23 +938,53 @@ export function AdminUserDirectory({
                   </div>
                 </div>
 
-                <div className="mt-5 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
+                <div>
+                  <label
+                    htmlFor="new-user-role"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Organizational Role <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="new-user-role"
+                    required
+                    value={selectedRoleId}
+                    onChange={(e) => setSelectedRoleId(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                  >
+                    <option value="">Select a role...</option>
+                    {roles.map((r) => (
+                      <option key={r.role_id} value={r.role_id}>
+                        {r.role_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50"
                   >
-                    {isSubmitting && (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Creating account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Create Account</span>
+                      </>
                     )}
-                    <span>Create Account</span>
                   </button>
                 </div>
               </form>
@@ -972,22 +993,26 @@ export function AdminUserDirectory({
         )}
 
         {/* Modal: Edit Existing User */}
-        {isEditModalOpen && (
+        {isEditModalOpen && editingUserId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
             <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                  <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
                     <Pencil className="h-4 w-4" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Edit User Account
-                  </h3>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Edit User Profile
+                    </h3>
+                    <p className="text-[11px] text-slate-500">{editEmail}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
                     setIsEditModalOpen(false);
+                    setEditingUserId(null);
                     setEditFeedback(null);
                   }}
                   className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
@@ -1023,7 +1048,7 @@ export function AdminUserDirectory({
                       required
                       value={editFirstName}
                       onChange={(e) => setEditFirstName(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
 
@@ -1039,7 +1064,7 @@ export function AdminUserDirectory({
                       type="text"
                       value={editLastName}
                       onChange={(e) => setEditLastName(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                     />
                   </div>
                 </div>
@@ -1057,47 +1082,25 @@ export function AdminUserDirectory({
                     required
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <label
-                      htmlFor="edit-user-role"
-                      className="block text-xs font-semibold text-slate-700"
-                    >
-                      Assigned Role
-                    </label>
-                    <select
-                      id="edit-user-role"
-                      value={editRoleId}
-                      onChange={(e) => setEditRoleId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
-                    >
-                      <option value="">Select a role...</option>
-                      {roles.map((r) => (
-                        <option key={r.role_id} value={r.role_id}>
-                          {roleLabels[r.role_name] || r.role_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="edit-user-department"
+                      htmlFor="edit-user-dept"
                       className="block text-xs font-semibold text-slate-700"
                     >
                       Department
                     </label>
                     <select
-                      id="edit-user-department"
+                      id="edit-user-dept"
                       value={editDeptId}
                       onChange={(e) => setEditDeptId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
                     >
-                      <option value="">None (Organization-wide)</option>
+                      <option value="">None / Unassigned</option>
                       {departments.map((d) => (
                         <option key={d.department_id} value={d.department_id}>
                           {d.department_name}
@@ -1105,43 +1108,80 @@ export function AdminUserDirectory({
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label
+                      htmlFor="edit-user-role"
+                      className="block text-xs font-semibold text-slate-700"
+                    >
+                      Role <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      id="edit-user-role"
+                      required
+                      value={editRoleId}
+                      onChange={(e) => setEditRoleId(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                    >
+                      <option value="">Select a role...</option>
+                      {roles.map((r) => (
+                        <option key={r.role_id} value={r.role_id}>
+                          {r.role_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="edit-user-status"
+                      className="block text-xs font-semibold text-slate-700"
+                    >
+                      Status <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      id="edit-user-status"
+                      required
+                      value={editStatus}
+                      onChange={(e) =>
+                        setEditStatus(e.target.value as "ACTIVE" | "INACTIVE")
+                      }
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="edit-user-status"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Account Status
-                  </label>
-                  <select
-                    id="edit-user-status"
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-600 focus:bg-white"
-                  >
-                    <option value="ACTIVE">ACTIVE (Full access)</option>
-                    <option value="INACTIVE">INACTIVE (Access blocked)</option>
-                  </select>
-                </div>
-
-                <div className="mt-5 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                    onClick={() => {
+                      setIsEditModalOpen(false);
+                      setEditingUserId(null);
+                      setEditFeedback(null);
+                    }}
+                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isEditSubmitting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50"
                   >
-                    {isEditSubmitting && (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    {isEditSubmitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Save Changes</span>
+                      </>
                     )}
-                    <span>Save Changes</span>
                   </button>
                 </div>
               </form>

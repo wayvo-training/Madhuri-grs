@@ -53,15 +53,23 @@ export async function getCurrentUser() {
     return null;
   }
 
-  // Update last accessed time
-  await prisma.sessions.update({
-    where: {
-      session_id: session.session_id,
-    },
-    data: {
-      last_accessed_at: new Date(),
-    },
-  });
+  // Throttle updating last_accessed_at (only update if last accessed > 5 minutes ago)
+  // Non-blocking so authentication and page loads return immediately without awaiting an extra DB write
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  if (!session.last_accessed_at || session.last_accessed_at < fiveMinutesAgo) {
+    prisma.sessions
+      .update({
+        where: {
+          session_id: session.session_id,
+        },
+        data: {
+          last_accessed_at: new Date(),
+        },
+      })
+      .catch((err) => {
+        console.error("Failed to update session access time:", err);
+      });
+  }
 
   return {
     ...session.users,

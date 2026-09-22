@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-heading: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,87 +49,91 @@
 }
 
 :root {
-  --background: oklch(0.985 0.008 250);
-  --foreground: oklch(0.18 0.025 255);
+  /* Warm Slate Neutrals */
+  --background: oklch(0.988 0.006 155);
+  --foreground: oklch(0.18 0.022 158);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.025 255);
+  --card-foreground: oklch(0.18 0.022 158);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.025 255);
+  --popover-foreground: oklch(0.18 0.022 158);
 
-  /* GRS Primary - Deep Blue */
-  --primary: oklch(0.48 0.18 255);
-  --primary-foreground: oklch(0.985 0.01 250);
+  /* GRS Primary - Deep Forest (#064E3B) */
+  --primary: oklch(0.355 0.098 156.8);
+  --primary-foreground: oklch(0.985 0.006 150);
 
-  /* Secondary */
-  --secondary: oklch(0.95 0.025 250);
-  --secondary-foreground: oklch(0.25 0.06 255);
+  /* Secondary - Soft Warm Slate */
+  --secondary: oklch(0.955 0.012 155);
+  --secondary-foreground: oklch(0.22 0.04 158);
 
-  /* Muted */
-  --muted: oklch(0.95 0.012 250);
-  --muted-foreground: oklch(0.5 0.035 255);
+  /* Muted - Warm Neutral */
+  --muted: oklch(0.955 0.008 155);
+  --muted-foreground: oklch(0.48 0.025 155);
 
-  /* Accent - Teal */
-  --accent: oklch(0.94 0.045 175);
-  --accent-foreground: oklch(0.25 0.08 175);
+  /* Accent - Vivid Emerald (#059669) Tint */
+  --accent: oklch(0.95 0.035 156);
+  --accent-foreground: oklch(0.32 0.09 156);
 
   --destructive: oklch(0.58 0.22 25);
 
-  --border: oklch(0.9 0.018 250);
-  --input: oklch(0.9 0.018 250);
-  --ring: oklch(0.55 0.16 255);
+  /* Warm Slate Borders & Emerald Ring */
+  --border: oklch(0.91 0.01 155);
+  --input: oklch(0.91 0.01 155);
+  --ring: oklch(0.58 0.16 158);
 
-  --chart-1: oklch(0.48 0.18 255);
-  --chart-2: oklch(0.6 0.15 175);
-  --chart-3: oklch(0.55 0.12 220);
-  --chart-4: oklch(0.65 0.14 80);
-  --chart-5: oklch(0.6 0.18 300);
+  /* Chart Colors - Forest, Emerald, Mint, Amber, Slate */
+  --chart-1: oklch(0.355 0.098 156.8);
+  --chart-2: oklch(0.60 0.165 158);
+  --chart-3: oklch(0.72 0.13 162);
+  --chart-4: oklch(0.68 0.14 80);
+  --chart-5: oklch(0.55 0.12 215);
 
   --radius: 0.75rem;
 
-  --sidebar: oklch(0.98 0.008 250);
-  --sidebar-foreground: oklch(0.18 0.025 255);
-  --sidebar-primary: oklch(0.48 0.18 255);
-  --sidebar-primary-foreground: oklch(0.985 0.01 250);
-  --sidebar-accent: oklch(0.94 0.045 175);
-  --sidebar-accent-foreground: oklch(0.25 0.08 175);
-  --sidebar-border: oklch(0.9 0.018 250);
-  --sidebar-ring: oklch(0.55 0.16 255);
+  /* Sidebar - Warm Slate Ground with Deep Forest Brand Elements */
+  --sidebar: oklch(0.985 0.006 155);
+  --sidebar-foreground: oklch(0.18 0.022 158);
+  --sidebar-primary: oklch(0.355 0.098 156.8);
+  --sidebar-primary-foreground: oklch(0.985 0.006 150);
+  --sidebar-accent: oklch(0.94 0.03 156);
+  --sidebar-accent-foreground: oklch(0.25 0.07 156);
+  --sidebar-border: oklch(0.91 0.01 155);
+  --sidebar-ring: oklch(0.58 0.16 158);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --background: oklch(0.13 0.015 158);
+  --foreground: oklch(0.985 0.005 150);
+  --card: oklch(0.18 0.018 158);
+  --card-foreground: oklch(0.985 0.005 150);
+  --popover: oklch(0.18 0.018 158);
+  --popover-foreground: oklch(0.985 0.005 150);
+  --primary: oklch(0.65 0.16 158);
+  --primary-foreground: oklch(0.12 0.02 158);
+  --secondary: oklch(0.24 0.02 158);
+  --secondary-foreground: oklch(0.985 0.005 150);
+  --muted: oklch(0.24 0.015 158);
+  --muted-foreground: oklch(0.68 0.02 155);
+  --accent: oklch(0.24 0.025 158);
+  --accent-foreground: oklch(0.985 0.005 150);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.60 0.16 158);
+  --chart-1: oklch(0.65 0.16 158);
+  --chart-2: oklch(0.52 0.14 158);
+  --chart-3: oklch(0.75 0.12 162);
+  --chart-4: oklch(0.68 0.14 80);
+  --chart-5: oklch(0.55 0.12 215);
+  --sidebar: oklch(0.16 0.018 158);
+  --sidebar-foreground: oklch(0.985 0.005 150);
+  --sidebar-primary: oklch(0.65 0.16 158);
+  --sidebar-primary-foreground: oklch(0.12 0.02 158);
+  --sidebar-accent: oklch(0.24 0.025 158);
+  --sidebar-accent-foreground: oklch(0.985 0.005 150);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.60 0.16 158);
 }
 
 @layer base {
@@ -137,13 +141,19 @@
     @apply border-border outline-ring/50;
   }
 
-  body {
-    @apply bg-background text-foreground;
+  html {
+    font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  html {
-    @apply font-sans;
-    scroll-behavior: smooth;
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.55;
   }
 }
 
@@ -151,19 +161,44 @@
   .grs-gradient {
     background: linear-gradient(
       135deg,
-      oklch(0.48 0.18 255),
-      oklch(0.55 0.14 230)
+      oklch(0.355 0.098 156.8),
+      oklch(0.52 0.15 158)
     );
   }
 
   .grs-text-gradient {
     background: linear-gradient(
       135deg,
-      oklch(0.42 0.18 255),
-      oklch(0.55 0.14 220)
+      oklch(0.32 0.098 156.8),
+      oklch(0.55 0.16 158)
     );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  /* Modern sleek scrollbar for internal scroll containers */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.4);
+    border-radius: 9999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.6);
+  }
 }
+

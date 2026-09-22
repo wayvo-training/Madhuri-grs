@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Building2,
   FileText,
   LayoutDashboard,
@@ -94,6 +95,28 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Department Overview",
           href: "/department-head/dashboard",
           icon: LayoutDashboard,
+        },
+        {
+          title: "Grievance Queue",
+          href: "/department-head/dashboard#queue",
+          icon: FileText,
+          badge: "2 New",
+        },
+      ],
+    },
+    {
+      label: "Team & Performance",
+      items: [
+        {
+          title: "Staff Workload",
+          href: "/department-head/dashboard#staff",
+          icon: Users,
+        },
+        {
+          title: "SLA & Escalations",
+          href: "/department-head/dashboard#sla",
+          icon: AlertTriangle,
+          badge: "4",
         },
       ],
     },

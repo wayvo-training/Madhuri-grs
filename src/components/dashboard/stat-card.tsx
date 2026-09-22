@@ -15,13 +15,13 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  blue: {
-    iconBg: "bg-blue-50 text-blue-600",
-    borderGlow: "hover:border-blue-200",
-  },
   emerald: {
-    iconBg: "bg-emerald-50 text-emerald-600",
-    borderGlow: "hover:border-emerald-200",
+    iconBg: "bg-emerald-50 text-emerald-800 border border-emerald-100",
+    borderGlow: "hover:border-emerald-300",
+  },
+  blue: {
+    iconBg: "bg-sky-50 text-sky-700",
+    borderGlow: "hover:border-sky-200",
   },
   amber: {
     iconBg: "bg-amber-50 text-amber-600",
@@ -43,35 +43,35 @@ export function StatCard({
   icon: Icon,
   trend,
   description,
-  accentColor = "blue",
+  accentColor = "emerald",
   badge,
 }: StatCardProps) {
-  const styles = colorMap[accentColor] || colorMap.blue;
+  const styles = colorMap[accentColor] || colorMap.emerald;
 
   return (
     <div
       className={`rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs transition-all duration-200 hover:shadow-md ${styles.borderGlow}`}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </p>
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-xl ${styles.iconBg}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl ${styles.iconBg}`}
         >
           <Icon className="h-5 w-5" />
         </div>
       </div>
 
-      <div className="mt-3 flex items-baseline gap-3">
-        <p className="text-3xl font-bold tracking-tight text-slate-900">
+      <div className="mt-3.5 flex items-baseline gap-3">
+        <p className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
           {value}
         </p>
         {badge}
       </div>
 
       {(trend || description) && (
-        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+        <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm font-normal text-slate-600">
           {trend && (
             <span
               className={`inline-flex items-center gap-1 font-semibold ${
@@ -79,14 +79,16 @@ export function StatCard({
               }`}
             >
               {trend.isPositive ? (
-                <TrendingUp className="h-3.5 w-3.5" />
+                <TrendingUp className="h-4 w-4" />
               ) : (
-                <TrendingDown className="h-3.5 w-3.5" />
+                <TrendingDown className="h-4 w-4" />
               )}
               {trend.value}
             </span>
           )}
-          {description && <span className="truncate">{description}</span>}
+          {description && (
+            <span className="truncate font-normal">{description}</span>
+          )}
         </div>
       )}
     </div>

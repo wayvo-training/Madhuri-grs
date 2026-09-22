@@ -7,23 +7,27 @@ import SystemStatusBar from "@/components/ui/home/systemstatusbar";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background font-sans antialiased">
+      {/* Pinned Navbar at the top (shrink-0, no scrollbar beside it) */}
       <Navbar />
 
-      <HeroSection
-        headline="Resolve workplace concerns with clarity."
-        subtext="Raise, track, and resolve workplace grievances through a structured and transparent process."
-        ctaText="Raise a Grievance"
-        ctaHref="/login"
-      />
+      {/* Internal scroll container starting strictly below Navbar from the Hero Section down */}
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth custom-scrollbar">
+        <HeroSection
+          headline="Resolve workplace concerns with clarity."
+          subtext="Raise, track, and resolve workplace grievances through a structured and transparent process."
+          ctaText="Raise a Grievance"
+          ctaHref="/login"
+        />
 
-      <SystemStatusBar />
+        <SystemStatusBar />
 
-      <HowItsWork />
+        <HowItsWork />
 
-      <FaqAccordion />
+        <FaqAccordion />
 
-      <Footer />
-    </main>
+        <Footer />
+      </main>
+    </div>
   );
 }

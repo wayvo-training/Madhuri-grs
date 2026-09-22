@@ -53,7 +53,7 @@ export default function HowItsWork() {
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
             HOW IT WORKS
           </span>
 
@@ -80,16 +80,16 @@ export default function HowItsWork() {
                 onClick={() => setActiveStep(index)}
                 className={`group relative rounded-2xl border p-5 text-left transition-all ${
                   isActive
-                    ? "border-blue-200 bg-white shadow-md shadow-blue-100/60"
-                    : "border-slate-200 bg-white/70 hover:border-blue-100 hover:bg-white"
+                    ? "border-emerald-300 bg-white shadow-md shadow-emerald-900/10"
+                    : "border-slate-200 bg-white/70 hover:border-emerald-200 hover:bg-white"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
                       isActive
-                        ? "bg-blue-600 text-white"
-                        : "bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600"
+                        ? "bg-[#064E3B] text-white"
+                        : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700"
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -97,7 +97,7 @@ export default function HowItsWork() {
 
                   <span
                     className={`text-xs font-bold ${
-                      isActive ? "text-blue-600" : "text-slate-400"
+                      isActive ? "text-emerald-700" : "text-slate-400"
                     }`}
                   >
                     {step.number}
@@ -110,7 +110,7 @@ export default function HowItsWork() {
 
                 <div
                   className={`mt-3 h-0.5 rounded-full transition-all ${
-                    isActive ? "w-10 bg-blue-600" : "w-6 bg-slate-200"
+                    isActive ? "w-10 bg-[#064E3B]" : "w-6 bg-slate-200"
                   }`}
                 />
               </button>
@@ -124,11 +124,11 @@ export default function HowItsWork() {
             {/* Left */}
             <div>
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
-                  <ActiveIcon className="h-6 w-6 text-blue-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <ActiveIcon className="h-6 w-6 text-[#064E3B]" />
                 </div>
 
-                <span className="text-sm font-semibold text-blue-600">
+                <span className="text-sm font-semibold text-emerald-800">
                   Step {activeStep + 1} of {steps.length}
                 </span>
               </div>
@@ -156,7 +156,7 @@ export default function HowItsWork() {
                   type="button"
                   disabled={activeStep === steps.length - 1}
                   onClick={() => setActiveStep((prev) => prev + 1)}
-                  className="flex items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center rounded-xl bg-[#064E3B] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm shadow-emerald-950/20"
                 >
                   Next
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -178,9 +178,9 @@ export default function HowItsWork() {
                         <div
                           className={`flex h-10 w-10 items-center justify-center rounded-full border ${
                             completed
-                              ? "border-teal-500 bg-teal-50 text-teal-600"
+                              ? "border-emerald-500 bg-emerald-50 text-emerald-700"
                               : current
-                                ? "border-blue-600 bg-blue-600 text-white"
+                                ? "border-[#064E3B] bg-[#064E3B] text-white"
                                 : "border-slate-200 bg-white text-slate-400"
                           }`}
                         >
@@ -195,7 +195,7 @@ export default function HowItsWork() {
                           <div
                             className={`my-1 h-5 w-px ${
                               index < activeStep
-                                ? "bg-teal-400"
+                                ? "bg-emerald-500"
                                 : "bg-slate-200"
                             }`}
                           />

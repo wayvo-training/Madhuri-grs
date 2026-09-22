@@ -46,8 +46,7 @@ export default function LoginPage() {
       }
 
       const targetPath = getRoleDashboardPath(data.user?.role);
-      router.refresh();
-      router.push(targetPath);
+      window.location.href = targetPath;
     } catch (err) {
       console.error("Login failed:", err);
       setError("Unable to connect to server. Please try again.");
@@ -59,7 +58,7 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-50 py-12 sm:px-6 lg:px-8">
       {/* Ambient background glow matching hero */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-gradient-to-b from-blue-100/70 via-blue-50/40 to-transparent blur-3xl" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-gradient-to-b from-emerald-100/50 via-emerald-50/25 to-transparent blur-3xl" />
       </div>
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -68,7 +67,7 @@ export default function LoginPage() {
           href="/"
           className="group inline-flex items-center gap-3 transition-transform hover:scale-[1.02]"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white shadow-md shadow-blue-600/25">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold text-white shadow-md shadow-emerald-950/25">
             G
           </div>
           <div className="text-left">
@@ -86,8 +85,8 @@ export default function LoginPage() {
       <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="rounded-2xl border border-slate-200/80 bg-white p-7 sm:p-9 shadow-xl shadow-slate-200/60">
           <div className="mb-6">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50/80 px-3 py-1 text-xs font-semibold text-blue-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Secure Portal
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -126,7 +125,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   placeholder="name@organization.com"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20 disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -142,7 +141,7 @@ export default function LoginPage() {
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-medium text-blue-600 transition hover:text-blue-700 hover:underline"
+                  className="text-xs font-medium text-emerald-700 transition hover:text-emerald-800 hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -159,7 +158,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   placeholder="Enter your password"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/20 disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -181,7 +180,7 @@ export default function LoginPage() {
               <input
                 id="remember"
                 type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 accent-blue-600 focus:ring-blue-600 cursor-pointer"
+                className="h-4 w-4 rounded border-slate-300 text-[#064E3B] accent-[#064E3B] focus:ring-emerald-600 cursor-pointer"
               />
               <label
                 htmlFor="remember"
@@ -195,7 +194,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition-all duration-200 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/30 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#064E3B] text-sm font-semibold text-white shadow-md shadow-emerald-950/25 transition-all duration-200 hover:bg-emerald-900 hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>
@@ -213,7 +212,7 @@ export default function LoginPage() {
 
           {/* Security Assurance */}
           <div className="mt-6 border-t border-slate-100 pt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="h-4 w-4 text-teal-600" />
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
             <span>Controlled access & auditability</span>
           </div>
         </div>

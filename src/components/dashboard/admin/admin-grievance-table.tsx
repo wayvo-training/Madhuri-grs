@@ -318,7 +318,7 @@ export function AdminGrievanceTable({
             <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
               <span>Live Grievance Oversight Queue</span>
               {isLoading && (
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
               )}
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
@@ -334,7 +334,7 @@ export function AdminGrievanceTable({
               onClick={() => setActiveTab("ALL")}
               className={`rounded-lg px-3 py-1.5 transition ${
                 activeTab === "ALL"
-                  ? "bg-white text-blue-600 shadow-xs"
+                  ? "bg-white text-emerald-800 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -361,7 +361,7 @@ export function AdminGrievanceTable({
               onClick={() => setActiveTab("ACTIVE")}
               className={`rounded-lg px-3 py-1.5 transition ${
                 activeTab === "ACTIVE"
-                  ? "bg-white text-blue-600 shadow-xs"
+                  ? "bg-white text-emerald-800 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -387,7 +387,7 @@ export function AdminGrievanceTable({
               onClick={() => setActiveTab("CLOSED")}
               className={`rounded-lg px-3 py-1.5 transition ${
                 activeTab === "CLOSED"
-                  ? "bg-white text-blue-600 shadow-xs"
+                  ? "bg-white text-emerald-800 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
@@ -408,7 +408,7 @@ export function AdminGrievanceTable({
               placeholder="Search ID, title, submitter, category..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600/20"
+              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/20"
             />
           </div>
 
@@ -416,7 +416,7 @@ export function AdminGrievanceTable({
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white"
+            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
           >
             <option value="ALL">All Departments</option>
             {departments.map((d) => (
@@ -430,7 +430,7 @@ export function AdminGrievanceTable({
           <select
             value={selectedPriority}
             onChange={(e) => setSelectedPriority(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white"
+            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
           >
             <option value="ALL">All Priorities</option>
             <option value="CRITICAL">Critical</option>
@@ -443,7 +443,7 @@ export function AdminGrievanceTable({
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-600 focus:bg-white"
+            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
           >
             <option value="ALL">All Statuses</option>
             <option value="SUBMITTED">Submitted</option>
@@ -559,7 +559,7 @@ export function AdminGrievanceTable({
                         type="button"
                         onClick={() => setActiveModalGrievance(g)}
                         title="View Grievance Record"
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 hover:text-blue-600"
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 hover:text-emerald-800"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span>Inspect</span>
@@ -632,7 +632,7 @@ export function AdminGrievanceTable({
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-bold text-blue-600">
+                  <span className="font-mono text-sm font-bold text-emerald-800">
                     {activeModalGrievance.grievance_number}
                   </span>
                   <PriorityBadge priority={activeModalGrievance.priority} />
@@ -720,7 +720,7 @@ export function AdminGrievanceTable({
                     <select
                       value={targetDeptId}
                       onChange={(e) => setTargetDeptId(e.target.value)}
-                      className="h-9 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20"
+                      className="h-9 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20"
                     >
                       <option value="">-- Select Target Department --</option>
                       {departments.map((d) => (

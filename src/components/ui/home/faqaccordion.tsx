@@ -50,7 +50,7 @@ export default function FaqAccordion() {
         <div className="grid items-center gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           {/* Left */}
           <div className="lg:pr-8">
-            <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
               FAQ
             </span>
 
@@ -83,7 +83,7 @@ export default function FaqAccordion() {
 
                     <ChevronDown
                       className={`h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200 ${
-                        isOpen ? "rotate-180 text-blue-600" : ""
+                        isOpen ? "rotate-180 text-emerald-700" : ""
                       }`}
                     />
                   </button>

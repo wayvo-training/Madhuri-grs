@@ -14,7 +14,7 @@ interface DashboardHeaderProps {
 
 const roleColors: Record<string, string> = {
   ADMIN: "bg-purple-100 text-purple-700 border-purple-200",
-  DEPARTMENT_HEAD: "bg-blue-100 text-blue-700 border-blue-200",
+  DEPARTMENT_HEAD: "bg-sky-100 text-sky-800 border-sky-200",
   STAFF: "bg-amber-100 text-amber-700 border-amber-200",
   END_USER: "bg-emerald-100 text-emerald-700 border-emerald-200",
 };
@@ -47,7 +47,7 @@ export default function DashboardHeader({
         {/* Brand & Page title */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 font-bold text-white shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#064E3B] font-bold text-white shadow-sm">
               G
             </div>
             <span className="text-lg font-semibold tracking-tight text-black">

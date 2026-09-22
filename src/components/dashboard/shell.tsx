@@ -31,7 +31,6 @@ export function DashboardShell({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Initialize from localStorage after mounting
   useEffect(() => {
     try {
       const saved = localStorage.getItem("grs_sidebar_collapsed");
@@ -39,7 +38,7 @@ export function DashboardShell({
         setIsCollapsed(true);
       }
     } catch {
-      // Ignore localStorage access issues
+      // Ignore
     }
   }, []);
 
@@ -56,8 +55,8 @@ export function DashboardShell({
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans antialiased">
-      {/* Role-Adaptive Sidebar with Collapsible Desktop State */}
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 font-sans antialiased">
+      {/* Role-Adaptive Sidebar with Fixed Logo, Fixed Bottom Profile, and Internal Scroll */}
       <DashboardSidebar
         userRole={userRole}
         userName={userName}
@@ -69,13 +68,11 @@ export function DashboardShell({
         onToggleCollapse={handleToggleCollapse}
       />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0 transition-all duration-300">
+      {/* Main Content Area: Exactly 100vh height with internal scrolling strictly below the header */}
+      <div className="flex flex-1 flex-col h-screen min-w-0 overflow-hidden transition-all duration-300">
         <DashboardHeader
           title={title}
           subtitle={subtitle}
-          userRole={userRole}
-          userName={userName}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           isCollapsed={isCollapsed}
           onToggleCollapse={handleToggleCollapse}
@@ -83,7 +80,8 @@ export function DashboardShell({
           onSearchChange={onSearchChange}
         />
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 max-w-[1600px] w-full mx-auto">
+        {/* Content scrollbar starts strictly below the header */}
+        <main className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 max-w-[1600px] w-full mx-auto custom-scrollbar">
           {children}
         </main>
       </div>

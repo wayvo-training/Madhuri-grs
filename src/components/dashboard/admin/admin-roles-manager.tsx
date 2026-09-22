@@ -455,7 +455,7 @@ export function AdminRolesManager({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+              <span className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
                 <ShieldCheck className="h-4 w-4" />
               </span>
               <h2 className="text-base font-bold tracking-tight text-slate-900">
@@ -473,7 +473,7 @@ export function AdminRolesManager({
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Create New Role</span>
@@ -563,7 +563,7 @@ export function AdminRolesManager({
                 }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   roleStatusFilter === "ALL"
-                    ? "bg-blue-50 font-semibold text-blue-700"
+                    ? "bg-[#064E3B] font-semibold text-white shadow-xs"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -612,7 +612,7 @@ export function AdminRolesManager({
                   setRoleSearch(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition"
+                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-emerald-600 focus:bg-white transition"
               />
             </div>
           </div>
@@ -649,7 +649,7 @@ export function AdminRolesManager({
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
                               role.status === "ACTIVE"
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-emerald-100 text-[#064E3B]"
                                 : "bg-slate-200 text-slate-600"
                             }`}
                           >
@@ -721,7 +721,7 @@ export function AdminRolesManager({
                                 key={p.permission_id}
                                 className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700 shadow-2xs"
                               >
-                                <KeyRound className="h-2.5 w-2.5 text-blue-600" />
+                                <KeyRound className="h-2.5 w-2.5 text-emerald-700" />
                                 {p.permission_code}
                               </span>
                             ))
@@ -738,7 +738,7 @@ export function AdminRolesManager({
                         onClick={() => openEditRoleModal(role)}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50 transition"
                       >
-                        <Pencil className="h-3 w-3 text-blue-600" />
+                        <Pencil className="h-3 w-3 text-emerald-700" />
                         <span>Edit</span>
                       </button>
 
@@ -838,7 +838,7 @@ export function AdminRolesManager({
                 onClick={() => setPermStatusFilter("ALL")}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   permStatusFilter === "ALL"
-                    ? "bg-blue-50 font-semibold text-blue-700"
+                    ? "bg-[#064E3B] font-semibold text-white shadow-xs"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -878,7 +878,7 @@ export function AdminRolesManager({
                 placeholder="Search permissions..."
                 value={permSearch}
                 onChange={(e) => setPermSearch(e.target.value)}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-blue-600 focus:bg-white transition"
+                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-3 text-xs text-slate-800 outline-none focus:border-emerald-600 focus:bg-white transition"
               />
             </div>
           </div>
@@ -916,7 +916,7 @@ export function AdminRolesManager({
                       >
                         <td className="px-4 py-3 font-mono font-bold text-slate-900">
                           <span className="inline-flex items-center gap-1.5">
-                            <KeyRound className="h-3 w-3 text-blue-600" />
+                            <KeyRound className="h-3 w-3 text-emerald-700" />
                             {perm.permission_code}
                           </span>
                         </td>
@@ -983,7 +983,7 @@ export function AdminRolesManager({
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                <div className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
                   <KeyRound className="h-4 w-4" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">
@@ -1034,7 +1034,7 @@ export function AdminRolesManager({
                       e.target.value.toUpperCase().replace(/\s+/g, "_"),
                     )
                   }
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 font-mono text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 font-mono text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                 />
               </div>
 
@@ -1051,7 +1051,7 @@ export function AdminRolesManager({
                   placeholder="Briefly describe the operational responsibility of this role..."
                   value={newRoleDescription}
                   onChange={(e) => setNewRoleDescription(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                 />
               </div>
 
@@ -1122,7 +1122,7 @@ export function AdminRolesManager({
                         key={perm.permission_id}
                         className={`flex cursor-pointer items-start gap-2.5 rounded-lg p-2 transition ${
                           isChecked
-                            ? "bg-blue-50/80 text-blue-900"
+                            ? "bg-emerald-50/80 text-emerald-950"
                             : "hover:bg-slate-100/70 text-slate-700"
                         }`}
                       >
@@ -1130,7 +1130,7 @@ export function AdminRolesManager({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => togglePermission(perm.permission_id)}
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -1164,7 +1164,7 @@ export function AdminRolesManager({
                 <button
                   type="submit"
                   disabled={isSubmitting || !newRoleName.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {isSubmitting && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1183,7 +1183,7 @@ export function AdminRolesManager({
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-blue-50 p-1.5 text-blue-600">
+                <div className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
                   <Pencil className="h-4 w-4" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">
@@ -1227,7 +1227,7 @@ export function AdminRolesManager({
                   rows={2}
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-900 outline-none focus:border-blue-600 focus:bg-white"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
                 />
               </div>
 
@@ -1308,7 +1308,7 @@ export function AdminRolesManager({
                         key={perm.permission_id}
                         className={`flex cursor-pointer items-start gap-2.5 rounded-lg p-2 transition ${
                           isChecked
-                            ? "bg-blue-50/80 text-blue-900"
+                            ? "bg-emerald-50/80 text-emerald-950"
                             : "hover:bg-slate-100/70 text-slate-700"
                         }`}
                       >
@@ -1318,7 +1318,7 @@ export function AdminRolesManager({
                           onChange={() =>
                             toggleEditPermission(perm.permission_id)
                           }
-                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -1352,7 +1352,7 @@ export function AdminRolesManager({
                 <button
                   type="submit"
                   disabled={isEditSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 disabled:opacity-50"
                 >
                   {isEditSubmitting && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
