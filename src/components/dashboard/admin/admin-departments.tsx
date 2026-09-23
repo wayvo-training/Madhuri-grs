@@ -29,6 +29,12 @@ export interface SerializedDepartment {
 
 interface AdminDepartmentsProps {
   initialDepartments: SerializedDepartment[];
+  departmentHeads?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  }[];
   totalGrievances: number;
   stats?: {
     total: number;
@@ -40,6 +46,7 @@ interface AdminDepartmentsProps {
 
 export function AdminDepartments({
   initialDepartments,
+  departmentHeads = [],
   totalGrievances,
   stats,
 }: AdminDepartmentsProps) {
@@ -56,7 +63,10 @@ export function AdminDepartments({
   // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deptName, setDeptName] = useState("");
+  const [deptCode, setDeptCode] = useState("");
+  const [selectedHeadId, setSelectedHeadId] = useState("");
   const [description, setDescription] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [deptStatus, setDeptStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
@@ -208,7 +218,38 @@ export function AdminDepartments({
   // Handle Create Department
   async function handleCreateDepartment(e: React.FormEvent) {
     e.preventDefault();
-    if (!deptName.trim()) return;
+    if (!deptName.trim()) {
+      setFeedback({ type: "error", text: "Department name is required." });
+      return;
+    }
+    if (!deptCode.trim() || deptCode.trim().length < 2) {
+      setFeedback({
+        type: "error",
+        text: "Department code is required (e.g. HR, FIN, IT, FAC).",
+      });
+      return;
+    }
+    if (!selectedHeadId) {
+      setFeedback({
+        type: "error",
+        text: "Department Head is required. Please select a Department Head.",
+      });
+      return;
+    }
+    if (!contactEmail.trim()) {
+      setFeedback({
+        type: "error",
+        text: "Department contact email is required.",
+      });
+      return;
+    }
+    if (!description.trim() || description.trim().length < 20) {
+      setFeedback({
+        type: "error",
+        text: "Department description is mandatory (minimum 20 characters) detailing grievance jurisdiction.",
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -219,7 +260,10 @@ export function AdminDepartments({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           department_name: deptName.trim(),
+          department_code: deptCode.trim().toUpperCase(),
+          head_user_id: selectedHeadId,
           description: description.trim(),
+          contact_email: contactEmail.trim(),
           status: deptStatus,
         }),
       });
@@ -242,7 +286,7 @@ export function AdminDepartments({
           department_name: data.department.department_name,
           description: data.department.description,
           status: data.department.status,
-          user_count: 0,
+          user_count: 1,
           grievance_count: 0,
         },
       ]);
@@ -255,7 +299,10 @@ export function AdminDepartments({
       setTimeout(() => {
         setIsModalOpen(false);
         setDeptName("");
+        setDeptCode("");
+        setSelectedHeadId("");
         setDescription("");
+        setContactEmail("");
         setDeptStatus("ACTIVE");
         setFeedback(null);
         router.refresh();
@@ -328,12 +375,12 @@ export function AdminDepartments({
             <span className="text-xs font-semibold text-slate-500">
               Deactivated / Inactive
             </span>
-            <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
+            <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
               <Power className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-rose-600">
+            <span className="text-2xl font-black tracking-tight text-slate-800">
               {stats?.inactive ??
                 departments.filter((d) => d.status === "INACTIVE").length}
             </span>
@@ -341,8 +388,8 @@ export function AdminDepartments({
               Suspended
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Excluded from new intake
           </div>
         </div>
@@ -352,20 +399,20 @@ export function AdminDepartments({
             <span className="text-xs font-semibold text-slate-500">
               Assigned Grievances
             </span>
-            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
+            <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
               <Activity className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-purple-700">
+            <span className="text-2xl font-black tracking-tight text-slate-900">
               {stats?.totalGrievances ?? totalGrievances}
             </span>
             <span className="text-[11px] font-medium text-slate-400">
               In lifecycle
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-purple-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             System-wide distribution
           </div>
         </div>
@@ -518,12 +565,12 @@ export function AdminDepartments({
                             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
                               isDeptActive
                                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-rose-200 bg-rose-50 text-rose-700"
+                                : "border-slate-200 bg-slate-100 text-slate-600"
                             }`}
                           >
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
-                                isDeptActive ? "bg-emerald-500" : "bg-rose-500"
+                                isDeptActive ? "bg-emerald-500" : "bg-slate-400"
                               }`}
                             />
                             {isDeptActive ? "Active" : "Inactive"}
@@ -680,13 +727,13 @@ export function AdminDepartments({
                     htmlFor="new-dept-name"
                     className="block text-xs font-semibold text-slate-700"
                   >
-                    Department Name <span className="text-rose-500">*</span>
+                    Department Name <span className="text-amber-800">*</span>
                   </label>
                   <input
                     id="new-dept-name"
                     type="text"
                     required
-                    placeholder="e.g. Legal & Compliance, Facilities, Payroll"
+                    placeholder="e.g. Legal & Compliance, Facilities Management, People Ops"
                     value={deptName}
                     onChange={(e) => setDeptName(e.target.value)}
                     className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
@@ -695,15 +742,99 @@ export function AdminDepartments({
 
                 <div>
                   <label
-                    htmlFor="new-dept-desc"
+                    htmlFor="new-dept-code"
                     className="block text-xs font-semibold text-slate-700"
                   >
-                    Description
+                    Department Code <span className="text-amber-800">*</span>
                   </label>
+                  <input
+                    id="new-dept-code"
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="e.g. FIN, HR, IT, LEGAL"
+                    value={deptCode}
+                    onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
+                    className="mt-1 h-9 w-full uppercase font-mono rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="new-dept-head"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Department Head <span className="text-amber-800">*</span>
+                  </label>
+                  <select
+                    id="new-dept-head"
+                    required
+                    value={selectedHeadId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedHeadId(id);
+                      const head = departmentHeads.find(
+                        (h) => h.user_id === id,
+                      );
+                      if (head && !contactEmail) {
+                        setContactEmail(head.email);
+                      }
+                    }}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
+                  >
+                    <option value="">Select Department Head</option>
+                    {departmentHeads.map((head) => (
+                      <option key={head.user_id} value={head.user_id}>
+                        {head.first_name} {head.last_name} ({head.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="new-dept-email"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Department Contact Email{" "}
+                    <span className="text-amber-800">*</span>
+                  </label>
+                  <input
+                    id="new-dept-email"
+                    type="email"
+                    required
+                    placeholder="finance@company.com"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="new-dept-desc"
+                      className="block text-xs font-semibold text-slate-700"
+                    >
+                      Mandate & Scope Description{" "}
+                      <span className="text-amber-800">*</span>
+                    </label>
+                    <span
+                      className={`text-[10px] font-mono ${
+                        description.trim().length >= 20
+                          ? "text-slate-500"
+                          : "text-amber-800 font-semibold"
+                      }`}
+                    >
+                      {description.length} / 255 (min 20 chars)
+                    </span>
+                  </div>
                   <textarea
                     id="new-dept-desc"
-                    rows={2}
-                    placeholder="Mandate and scope of this department..."
+                    rows={3}
+                    required
+                    maxLength={255}
+                    placeholder="Describe specific grievances handled (e.g. Responsible for workplace disputes, leave policies, payroll issues, and employee benefits)..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"

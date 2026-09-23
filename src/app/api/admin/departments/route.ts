@@ -49,11 +49,29 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { department_name, description, status } = body;
+    const {
+      department_name,
+      description,
+      status,
+      department_code,
+      contact_email,
+      head_user_id,
+    } = body;
 
     if (!department_name?.trim()) {
       return NextResponse.json(
         { success: false, message: "Department name is required." },
+        { status: 400 },
+      );
+    }
+
+    if (!description?.trim() || description.trim().length < 15) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Department description is mandatory (minimum 15 characters).",
+        },
         { status: 400 },
       );
     }
@@ -77,14 +95,40 @@ export async function POST(request: Request) {
 
     const departmentStatus = status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
 
+    // Format full description with code and contact email if provided
+    let fullDescription = description.trim();
+    const code = department_code?.trim().toUpperCase();
+    const email = contact_email?.trim();
+
+    if (code && !fullDescription.startsWith(`[${code}]`)) {
+      fullDescription = `[${code}] ${fullDescription}`;
+    }
+    if (email && !fullDescription.includes(email)) {
+      fullDescription = `${fullDescription} (Contact: ${email})`;
+    }
+    if (fullDescription.length > 255) {
+      fullDescription = fullDescription.substring(0, 252) + "...";
+    }
+
     const department = await prisma.$transaction(async (tx) => {
       const created = await tx.departments.create({
         data: {
           department_name: trimmedName,
-          description: description?.trim() || null,
+          description: fullDescription,
           status: departmentStatus,
         },
       });
+
+      if (head_user_id) {
+        try {
+          await tx.users.update({
+            where: { user_id: BigInt(head_user_id) },
+            data: { department_id: created.department_id },
+          });
+        } catch (err) {
+          console.error("Failed to assign department head:", err);
+        }
+      }
 
       await tx.audit_logs.create({
         data: {
@@ -95,6 +139,7 @@ export async function POST(request: Request) {
           new_value: {
             department_name: created.department_name,
             description: created.description,
+            head_user_id: head_user_id || null,
             status: created.status,
           },
         },

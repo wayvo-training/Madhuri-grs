@@ -68,10 +68,10 @@ const categoryTabs: {
 ];
 
 const roleBadgeStyles: Record<string, string> = {
-  ADMIN: "bg-purple-50 text-purple-700 border-purple-200",
-  DEPARTMENT_HEAD: "bg-sky-50 text-sky-700 border-sky-200",
-  STAFF: "bg-amber-50 text-amber-700 border-amber-200",
-  END_USER: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ADMIN: "bg-slate-100 text-slate-900 border-slate-300 font-semibold",
+  DEPARTMENT_HEAD: "bg-slate-100 text-slate-800 border-slate-200 font-medium",
+  STAFF: "bg-slate-50 text-slate-700 border-slate-200",
+  END_USER: "bg-slate-50 text-slate-600 border-slate-200",
   SYSTEM: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
@@ -193,20 +193,20 @@ export function AdminAuditTrail({
             <span className="text-xs font-semibold text-slate-500">
               API Requests & Route Calls
             </span>
-            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
+            <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
               <Server className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-purple-700">
+            <span className="text-2xl font-black tracking-tight text-slate-900">
               {stats?.apis ?? "-"}
             </span>
             <span className="text-[11px] font-medium text-slate-400">
               Transactions
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-purple-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Automated API telemetry
           </div>
         </div>
@@ -216,20 +216,20 @@ export function AdminAuditTrail({
             <span className="text-xs font-semibold text-slate-500">
               Errors & Exceptions
             </span>
-            <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
+            <div className="rounded-xl bg-amber-50 p-2 text-amber-800 border border-amber-200">
               <AlertTriangle className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-rose-600">
+            <span className="text-2xl font-black tracking-tight text-amber-900">
               {stats?.errors ?? "-"}
             </span>
             <span className="text-[11px] font-medium text-slate-400">
               Logged
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-amber-800 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-600" />
             Security & runtime alerts
           </div>
         </div>
