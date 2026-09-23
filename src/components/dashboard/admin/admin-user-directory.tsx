@@ -49,10 +49,10 @@ interface AdminUserDirectoryProps {
 }
 
 const rolePills: Record<string, string> = {
-  ADMIN: "bg-purple-50 text-purple-700 border-purple-200",
-  DEPARTMENT_HEAD: "bg-sky-50 text-sky-700 border-sky-200",
-  STAFF: "bg-amber-50 text-amber-700 border-amber-200",
-  END_USER: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  ADMIN: "bg-slate-100 text-slate-900 border-slate-300 font-semibold",
+  DEPARTMENT_HEAD: "bg-slate-100 text-slate-800 border-slate-200 font-medium",
+  STAFF: "bg-slate-50 text-slate-700 border-slate-200 font-normal",
+  END_USER: "bg-slate-50 text-slate-600 border-slate-200 font-normal",
 };
 
 const roleLabels: Record<string, string> = {
@@ -385,12 +385,12 @@ export function AdminUserDirectory({
             <span className="text-xs font-semibold text-slate-500">
               Suspended Accounts
             </span>
-            <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
+            <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
               <UserX className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-rose-600">
+            <span className="text-2xl font-black tracking-tight text-slate-800">
               {stats?.inactive ??
                 usersList.filter((u: SerializedUser) => u.status === "INACTIVE")
                   .length}
@@ -399,8 +399,8 @@ export function AdminUserDirectory({
               Locked
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Revoked access
           </div>
         </div>
@@ -410,12 +410,12 @@ export function AdminUserDirectory({
             <span className="text-xs font-semibold text-slate-500">
               Department Heads & Staff
             </span>
-            <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
+            <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-purple-700">
+            <span className="text-2xl font-black tracking-tight text-slate-900">
               {stats?.admins ??
                 usersList.filter(
                   (u: SerializedUser) =>
@@ -428,8 +428,8 @@ export function AdminUserDirectory({
               Operational
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-purple-600 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-500" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Resolution staff
           </div>
         </div>
@@ -670,17 +670,17 @@ export function AdminUserDirectory({
 
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium border ${
                             u.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-rose-50 text-rose-700 border border-rose-200"
+                              ? "bg-slate-50 text-slate-700 border-slate-200"
+                              : "bg-slate-100 text-slate-500 border-slate-200"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
                               u.status === "ACTIVE"
-                                ? "bg-emerald-500"
-                                : "bg-rose-500"
+                                ? "bg-emerald-600"
+                                : "bg-slate-400"
                             }`}
                           />
                           {u.status}

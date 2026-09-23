@@ -10,11 +10,15 @@ interface StatCardProps {
     isPositive: boolean;
   };
   description?: string;
-  accentColor?: "blue" | "emerald" | "amber" | "rose" | "purple";
+  accentColor?: "blue" | "emerald" | "amber" | "rose" | "purple" | "slate";
   badge?: ReactNode;
 }
 
 const colorMap = {
+  slate: {
+    iconBg: "bg-slate-100 text-slate-700 border border-slate-200/80",
+    borderGlow: "hover:border-slate-300",
+  },
   emerald: {
     iconBg: "bg-emerald-50 text-emerald-800 border border-emerald-100",
     borderGlow: "hover:border-emerald-300",
@@ -24,11 +28,11 @@ const colorMap = {
     borderGlow: "hover:border-sky-200",
   },
   amber: {
-    iconBg: "bg-amber-50 text-amber-600",
-    borderGlow: "hover:border-amber-200",
+    iconBg: "bg-amber-50 text-amber-800 border border-amber-200",
+    borderGlow: "hover:border-amber-300",
   },
   rose: {
-    iconBg: "bg-rose-50 text-rose-600",
+    iconBg: "bg-rose-50 text-rose-700",
     borderGlow: "hover:border-rose-200",
   },
   purple: {
