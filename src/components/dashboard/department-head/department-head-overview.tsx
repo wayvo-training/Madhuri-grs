@@ -8,7 +8,6 @@ import {
   Building2,
   Check,
   CheckCircle2,
-  ChevronRight,
   Clock,
   Download,
   Eye,
@@ -20,9 +19,7 @@ import {
   Inbox,
   Layers,
   LayoutDashboard,
-  Mail,
   MessageSquare,
-  Paperclip,
   RefreshCw,
   RotateCcw,
   Search,
@@ -35,7 +32,8 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 
@@ -71,6 +69,7 @@ export interface GrievanceItem {
   slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
   slaDeadline: string;
   slaTimeLeft: string;
+  slaConsumptionPercent?: number;
   assignedStaffId?: string | null;
   assignedStaffName?: string | null;
   createdAt: string;
@@ -97,6 +96,8 @@ export interface GrievanceItem {
   identifiedBottleneck?: string;
   hodIntervention?: {
     actionType:
+      | "MONITOR"
+      | "NOTIFY_STAFF"
       | "REASSIGN"
       | "CROSS_DEPT"
       | "EXPEDITE"
@@ -217,436 +218,40 @@ export const SLA_LIFECYCLE_STEPS = [
   },
 ];
 
-const INITIAL_STAFF: StaffMember[] = [
-  {
-    id: "staff-1",
-    name: "Priya Nair",
-    designation: "Senior Accounts Officer",
-    email: "priya.nair@organization.org",
-    activeTickets: 3,
-    maxCapacity: 10,
-    status: "ACTIVE",
-  },
-  {
-    id: "staff-2",
-    name: "Amit Verma",
-    designation: "Billing Specialist",
-    email: "amit.verma@organization.org",
-    activeTickets: 2,
-    maxCapacity: 8,
-    status: "BUSY",
-  },
-  {
-    id: "staff-3",
-    name: "Sneha Rao",
-    designation: "Payroll Associate",
-    email: "sneha.rao@organization.org",
-    activeTickets: 2,
-    maxCapacity: 8,
-    status: "ACTIVE",
-  },
-  {
-    id: "staff-4",
-    name: "Kiran Kumar",
-    designation: "Audit & Compliance Officer",
-    email: "kiran.kumar@organization.org",
-    activeTickets: 1,
-    maxCapacity: 8,
-    status: "ACTIVE",
-  },
-  {
-    id: "staff-5",
-    name: "Meera Patel",
-    designation: "Junior Accounts Assistant",
-    email: "meera.patel@organization.org",
-    activeTickets: 0,
-    maxCapacity: 6,
-    status: "ON_LEAVE",
-  },
-];
+function formatAuditFeedDetails(rawDetails?: string | null): string | null {
+  if (!rawDetails) return null;
+  const str = String(rawDetails).trim();
+  if (!str.startsWith("{")) return str;
 
-const INITIAL_GRIEVANCES: GrievanceItem[] = [
-  {
-    id: "grv-1",
-    ticketCode: "GRS-2026-0842",
-    title: "February Salary Arrears & TDS Miscalculation",
-    category: "Compensation & Benefits",
-    subcategory: "Salary & Pay",
-    submitterName: "Dr. Ananya Sen",
-    submitterRole: "Faculty Member",
-    submitterEmail: "ananya.sen@organization.org",
-    priority: "HIGH",
-    status: "ROUTED",
-    slaStatus: "AT_RISK",
-    slaDeadline: "Today at 5:00 PM",
-    slaTimeLeft: "3h 15m remaining",
-    assignedStaffId: null,
-    assignedStaffName: null,
-    createdAt: "Today at 09:30 AM",
-    description:
-      "I am writing to report an erroneous deduction of ₹12,400 under Section 192 TDS in my February salary slip. Despite submitting my 80C investment proofs, term life policy, and certified house rent receipts on Jan 14th before the annual declaration cut-off, the accounts system defaulted to the old tax regime with zero exemption credits. Kindly recalculate and credit the arrears in the upcoming payroll cycle.",
-    attachments: [
-      { name: "Feb_2026_Payslip_Detailed.pdf", size: "420 KB", type: "PDF" },
-      {
-        name: "Form12BB_TDS_Declaration_Signed.pdf",
-        size: "1.1 MB",
-        type: "PDF",
-      },
-      { name: "Rent_Receipts_Oct_to_Jan.pdf", size: "2.3 MB", type: "PDF" },
-    ],
-    internalNotes: [
-      {
-        id: "note-1",
-        author: "Auto-Routing Engine",
-        role: "System",
-        timestamp: "Today at 09:30 AM",
-        note: "Auto-classified under Salary & Pay taxonomy. Routed to Finance & Accounts queue.",
-      },
-    ],
-  },
-  {
-    id: "grv-2",
-    ticketCode: "GRS-2026-0839",
-    title: "Emergency Medical Reimbursement Claim Pending for 14 Days",
-    category: "Compensation & Benefits",
-    subcategory: "Medical Insurance",
-    submitterName: "Rohan Kapoor",
-    submitterRole: "Administrative Staff",
-    submitterEmail: "rohan.k@organization.org",
-    priority: "CRITICAL",
-    status: "ESCALATED",
-    slaStatus: "BREACHED",
-    slaDeadline: "Yesterday at 6:00 PM",
-    slaTimeLeft: "Breached by 18 hours",
-    assignedStaffId: "staff-1",
-    assignedStaffName: "Priya Nair",
-    createdAt: "2 days ago",
-    escalationReason: "Exceeded SLA by > 24 hours without resolution update.",
-    escalationLevel: 2,
-    escalationStage: "HOD_NOTIFIED",
-    description:
-      "My mother was admitted to Fortis Hospital for emergency cardiac treatment on Feb 10th. The pre-authorization summary, hospital discharge report, and original pharmacy bills totaling ₹42,500 were submitted under the Staff Emergency Medical Quota on Feb 12th. It has now been 14 days without an update from the claims section, and our pharmacy line of credit has been put on hold. Please intervene urgently.",
-    attachments: [
-      {
-        name: "Discharge_Summary_Fortis_Cardiac.pdf",
-        size: "3.4 MB",
-        type: "PDF",
-      },
-      {
-        name: "Hospital_Final_Tax_Invoice_Signed.pdf",
-        size: "1.8 MB",
-        type: "PDF",
-      },
-      {
-        name: "Prescription_and_Pharmacy_Vouchers.zip",
-        size: "5.6 MB",
-        type: "ZIP",
-      },
-    ],
-    internalNotes: [
-      {
-        id: "note-2a",
-        author: "Priya Nair",
-        role: "Senior Accounts Officer",
-        timestamp: "Yesterday at 11:30 AM",
-        note: "Original bill files received. Tariff rates verified against approved medical scheme list. Found a discrepancy in ICU room rent capping. Reached out to Fortis billing desk for itemized sub-breakdown.",
-      },
-      {
-        id: "note-2b",
-        author: "SLA Monitoring Engine",
-        role: "System",
-        timestamp: "Yesterday at 6:00 PM",
-        note: "72-hour SLA deadline breached. Automated escalation to Level 2 (Department Head) dispatched.",
-      },
-    ],
-    auditTrail: [
-      {
-        id: "aud-0839-1",
-        timestamp: "Yesterday at 6:00 PM",
-        actor: "SLA Monitoring Engine",
-        action: "Step 1: SLA Threshold Reached",
-        details:
-          "Grievance exceeded 72-hour resolution deadline without completion update.",
-        stage: "SLA_THRESHOLD_REACHED",
-      },
-      {
-        id: "aud-0839-2",
-        timestamp: "Yesterday at 6:05 PM",
-        actor: "Auto-Escalation Engine",
-        action: "Step 2: Grievance Escalated",
-        details:
-          "Automated governance rule escalated ticket to Level 2 (Department Head) due to SLA breach.",
-        stage: "GRIEVANCE_ESCALATED",
-      },
-      {
-        id: "aud-0839-3",
-        timestamp: "Today at 9:00 AM",
-        actor: "Notification Service",
-        action: "Step 3: Department Head Notified",
-        details:
-          "High-priority escalation notification alert dispatched to Department Head portal & operational inbox.",
-        stage: "HOD_NOTIFIED",
-      },
-    ],
-  },
-  {
-    id: "grv-3",
-    ticketCode: "GRS-2026-0835",
-    title: "Double deduction of Provident Fund contribution in Jan payroll",
-    category: "Compensation & Benefits",
-    subcategory: "Incorrect Deduction",
-    submitterName: "Vikram Malhotra",
-    submitterRole: "Senior Lab Instructor",
-    submitterEmail: "vikram.m@organization.org",
-    priority: "MEDIUM",
-    status: "ASSIGNED",
-    slaStatus: "ON_TRACK",
-    slaDeadline: "Tomorrow at 2:00 PM",
-    slaTimeLeft: "1d 4h remaining",
-    assignedStaffId: "staff-2",
-    assignedStaffName: "Amit Verma",
-    createdAt: "Yesterday at 11:20 AM",
-    description:
-      "In my January payroll statement, an amount of ₹3,600 was deducted twice under UAN 100928374619 for employee provident fund contribution. HR confirmed that the supplementary arrears batch also triggered standard PF deduction by mistake. Kindly refund the duplicate deduction of ₹3,600 or adjust in the next salary cycle.",
-    attachments: [
-      {
-        name: "EPF_Passbook_Statement_Jan2026.pdf",
-        size: "890 KB",
-        type: "PDF",
-      },
-      { name: "January_Salary_Slip_Compare.pdf", size: "520 KB", type: "PDF" },
-    ],
-    internalNotes: [
-      {
-        id: "note-3a",
-        author: "Amit Verma",
-        role: "Billing Specialist",
-        timestamp: "Yesterday at 3:15 PM",
-        note: "Reconciled with EPFO monthly ECR challan. Double deduction confirmed for Jan supplementary run. Preparing supplementary credit voucher.",
-      },
-    ],
-  },
-  {
-    id: "grv-4",
-    ticketCode: "GRS-2026-0831",
-    title: "Research Grant Disbursement delayed for Q1 Project 4B",
-    category: "Finance & Accounts",
-    subcategory: "Grant Disbursement",
-    submitterName: "Prof. Suresh Chandra",
-    submitterRole: "Principal Investigator",
-    submitterEmail: "suresh.c@organization.org",
-    priority: "HIGH",
-    status: "IN_PROGRESS",
-    slaStatus: "ON_TRACK",
-    slaDeadline: "In 2 days",
-    slaTimeLeft: "2d 8h remaining",
-    assignedStaffId: "staff-3",
-    assignedStaffName: "Sneha Rao",
-    createdAt: "3 days ago",
-    description:
-      "The first installment of the sanctioned DST research grant for Project 4B (Advanced Computational Biology) amounting to ₹6,50,000 has not been credited to the project account. Project fellows have not received their stipend for two months and equipment procurement orders are pending.",
-    attachments: [
-      {
-        name: "DST_Sanction_Order_DST-2025-4B.pdf",
-        size: "2.1 MB",
-        type: "PDF",
-      },
-      {
-        name: "Utilization_Certificate_Audited.pdf",
-        size: "1.4 MB",
-        type: "PDF",
-      },
-    ],
-    internalNotes: [
-      {
-        id: "note-4a",
-        author: "Sneha Rao",
-        role: "Grants & Disbursal Officer",
-        timestamp: "2 days ago",
-        note: "DST sanction letter verified. Utilization certificate uploaded by PI is approved. Sent fund release requisition to central treasury.",
-      },
-    ],
-  },
-  {
-    id: "grv-5",
-    ticketCode: "GRS-2026-0828",
-    title:
-      "Travel allowance claim for annual symposium rejected without justification",
-    category: "Finance & Accounts",
-    subcategory: "Travel Allowance",
-    submitterName: "Deepak Sharma",
-    submitterRole: "Assistant Professor",
-    submitterEmail: "deepak.s@organization.org",
-    priority: "MEDIUM",
-    status: "UNDER_REVIEW",
-    slaStatus: "ON_TRACK",
-    slaDeadline: "In 3 days",
-    slaTimeLeft: "3d 12h remaining",
-    assignedStaffId: "staff-1",
-    assignedStaffName: "Priya Nair",
-    createdAt: "4 days ago",
-    escalationStage: "RESOLUTION_SUBMITTED",
-    description:
-      "My TA claim of ₹14,250 for attending the IEEE Annual Conference in Mumbai was rejected stating 'boarding passes missing'. However, e-boarding passes downloaded from the airline app were attached on page 3 of the original PDF submission.",
-    attachments: [
-      { name: "Air_India_E-Boarding_Passes.pdf", size: "750 KB", type: "PDF" },
-      {
-        name: "Symposium_Invitation_and_DutyLeave.pdf",
-        size: "1.2 MB",
-        type: "PDF",
-      },
-      {
-        name: "Conference_Registration_Fee_Receipt.pdf",
-        size: "640 KB",
-        type: "PDF",
-      },
-    ],
-    internalNotes: [
-      {
-        id: "note-5a",
-        author: "Priya Nair",
-        role: "Senior Accounts Officer",
-        timestamp: "Today at 11:30 AM",
-        note: "Verified e-boarding passes and conference certificate. Claim is legitimate under Grade 2 faculty entitlement. Recommended approval of ₹14,250.",
-      },
-    ],
-    submittedResolution: {
-      staffName: "Priya Nair",
-      note: "Audit verified that original boarding passes were uploaded. Recommending approval of ₹14,250 reimbursement.",
-      submittedAt: "Today at 11:45 AM",
-    },
-    auditTrail: [
-      {
-        id: "aud-0828-1",
-        timestamp: "4 days ago",
-        actor: "Auto-Routing Engine",
-        action: "Initial Assignment",
-        details: "Assigned to Priya Nair (Senior Accounts Officer).",
-        stage: "ASSIGNED",
-      },
-      {
-        id: "aud-0828-2",
-        timestamp: "Today at 11:45 AM",
-        actor: "Priya Nair (Senior Accounts Officer)",
-        action: "Step 10: Resolution Submitted",
-        details:
-          "Audit completed. Boarding passes validated and ₹14,250 refund recommended for HOD approval.",
-        stage: "RESOLUTION_SUBMITTED",
-      },
-    ],
-  },
-  {
-    id: "grv-6",
-    ticketCode: "GRS-2026-0822",
-    title:
-      "Clarification on National Pension Scheme (NPS) Tier-1 Employer Match",
-    category: "Compensation & Benefits",
-    subcategory: "Retirement & Pension",
-    submitterName: "Sunita Deshmukh",
-    submitterRole: "Staff Nurse",
-    submitterEmail: "sunita.d@organization.org",
-    priority: "LOW",
-    status: "ROUTED",
-    slaStatus: "ON_TRACK",
-    slaDeadline: "In 4 days",
-    slaTimeLeft: "4d 6h remaining",
-    assignedStaffId: null,
-    assignedStaffName: null,
-    createdAt: "5 days ago",
-    description:
-      "Seeking official clarification on whether the 14% employer contribution under NPS Tier-1 is applicable from the date of joining or from the confirmation of probation period, as my PRAN statement reflects standard 10% rate.",
-    attachments: [
-      {
-        name: "PRAN_Annual_Statement_2025-26.pdf",
-        size: "910 KB",
-        type: "PDF",
-      },
-      { name: "Appointment_Order_Copy.pdf", size: "1.1 MB", type: "PDF" },
-    ],
-  },
-  {
-    id: "grv-7",
-    ticketCode: "GRS-2026-0817",
-    title:
-      "Reopened: IT Declaration form was rejected despite submitting proof before deadline",
-    category: "Finance & Accounts",
-    subcategory: "Income Tax",
-    submitterName: "Ramesh Patel",
-    submitterRole: "Accounts Officer",
-    submitterEmail: "ramesh.p@organization.org",
-    priority: "HIGH",
-    status: "REOPENED",
-    slaStatus: "AT_RISK",
-    slaDeadline: "Today at 7:00 PM",
-    slaTimeLeft: "5h 15m remaining",
-    assignedStaffId: "staff-4",
-    assignedStaffName: "Kiran Kumar",
-    createdAt: "6 days ago",
-    isReopened: true,
-    reopenCount: 2,
-    reopenReason:
-      "Previous resolution stated documents were incomplete, but certified bank receipts were attached on page 4.",
-    description:
-      "My income tax rebate for home loan principal (Section 80C) and interest (Section 24b) was rejected twice citing incomplete documentation. The bank interest provisional certificate issued by SBI on letterhead with branch manager stamp was explicitly attached. Please re-evaluate.",
-    attachments: [
-      {
-        name: "SBI_HomeLoan_Interest_Certificate_2025.pdf",
-        size: "1.5 MB",
-        type: "PDF",
-      },
-      { name: "Bank_Loan_Account_Statement.pdf", size: "2.8 MB", type: "PDF" },
-    ],
-    internalNotes: [
-      {
-        id: "note-7a",
-        author: "Kiran Kumar",
-        role: "Taxation Specialist",
-        timestamp: "Yesterday at 4:30 PM",
-        note: "Reviewing page 4 of the attachment. The bank certificate is stamped. Cross-referencing with PAN records.",
-      },
-    ],
-  },
-  {
-    id: "grv-8",
-    ticketCode: "GRS-2026-0809",
-    title:
-      "Cross-Department: Inter-facility relocation expenses & compensatory off disputes",
-    category: "Operations & HR",
-    subcategory: "Facility Transfer",
-    submitterName: "Neelam Joshi",
-    submitterRole: "Lab Technician",
-    submitterEmail: "neelam.j@organization.org",
-    priority: "HIGH",
-    status: "IN_PROGRESS",
-    slaStatus: "ON_TRACK",
-    slaDeadline: "In 3 days",
-    slaTimeLeft: "3d 4h remaining",
-    assignedStaffId: "staff-3",
-    assignedStaffName: "Sneha Rao",
-    createdAt: "1 week ago",
-    isCrossDepartment: true,
-    collaboratingDepartments: ["Human Resources", "Facility Operations"],
-    description:
-      "Following the temporary transfer to the South Campus lab for the 3-month clinical diagnostics project, my daily inter-campus shuttle reimbursement and 6 compensatory off days have not been credited. Accounts states HR has not sent attendance regularization, while HR says Accounts did not process transfer allowance.",
-    attachments: [
-      {
-        name: "Campus_Transfer_Order_Dated_Nov15.pdf",
-        size: "820 KB",
-        type: "PDF",
-      },
-      { name: "Monthly_Duty_Roster_Signed.pdf", size: "1.3 MB", type: "PDF" },
-    ],
-    internalNotes: [
-      {
-        id: "note-8a",
-        author: "Sneha Rao",
-        role: "Senior Accounts Officer",
-        timestamp: "3 days ago",
-        note: "Initiated joint ticket consultation with Mr. Alok (HR Operations). Awaiting revised attendance log.",
-      },
-    ],
-  },
-];
+  try {
+    const parsed = JSON.parse(str);
+    if (parsed && typeof parsed === "object") {
+      if (parsed.consumptionPercent !== undefined) {
+        const pct = Math.round(Number(parsed.consumptionPercent));
+        const escalatedTo = parsed.escalatedTo
+          ? ` to ${parsed.escalatedTo}`
+          : "";
+        return `Critical SLA breach (${pct}% consumed). Auto-escalated${escalatedTo} for intervention.`;
+      }
+      if (parsed.note) return String(parsed.note);
+      if (parsed.remarks) return String(parsed.remarks);
+      if (parsed.reason) return String(parsed.reason);
+      return Object.entries(parsed)
+        .filter(
+          ([k, v]) =>
+            typeof v !== "object" &&
+            v !== null &&
+            v !== undefined &&
+            k !== "threshold",
+        )
+        .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase()}: ${v}`)
+        .join(" • ");
+    }
+  } catch {
+    // ignore parse error
+  }
+  return str;
+}
 
 interface Props {
   departmentName?: string;
@@ -657,15 +262,95 @@ interface Props {
 }
 
 export function DepartmentHeadOverview({
-  departmentName = "Finance & Accounts",
-  hodName = "Dr. Rajesh Sharma",
-  hodEmail = "rajesh.sharma@organization.org",
-  employeeCode = "FIN-HOD-01",
-  isAdminPreview = false,
+  departmentName = "Department Operations",
+  hodName = "Department Head",
+  hodEmail = "",
+  employeeCode = "HOD-01",
+  isAdminPreview: _isAdminPreview = false,
 }: Props) {
-  const [grievances, setGrievances] =
-    useState<GrievanceItem[]>(INITIAL_GRIEVANCES);
-  const [staffList, setStaffList] = useState<StaffMember[]>(INITIAL_STAFF);
+  const [grievances, setGrievances] = useState<GrievanceItem[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+
+  // Live Database Loading & Department State
+  const [_isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const [availableDepartments, setAvailableDepartments] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const [currentDepartmentName, setCurrentDepartmentName] =
+    useState(departmentName);
+  const [currentHodName, setCurrentHodName] = useState(hodName);
+  const [currentHodEmail, setCurrentHodEmail] = useState(hodEmail);
+  const [currentEmployeeCode, setCurrentEmployeeCode] = useState(employeeCode);
+
+  const loadData = useCallback(
+    async (deptId?: string, isSilentRefresh = false) => {
+      try {
+        if (!isSilentRefresh) setIsLoading(true);
+        else setIsRefreshing(true);
+
+        const targetDeptId = deptId !== undefined ? deptId : selectedDeptId;
+        const deptQuery = targetDeptId ? `?deptId=${targetDeptId}` : "";
+
+        const [overviewRes, grievancesRes, staffRes] = await Promise.all([
+          fetch(`/api/department-head/overview${deptQuery}`),
+          fetch(`/api/department-head/grievances${deptQuery}`),
+          fetch(`/api/department-head/staff${deptQuery}`),
+        ]);
+
+        if (overviewRes.ok) {
+          const overviewData = await overviewRes.json();
+          if (overviewData.success) {
+            if (overviewData.department?.name) {
+              setCurrentDepartmentName(overviewData.department.name);
+            }
+            if (overviewData.head) {
+              setCurrentHodName(overviewData.head.name);
+              setCurrentHodEmail(overviewData.head.email);
+              setCurrentEmployeeCode(overviewData.head.employeeCode);
+            }
+            if (overviewData.auditFeed && overviewData.auditFeed.length > 0) {
+              setGovernanceAuditFeed(overviewData.auditFeed);
+            }
+            if (
+              overviewData.availableDepartments &&
+              overviewData.availableDepartments.length > 0
+            ) {
+              setAvailableDepartments(overviewData.availableDepartments);
+            }
+          }
+        }
+
+        if (grievancesRes.ok) {
+          const grievancesData = await grievancesRes.json();
+          if (
+            grievancesData.success &&
+            Array.isArray(grievancesData.grievances)
+          ) {
+            setGrievances(grievancesData.grievances);
+          }
+        }
+
+        if (staffRes.ok) {
+          const staffData = await staffRes.json();
+          if (staffData.success && Array.isArray(staffData.staff)) {
+            setStaffList(staffData.staff);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load department head data:", err);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [selectedDeptId],
+  );
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Active View Switcher (Synced with Sidebar hash navigation: #overview, #queue, #staff, #sla)
   const [activeView, setActiveView] = useState<
@@ -733,8 +418,14 @@ export function DepartmentHeadOverview({
     | "ADMIN_DELAY"
   >("STAFF_CAPACITY");
   const [escalationInterventionType, setEscalationInterventionType] = useState<
-    "REASSIGN" | "CROSS_DEPT" | "EXPEDITE" | "OVERRIDE" | "SLA_EXTENSION"
-  >("REASSIGN");
+    | "MONITOR"
+    | "NOTIFY_STAFF"
+    | "REASSIGN"
+    | "CROSS_DEPT"
+    | "EXPEDITE"
+    | "OVERRIDE"
+    | "SLA_EXTENSION"
+  >("MONITOR");
   const [escalationTargetStaffId, setEscalationTargetStaffId] = useState("");
   const [escalationTargetDept, setEscalationTargetDept] =
     useState("Finance & Accounts");
@@ -742,37 +433,10 @@ export function DepartmentHeadOverview({
   const [escalationAuditExpandedId, setEscalationAuditExpandedId] = useState<
     string | null
   >(null);
-  const [flowFilterStep, setFlowFilterStep] = useState<number | null>(null);
 
   const [governanceAuditFeed, setGovernanceAuditFeed] = useState<
     EscalationAuditRecord[]
-  >([
-    {
-      id: "gov-1",
-      timestamp: "12m ago",
-      actor: "Auto-Routing Engine",
-      action: "Auto-routed GRS-2026-0842 via rule Salary & Pay to Finance.",
-      details: "Category: Compensation & Benefits.",
-      stage: "ROUTED",
-    },
-    {
-      id: "gov-2",
-      timestamp: "1h ago",
-      actor: "Escalation Engine",
-      action:
-        "Auto-escalated GRS-2026-0839 to Department Head (SLA breach > 24h).",
-      details: "Threshold reached. Direct HOD intervention required.",
-      stage: "GRIEVANCE_ESCALATED",
-    },
-    {
-      id: "gov-3",
-      timestamp: "3h ago",
-      actor: "Reopen Engine",
-      action: "GRS-2026-0817 reopened for 2nd review by submitter.",
-      details: "Proof submitted before deadline contested.",
-      stage: "REOPENED",
-    },
-  ]);
+  >([]);
 
   const [resolutionModalGrievance, setResolutionModalGrievance] =
     useState<GrievanceItem | null>(null);
@@ -800,16 +464,18 @@ export function DepartmentHeadOverview({
     useState("");
   const [leaveReassignNote, setLeaveReassignNote] = useState("");
 
-  const handleAddInternalNote = (e: React.FormEvent) => {
+  const handleAddInternalNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCaseFile || !newInternalNote.trim()) return;
 
+    const noteText = newInternalNote.trim();
+
     const newNoteObj = {
       id: `note-${Date.now()}`,
-      author: `${hodName} (Department Head)`,
+      author: `${currentHodName} (Department Head)`,
       role: "Department Head",
       timestamp: "Just now",
-      note: newInternalNote.trim(),
+      note: noteText,
     };
 
     const newAudit: EscalationAuditRecord = {
@@ -817,7 +483,7 @@ export function DepartmentHeadOverview({
       timestamp: "Just now",
       actor: `${hodName} (Department Head)`,
       action: "HOD Internal Directive Recorded",
-      details: `Directive: "${newInternalNote.trim()}"`,
+      details: `Directive: "${noteText}"`,
       stage: selectedCaseFile.status,
     };
 
@@ -836,6 +502,21 @@ export function DepartmentHeadOverview({
       `Added internal directive to ${selectedCaseFile.ticketCode}`,
     );
     setTimeout(() => setActionSuccessMessage(null), 4000);
+
+    // Persist note to real database
+    try {
+      await fetch(
+        `/api/department-head/grievances/${selectedCaseFile.id}/notes`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ note: noteText }),
+        },
+      );
+      loadData(undefined, true);
+    } catch (err) {
+      console.error("Failed to persist internal note to database:", err);
+    }
   };
 
   // Metrics
@@ -965,6 +646,16 @@ export function DepartmentHeadOverview({
     setActionSuccessMessage(
       `Dispatched ${assignModalGrievance.ticketCode} to ${staffMember.name}.`,
     );
+
+    // Persist to real API
+    fetch(`/api/department-head/grievances/${assignModalGrievance.id}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ staffId: staffMember.id, note: assignmentNote }),
+    })
+      .then(() => loadData(undefined, true))
+      .catch((err) => console.error("Failed to assign staff:", err));
+
     setAssignModalGrievance(null);
     setSelectedStaffId("");
     setAssignmentNote("");
@@ -1005,6 +696,8 @@ export function DepartmentHeadOverview({
     };
 
     const actionLabels: Record<string, string> = {
+      MONITOR: "Continued Monitoring (75% SLA Risk Acknowledged by HOD)",
+      NOTIFY_STAFF: `Direct Operational Nudge Dispatched to ${targetStaffName}`,
       REASSIGN: `Reassigned to ${targetStaffName}`,
       CROSS_DEPT: `Enlisted Supporting Department (${escalationTargetDept})`,
       EXPEDITE: "Expedited Priority (Fast-Track Override)",
@@ -1021,7 +714,7 @@ export function DepartmentHeadOverview({
       {
         id: `aud-${Date.now()}-5`,
         timestamp: "Just now",
-        actor: `${hodName} (Department Head)`,
+        actor: `${currentHodName} (Department Head)`,
         action: "Step 5: Bottleneck Identified",
         bottleneck: chosenBottleneck,
         details: `Identified primary bottleneck stalling resolution: ${chosenBottleneck}.`,
@@ -1030,7 +723,7 @@ export function DepartmentHeadOverview({
       {
         id: `aud-${Date.now()}-6`,
         timestamp: "Just now",
-        actor: `${hodName} (Department Head)`,
+        actor: `${currentHodName} (Department Head)`,
         action: "Step 6: Intervention Action Taken",
         details: `Action: ${chosenAction}. Directive: "${escalationNote || "Proceed with expedited priority."}"`,
         stage: "INTERVENTION_TAKEN",
@@ -1092,7 +785,7 @@ export function DepartmentHeadOverview({
             actionLabel: chosenAction,
             note: escalationNote,
             intervenedAt: "Just now",
-            intervenedBy: hodName,
+            intervenedBy: currentHodName,
             targetStaffName: targetStaffName,
             targetDepartment: escalationTargetDept,
           },
@@ -1117,6 +810,25 @@ export function DepartmentHeadOverview({
     setActionSuccessMessage(
       `Steps 5-9 Complete: HOD intervention logged to audit trail & dispatched to staff. Grievance ${escalationModalGrievance.ticketCode} continues in progress.`,
     );
+
+    // Persist intervention to real API
+    fetch(
+      `/api/department-head/grievances/${escalationModalGrievance.id}/intervene`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bottleneck: escalationBottleneck,
+          interventionType: escalationInterventionType,
+          targetStaffId: escalationTargetStaffId,
+          targetDeptName: escalationTargetDept,
+          note: escalationNote,
+        }),
+      },
+    )
+      .then(() => loadData(undefined, true))
+      .catch((err) => console.error("Failed to persist intervention:", err));
+
     setEscalationModalGrievance(null);
     setEscalationNote("");
     setEscalationTargetStaffId("");
@@ -1184,7 +896,7 @@ export function DepartmentHeadOverview({
       const finalAudit: EscalationAuditRecord = {
         id: `aud-${Date.now()}-11`,
         timestamp: "Just now",
-        actor: `${hodName} (Department Head)`,
+        actor: `${currentHodName} (Department Head)`,
         action: "Step 11: Escalation Cleared & Grievance Closed",
         details: `Department Head approved final resolution. Escalation cleared, SLA compliance archived, grievance marked CLOSED.`,
         stage: "ESCALATION_CLEARED",
@@ -1224,7 +936,7 @@ export function DepartmentHeadOverview({
       const clarifyAudit: EscalationAuditRecord = {
         id: `aud-${Date.now()}-clarify`,
         timestamp: "Just now",
-        actor: `${hodName} (Department Head)`,
+        actor: `${currentHodName} (Department Head)`,
         action: "Resolution Returned for Clarification",
         details: `Feedback: "${resolutionFeedback || "Additional verification required."}". Grievance returned to investigating staff.`,
         stage: "IN_PROGRESS",
@@ -1246,6 +958,23 @@ export function DepartmentHeadOverview({
       );
     }
 
+    // Persist resolution decision to real API
+    fetch(
+      `/api/department-head/grievances/${resolutionModalGrievance.id}/resolution`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decision: resolutionDecision,
+          feedback: resolutionFeedback,
+        }),
+      },
+    )
+      .then(() => loadData(undefined, true))
+      .catch((err) =>
+        console.error("Failed to persist resolution decision:", err),
+      );
+
     setResolutionModalGrievance(null);
     setResolutionFeedback("");
     setTimeout(() => setActionSuccessMessage(null), 5000);
@@ -1261,6 +990,15 @@ export function DepartmentHeadOverview({
       setActionSuccessMessage(
         `${staff.name} is now marked as Active & Available for assignments.`,
       );
+
+      fetch(`/api/department-head/staff/${staff.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      })
+        .then(() => loadData(undefined, true))
+        .catch((err) => console.error("Failed to toggle availability:", err));
+
       setTimeout(() => setActionSuccessMessage(null), 4000);
       return;
     }
@@ -1277,7 +1015,7 @@ export function DepartmentHeadOverview({
       );
       setLeaveReassignTargetStaffId(defaultTarget ? defaultTarget.id : "");
       setLeaveReassignNote(
-        `Temporary leave reassignment authorized by Department Head ${hodName}.`,
+        `Temporary leave reassignment authorized by Department Head ${currentHodName}.`,
       );
       setLeaveReassignmentModalStaff(staff);
     } else {
@@ -1286,6 +1024,15 @@ export function DepartmentHeadOverview({
         prev.map((s) => (s.id === staff.id ? { ...s, status: "ON_LEAVE" } : s)),
       );
       setActionSuccessMessage(`${staff.name} is now marked as On Leave.`);
+
+      fetch(`/api/department-head/staff/${staff.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ON_LEAVE" }),
+      })
+        .then(() => loadData(undefined, true))
+        .catch((err) => console.error("Failed to set on leave:", err));
+
       setTimeout(() => setActionSuccessMessage(null), 4000);
     }
   };
@@ -1314,7 +1061,7 @@ export function DepartmentHeadOverview({
         const auditEntry: EscalationAuditRecord = {
           id: `aud-${Date.now()}-${g.id}`,
           timestamp: "Just now",
-          actor: `${hodName} (Department Head)`,
+          actor: `${currentHodName} (Department Head)`,
           action: "Reassigned due to Officer Leave",
           details: `Reassigned from ${leaveReassignmentModalStaff.name} to ${targetStaff.name}. Reason: Officer marked On Leave. Directive: "${leaveReassignNote || "Transferred to maintain SLA turnaround during officer leave."}"`,
           stage: g.status,
@@ -1322,7 +1069,7 @@ export function DepartmentHeadOverview({
 
         const internalNoteEntry = {
           id: `note-${Date.now()}-${g.id}`,
-          author: `${hodName} (Department Head)`,
+          author: `${currentHodName} (Department Head)`,
           role: "Department Head",
           timestamp: "Just now",
           note: `Transferred to ${targetStaff.name} due to officer leave. Directive: "${leaveReassignNote || "Transferred to maintain SLA turnaround during officer leave."}"`,
@@ -1370,6 +1117,21 @@ export function DepartmentHeadOverview({
     setActionSuccessMessage(
       `Reassigned ${activeTicketsToTransfer.length} ticket(s) to ${targetStaff.name} and marked ${leaveReassignmentModalStaff.name} as On Leave.`,
     );
+
+    // Persist bulk reassignment to real API
+    fetch(`/api/department-head/staff/${leavingStaffId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetStaffId: targetStaff.id,
+        note:
+          leaveReassignNote ||
+          "Transferred to maintain SLA turnaround during officer leave.",
+      }),
+    })
+      .then(() => loadData(undefined, true))
+      .catch((err) => console.error("Failed to bulk reassign:", err));
+
     setLeaveReassignmentModalStaff(null);
     setLeaveReassignTargetStaffId("");
     setLeaveReassignNote("");
@@ -1380,12 +1142,10 @@ export function DepartmentHeadOverview({
   const handleKeepTicketsAndMarkLeave = () => {
     if (!leaveReassignmentModalStaff) return;
 
+    const staffId = leaveReassignmentModalStaff.id;
+
     setStaffList((prev) =>
-      prev.map((s) =>
-        s.id === leaveReassignmentModalStaff.id
-          ? { ...s, status: "ON_LEAVE" }
-          : s,
-      ),
+      prev.map((s) => (s.id === staffId ? { ...s, status: "ON_LEAVE" } : s)),
     );
 
     setGovernanceAuditFeed((prev) => [
@@ -1403,6 +1163,15 @@ export function DepartmentHeadOverview({
     setActionSuccessMessage(
       `Marked ${leaveReassignmentModalStaff.name} as On Leave. Active tickets retained in their queue.`,
     );
+
+    fetch(`/api/department-head/staff/${staffId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ON_LEAVE" }),
+    })
+      .then(() => loadData(undefined, true))
+      .catch((err) => console.error("Failed to mark on leave:", err));
+
     setLeaveReassignmentModalStaff(null);
     setLeaveReassignTargetStaffId("");
     setLeaveReassignNote("");
@@ -1492,19 +1261,49 @@ export function DepartmentHeadOverview({
           </button>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setGrievances(INITIAL_GRIEVANCES);
-            setStaffList(INITIAL_STAFF);
-            setActionSuccessMessage("Queue & staff availability refreshed.");
-            setTimeout(() => setActionSuccessMessage(null), 3000);
-          }}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
-        >
-          <RefreshCw className="h-3.5 w-3.5" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {availableDepartments.length > 0 && (
+            <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-2xs">
+              <Building2 className="h-3.5 w-3.5 text-emerald-700" />
+              <span className="font-semibold text-slate-500">Dept:</span>
+              <select
+                value={selectedDeptId}
+                onChange={(e) => {
+                  setSelectedDeptId(e.target.value);
+                  loadData(e.target.value);
+                }}
+                className="bg-transparent font-semibold text-slate-800 outline-none cursor-pointer"
+              >
+                <option value="">Default ({currentDepartmentName})</option>
+                {availableDepartments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              loadData(selectedDeptId, true);
+              setActionSuccessMessage(
+                "Refreshed live queue from PostgreSQL database.",
+              );
+              setTimeout(() => setActionSuccessMessage(null), 3000);
+            }}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                isRefreshing ? "animate-spin text-emerald-700" : ""
+              }`}
+            />
+            <span>{isRefreshing ? "Syncing..." : "Refresh"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Success Notification Alert */}
@@ -1539,7 +1338,7 @@ export function DepartmentHeadOverview({
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                      {departmentName}
+                      {currentDepartmentName}
                     </h2>
                     <span className="rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 text-xs font-medium text-emerald-200">
                       Primary Queue
@@ -1548,11 +1347,11 @@ export function DepartmentHeadOverview({
                   <p className="mt-1 text-xs font-normal text-slate-300">
                     Department Head:{" "}
                     <strong className="font-semibold text-white">
-                      {hodName}
+                      {currentHodName}
                     </strong>{" "}
-                    &bull; {hodEmail} &bull; Code:{" "}
+                    &bull; {currentHodEmail} &bull; Code:{" "}
                     <span className="font-mono text-emerald-300">
-                      {employeeCode}
+                      {currentEmployeeCode}
                     </span>
                   </p>
                 </div>
@@ -1636,8 +1435,12 @@ export function DepartmentHeadOverview({
                   </div>
                   <p className="text-xs font-normal text-rose-950 mt-0.5">
                     Critical SLA threshold breached on{" "}
-                    <strong>GRS-2026-0839</strong>. Automated escalation
-                    requires your direct bottleneck review and intervention.
+                    <strong>
+                      {grievances.find((g) => g.status === "ESCALATED")
+                        ?.ticketCode || "department grievance"}
+                    </strong>
+                    . Automated escalation requires your direct bottleneck
+                    review and intervention.
                   </p>
                 </div>
               </div>
@@ -1655,10 +1458,11 @@ export function DepartmentHeadOverview({
             </div>
           )}
 
-          {/* Balanced Overview Grid */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            {/* Left 7 Cols: Urgent Triage Queue */}
-            <div className="space-y-4 lg:col-span-7">
+          {/* Balanced Overview Grid matching Admin Dashboard reference layout */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Left 2 Columns: Priority Triage & Department Grievances Stream */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Card 1: Priority Triage & Urgent Queue */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div>
@@ -1680,15 +1484,30 @@ export function DepartmentHeadOverview({
                 </div>
 
                 <div className="mt-3.5 space-y-3">
-                  {grievances
-                    .filter(
+                  {(() => {
+                    const urgentList = grievances.filter(
                       (g) =>
                         !g.assignedStaffId ||
                         g.priority === "CRITICAL" ||
                         g.status === "ESCALATED",
-                    )
-                    .slice(0, 4)
-                    .map((item) => (
+                    );
+
+                    if (urgentList.length === 0) {
+                      return (
+                        <div className="py-8 text-center text-sm font-normal text-slate-400">
+                          <Inbox className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                          <p className="font-semibold text-slate-700 text-xs">
+                            No grievances require triage
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            All incoming grievances are currently assigned or
+                            being processed.
+                          </p>
+                        </div>
+                      );
+                    }
+
+                    return urgentList.slice(0, 4).map((item) => (
                       <div
                         key={item.id}
                         className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 space-y-2 hover:border-emerald-300 transition"
@@ -1751,13 +1570,112 @@ export function DepartmentHeadOverview({
                           </div>
                         </div>
                       </div>
-                    ))}
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* Card 2: Recent Department Grievances Table (Matches Admin Reference Page) */}
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-900">
+                      Recent Grievances Stream
+                    </h3>
+                    <p className="text-xs font-normal text-slate-500">
+                      Active cases, officer assignments & resolution status
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => switchView("queue")}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+                  >
+                    <span>View All Tickets</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="border-b border-slate-100 bg-slate-50/60 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      <tr>
+                        <th className="py-2.5 pl-3 pr-2">Ticket</th>
+                        <th className="px-3 py-2.5">Category</th>
+                        <th className="px-3 py-2.5">Assigned Officer</th>
+                        <th className="px-3 py-2.5">Priority</th>
+                        <th className="py-2.5 pl-2 pr-3 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs text-slate-700 font-normal">
+                      {grievances.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-6 text-center text-slate-400 font-normal"
+                          >
+                            No grievances registered in this department queue
+                            yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        grievances.slice(0, 5).map((g) => (
+                          <tr
+                            key={g.id}
+                            className="hover:bg-slate-50/60 transition cursor-pointer"
+                            onClick={() => {
+                              setSelectedCaseFile(g);
+                              setCaseDrawerTab("statement");
+                            }}
+                          >
+                            <td className="whitespace-nowrap py-3 pl-3 pr-2 font-mono font-medium text-slate-900">
+                              {g.ticketCode}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 font-normal text-slate-800">
+                              {g.category}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 font-medium text-slate-700">
+                              {g.assignedStaffName || (
+                                <span className="italic text-amber-600 font-normal">
+                                  Unassigned
+                                </span>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3">
+                              <PriorityBadge priority={g.priority} />
+                            </td>
+                            <td className="whitespace-nowrap py-3 pl-2 pr-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                {g.slaConsumptionPercent !== undefined && (
+                                  <span
+                                    className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                                      g.slaConsumptionPercent >= 100
+                                        ? "bg-rose-100 text-rose-800"
+                                        : g.slaConsumptionPercent >= 75
+                                          ? "bg-amber-100 text-amber-800"
+                                          : g.slaConsumptionPercent >= 50
+                                            ? "bg-blue-100 text-blue-800"
+                                            : "bg-emerald-100 text-emerald-800"
+                                    }`}
+                                    title={`${g.slaConsumptionPercent}% SLA consumed`}
+                                  >
+                                    {g.slaConsumptionPercent}% SLA
+                                  </span>
+                                )}
+                                <StatusBadge status={g.status} />
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
 
-            {/* Right 5 Cols: Staff Snapshot & Live Audit Feed */}
-            <div className="space-y-4 lg:col-span-5">
+            {/* Right Column: Staff Capacity + Governance Engine Audit (1 Col on lg) */}
+            <div className="space-y-6 lg:col-span-1">
               {/* Staff Snapshot */}
               <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1796,7 +1714,13 @@ export function DepartmentHeadOverview({
                         </div>
                         <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full ${staff.status === "ON_LEAVE" ? "bg-slate-400" : pct >= 80 ? "bg-amber-500" : "bg-emerald-600"}`}
+                            className={`h-full rounded-full ${
+                              staff.status === "ON_LEAVE"
+                                ? "bg-slate-400"
+                                : pct >= 80
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-600"
+                            }`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
                           />
                         </div>
@@ -1820,29 +1744,69 @@ export function DepartmentHeadOverview({
                   </span>
                 </div>
                 <div className="mt-3 space-y-2 text-xs">
-                  {governanceAuditFeed.slice(0, 4).map((feed) => (
-                    <div
-                      key={feed.id}
-                      className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 space-y-1 hover:border-emerald-200 transition"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-900">
-                          {feed.actor}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {feed.timestamp}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 font-normal">
-                        {feed.action}
-                      </p>
-                      {feed.details && (
-                        <p className="text-[11px] text-slate-500 font-normal italic">
-                          {feed.details}
-                        </p>
-                      )}
+                  {governanceAuditFeed.length === 0 ? (
+                    <div className="py-6 text-center text-slate-400 font-normal">
+                      No governance audit events recorded yet.
                     </div>
-                  ))}
+                  ) : (
+                    governanceAuditFeed.slice(0, 4).map((feed) => {
+                      const isSlaEngineAction =
+                        feed.action.includes("SLA") ||
+                        feed.action.includes("Auto-");
+                      const displayActor =
+                        isSlaEngineAction &&
+                        feed.actor.includes("DEPARTMENT_HEAD")
+                          ? "SLA Governance Engine (Automated)"
+                          : feed.actor;
+                      const displayAction = feed.action
+                        .replace(
+                          /SLA 100 BREACH ESCALATED/g,
+                          "SLA Breached & Case Escalated",
+                        )
+                        .replace(
+                          /SLA 75 PERCENT HOD ALERT/g,
+                          "SLA At Risk (75% Threshold Alert)",
+                        )
+                        .replace(
+                          /SLA 50 PERCENT WARNING/g,
+                          "50% SLA Priority Warning",
+                        );
+                      const cleanDetails = formatAuditFeedDetails(feed.details);
+
+                      return (
+                        <div
+                          key={feed.id}
+                          className="rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 space-y-1 hover:border-emerald-200 transition"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-900">
+                              {displayActor}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {feed.timestamp}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 font-normal">
+                            {displayAction}
+                          </p>
+                          {cleanDetails && (
+                            <p className="text-[11px] text-slate-500 font-normal italic">
+                              {cleanDetails}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-100 text-right">
+                  <button
+                    type="button"
+                    onClick={() => switchView("queue")}
+                    className="text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+                  >
+                    View Full Audit &rarr;
+                  </button>
                 </div>
               </div>
             </div>
@@ -2288,7 +2252,7 @@ export function DepartmentHeadOverview({
               value={staffList.length}
               icon={Users}
               accentColor="emerald"
-              description={`${departmentName} department`}
+              description={`${currentDepartmentName} department`}
             />
             <StatCard
               label="On Active Duty"
@@ -2982,7 +2946,7 @@ export function DepartmentHeadOverview({
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-2xs focus:border-emerald-600 focus:outline-hidden"
                 >
                   <option value="">
-                    -- Choose an Officer from {departmentName} --
+                    -- Choose an Officer from {currentDepartmentName} --
                   </option>
                   {staffList.map((staff) => (
                     <option
@@ -3186,16 +3150,33 @@ export function DepartmentHeadOverview({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEscalationInterventionType("REASSIGN")}
+                    onClick={() => setEscalationInterventionType("MONITOR")}
                     className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                      escalationInterventionType === "REASSIGN"
-                        ? "border-rose-700 bg-rose-50 text-rose-950 font-semibold ring-1 ring-rose-600"
+                      escalationInterventionType === "MONITOR"
+                        ? "border-emerald-700 bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-emerald-600"
                         : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                     }`}
                   >
-                    🔄 Reassign to Available Officer
+                    👁️ Continue Monitoring
                     <div className="text-[11px] font-normal text-slate-500 mt-0.5">
-                      Transfer ticket to an active officer with spare capacity
+                      Acknowledge SLA risk and supervise without reassigning
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEscalationInterventionType("NOTIFY_STAFF")
+                    }
+                    className={`rounded-xl border p-2.5 text-left text-xs transition ${
+                      escalationInterventionType === "NOTIFY_STAFF"
+                        ? "border-amber-600 bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-600"
+                        : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    📢 Notify Assigned Staff
+                    <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      Send urgent priority nudge to assigned officer
                     </div>
                   </button>
 
@@ -3208,9 +3189,24 @@ export function DepartmentHeadOverview({
                         : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                     }`}
                   >
-                    🤝 Enlist Supporting Department
+                    🤝 Add Supporting Dept / Staff
                     <div className="text-[11px] font-normal text-slate-500 mt-0.5">
-                      Dispatch joint action notice to collaborating team
+                      Enlist supporting department to collaborate
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEscalationInterventionType("REASSIGN")}
+                    className={`rounded-xl border p-2.5 text-left text-xs transition ${
+                      escalationInterventionType === "REASSIGN"
+                        ? "border-rose-700 bg-rose-50 text-rose-950 font-semibold ring-1 ring-rose-600"
+                        : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    🔄 Reassign to Available Officer
+                    <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      Transfer ticket to an active officer with spare capacity
                     </div>
                   </button>
 
