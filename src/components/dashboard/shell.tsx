@@ -15,6 +15,7 @@ interface DashboardShellProps {
   children: ReactNode;
   searchValue?: string;
   onSearchChange?: (val: string) => void;
+  searchPlaceholder?: string;
 }
 
 export function DashboardShell({
@@ -27,6 +28,7 @@ export function DashboardShell({
   children,
   searchValue,
   onSearchChange,
+  searchPlaceholder,
 }: DashboardShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -73,11 +75,14 @@ export function DashboardShell({
         <DashboardHeader
           title={title}
           subtitle={subtitle}
+          userRole={userRole}
+          userName={userName}
           onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           isCollapsed={isCollapsed}
           onToggleCollapse={handleToggleCollapse}
           searchValue={searchValue}
           onSearchChange={onSearchChange}
+          searchPlaceholder={searchPlaceholder}
         />
 
         {/* Content scrollbar starts strictly below the header */}

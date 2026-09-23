@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   Building2,
   CheckCircle2,
   ChevronLeft,
@@ -9,7 +10,6 @@ import {
   Mail,
   Pencil,
   Plus,
-  Power,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -81,6 +81,7 @@ export function AdminUserDirectory({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [selectedDept, setSelectedDept] = useState<string>("ALL");
+  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
 
   const isFirstMount = useRef(true);
 
@@ -88,7 +89,13 @@ export function AdminUserDirectory({
 
   // Fetch paginated users from server
   const fetchUsers = useCallback(
-    async (page: number, search: string, role: string, dept: string) => {
+    async (
+      page: number,
+      search: string,
+      role: string,
+      dept: string,
+      status: string,
+    ) => {
       try {
         setIsLoading(true);
         const params = new URLSearchParams({
@@ -98,6 +105,7 @@ export function AdminUserDirectory({
         if (search.trim()) params.set("search", search.trim());
         if (role !== "ALL") params.set("role_id", role);
         if (dept !== "ALL") params.set("department_id", dept);
+        if (status !== "ALL") params.set("status", status);
 
         const res = await fetch(`/api/admin/users?${params.toString()}`);
         const data = await res.json();
@@ -124,11 +132,24 @@ export function AdminUserDirectory({
     }
 
     const timer = setTimeout(() => {
-      fetchUsers(currentPage, searchQuery, selectedRole, selectedDept);
+      fetchUsers(
+        currentPage,
+        searchQuery,
+        selectedRole,
+        selectedDept,
+        selectedStatus,
+      );
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentPage, searchQuery, selectedRole, selectedDept, fetchUsers]);
+  }, [
+    currentPage,
+    searchQuery,
+    selectedRole,
+    selectedDept,
+    selectedStatus,
+    fetchUsers,
+  ]);
 
   // Create Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -161,6 +182,29 @@ export function AdminUserDirectory({
     text: string;
   } | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Suspend User Modal State
+  const [suspensionModalUser, setSuspensionModalUser] =
+    useState<SerializedUser | null>(null);
+  const [suspensionCategory, setSuspensionCategory] =
+    useState("POLICY_VIOLATION");
+  const [suspensionReason, setSuspensionReason] = useState("");
+  const [suspensionFeedback, setSuspensionFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isSubmittingSuspension, setIsSubmittingSuspension] = useState(false);
+
+  // Reactivate User Modal State
+  const [reactivationModalUser, setReactivationModalUser] =
+    useState<SerializedUser | null>(null);
+  const [reactivationReason, setReactivationReason] = useState("");
+  const [reactivationFeedback, setReactivationFeedback] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const [isSubmittingReactivation, setIsSubmittingReactivation] =
+    useState(false);
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
@@ -205,7 +249,13 @@ export function AdminUserDirectory({
         type: "success",
         text: data.message || "User onboarded successfully.",
       });
-      fetchUsers(currentPage, searchQuery, selectedRole, selectedDept);
+      fetchUsers(
+        currentPage,
+        searchQuery,
+        selectedRole,
+        selectedDept,
+        selectedStatus,
+      );
 
       setTimeout(() => {
         setIsModalOpen(false);
@@ -283,7 +333,13 @@ export function AdminUserDirectory({
         return;
       }
 
-      fetchUsers(currentPage, searchQuery, selectedRole, selectedDept);
+      fetchUsers(
+        currentPage,
+        searchQuery,
+        selectedRole,
+        selectedDept,
+        selectedStatus,
+      );
 
       setEditFeedback({
         type: "success",
@@ -307,23 +363,141 @@ export function AdminUserDirectory({
     }
   }
 
-  async function handleToggleStatus(u: SerializedUser) {
-    const nextStatus = u.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+  function handleInitiateStatusChange(u: SerializedUser) {
+    if (u.status === "ACTIVE") {
+      setSuspensionModalUser(u);
+      setSuspensionCategory("POLICY_VIOLATION");
+      setSuspensionReason("");
+      setSuspensionFeedback(null);
+    } else {
+      setReactivationModalUser(u);
+      setReactivationReason("");
+      setReactivationFeedback(null);
+    }
+  }
+
+  async function handleConfirmSuspension(e: React.FormEvent) {
+    e.preventDefault();
+    if (!suspensionModalUser) return;
+
+    if (!suspensionReason.trim()) {
+      setSuspensionFeedback({
+        type: "error",
+        text: "A documented justification reason is required to suspend this account.",
+      });
+      return;
+    }
+
     try {
+      setIsSubmittingSuspension(true);
+      setSuspensionFeedback(null);
+
       const res = await fetch("/api/admin/users", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: u.user_id,
-          status: nextStatus,
+          user_id: suspensionModalUser.user_id,
+          status: "INACTIVE",
+          reason_category: suspensionCategory,
+          reason: suspensionReason.trim(),
         }),
       });
+
       const data = await res.json();
-      if (res.ok && data.success) {
-        fetchUsers(currentPage, searchQuery, selectedRole, selectedDept);
+      if (!res.ok || !data.success) {
+        setSuspensionFeedback({
+          type: "error",
+          text: data.message || "Failed to suspend account.",
+        });
+        setIsSubmittingSuspension(false);
+        return;
       }
+
+      setSuspensionFeedback({
+        type: "success",
+        text: `Account for ${suspensionModalUser.first_name} suspended and all active sessions revoked.`,
+      });
+
+      fetchUsers(
+        currentPage,
+        searchQuery,
+        selectedRole,
+        selectedDept,
+        selectedStatus,
+      );
+
+      setTimeout(() => {
+        setSuspensionModalUser(null);
+        setSuspensionFeedback(null);
+        setSuspensionReason("");
+        router.refresh();
+      }, 1200);
     } catch (err) {
-      console.error("Failed to toggle status:", err);
+      console.error("Failed to suspend account:", err);
+      setSuspensionFeedback({
+        type: "error",
+        text: "An unexpected network or server error occurred.",
+      });
+    } finally {
+      setIsSubmittingSuspension(false);
+    }
+  }
+
+  async function handleConfirmReactivation(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reactivationModalUser) return;
+
+    try {
+      setIsSubmittingReactivation(true);
+      setReactivationFeedback(null);
+
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: reactivationModalUser.user_id,
+          status: "ACTIVE",
+          reason: reactivationReason.trim() || "Administrative reactivation",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setReactivationFeedback({
+          type: "error",
+          text: data.message || "Failed to reactivate account.",
+        });
+        setIsSubmittingReactivation(false);
+        return;
+      }
+
+      setReactivationFeedback({
+        type: "success",
+        text: `Account for ${reactivationModalUser.first_name} successfully reactivated.`,
+      });
+
+      fetchUsers(
+        currentPage,
+        searchQuery,
+        selectedRole,
+        selectedDept,
+        selectedStatus,
+      );
+
+      setTimeout(() => {
+        setReactivationModalUser(null);
+        setReactivationFeedback(null);
+        setReactivationReason("");
+        router.refresh();
+      }, 1200);
+    } catch (err) {
+      console.error("Failed to reactivate account:", err);
+      setReactivationFeedback({
+        type: "error",
+        text: "An unexpected network or server error occurred.",
+      });
+    } finally {
+      setIsSubmittingReactivation(false);
     }
   }
 
@@ -331,7 +505,18 @@ export function AdminUserDirectory({
     <div className="space-y-6">
       {/* Executive Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedStatus("ALL");
+            setCurrentPage(1);
+          }}
+          className={`relative overflow-hidden rounded-2xl border text-left p-5 shadow-xs transition hover:shadow-md cursor-pointer ${
+            selectedStatus === "ALL"
+              ? "border-emerald-600 ring-2 ring-emerald-600/20 bg-emerald-50/20"
+              : "border-slate-200/80 bg-white"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               Total Enrolled Users
@@ -352,9 +537,20 @@ export function AdminUserDirectory({
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
             Active enterprise directory
           </div>
-        </div>
+        </button>
 
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedStatus("ACTIVE");
+            setCurrentPage(1);
+          }}
+          className={`relative overflow-hidden rounded-2xl border text-left p-5 shadow-xs transition hover:shadow-md cursor-pointer ${
+            selectedStatus === "ACTIVE"
+              ? "border-emerald-600 ring-2 ring-emerald-600/20 bg-emerald-50/20"
+              : "border-slate-200/80 bg-white"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               Active Accounts
@@ -378,14 +574,25 @@ export function AdminUserDirectory({
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Access permitted
           </div>
-        </div>
+        </button>
 
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
+        <button
+          type="button"
+          onClick={() => {
+            setSelectedStatus("INACTIVE");
+            setCurrentPage(1);
+          }}
+          className={`relative overflow-hidden rounded-2xl border text-left p-5 shadow-xs transition hover:shadow-md cursor-pointer ${
+            selectedStatus === "INACTIVE"
+              ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20"
+              : "border-slate-200/80 bg-white"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               Suspended Accounts
             </span>
-            <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
+            <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
               <UserX className="h-4 w-4" />
             </div>
           </div>
@@ -399,11 +606,11 @@ export function AdminUserDirectory({
               Locked
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
             Revoked access
           </div>
-        </div>
+        </button>
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
@@ -476,8 +683,24 @@ export function AdminUserDirectory({
                 />
               </div>
 
+              {/* Status Filter */}
+              <select
+                aria-label="Filter by account status"
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="ACTIVE">Active Accounts</option>
+                <option value="INACTIVE">Suspended Accounts</option>
+              </select>
+
               {/* Role Filter */}
               <select
+                aria-label="Filter by organizational role"
                 value={selectedRole}
                 onChange={(e) => {
                   setSelectedRole(e.target.value);
@@ -494,6 +717,7 @@ export function AdminUserDirectory({
 
               {/* Department Filter */}
               <select
+                aria-label="Filter by assigned department"
                 value={selectedDept}
                 onChange={(e) => {
                   setSelectedDept(e.target.value);
@@ -672,8 +896,8 @@ export function AdminUserDirectory({
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium border ${
                             u.status === "ACTIVE"
-                              ? "bg-slate-50 text-slate-700 border-slate-200"
-                              : "bg-slate-100 text-slate-500 border-slate-200"
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "bg-slate-100 text-slate-600 border-slate-200"
                           }`}
                         >
                           <span
@@ -683,7 +907,7 @@ export function AdminUserDirectory({
                                 : "bg-slate-400"
                             }`}
                           />
-                          {u.status}
+                          {u.status === "ACTIVE" ? "Active" : "Suspended"}
                         </span>
                       </td>
 
@@ -713,24 +937,29 @@ export function AdminUserDirectory({
 
                           <button
                             type="button"
-                            onClick={() => handleToggleStatus(u)}
+                            onClick={() => handleInitiateStatusChange(u)}
                             className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
                               u.status === "ACTIVE"
-                                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
                             }`}
                             title={
                               u.status === "ACTIVE"
-                                ? "Deactivate User"
-                                : "Activate User"
+                                ? "Suspend User Account (Requires Justification)"
+                                : "Reactivate User Account"
                             }
                           >
-                            <Power className="h-3 w-3" />
-                            <span>
-                              {u.status === "ACTIVE"
-                                ? "Deactivate"
-                                : "Activate"}
-                            </span>
+                            {u.status === "ACTIVE" ? (
+                              <>
+                                <UserX className="h-3 w-3" />
+                                <span>Suspend</span>
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="h-3 w-3" />
+                                <span>Reactivate</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       </td>
@@ -1180,6 +1409,306 @@ export function AdminUserDirectory({
                       <>
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Account Suspension (Requires Documented Justification) */}
+        {suspensionModalUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-rose-50 p-1.5 text-rose-700">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Suspend User Account
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Mandatory documented justification required
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuspensionModalUser(null);
+                    setSuspensionFeedback(null);
+                  }}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {suspensionFeedback && (
+                <div
+                  className={`mt-4 rounded-xl border p-3 text-xs ${
+                    suspensionFeedback.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-rose-200 bg-rose-50 text-rose-800"
+                  }`}
+                >
+                  {suspensionFeedback.text}
+                </div>
+              )}
+
+              {/* Target User Details */}
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      {suspensionModalUser.first_name}{" "}
+                      {suspensionModalUser.last_name || ""}
+                    </span>
+                    <span className="ml-2 font-mono text-[10px] text-slate-500">
+                      ({suspensionModalUser.employee_code})
+                    </span>
+                  </div>
+                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                    {suspensionModalUser.role_name}
+                  </span>
+                </div>
+                <div className="mt-1 text-slate-600">
+                  {suspensionModalUser.email}
+                  {suspensionModalUser.department_name && (
+                    <span className="ml-2 text-slate-400">
+                      • {suspensionModalUser.department_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Security Warning Notice */}
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-800">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                  Security Impact Notice
+                </p>
+                <p className="mt-1 text-[11px] text-amber-700">
+                  Suspending this user will immediately revoke all active
+                  sessions across all devices, block login attempts, and log an
+                  audit record with your justification.
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleConfirmSuspension}
+                className="mt-4 space-y-3.5"
+              >
+                <div>
+                  <label
+                    htmlFor="suspension-category"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Suspension Category <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="suspension-category"
+                    required
+                    value={suspensionCategory}
+                    onChange={(e) => setSuspensionCategory(e.target.value)}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 outline-none focus:border-rose-600"
+                  >
+                    <option value="POLICY_VIOLATION">
+                      Policy / Code of Conduct Violation
+                    </option>
+                    <option value="SECURITY_INCIDENT">
+                      Suspected Compromise / Security Risk
+                    </option>
+                    <option value="EMPLOYMENT_STATUS_CHANGE">
+                      Separation / Offboarding / Leave
+                    </option>
+                    <option value="MALICIOUS_ACTIVITY">
+                      Unauthorized Access / Malicious Grievance Activity
+                    </option>
+                    <option value="ADMINISTRATIVE_HOLD">
+                      Administrative Review Hold
+                    </option>
+                    <option value="OTHER">Other Documented Reason</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="suspension-reason"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Documented Justification Reason{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <textarea
+                    id="suspension-reason"
+                    required
+                    rows={3}
+                    placeholder="Enter detailed justification for suspending this account. This will be preserved in the immutable audit log..."
+                    value={suspensionReason}
+                    onChange={(e) => setSuspensionReason(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-rose-600 focus:ring-1 focus:ring-rose-600 placeholder:text-slate-400"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    Audit logs require verifiable documentation for regulatory
+                    and compliance review.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuspensionModalUser(null);
+                      setSuspensionFeedback(null);
+                    }}
+                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmittingSuspension || !suspensionReason.trim()
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-rose-700 disabled:opacity-50"
+                  >
+                    {isSubmittingSuspension ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Suspending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserX className="h-3.5 w-3.5" />
+                        <span>Confirm Account Suspension</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Account Reactivation */}
+        {reactivationModalUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="w-full max-w-lg rounded-2xl border border-emerald-200 bg-white p-6 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
+                    <UserCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Reactivate User Account
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Restore authentication and enterprise access
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReactivationModalUser(null);
+                    setReactivationFeedback(null);
+                  }}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {reactivationFeedback && (
+                <div
+                  className={`mt-4 rounded-xl border p-3 text-xs ${
+                    reactivationFeedback.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-rose-200 bg-rose-50 text-rose-800"
+                  }`}
+                >
+                  {reactivationFeedback.text}
+                </div>
+              )}
+
+              {/* Target User Details */}
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      {reactivationModalUser.first_name}{" "}
+                      {reactivationModalUser.last_name || ""}
+                    </span>
+                    <span className="ml-2 font-mono text-[10px] text-slate-500">
+                      ({reactivationModalUser.employee_code})
+                    </span>
+                  </div>
+                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                    {reactivationModalUser.role_name}
+                  </span>
+                </div>
+                <div className="mt-1 text-slate-600">
+                  {reactivationModalUser.email}
+                  {reactivationModalUser.department_name && (
+                    <span className="ml-2 text-slate-400">
+                      • {reactivationModalUser.department_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <form
+                onSubmit={handleConfirmReactivation}
+                className="mt-4 space-y-3.5"
+              >
+                <div>
+                  <label
+                    htmlFor="reactivation-reason"
+                    className="block text-xs font-semibold text-slate-700"
+                  >
+                    Reactivation Notes / Reason (Optional)
+                  </label>
+                  <textarea
+                    id="reactivation-reason"
+                    rows={2}
+                    placeholder="e.g. Investigation completed, clearance reinstated, offboarding request canceled..."
+                    value={reactivationReason}
+                    onChange={(e) => setReactivationReason(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReactivationModalUser(null);
+                      setReactivationFeedback(null);
+                    }}
+                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReactivation}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50"
+                  >
+                    {isSubmittingReactivation ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Reactivating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck className="h-3.5 w-3.5" />
+                        <span>Confirm Reactivation</span>
                       </>
                     )}
                   </button>

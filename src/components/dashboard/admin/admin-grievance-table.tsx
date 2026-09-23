@@ -128,6 +128,32 @@ export function AdminGrievanceTable({
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Check URL search params on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("search");
+      if (q) {
+        setSearchQuery(q);
+        setDebouncedSearch(q);
+      }
+    }
+  }, []);
+
+  // Listen to global header search events
+  useEffect(() => {
+    const handleHeaderSearch = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (typeof customEvent.detail === "string") {
+        setSearchQuery(customEvent.detail);
+        setCurrentPage(1);
+      }
+    };
+    window.addEventListener("grs:header-search", handleHeaderSearch);
+    return () => {
+      window.removeEventListener("grs:header-search", handleHeaderSearch);
+    };
+  }, []);
+
   // Fetch paginated grievances from server API
   const fetchGrievances = useCallback(
     async (
@@ -438,7 +464,15 @@ export function AdminGrievanceTable({
               type="text"
               placeholder="Search ID, title, submitter, category..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(
+                    new CustomEvent("grs:component-search", { detail: val }),
+                  );
+                }
+              }}
               className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/20"
             />
           </div>
