@@ -251,6 +251,8 @@ export async function PATCH(request: Request) {
       role_id,
       department_id,
       status,
+      reason,
+      reason_category,
     } = body;
 
     if (!user_id) {
@@ -261,6 +263,19 @@ export async function PATCH(request: Request) {
     }
 
     const userIdBigInt = BigInt(user_id);
+
+    // Prevent administrators from suspending their own active account
+    if (status === "INACTIVE" && user.user_id === userIdBigInt) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Security restriction: You cannot suspend your own administrative account.",
+        },
+        { status: 400 },
+      );
+    }
+
     const existing = await prisma.users.findUnique({
       where: { user_id: userIdBigInt },
       include: { roles: true, departments: true },
@@ -271,6 +286,21 @@ export async function PATCH(request: Request) {
         { success: false, message: "User not found." },
         { status: 404 },
       );
+    }
+
+    // Require reason when suspending an active user
+    if (status === "INACTIVE" && existing.status === "ACTIVE") {
+      const fullReason = [reason_category, reason].filter(Boolean).join(" - ");
+      if (!fullReason.trim()) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "A documented justification reason is required to suspend an account.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const updateData: {
@@ -320,6 +350,18 @@ export async function PATCH(request: Request) {
       }
     }
 
+    const isSuspending =
+      status === "INACTIVE" && existing.status !== "INACTIVE";
+    const isReactivating =
+      status === "ACTIVE" && existing.status === "INACTIVE";
+    const auditAction = isSuspending
+      ? "SUSPEND_USER"
+      : isReactivating
+        ? "REACTIVATE_USER"
+        : status !== undefined && status !== existing.status
+          ? "TOGGLE_USER_STATUS"
+          : "UPDATE_USER";
+
     const updatedUser = await prisma.$transaction(async (tx) => {
       const result = await tx.users.update({
         where: { user_id: userIdBigInt },
@@ -327,13 +369,18 @@ export async function PATCH(request: Request) {
         include: { roles: true, departments: true },
       });
 
+      // Immediately revoke all active sessions if user is being suspended
+      if (isSuspending) {
+        await tx.sessions.updateMany({
+          where: { user_id: userIdBigInt, revoked_at: null },
+          data: { revoked_at: new Date() },
+        });
+      }
+
       await tx.audit_logs.create({
         data: {
           user_id: user.user_id,
-          action:
-            status !== undefined && status !== existing.status
-              ? "TOGGLE_USER_STATUS"
-              : "UPDATE_USER",
+          action: auditAction,
           entity_type: "USER",
           entity_id: result.user_id,
           old_value: {
@@ -349,6 +396,8 @@ export async function PATCH(request: Request) {
             role: result.roles.role_name,
             department: result.departments?.department_name || null,
             status: result.status,
+            ...(reason_category ? { reason_category } : {}),
+            ...(reason ? { reason: reason.trim() } : {}),
           },
         },
       });

@@ -1,6 +1,8 @@
 "use client";
 
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Menu, Search, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { UserRole } from "@/components/dashboard/navigation";
 
 interface DashboardHeaderProps {
@@ -13,17 +15,121 @@ interface DashboardHeaderProps {
   onToggleCollapse?: () => void;
   searchValue?: string;
   onSearchChange?: (val: string) => void;
+  searchPlaceholder?: string;
 }
 
 export function DashboardHeader({
   title,
   subtitle,
+  userRole,
   onOpenMobileMenu,
-  isCollapsed = false,
-  onToggleCollapse,
-  searchValue = "",
+  searchValue,
   onSearchChange,
+  searchPlaceholder,
 }: DashboardHeaderProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [internalQuery, setInternalQuery] = useState(searchValue || "");
+
+  // Sync when controlled searchValue prop changes
+  useEffect(() => {
+    if (searchValue !== undefined) {
+      setInternalQuery(searchValue);
+    }
+  }, [searchValue]);
+
+  // Read initial query from URL search params on mount if not controlled
+  useEffect(() => {
+    if (typeof window !== "undefined" && searchValue === undefined) {
+      const urlQuery = new URLSearchParams(window.location.search).get(
+        "search",
+      );
+      if (urlQuery) {
+        setInternalQuery(urlQuery);
+      }
+    }
+  }, [searchValue]);
+
+  // Sync with child component search events (e.g. Master Rules or Grievance Table)
+  useEffect(() => {
+    const handleComponentSearchSync = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (typeof customEvent.detail === "string") {
+        setInternalQuery(customEvent.detail);
+      }
+    };
+    window.addEventListener("grs:component-search", handleComponentSearchSync);
+    return () => {
+      window.removeEventListener(
+        "grs:component-search",
+        handleComponentSearchSync,
+      );
+    };
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInternalQuery(val);
+    onSearchChange?.(val);
+
+    // If on /admin/rules, broadcast search so AdminMasterRules updates immediately in real-time
+    if (pathname === "/admin/rules") {
+      window.dispatchEvent(
+        new CustomEvent("grs:header-search", { detail: val }),
+      );
+    }
+  };
+
+  const handleClear = () => {
+    setInternalQuery("");
+    onSearchChange?.("");
+    if (pathname === "/admin/rules") {
+      window.dispatchEvent(
+        new CustomEvent("grs:header-search", { detail: "" }),
+      );
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = internalQuery.trim();
+
+    // If on /admin/rules, it already filters rules in real-time.
+    // If the admin enters a specific Grievance ID like "GRS-...", navigate to grievances
+    if (pathname === "/admin/rules") {
+      window.dispatchEvent(
+        new CustomEvent("grs:header-search", { detail: trimmed }),
+      );
+      if (/^grs-/i.test(trimmed)) {
+        router.push(`/admin/grievances?search=${encodeURIComponent(trimmed)}`);
+      }
+      return;
+    }
+
+    // Determine target grievance queue based on userRole
+    let targetPath = "/admin/grievances";
+    if (userRole === "DEPARTMENT_HEAD") {
+      targetPath = "/department-head/dashboard";
+    } else if (userRole === "STAFF") {
+      targetPath = "/staff/dashboard";
+    } else if (userRole === "END_USER") {
+      targetPath = "/dashboard";
+    }
+
+    const searchUrl = trimmed
+      ? `${targetPath}?search=${encodeURIComponent(trimmed)}`
+      : targetPath;
+
+    router.push(searchUrl);
+  };
+
+  // Adaptive placeholder
+  const placeholderText =
+    searchPlaceholder ||
+    (pathname === "/admin/rules"
+      ? "Search governance rules, policies, or grievances..."
+      : "Search grievances by ID, subject, or keyword...");
+
   return (
     <header className="sticky top-0 z-30 flex h-18 shrink-0 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur-md">
       {/* Left: Mobile Toggle & Page Title */}
@@ -52,18 +158,31 @@ export function DashboardHeader({
 
       {/* Center: Search Bar */}
       <div className="hidden md:flex flex-1 max-w-md mx-6">
-        <div className="relative w-full">
+        <form onSubmit={handleFormSubmit} className="relative w-full">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
             <Search className="h-4 w-4" />
           </div>
           <input
+            id="global-header-search-input"
+            aria-label={placeholderText}
             type="text"
-            placeholder="Search grievances by ID, subject, or keyword..."
-            value={searchValue}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
+            placeholder={placeholderText}
+            value={internalQuery}
+            onChange={handleInputChange}
+            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-9 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
           />
-        </div>
+          {internalQuery && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </form>
       </div>
 
       {/* Right: Notifications Action */}

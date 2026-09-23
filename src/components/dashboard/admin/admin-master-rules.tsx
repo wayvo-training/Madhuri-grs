@@ -342,6 +342,13 @@ export function AdminMasterRules({
   const [keywords, setKeywords] = useState("");
   const [ruleStatus, setRuleStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
 
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "ACTIVE" | "INACTIVE"
+  >("ALL");
+  const [deptFilter, setDeptFilter] = useState("ALL");
+
   // Pagination states for each rule category
   const [priorityPage, setPriorityPage] = useState(1);
   const [routingPage, setRoutingPage] = useState(1);
@@ -349,22 +356,145 @@ export function AdminMasterRules({
   const [reopenPage, setReopenPage] = useState(1);
   const PAGE_SIZE = 10;
 
-  const paginatedPriorityRules = priorityRules.slice(
+  // Sync with global header search bar
+  useEffect(() => {
+    const handleHeaderSearch = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (typeof customEvent.detail === "string") {
+        setSearchQuery(customEvent.detail);
+        setPriorityPage(1);
+        setRoutingPage(1);
+        setSlaPage(1);
+        setReopenPage(1);
+      }
+    };
+    window.addEventListener("grs:header-search", handleHeaderSearch);
+    return () => {
+      window.removeEventListener("grs:header-search", handleHeaderSearch);
+    };
+  }, []);
+
+  // Read initial search query from URL on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const initial = new URLSearchParams(window.location.search).get("search");
+      if (initial) {
+        setSearchQuery(initial);
+      }
+    }
+  }, []);
+
+  const handleStatusFilterChange = (st: "ALL" | "ACTIVE" | "INACTIVE") => {
+    setStatusFilter(st);
+    setPriorityPage(1);
+    setRoutingPage(1);
+    setSlaPage(1);
+    setReopenPage(1);
+  };
+
+  // Filtered Rules
+  const filteredPriorityRules = priorityRules.filter((rule) => {
+    if (statusFilter !== "ALL" && rule.status !== statusFilter) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const condStr = JSON.stringify(rule.conditions || {}).toLowerCase();
+    return (
+      rule.rule_name.toLowerCase().includes(q) ||
+      rule.priority_level.toLowerCase().includes(q) ||
+      condStr.includes(q)
+    );
+  });
+
+  const filteredRoutingRules = routingRules.filter((rule) => {
+    if (statusFilter !== "ALL" && rule.status !== statusFilter) return false;
+    if (deptFilter !== "ALL" && rule.department_name !== deptFilter)
+      return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const suppStr = (rule.supporting_departments || []).join(" ").toLowerCase();
+    return (
+      rule.rule_name.toLowerCase().includes(q) ||
+      Boolean(rule.category_name?.toLowerCase().includes(q)) ||
+      Boolean(rule.subcategory_name?.toLowerCase().includes(q)) ||
+      rule.department_name.toLowerCase().includes(q) ||
+      suppStr.includes(q) ||
+      rule.involvement_type.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredSlaPolicies = slaPolicies.filter((policy) => {
+    if (statusFilter !== "ALL" && policy.status !== statusFilter) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      policy.policy_name.toLowerCase().includes(q) ||
+      Boolean(policy.priority_level?.toLowerCase().includes(q)) ||
+      policy.target_role.toLowerCase().includes(q) ||
+      policy.sla_type.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredReopenPolicies = reopenPolicies.filter((policy) => {
+    if (statusFilter !== "ALL" && policy.status !== statusFilter) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return policy.policy_name.toLowerCase().includes(q);
+  });
+
+  const paginatedPriorityRules = filteredPriorityRules.slice(
     (priorityPage - 1) * PAGE_SIZE,
     priorityPage * PAGE_SIZE,
   );
-  const paginatedRoutingRules = routingRules.slice(
+  const paginatedRoutingRules = filteredRoutingRules.slice(
     (routingPage - 1) * PAGE_SIZE,
     routingPage * PAGE_SIZE,
   );
-  const paginatedSlaPolicies = slaPolicies.slice(
+  const paginatedSlaPolicies = filteredSlaPolicies.slice(
     (slaPage - 1) * PAGE_SIZE,
     slaPage * PAGE_SIZE,
   );
-  const paginatedReopenPolicies = reopenPolicies.slice(
+  const paginatedReopenPolicies = filteredReopenPolicies.slice(
     (reopenPage - 1) * PAGE_SIZE,
     reopenPage * PAGE_SIZE,
   );
+
+  const currentTotalCount =
+    activeTab === "priority"
+      ? priorityRules.length
+      : activeTab === "routing"
+        ? routingRules.length
+        : activeTab === "sla"
+          ? slaPolicies.length
+          : reopenPolicies.length;
+
+  const currentFilteredCount =
+    activeTab === "priority"
+      ? filteredPriorityRules.length
+      : activeTab === "routing"
+        ? filteredRoutingRules.length
+        : activeTab === "sla"
+          ? filteredSlaPolicies.length
+          : filteredReopenPolicies.length;
+
+  const isFiltered =
+    Boolean(searchQuery.trim()) ||
+    statusFilter !== "ALL" ||
+    (activeTab === "routing" && deptFilter !== "ALL");
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setDeptFilter("ALL");
+    setPriorityPage(1);
+    setRoutingPage(1);
+    setSlaPage(1);
+    setReopenPage(1);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("grs:component-search", { detail: "" }),
+      );
+    }
+  };
 
   // Priority-specific Taxonomy State
   const [selectedPriorityCatId, setSelectedPriorityCatId] = useState("");
@@ -883,6 +1013,85 @@ export function AdminMasterRules({
         </div>
       </div>
 
+      {/* Filter Toolbar */}
+      <div className="border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-1 flex-wrap items-center gap-2.5 min-w-[280px]">
+            {/* Status Filter */}
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-0.5 shadow-2xs">
+              {(["ALL", "ACTIVE", "INACTIVE"] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => handleStatusFilterChange(st)}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                    statusFilter === st
+                      ? "bg-[#064E3B] text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                  }`}
+                >
+                  {st === "ALL"
+                    ? "All Status"
+                    : st === "ACTIVE"
+                      ? "Active"
+                      : "Inactive"}
+                </button>
+              ))}
+            </div>
+
+            {/* Department Filter (Only for Routing tab) */}
+            {activeTab === "routing" && (
+              <select
+                id="routing-dept-filter"
+                aria-label="Filter by department"
+                value={deptFilter}
+                onChange={(e) => {
+                  setDeptFilter(e.target.value);
+                  setRoutingPage(1);
+                }}
+                className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-2xs outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              >
+                <option value="ALL">All Target Depts</option>
+                {departments.map((d) => (
+                  <option key={d.department_id} value={d.department_name}>
+                    {d.department_name}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Clear Filters Button */}
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+
+          {/* Result Count Info */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="font-semibold text-slate-800">
+              {currentFilteredCount}
+            </span>
+            <span>of</span>
+            <span className="font-semibold text-slate-800">
+              {currentTotalCount}
+            </span>
+            <span>rules</span>
+            {isFiltered && (
+              <span className="ml-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Filtered
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Tab Panels */}
       <div className="p-5 sm:p-6 space-y-4">
         {tableFeedback && (
@@ -950,6 +1159,27 @@ export function AdminMasterRules({
                         className="py-8 text-center text-slate-400"
                       >
                         No priority rules configured.
+                      </td>
+                    </tr>
+                  ) : filteredPriorityRules.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                          <p className="font-semibold text-slate-700">
+                            No priority rules match your search or filter.
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Try adjusting your search terms or filters.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Reset Filters</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -1040,7 +1270,7 @@ export function AdminMasterRules({
 
             <PaginationFooter
               currentPage={priorityPage}
-              totalItems={priorityRules.length}
+              totalItems={filteredPriorityRules.length}
               pageSize={PAGE_SIZE}
               onPageChange={setPriorityPage}
             />
@@ -1087,6 +1317,28 @@ export function AdminMasterRules({
                         className="py-8 text-center text-slate-400"
                       >
                         No routing rules configured.
+                      </td>
+                    </tr>
+                  ) : filteredRoutingRules.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                          <p className="font-semibold text-slate-700">
+                            No routing rules match your search or filter.
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Try adjusting your search terms or department
+                            filters.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Reset Filters</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -1201,7 +1453,7 @@ export function AdminMasterRules({
 
             <PaginationFooter
               currentPage={routingPage}
-              totalItems={routingRules.length}
+              totalItems={filteredRoutingRules.length}
               pageSize={PAGE_SIZE}
               onPageChange={setRoutingPage}
             />
@@ -1250,6 +1502,27 @@ export function AdminMasterRules({
                         className="py-8 text-center text-slate-400"
                       >
                         No SLA policies configured.
+                      </td>
+                    </tr>
+                  ) : filteredSlaPolicies.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                          <p className="font-semibold text-slate-700">
+                            No SLA policies match your search or filter.
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Try adjusting your search terms or filters.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Reset Filters</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -1342,7 +1615,7 @@ export function AdminMasterRules({
 
             <PaginationFooter
               currentPage={slaPage}
-              totalItems={slaPolicies.length}
+              totalItems={filteredSlaPolicies.length}
               pageSize={PAGE_SIZE}
               itemLabel="policies"
               onPageChange={setSlaPage}
@@ -1389,6 +1662,27 @@ export function AdminMasterRules({
                         className="py-8 text-center text-slate-400"
                       >
                         No reopen policies configured.
+                      </td>
+                    </tr>
+                  ) : filteredReopenPolicies.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-slate-500">
+                          <p className="font-semibold text-slate-700">
+                            No reopen policies match your search or filter.
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            Try adjusting your search terms or filters.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="mt-2 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            <span>Reset Filters</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -1475,7 +1769,7 @@ export function AdminMasterRules({
 
             <PaginationFooter
               currentPage={reopenPage}
-              totalItems={reopenPolicies.length}
+              totalItems={filteredReopenPolicies.length}
               pageSize={PAGE_SIZE}
               itemLabel="policies"
               onPageChange={setReopenPage}
