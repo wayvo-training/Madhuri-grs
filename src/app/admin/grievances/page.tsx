@@ -82,8 +82,27 @@ export default async function AdminGrievancesPage() {
     ]),
   ]);
 
-  const serializedGrievances: SerializedGrievance[] = rawGrievances.map(
-    (g) => ({
+  const grievanceIds = rawGrievances.map((g) => g.grievance_id);
+  const allDeptLinks =
+    grievanceIds.length > 0
+      ? await prisma.grievance_departments.findMany({
+          where: { grievance_id: { in: grievanceIds } },
+          include: { departments: true },
+        })
+      : [];
+
+  const serializedGrievances: SerializedGrievance[] = rawGrievances.map((g) => {
+    const ticketLinks = allDeptLinks.filter(
+      (l) => l.grievance_id === g.grievance_id,
+    );
+    const primaryLink = ticketLinks.find(
+      (l) => l.involvement_type === "PRIMARY",
+    );
+    const supportingLinks = ticketLinks.filter(
+      (l) => l.involvement_type === "SUPPORTING",
+    );
+
+    return {
       grievance_id: g.grievance_id.toString(),
       grievance_number: g.grievance_number,
       title: g.title,
@@ -99,11 +118,17 @@ export default async function AdminGrievancesPage() {
         `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
       submitted_by_email: g.users.email,
       department_name:
-        g.grievance_departments?.departments?.department_name || null,
+        primaryLink?.departments?.department_name ||
+        g.grievance_departments?.departments?.department_name ||
+        null,
+      supporting_departments: supportingLinks.map((s) => ({
+        department_id: s.department_id.toString(),
+        department_name: s.departments.department_name,
+      })),
       reopen_count: g.reopen_count,
       manual_review_count: g.manual_review_count,
-    }),
-  );
+    };
+  });
 
   const serializedDepartments = departments.map((d) => ({
     department_id: d.department_id.toString(),
