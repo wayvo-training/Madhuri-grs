@@ -35,6 +35,10 @@ export interface SerializedGrievance {
   submitted_by_name: string;
   submitted_by_email: string;
   department_name: string | null;
+  supporting_departments?: {
+    department_id: string;
+    department_name: string;
+  }[];
   reopen_count: number;
   manual_review_count: number;
 }
@@ -90,11 +94,25 @@ export function AdminGrievanceTable({
 
   // Manual Routing Exception state
   const [targetDeptId, setTargetDeptId] = useState<string>("");
+  const [selectedSupportingDeptIds, setSelectedSupportingDeptIds] = useState<
+    string[]
+  >([]);
   const [isRouting, setIsRouting] = useState(false);
   const [routingFeedback, setRoutingFeedback] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const openGrievanceModal = (g: SerializedGrievance) => {
+    setActiveModalGrievance(g);
+    setTargetDeptId("");
+    setSelectedSupportingDeptIds(
+      g.supporting_departments
+        ? g.supporting_departments.map((sd) => sd.department_id)
+        : [],
+    );
+    setRoutingFeedback(null);
+  };
 
   // Table tabs
   type TableTab = "ALL" | "EXCEPTIONS" | "ACTIVE" | "SLA_RISK" | "CLOSED";
@@ -161,7 +179,10 @@ export function AdminGrievanceTable({
       const res = await fetch(`/api/admin/grievances/${grievanceId}/route`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ department_id: targetDeptId }),
+        body: JSON.stringify({
+          department_id: targetDeptId,
+          supporting_department_ids: selectedSupportingDeptIds,
+        }),
       });
 
       const data = await res.json();
@@ -178,11 +199,19 @@ export function AdminGrievanceTable({
       const assignedDept = departments.find(
         (d) => d.department_id === targetDeptId,
       );
+      const assignedSupporting = departments.filter((d) =>
+        selectedSupportingDeptIds.includes(d.department_id),
+      );
 
       setRoutingFeedback({
         type: "success",
         text: data.message || "Grievance routed successfully.",
       });
+
+      const updatedSupporting = assignedSupporting.map((s) => ({
+        department_id: s.department_id,
+        department_name: s.department_name,
+      }));
 
       // Update local state
       setGrievancesList((prev) =>
@@ -194,6 +223,7 @@ export function AdminGrievanceTable({
                 department_name: assignedDept
                   ? assignedDept.department_name
                   : g.department_name,
+                supporting_departments: updatedSupporting,
                 manual_review_count: g.manual_review_count + 1,
               }
             : g,
@@ -209,6 +239,7 @@ export function AdminGrievanceTable({
                 department_name: assignedDept
                   ? assignedDept.department_name
                   : prev.department_name,
+                supporting_departments: updatedSupporting,
                 manual_review_count: prev.manual_review_count + 1,
               }
             : null,
@@ -226,13 +257,13 @@ export function AdminGrievanceTable({
       );
 
       router.refresh();
+      setIsRouting(false);
     } catch (err) {
       console.error(err);
       setRoutingFeedback({
         type: "error",
         text: "An unexpected error occurred during manual routing.",
       });
-    } finally {
       setIsRouting(false);
     }
   }
@@ -516,10 +547,21 @@ export function AdminGrievanceTable({
                     {/* Department */}
                     <td className="whitespace-nowrap px-3 py-4">
                       {g.department_name ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                          <Building2 className="h-3 w-3 text-slate-400" />
-                          {g.department_name}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                            <Building2 className="h-3 w-3 text-slate-400" />
+                            {g.department_name}
+                          </span>
+                          {g.supporting_departments &&
+                            g.supporting_departments.length > 0 && (
+                              <span
+                                title={`Supporting: ${g.supporting_departments.map((d) => d.department_name).join(", ")}`}
+                                className="inline-flex items-center gap-1 rounded bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 border border-slate-200/80 cursor-help"
+                              >
+                                +{g.supporting_departments.length} supporting
+                              </span>
+                            )}
+                        </div>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                           <AlertTriangle className="h-3 w-3" />
@@ -557,7 +599,7 @@ export function AdminGrievanceTable({
                     <td className="whitespace-nowrap py-4 pl-3 pr-6 text-right space-x-2">
                       <button
                         type="button"
-                        onClick={() => setActiveModalGrievance(g)}
+                        onClick={() => openGrievanceModal(g)}
                         title="View Grievance Record"
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-xs transition hover:bg-slate-50 hover:text-emerald-800"
                       >
@@ -569,7 +611,7 @@ export function AdminGrievanceTable({
                       {isException && (
                         <button
                           type="button"
-                          onClick={() => setActiveModalGrievance(g)}
+                          onClick={() => openGrievanceModal(g)}
                           title="Manual Routing Exception"
                           className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 shadow-xs transition hover:bg-amber-100"
                         >
@@ -662,11 +704,31 @@ export function AdminGrievanceTable({
 
               <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-100 p-4">
                 <div>
-                  <p className="text-slate-400">Department</p>
+                  <p className="text-slate-400">Primary Department</p>
                   <p className="mt-0.5 font-semibold text-slate-800">
                     {activeModalGrievance.department_name ||
                       "Pending Manual Routing"}
                   </p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Supporting Departments</p>
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {activeModalGrievance.supporting_departments &&
+                    activeModalGrievance.supporting_departments.length > 0 ? (
+                      activeModalGrievance.supporting_departments.map((sd) => (
+                        <span
+                          key={sd.department_id}
+                          className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                        >
+                          {sd.department_name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 italic font-normal">
+                        None configured
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-slate-400">Category & Subcategory</p>
@@ -712,44 +774,110 @@ export function AdminGrievanceTable({
                   </div>
                   <p className="mt-1 text-[11px] text-amber-700">
                     This grievance requires manual department allocation because
-                    automated routing rules did not match. Assign a primary
-                    department to route this ticket to their triage queue.
+                    automated routing rules did not match. Assign 1 Primary
+                    Department and optionally designate Supporting Departments.
                   </p>
 
-                  <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <select
-                      value={targetDeptId}
-                      onChange={(e) => setTargetDeptId(e.target.value)}
-                      className="h-9 flex-1 rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20"
-                    >
-                      <option value="">-- Select Target Department --</option>
-                      {departments.map((d) => (
-                        <option key={d.department_id} value={d.department_id}>
-                          {d.department_name}
+                  <div className="mt-3.5 space-y-3">
+                    <div>
+                      <label
+                        htmlFor="manual-routing-primary-dept"
+                        className="block text-[11px] font-semibold uppercase tracking-wider text-amber-900/80 mb-1"
+                      >
+                        Primary Department{" "}
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        id="manual-routing-primary-dept"
+                        value={targetDeptId}
+                        onChange={(e) => {
+                          const newPrimaryId = e.target.value;
+                          setTargetDeptId(newPrimaryId);
+                          setSelectedSupportingDeptIds((prev) =>
+                            prev.filter((id) => id !== newPrimaryId),
+                          );
+                        }}
+                        className="h-9 w-full rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-amber-600 focus:ring-1 focus:ring-amber-600/20"
+                      >
+                        <option value="">
+                          -- Select Primary Department --
                         </option>
-                      ))}
-                    </select>
+                        {departments.map((d) => (
+                          <option key={d.department_id} value={d.department_id}>
+                            {d.department_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleManualRoute(activeModalGrievance.grievance_id)
-                      }
-                      disabled={!targetDeptId || isRouting}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-amber-700 disabled:opacity-50"
-                    >
-                      {isRouting ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          <span>Routing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Building2 className="h-3.5 w-3.5" />
-                          <span>Confirm & Route</span>
-                        </>
-                      )}
-                    </button>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="block text-[11px] font-semibold uppercase tracking-wider text-amber-900/80">
+                          Supporting Departments (Optional)
+                        </p>
+                        {selectedSupportingDeptIds.length > 0 && (
+                          <span className="text-[10px] text-amber-800 font-medium">
+                            {selectedSupportingDeptIds.length} selected
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 p-2 rounded-xl border border-amber-200/80 bg-white/80 min-h-[42px] items-center">
+                        {departments
+                          .filter((d) => d.department_id !== targetDeptId)
+                          .map((d) => {
+                            const isSelected =
+                              selectedSupportingDeptIds.includes(
+                                d.department_id,
+                              );
+                            return (
+                              <button
+                                key={d.department_id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSupportingDeptIds((prev) =>
+                                    isSelected
+                                      ? prev.filter(
+                                          (id) => id !== d.department_id,
+                                        )
+                                      : [...prev, d.department_id],
+                                  );
+                                }}
+                                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                                  isSelected
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300 font-semibold shadow-2xs"
+                                    : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                <span>{isSelected ? "✓" : "+"}</span>
+                                <span>{d.department_name}</span>
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleManualRoute(activeModalGrievance.grievance_id)
+                        }
+                        disabled={!targetDeptId || isRouting}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-amber-700 disabled:opacity-50"
+                      >
+                        {isRouting ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Routing Ticket...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Building2 className="h-3.5 w-3.5" />
+                            <span>Confirm & Route Ticket</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {routingFeedback && (

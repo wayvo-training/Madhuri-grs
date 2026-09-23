@@ -162,26 +162,53 @@ export async function GET(request: Request) {
       ]),
     ]);
 
-    const serializedGrievances = rawGrievances.map((g) => ({
-      grievance_id: g.grievance_id.toString(),
-      grievance_number: g.grievance_number,
-      title: g.title,
-      description: g.description,
-      priority: g.priority,
-      status: g.status,
-      sla_status: g.sla_status,
-      due_at: g.due_at ? g.due_at.toISOString() : null,
-      created_at: g.created_at.toISOString(),
-      category_name: g.categories.category_name,
-      subcategory_name: g.subcategories.subcategory_name,
-      submitted_by_name:
-        `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
-      submitted_by_email: g.users.email,
-      department_name:
-        g.grievance_departments?.departments?.department_name || null,
-      reopen_count: g.reopen_count,
-      manual_review_count: g.manual_review_count,
-    }));
+    const grievanceIds = rawGrievances.map((g) => g.grievance_id);
+    const allDeptLinks =
+      grievanceIds.length > 0
+        ? await prisma.grievance_departments.findMany({
+            where: { grievance_id: { in: grievanceIds } },
+            include: { departments: true },
+          })
+        : [];
+
+    const serializedGrievances = rawGrievances.map((g) => {
+      const ticketLinks = allDeptLinks.filter(
+        (l) => l.grievance_id === g.grievance_id,
+      );
+      const primaryLink = ticketLinks.find(
+        (l) => l.involvement_type === "PRIMARY",
+      );
+      const supportingLinks = ticketLinks.filter(
+        (l) => l.involvement_type === "SUPPORTING",
+      );
+
+      return {
+        grievance_id: g.grievance_id.toString(),
+        grievance_number: g.grievance_number,
+        title: g.title,
+        description: g.description,
+        priority: g.priority,
+        status: g.status,
+        sla_status: g.sla_status,
+        due_at: g.due_at ? g.due_at.toISOString() : null,
+        created_at: g.created_at.toISOString(),
+        category_name: g.categories.category_name,
+        subcategory_name: g.subcategories.subcategory_name,
+        submitted_by_name:
+          `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
+        submitted_by_email: g.users.email,
+        department_name:
+          primaryLink?.departments?.department_name ||
+          g.grievance_departments?.departments?.department_name ||
+          null,
+        supporting_departments: supportingLinks.map((s) => ({
+          department_id: s.department_id.toString(),
+          department_name: s.departments.department_name,
+        })),
+        reopen_count: g.reopen_count,
+        manual_review_count: g.manual_review_count,
+      };
+    });
 
     return NextResponse.json({
       success: true,
