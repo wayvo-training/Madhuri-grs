@@ -5,92 +5,57 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-950 text-white">
-      <div className="mx-auto max-w-7xl px-6 py-14 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr]">
+    <footer className="border-t border-slate-800 bg-slate-950 text-slate-400 text-xs">
+      <div className="mx-auto max-w-6xl px-6 py-6 sm:py-8 lg:px-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           {/* Brand */}
-          <div>
-            <Link href="/" className="inline-flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold">
-                G
-              </div>
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#064E3B] text-sm font-bold text-white shadow-xs">
+              G
+            </div>
+            <div>
+              <span className="font-bold tracking-tight text-white text-sm">
+                GRS
+              </span>
+              <span className="ml-2 text-[11px] text-slate-500 font-medium">
+                Grievance Resolution System
+              </span>
+            </div>
+          </Link>
 
-              <div>
-                <p className="text-base font-bold tracking-tight">GRS</p>
-                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400">
-                  Grievance Resolution System
-                </p>
-              </div>
+          {/* Quick Nav Links */}
+          <nav className="flex flex-wrap items-center gap-5 sm:gap-6 text-xs">
+            <Link href="/" className="hover:text-white transition-colors">
+              Home
             </Link>
-
-            <p className="mt-5 max-w-md text-sm leading-6 text-slate-400">
-              A structured platform for submitting, processing, tracking, and
-              resolving workplace grievances with clear ownership and
-              visibility.
-            </p>
-          </div>
-
-          {/* Platform */}
-          <div>
-            <h3 className="text-sm font-semibold text-white">Platform</h3>
-
-            <div className="mt-4 space-y-3">
-              <Link
-                href="/"
-                className="block text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                Home
-              </Link>
-
-              <Link
-                href="#how-it-works"
-                className="block text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                How It Works
-              </Link>
-
-              <Link
-                href="#faq"
-                className="block text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                FAQ
-              </Link>
-
-              <Link
-                href="/login"
-                className="flex items-center gap-1 text-sm text-slate-400 transition-colors hover:text-white"
-              >
-                Login
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Process */}
-          <div>
-            <h3 className="text-sm font-semibold text-white">Process</h3>
-
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-slate-400">Submit Grievance</p>
-
-              <p className="text-sm text-slate-400">Review & Routing</p>
-
-              <p className="text-sm text-slate-400">Staff Resolution</p>
-
-              <p className="text-sm text-slate-400">Review & Closure</p>
-            </div>
-          </div>
+            <Link href="/#track" className="hover:text-white transition-colors">
+              Track Status
+            </Link>
+            <Link
+              href="/#how-it-works"
+              className="hover:text-white transition-colors"
+            >
+              How It Works
+            </Link>
+            <Link href="/faq" className="hover:text-white transition-colors">
+              FAQ
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Login
+              <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </nav>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-12 flex flex-col gap-4 border-t border-slate-800 pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">
-            © 2026 Grievance Resolution System. Internal platform.
-          </p>
-
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="h-4 w-4 text-teal-500" />
-            Controlled access & auditability
+        {/* Bottom bar */}
+        <div className="mt-6 flex flex-col gap-2 border-t border-slate-900 pt-4 sm:flex-row sm:items-center sm:justify-between text-[11px] text-slate-500">
+          <p>© 2026 Grievance Resolution System. Internal platform.</p>
+          <div className="flex items-center gap-1.5 text-slate-500">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <span>Controlled access & immutable audit trails</span>
           </div>
         </div>
       </div>
