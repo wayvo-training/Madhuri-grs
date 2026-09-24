@@ -1,9 +1,8 @@
-import FaqAccordion from "@/components/ui/home/faqaccordion";
 import Footer from "@/components/ui/home/footer";
+import GrievanceTracker from "@/components/ui/home/grievance-tracker";
 import HeroSection from "@/components/ui/home/herosection";
 import HowItsWork from "@/components/ui/home/howitswork";
 import Navbar from "@/components/ui/home/navbar";
-import SystemStatusBar from "@/components/ui/home/systemstatusbar";
 
 export default function Home() {
   return (
@@ -14,17 +13,15 @@ export default function Home() {
       {/* Internal scroll container starting strictly below Navbar from the Hero Section down */}
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain scroll-smooth custom-scrollbar">
         <HeroSection
-          headline="Resolve workplace concerns with clarity."
-          subtext="Raise, track, and resolve workplace grievances through a structured and transparent process."
+          headline="Resolve workplace concerns with clarity & trust."
+          subtext="Raise, track, and resolve workplace grievances through a structured, confidential, and auditable process."
           ctaText="Raise a Grievance"
           ctaHref="/login"
         />
 
-        <SystemStatusBar />
+        <GrievanceTracker />
 
         <HowItsWork />
-
-        <FaqAccordion />
 
         <Footer />
       </main>

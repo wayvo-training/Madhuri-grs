@@ -34,15 +34,22 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="#how-it-works"
+            href="/#track"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 sm:block"
+          >
+            Track Status
+          </Link>
+
+          <Link
+            href="/#how-it-works"
             className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 md:block"
           >
             How It Works
           </Link>
 
           <Link
-            href="#faq"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 md:block"
+            href="/faq"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 sm:block"
           >
             FAQ
           </Link>
