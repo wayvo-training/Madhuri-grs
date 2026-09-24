@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       try {
         conditions.push({ role_id: BigInt(roleId) });
       } catch {
-        // Ignore invalid bigint
+        conditions.push({ roles: { role_name: roleId } });
       }
     }
 
@@ -109,12 +109,19 @@ export async function POST(request: Request) {
       department_id,
     } = body;
 
-    if (!employee_code || !first_name || !email || !password || !role_id) {
+    if (
+      !employee_code ||
+      !first_name ||
+      !email ||
+      !password ||
+      !role_id ||
+      !department_id
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Employee code, first name, email, password, and role are required.",
+            "Employee code, first name, email, password, role, and department are required.",
         },
         { status: 400 },
       );

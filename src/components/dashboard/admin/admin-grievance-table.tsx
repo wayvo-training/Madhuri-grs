@@ -19,6 +19,7 @@ import {
   SlaBadge,
   StatusBadge,
 } from "@/components/dashboard/badges";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 export interface SerializedGrievance {
   grievance_id: string;
@@ -478,47 +479,58 @@ export function AdminGrievanceTable({
           </div>
 
           {/* Department Filter */}
-          <select
+          <CustomSelect
+            aria-label="Filter by department"
             value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-          >
-            <option value="ALL">All Departments</option>
-            {departments.map((d) => (
-              <option key={d.department_id} value={d.department_name}>
-                {d.department_name}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => {
+              setSelectedDept(val);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: "ALL", label: "All Departments" },
+              ...departments.map((d) => ({
+                value: d.department_name,
+                label: d.department_name,
+              })),
+            ]}
+          />
 
           {/* Priority Filter */}
-          <select
+          <CustomSelect
+            aria-label="Filter by priority"
             value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
+            onChange={(val) => {
+              setSelectedPriority(val);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: "ALL", label: "All Priorities" },
+              { value: "CRITICAL", label: "Critical" },
+              { value: "HIGH", label: "High" },
+              { value: "MEDIUM", label: "Medium" },
+              { value: "LOW", label: "Low" },
+            ]}
+          />
 
           {/* Status Filter */}
-          <select
+          <CustomSelect
+            aria-label="Filter by status"
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="ROUTED">Routed</option>
-            <option value="ASSIGNED">Assigned</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="UNDER_REVIEW">Under Review</option>
-            <option value="ESCALATED">Escalated</option>
-            <option value="CLOSED">Closed</option>
-          </select>
+            onChange={(val) => {
+              setSelectedStatus(val);
+              setCurrentPage(1);
+            }}
+            options={[
+              { value: "ALL", label: "All Statuses" },
+              { value: "SUBMITTED", label: "Submitted" },
+              { value: "ROUTED", label: "Routed" },
+              { value: "ASSIGNED", label: "Assigned" },
+              { value: "IN_PROGRESS", label: "In Progress" },
+              { value: "UNDER_REVIEW", label: "Under Review" },
+              { value: "ESCALATED", label: "Escalated" },
+              { value: "CLOSED", label: "Closed" },
+            ]}
+          />
         </div>
       </div>
 

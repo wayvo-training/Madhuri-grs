@@ -155,6 +155,23 @@
     font-size: 0.9375rem;
     line-height: 1.55;
   }
+
+  /* Force green brand accents on form controls and select boxes */
+  select {
+    accent-color: #059669;
+  }
+
+  select:focus,
+  select:focus-visible {
+    outline: none !important;
+    border-color: #059669 !important;
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2) !important;
+  }
+
+  select option:checked {
+    background-color: #064E3B !important;
+    color: #ffffff !important;
+  }
 }
 
 @layer utilities {

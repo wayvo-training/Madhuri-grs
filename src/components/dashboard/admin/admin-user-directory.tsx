@@ -3,9 +3,13 @@
 import {
   AlertTriangle,
   Building2,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Copy,
+  Eye,
+  EyeOff,
   Loader2,
   Mail,
   Pencil,
@@ -20,6 +24,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 export interface SerializedUser {
   user_id: string;
@@ -165,8 +170,45 @@ export function AdminUserDirectory({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [hasCopiedPassword, setHasCopiedPassword] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [selectedDeptId, setSelectedDeptId] = useState("");
+
+  const handleCopyPassword = () => {
+    if (!password) return;
+    navigator.clipboard.writeText(password);
+    setHasCopiedPassword(true);
+    setTimeout(() => setHasCopiedPassword(false), 2000);
+  };
+
+  const openCreateModal = () => {
+    setEmpCode("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPassword("");
+    setShowPassword(false);
+    setHasCopiedPassword(false);
+    setSelectedRoleId("");
+    setSelectedDeptId("");
+    setFeedback(null);
+    setIsModalOpen(true);
+  };
+
+  // Prevent browser autofill from inserting logged-in user credentials into onboarding fields
+  useEffect(() => {
+    if (isModalOpen) {
+      setEmail("");
+      setPassword("");
+      const timer = setTimeout(() => {
+        setEmail((curr) =>
+          curr.includes("@") && curr === "admin@grs.local" ? "" : curr,
+        );
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isModalOpen]);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -208,10 +250,17 @@ export function AdminUserDirectory({
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!empCode || !firstName || !email || !password || !selectedRoleId) {
+    if (
+      !empCode ||
+      !firstName ||
+      !email ||
+      !password ||
+      !selectedRoleId ||
+      !selectedDeptId
+    ) {
       setFeedback({
         type: "error",
-        text: "Please fill in all mandatory fields.",
+        text: "Please fill in all mandatory fields including department.",
       });
       return;
     }
@@ -264,6 +313,8 @@ export function AdminUserDirectory({
         setLastName("");
         setEmail("");
         setPassword("");
+        setShowPassword(false);
+        setHasCopiedPassword(false);
         setSelectedRoleId("");
         setSelectedDeptId("");
         setFeedback(null);
@@ -303,7 +354,13 @@ export function AdminUserDirectory({
 
   async function handleSaveEditUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!editingUserId || !editFirstName || !editEmail) return;
+    if (!editingUserId || !editFirstName || !editEmail || !editDeptId) {
+      setEditFeedback({
+        type: "error",
+        text: "Please fill in all mandatory fields including department.",
+      });
+      return;
+    }
 
     try {
       setIsEditSubmitting(true);
@@ -684,59 +741,65 @@ export function AdminUserDirectory({
               </div>
 
               {/* Status Filter */}
-              <select
+              <CustomSelect
                 aria-label="Filter by account status"
                 value={selectedStatus}
-                onChange={(e) => {
-                  setSelectedStatus(e.target.value);
+                onChange={(val) => {
+                  setSelectedStatus(val);
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-              >
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">Active Accounts</option>
-                <option value="INACTIVE">Suspended Accounts</option>
-              </select>
+                options={[
+                  { value: "ALL", label: "All Statuses" },
+                  { value: "ACTIVE", label: "Active Accounts" },
+                  { value: "INACTIVE", label: "Suspended Accounts" },
+                ]}
+              />
 
               {/* Role Filter */}
-              <select
+              <CustomSelect
                 aria-label="Filter by organizational role"
                 value={selectedRole}
-                onChange={(e) => {
-                  setSelectedRole(e.target.value);
+                onChange={(val) => {
+                  setSelectedRole(val);
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-              >
-                <option value="ALL">All Roles</option>
-                <option value="ADMIN">Administrator</option>
-                <option value="DEPARTMENT_HEAD">Department Head</option>
-                <option value="STAFF">Staff Member</option>
-                <option value="END_USER">End User</option>
-              </select>
+                options={[
+                  { value: "ALL", label: "All Roles" },
+                  ...(roles.length > 0
+                    ? roles.map((r) => ({
+                        value: r.role_id,
+                        label: roleLabels[r.role_name] || r.role_name,
+                      }))
+                    : [
+                        { value: "ADMIN", label: "Administrator" },
+                        { value: "DEPARTMENT_HEAD", label: "Department Head" },
+                        { value: "STAFF", label: "Staff Member" },
+                        { value: "END_USER", label: "End User" },
+                      ]),
+                ]}
+              />
 
               {/* Department Filter */}
-              <select
+              <CustomSelect
                 aria-label="Filter by assigned department"
                 value={selectedDept}
-                onChange={(e) => {
-                  setSelectedDept(e.target.value);
+                onChange={(val) => {
+                  setSelectedDept(val);
                   setCurrentPage(1);
                 }}
-                className="h-9 rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-              >
-                <option value="ALL">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d.department_id} value={d.department_id}>
-                    {d.department_name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "ALL", label: "All Departments" },
+                  ...departments.map((d) => ({
+                    value: d.department_id,
+                    label: d.department_name,
+                  })),
+                ]}
+              />
 
               {/* Add User Button */}
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={openCreateModal}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1028,6 +1091,8 @@ export function AdminUserDirectory({
                   type="button"
                   onClick={() => {
                     setIsModalOpen(false);
+                    setShowPassword(false);
+                    setHasCopiedPassword(false);
                     setFeedback(null);
                   }}
                   className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
@@ -1048,7 +1113,29 @@ export function AdminUserDirectory({
                 </div>
               )}
 
-              <form onSubmit={handleCreateUser} className="mt-4 space-y-3.5">
+              <form
+                onSubmit={handleCreateUser}
+                autoComplete="off"
+                className="mt-4 space-y-3.5"
+              >
+                {/* Hidden dummy fields to prevent browser password managers from autofilling admin credentials */}
+                <input
+                  type="text"
+                  name="fake_username_autofill"
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  autoComplete="off"
+                />
+                <input
+                  type="password"
+                  name="fake_password_autofill"
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  autoComplete="new-password"
+                />
+
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
                     <label
@@ -1059,8 +1146,10 @@ export function AdminUserDirectory({
                     </label>
                     <input
                       id="new-user-empcode"
+                      name="enterprise_user_empcode"
                       type="text"
                       required
+                      autoComplete="off"
                       placeholder="e.g. EMP-1055"
                       value={empCode}
                       onChange={(e) => setEmpCode(e.target.value)}
@@ -1077,8 +1166,12 @@ export function AdminUserDirectory({
                     </label>
                     <input
                       id="new-user-email"
+                      name="enterprise_user_email"
                       type="email"
                       required
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
                       placeholder="user@enterprise.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -1133,15 +1226,56 @@ export function AdminUserDirectory({
                       Temporary Password{" "}
                       <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      id="new-user-password"
-                      type="password"
-                      required
-                      placeholder="Min. 8 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
-                    />
+                    <div className="relative mt-1">
+                      <input
+                        id="new-user-password"
+                        name="enterprise_user_password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        autoComplete="new-password"
+                        data-lpignore="true"
+                        placeholder="Min. 8 characters"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-16 text-xs text-slate-900 outline-none focus:border-emerald-600 focus:bg-white"
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
+                        {password && (
+                          <button
+                            type="button"
+                            onClick={handleCopyPassword}
+                            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                            title={
+                              hasCopiedPassword ? "Copied!" : "Copy password"
+                            }
+                            aria-label="Copy password"
+                          >
+                            {hasCopiedPassword ? (
+                              <Check className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                          title={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <div>
@@ -1149,15 +1283,17 @@ export function AdminUserDirectory({
                       htmlFor="new-user-dept"
                       className="block text-xs font-semibold text-slate-700"
                     >
-                      Assigned Department
+                      Assigned Department{" "}
+                      <span className="text-rose-500">*</span>
                     </label>
                     <select
                       id="new-user-dept"
+                      required
                       value={selectedDeptId}
                       onChange={(e) => setSelectedDeptId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:bg-white"
                     >
-                      <option value="">Select department (optional)...</option>
+                      <option value="">Select department...</option>
                       {departments.map((d) => (
                         <option key={d.department_id} value={d.department_id}>
                           {d.department_name}
@@ -1179,7 +1315,7 @@ export function AdminUserDirectory({
                     required
                     value={selectedRoleId}
                     onChange={(e) => setSelectedRoleId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:bg-white"
                   >
                     <option value="">Select a role...</option>
                     {roles.map((r) => (
@@ -1193,7 +1329,11 @@ export function AdminUserDirectory({
                 <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setShowPassword(false);
+                      setHasCopiedPassword(false);
+                    }}
                     className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     Cancel
@@ -1321,15 +1461,16 @@ export function AdminUserDirectory({
                       htmlFor="edit-user-dept"
                       className="block text-xs font-semibold text-slate-700"
                     >
-                      Department
+                      Department <span className="text-rose-500">*</span>
                     </label>
                     <select
                       id="edit-user-dept"
+                      required
                       value={editDeptId}
                       onChange={(e) => setEditDeptId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:bg-white"
                     >
-                      <option value="">None / Unassigned</option>
+                      <option value="">Select department...</option>
                       {departments.map((d) => (
                         <option key={d.department_id} value={d.department_id}>
                           {d.department_name}
@@ -1350,7 +1491,7 @@ export function AdminUserDirectory({
                       required
                       value={editRoleId}
                       onChange={(e) => setEditRoleId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:bg-white"
                     >
                       <option value="">Select a role...</option>
                       {roles.map((r) => (
@@ -1375,7 +1516,7 @@ export function AdminUserDirectory({
                       onChange={(e) =>
                         setEditStatus(e.target.value as "ACTIVE" | "INACTIVE")
                       }
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none focus:border-emerald-600 focus:bg-white"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:bg-white"
                     >
                       <option value="ACTIVE">ACTIVE</option>
                       <option value="INACTIVE">INACTIVE</option>
