@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface DashboardHeaderProps {
   title: string;
@@ -186,8 +187,9 @@ export function DashboardHeader({
         </form>
       </div>
 
-      {/* Right: Notifications Action */}
+      {/* Right: Actions */}
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <NotificationDrawer />
       </div>
     </header>
