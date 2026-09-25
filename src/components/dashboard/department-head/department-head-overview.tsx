@@ -45,342 +45,10 @@ import {
   DocumentViewerModal,
 } from "./document-viewer-modal";
 
-export interface EscalationAuditRecord {
-  id: string;
-  timestamp: string;
-  actor: string;
-  action: string;
-  bottleneck?: string;
-  details: string;
-  stage?: string;
-}
-
-export interface GrievanceItem {
-  id: string;
-  ticketCode: string;
-  title: string;
-  category: string;
-  subcategory: string;
-  submitterName: string;
-  submitterRole: string;
-  submitterEmail: string;
-  priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-  status:
-    | "SUBMITTED"
-    | "ROUTED"
-    | "ASSIGNED"
-    | "IN_PROGRESS"
-    | "UNDER_REVIEW"
-    | "REOPENED"
-    | "ESCALATED"
-    | "CLOSED"
-    | "RESOLVED";
-  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
-  slaDeadline: string;
-  slaTimeLeft: string;
-  slaConsumptionPercent?: number;
-  assignedStaffId?: string | null;
-  assignedStaffName?: string | null;
-  createdAt: string;
-  isReopened?: boolean;
-  reopenCount?: number;
-  reopenReason?: string;
-  isCrossDepartment?: boolean;
-  collaboratingDepartments?: string[];
-  escalationReason?: string;
-  escalationLevel?: number;
-  // 11-Step SLA Escalation & Resolution Lifecycle
-  escalationStage?:
-    | "SLA_THRESHOLD_REACHED"
-    | "GRIEVANCE_ESCALATED"
-    | "HOD_NOTIFIED"
-    | "UNDER_REVIEW"
-    | "BOTTLENECK_IDENTIFIED"
-    | "INTERVENTION_TAKEN"
-    | "AUDIT_LOGGED"
-    | "STAFF_NOTIFIED"
-    | "IN_PROGRESS"
-    | "RESOLUTION_SUBMITTED"
-    | "ESCALATION_CLEARED";
-  identifiedBottleneck?: string;
-  hodIntervention?: {
-    actionType:
-      | "MONITOR"
-      | "NOTIFY_STAFF"
-      | "REASSIGN"
-      | "CROSS_DEPT"
-      | "EXPEDITE"
-      | "OVERRIDE"
-      | "SLA_EXTENSION";
-    actionLabel: string;
-    note: string;
-    intervenedAt: string;
-    intervenedBy: string;
-    targetStaffName?: string;
-    targetDepartment?: string;
-    newDeadline?: string;
-  } | null;
-  submittedResolution?: {
-    staffName: string;
-    note: string;
-    submittedAt: string;
-  } | null;
-  auditTrail?: EscalationAuditRecord[];
-  description?: string;
-  attachments?: { name: string; size: string; type: string }[];
-  internalNotes?: {
-    id: string;
-    author: string;
-    role: string;
-    timestamp: string;
-    note: string;
-  }[];
-}
-
-export interface StaffMember {
-  id: string;
-  name: string;
-  designation: string;
-  email: string;
-  activeTickets: number;
-  maxCapacity: number;
-  status: "ACTIVE" | "ON_LEAVE" | "BUSY";
-}
-
-export const SLA_LIFECYCLE_STEPS = [
-  {
-    step: 1,
-    key: "SLA_THRESHOLD_REACHED",
-    title: "SLA Threshold Reached",
-    desc: "Warning or breach deadline reached",
-    icon: Clock,
-  },
-  {
-    step: 2,
-    key: "GRIEVANCE_ESCALATED",
-    title: "Grievance Escalated",
-    desc: "Status moves to Escalated, severity flagged",
-    icon: AlertTriangle,
-  },
-  {
-    step: 3,
-    key: "HOD_NOTIFIED",
-    title: "Department Head Notified",
-    desc: "Urgent alert banner dispatched to HOD portal",
-    icon: Bell,
-  },
-  {
-    step: 4,
-    key: "UNDER_REVIEW",
-    title: "Head Reviews Grievance",
-    desc: "HOD inspects details, timeline & history",
-    icon: Search,
-  },
-  {
-    step: 5,
-    key: "BOTTLENECK_IDENTIFIED",
-    title: "Identifies Bottleneck",
-    desc: "Pinpoints root stall: staff, cross-dept, or docs",
-    icon: Layers,
-  },
-  {
-    step: 6,
-    key: "INTERVENTION_TAKEN",
-    title: "Takes Intervention Action",
-    desc: "Reassigns, cross-dept, expedites, or overrides",
-    icon: ShieldAlert,
-  },
-  {
-    step: 7,
-    key: "AUDIT_LOGGED",
-    title: "Action Logged in Audit Trail",
-    desc: "Immutable timestamped governance entry",
-    icon: FileText,
-  },
-  {
-    step: 8,
-    key: "STAFF_NOTIFIED",
-    title: "Staff / Dept Notified",
-    desc: "Operational directives dispatched to team",
-    icon: Send,
-  },
-  {
-    step: 9,
-    key: "IN_PROGRESS",
-    title: "Grievance Continues",
-    desc: "Investigation resumes under active intervention",
-    icon: RefreshCw,
-  },
-  {
-    step: 10,
-    key: "RESOLUTION_SUBMITTED",
-    title: "Resolution Submitted",
-    desc: "Investigating officer submits solution note",
-    icon: FileCheck,
-  },
-  {
-    step: 11,
-    key: "ESCALATION_CLEARED",
-    title: "Escalation Cleared",
-    desc: "HOD reviews, approves & closes grievance",
-    icon: CheckCircle2,
-  },
-];
-
-function formatAuditFeedDetails(rawDetails?: string | null): string | null {
-  if (!rawDetails) return null;
-  const str = String(rawDetails).trim();
-  if (!str.startsWith("{")) return str;
-
-  try {
-    const parsed = JSON.parse(str);
-    if (parsed && typeof parsed === "object") {
-      if (parsed.consumptionPercent !== undefined) {
-        const pct = Math.round(Number(parsed.consumptionPercent));
-        const escalatedTo = parsed.escalatedTo
-          ? ` to ${parsed.escalatedTo}`
-          : "";
-        return `Critical SLA breach (${pct}% consumed). Auto-escalated${escalatedTo} for intervention.`;
-      }
-      if (parsed.note) return String(parsed.note);
-      if (parsed.remarks) return String(parsed.remarks);
-      if (parsed.reason) return String(parsed.reason);
-      return Object.entries(parsed)
-        .filter(
-          ([k, v]) =>
-            typeof v !== "object" &&
-            v !== null &&
-            v !== undefined &&
-            k !== "threshold",
-        )
-        .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase()}: ${v}`)
-        .join(" • ");
-    }
-  } catch {
-    // ignore parse error
-  }
-  return str;
-}
-
-function formatEscalationNotice(reason?: string): string {
-  if (!reason) return "Resolution deadline elapsed prior to staff closure.";
-  let cleaned = String(reason)
-    .replace(/^Automated SLA Breach:\s*/i, "")
-    .replace(/^SLA 100 BREACH ESCALATED:\s*/i, "")
-    .replace(/⚠/g, "")
-    .trim();
-
-  cleaned = cleaned.replace(
-    /\d+(\.\d+)?%\s*(?:of\s*SLA\s*time\s*consumed\s*)?(?:without\s*resolution\.?)?/gi,
-    "Resolution deadline elapsed prior to staff closure.",
-  );
-  cleaned = cleaned.replace(/\s*\d+(\.\d+)?%\s*/g, " ");
-  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
-  return cleaned || "Resolution deadline elapsed prior to staff closure.";
-}
-
-function formatAuditActionTitle(action: string): string {
-  const act = action.toUpperCase().replace(/\s+/g, "_");
-  if (act.includes("SLA_100") || act.includes("BREACH")) {
-    return "SLA Deadline Breached (Escalated)";
-  }
-  if (act.includes("SLA_75")) {
-    return "SLA Warning Alert Dispatched";
-  }
-  if (act === "ROUTE" || act === "ROUTED") {
-    return "Department Routing";
-  }
-  if (act === "CREATE" || act === "SUBMITTED") {
-    return "Grievance Submitted";
-  }
-  if (act.includes("ASSIGN")) {
-    return "Assigned to Investigating Officer";
-  }
-  if (act.includes("SUBMIT_RESOLUTION")) {
-    return "Resolution Findings Submitted";
-  }
-  if (act.includes("ACCEPT_RESOLUTION")) {
-    return "Resolution Approved & Accepted";
-  }
-  if (act.includes("HOD_INTERVENTION")) {
-    return "Department Head Intervention Directive";
-  }
-  if (act.includes("HOD_DIRECTIVE_NOTE")) {
-    return "Internal Directive Note";
-  }
-  return action
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatAuditLogContent(
-  action: string,
-  rawDetails?: string | null,
-): string {
-  if (!rawDetails) return "Action recorded during grievance processing.";
-  const str = String(rawDetails).trim();
-  if (!str.startsWith("{")) return str;
-
-  try {
-    const parsed = JSON.parse(str);
-    if (parsed && typeof parsed === "object") {
-      if (parsed.details) return String(parsed.details);
-      if (parsed.note) return String(parsed.note);
-      if (parsed.remarks) return String(parsed.remarks);
-      if (parsed.outcome) return String(parsed.outcome);
-
-      const act = action.toUpperCase();
-      if (
-        act.includes("SLA_100") ||
-        act.includes("BREACH") ||
-        parsed.newStatus === "ESCALATED"
-      ) {
-        const escalatedTo = parsed.escalatedTo
-          ? ` to ${parsed.escalatedTo}`
-          : " to Department Head";
-        return `SLA resolution deadline elapsed. Case automatically escalated${escalatedTo} for intervention directives.`;
-      }
-
-      if (act.includes("SLA_75") || parsed.slaStatus === "AT_RISK") {
-        return "SLA reached 75% threshold. Department Head notified for proactive review and guidance.";
-      }
-
-      if (act.includes("ROUTE") || parsed.status === "ROUTED") {
-        return "Grievance triaged and successfully routed to department queue.";
-      }
-
-      if (act.includes("CREATE") || parsed.status === "SUBMITTED") {
-        const prio = parsed.priority ? ` with ${parsed.priority} priority` : "";
-        return `Grievance registered and submitted by complainant${prio}.`;
-      }
-
-      if (act.includes("ASSIGN") || parsed.staff_id) {
-        return "Assigned to designated department officer for inquiry and resolution.";
-      }
-
-      if (act.includes("RESOLUTION") && parsed.decision) {
-        return `Resolution review decided: ${parsed.decision}.`;
-      }
-
-      const summary = Object.entries(parsed)
-        .filter(
-          ([k, v]) =>
-            typeof v !== "object" &&
-            v !== null &&
-            v !== undefined &&
-            k !== "threshold",
-        )
-        .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase()}: ${v}`)
-        .join(" • ");
-      if (summary) return summary;
-    }
-  } catch {
-    // ignore parse error and return original string
-  }
-
-  return str;
-}
+import { EscalationAuditRecord, GrievanceItem, StaffMember } from "@/types/department-head";
+import { SLA_LIFECYCLE_STEPS } from "@/lib/department-head/constants";
+import { formatAuditFeedDetails, formatEscalationNotice, formatAuditActionTitle, formatAuditLogContent } from "@/lib/department-head/utils";
+import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 
 interface Props {
   departmentName?: string;
@@ -390,7 +58,7 @@ interface Props {
   isAdminPreview?: boolean;
 }
 
-export function DepartmentHeadOverview({
+export function DepartmentHeadOverviewInner({
   departmentName = "Department Operations",
   hodName = "Department Head",
   hodEmail = "",
@@ -4973,5 +4641,18 @@ export function DepartmentHeadOverview({
         onDownload={handleDownloadDocument}
       />
     </div>
+  );
+}
+
+export function DepartmentHeadOverview(props: Props) {
+  return (
+    <DepartmentHeadProvider
+      initialDepartmentName={props.departmentName}
+      initialHodName={props.hodName}
+      initialHodEmail={props.hodEmail}
+      initialEmployeeCode={props.employeeCode}
+    >
+      <DepartmentHeadOverviewInner {...props} />
+    </DepartmentHeadProvider>
   );
 }
