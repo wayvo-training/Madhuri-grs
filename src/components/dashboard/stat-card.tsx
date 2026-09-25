@@ -56,10 +56,10 @@ export function StatCard({
 
   return (
     <div
-      className={`rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs transition-all duration-150 hover:shadow-xs flex flex-col justify-between h-[115px] sm:h-[120px] ${styles.borderGlow} ${className}`}
+      className={`rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs transition-all duration-150 hover:shadow-xs flex flex-col justify-between h-28.75 sm:h-30 ${styles.borderGlow} ${className}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
+        <p className="text-2.75 font-semibold uppercase tracking-wider text-slate-500 truncate">
           {label}
         </p>
         <div
@@ -80,7 +80,7 @@ export function StatCard({
         <div className="mt-auto pt-1 flex items-center gap-1.5 text-xs font-normal text-slate-500">
           {trend && (
             <span
-              className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
+              className={`inline-flex items-center gap-0.5 text-2.75 font-semibold ${
                 trend.isPositive ? "text-emerald-600" : "text-rose-600"
               }`}
             >
@@ -93,7 +93,7 @@ export function StatCard({
             </span>
           )}
           {description && (
-            <span className="truncate text-[11px] text-slate-500">
+            <span className="truncate text-2.75 text-slate-500">
               {description}
             </span>
           )}

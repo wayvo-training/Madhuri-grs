@@ -163,7 +163,7 @@ export default function GrievanceTracker() {
                     setQuery(sample);
                     handleTrack(sample);
                   }}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-800 transition-colors"
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-2.75 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-800 transition-colors"
                 >
                   {sample}
                 </button>
@@ -179,7 +179,7 @@ export default function GrievanceTracker() {
               <XCircle className="h-5 w-5" />
               <p className="text-xs font-semibold">{error}</p>
             </div>
-            <p className="mt-1 text-[11px] text-rose-600">
+            <p className="mt-1 text-2.75 text-rose-600">
               Need assistance?{" "}
               <Link
                 href="/login"
@@ -204,14 +204,14 @@ export default function GrievanceTracker() {
                       {result.number}
                     </span>
                     <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase ${getStatusBadge(
+                      className={`rounded-full border px-2.5 py-0.5 text-2.5 font-bold uppercase ${getStatusBadge(
                         result.status,
                       )}`}
                     >
                       {result.status.replace("_", " ")}
                     </span>
                     {result.status === "ESCALATED" && (
-                      <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                      <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-2.5 font-bold text-rose-700">
                         <ShieldAlert className="h-3 w-3" />
                         Escalated
                       </span>
@@ -225,11 +225,11 @@ export default function GrievanceTracker() {
 
                 {/* Primary Department & Category */}
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                  <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium">
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-2.75 font-medium">
                     <Building2 className="h-3.5 w-3.5 text-emerald-700" />
                     {result.primaryDepartment}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium">
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-2.75 font-medium">
                     <Tag className="h-3.5 w-3.5 text-slate-500" />
                     {result.category}
                   </span>
@@ -280,7 +280,7 @@ export default function GrievanceTracker() {
                         {stage.label}
                       </p>
 
-                      <p className="mt-1 text-[10px] text-slate-500">
+                      <p className="mt-1 text-2.5 text-slate-500">
                         {stage.date
                           ? new Date(stage.date).toLocaleDateString("en-US", {
                               month: "short",

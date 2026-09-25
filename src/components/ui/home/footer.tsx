@@ -17,7 +17,7 @@ export default function Footer() {
               <span className="font-bold tracking-tight text-white text-sm">
                 GRS
               </span>
-              <span className="ml-2 text-[11px] text-slate-500 font-medium">
+              <span className="ml-2 text-2.75 text-slate-500 font-medium">
                 Grievance Resolution System
               </span>
             </div>
@@ -51,7 +51,7 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-6 flex flex-col gap-2 border-t border-slate-900 pt-4 sm:flex-row sm:items-center sm:justify-between text-[11px] text-slate-500">
+        <div className="mt-6 flex flex-col gap-2 border-t border-slate-900 pt-4 sm:flex-row sm:items-center sm:justify-between text-2.75 text-slate-500">
           <p>© 2026 Grievance Resolution System. Internal platform.</p>
           <div className="flex items-center gap-1.5 text-slate-500">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />

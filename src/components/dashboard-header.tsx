@@ -76,7 +76,7 @@ export default function DashboardHeader({
               {userName}
             </span>
             {userEmail && (
-              <span className="text-[11px] text-gray-400">{userEmail}</span>
+              <span className="text-2.75 text-gray-400">{userEmail}</span>
             )}
           </div>
 

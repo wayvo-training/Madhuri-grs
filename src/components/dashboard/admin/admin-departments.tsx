@@ -4,8 +4,10 @@ import {
   Activity,
   Building2,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  EllipsisVertical,
   Loader2,
   Pencil,
   Plus,
@@ -16,7 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export interface SerializedDepartment {
   department_id: string;
@@ -85,6 +87,27 @@ export function AdminDepartments({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Action menu state (3-dot menu)
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  const closeActionMenu = useCallback(() => setOpenActionMenuId(null), []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(e.target as Node)
+      ) {
+        closeActionMenu();
+      }
+    }
+    if (openActionMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openActionMenuId, closeActionMenu]);
 
   // Filter departments by status and search
   const filteredDepartments = useMemo(() => {
@@ -324,7 +347,7 @@ export function AdminDepartments({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Total Departments
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-800">
@@ -332,14 +355,14 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? departments.length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-normal text-slate-400">
               Divisions
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-800 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-800 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
             Enterprise organization units
           </div>
@@ -347,7 +370,7 @@ export function AdminDepartments({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Active Departments
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
@@ -355,16 +378,16 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-emerald-600">
+            <span className="text-3xl font-bold tracking-tight text-emerald-600">
               {stats?.active ??
                 departments.filter((d) => (d.status || "ACTIVE") === "ACTIVE")
                   .length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-normal text-slate-400">
               Routing enabled
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Accepting grievances
           </div>
@@ -372,23 +395,23 @@ export function AdminDepartments({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Deactivated / Inactive
             </span>
-            <div className="rounded-xl bg-slate-100 p-2 text-slate-600">
+            <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
               <Power className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-800">
+            <span className="text-3xl font-bold tracking-tight text-slate-800">
               {stats?.inactive ??
                 departments.filter((d) => d.status === "INACTIVE").length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-normal text-slate-400">
               Suspended
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Excluded from new intake
           </div>
@@ -396,22 +419,22 @@ export function AdminDepartments({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Assigned Grievances
             </span>
-            <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+            <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
               <Activity className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.totalGrievances ?? totalGrievances}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-normal text-slate-400">
               In lifecycle
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             System-wide distribution
           </div>
@@ -430,19 +453,19 @@ export function AdminDepartments({
               <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
                 <Building2 className="h-4 w-4" />
               </span>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-lg font-semibold text-slate-900">
                 Department Workload & Governance
               </h3>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-[13px] font-normal text-slate-500">
               Enterprise divisions configured for automated routing, status
               governance, and workload resolution.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3">
             {/* Search Input */}
-            <div className="relative min-w-[200px]">
+            <div className="relative w-48 sm:w-56 shrink-0">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                 <Search className="h-4 w-4" />
               </div>
@@ -454,40 +477,36 @@ export function AdminDepartments({
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
+                className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
               />
             </div>
 
-            {/* Status Filter Buttons */}
-            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
-              {(["ALL", "ACTIVE", "INACTIVE"] as const).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter(st);
-                    setCurrentPage(1);
-                  }}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
-                    statusFilter === st
-                      ? "bg-white text-slate-900 shadow-2xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  {st === "ALL"
-                    ? "All"
-                    : st === "ACTIVE"
-                      ? "Active"
-                      : "Inactive"}
-                </button>
-              ))}
+            {/* Status Filter Dropdown */}
+            <div className="relative shrink-0">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(
+                    e.target.value as "ALL" | "ACTIVE" | "INACTIVE",
+                  );
+                  setCurrentPage(1);
+                }}
+                className="h-9 appearance-none rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                <ChevronDown className="h-3.5 w-3.5" />
+              </div>
             </div>
 
             {/* New Department Button */}
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
+              className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>New Department</span>
@@ -495,150 +514,201 @@ export function AdminDepartments({
           </div>
         </div>
 
-        {/* Departments List */}
-        <div className="mt-5 space-y-3.5">
-          {filteredDepartments.length === 0 ? (
-            <div className="py-14 text-center">
-              <div className="mx-auto flex max-w-sm flex-col items-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-8 ring-emerald-50/50">
-                  <Building2 className="h-6 w-6" />
-                </div>
-                <h3 className="mt-4 text-sm font-bold text-slate-900">
-                  No matching departments found
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  No departments match your current status filter or search
-                  query.
-                </p>
-                {(searchQuery || statusFilter !== "ALL") && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setStatusFilter("ALL");
-                      setCurrentPage(1);
-                    }}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Reset Filters</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            paginatedDepartments.map((dept) => {
-              const isDeptActive = (dept.status || "ACTIVE") === "ACTIVE";
-              const percentage =
-                totalGrievances > 0
-                  ? Math.round((dept.grievance_count / totalGrievances) * 100)
-                  : 0;
-
-              return (
-                <div
-                  key={dept.department_id}
-                  className={`rounded-xl border p-4 transition ${
-                    isDeptActive
-                      ? "border-slate-100 bg-white hover:border-slate-200 hover:shadow-xs"
-                      : "border-slate-200/60 bg-slate-50/70 opacity-80"
-                  }`}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-xs">
-                    {/* Department Identity */}
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg font-bold ${
-                          isDeptActive
-                            ? "bg-emerald-100/80 text-emerald-800"
-                            : "bg-slate-200 text-slate-500"
-                        }`}
-                      >
-                        <Building2 className="h-4 w-4" />
+        {/* Departments Table */}
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/80">
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  S.No
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Department
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Description
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Status
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Staff
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Cases
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDepartments.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-14 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-8 ring-emerald-50/50">
+                        <Building2 className="h-6 w-6" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-900">
-                            {dept.department_name}
-                          </span>
-                          {/* Status Pill */}
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+                      <h3 className="mt-4 text-sm font-bold text-slate-900">
+                        No matching departments found
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        No departments match your current status filter or
+                        search query.
+                      </p>
+                      {(searchQuery || statusFilter !== "ALL") && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("ALL");
+                            setCurrentPage(1);
+                          }}
+                          className="mt-4 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                          <span>Reset Filters</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedDepartments.map((dept, index) => {
+                  const isDeptActive = (dept.status || "ACTIVE") === "ACTIVE";
+
+                  return (
+                    <tr
+                      key={dept.department_id}
+                      className={`border-b border-slate-100 transition ${
+                        isDeptActive
+                          ? "bg-white hover:bg-slate-50/60"
+                          : "bg-slate-50/40 opacity-80"
+                      }`}
+                    >
+                      {/* S.No */}
+                      <td className="whitespace-nowrap px-4 py-3.5 text-sm font-medium text-slate-500">
+                        {(currentPage - 1) * PAGE_SIZE + index + 1}
+                      </td>
+
+                      {/* Department Name */}
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
                               isDeptActive
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-200 bg-slate-100 text-slate-600"
+                                ? "bg-emerald-100/80 text-emerald-800"
+                                : "bg-slate-200 text-slate-500"
                             }`}
                           >
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${
-                                isDeptActive ? "bg-emerald-500" : "bg-slate-400"
-                              }`}
-                            />
-                            {isDeptActive ? "Active" : "Inactive"}
+                            <Building2 className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-900">
+                            {dept.department_name}
                           </span>
                         </div>
-                        {dept.description && (
-                          <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">
-                            {dept.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Stats & Actions */}
-                    <div className="flex items-center gap-3">
-                      {dept.user_count !== undefined && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                          <Users className="h-3 w-3 text-slate-400" />
-                          {dept.user_count} staff
+                      {/* Description */}
+                      <td className="max-w-[220px] px-4 py-3.5">
+                        <p className="truncate text-sm font-normal text-slate-500">
+                          {dept.description || "—"}
+                        </p>
+                      </td>
+
+                      {/* Status */}
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                            isDeptActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              isDeptActive ? "bg-emerald-500" : "bg-slate-400"
+                            }`}
+                          />
+                          {isDeptActive ? "Active" : "Inactive"}
                         </span>
-                      )}
-                      <span className="font-semibold text-slate-700">
-                        {dept.grievance_count} cases ({percentage}%)
-                      </span>
+                      </td>
 
-                      {/* Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(dept)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-emerald-800 transition"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        <span>Edit</span>
-                      </button>
+                      {/* Staff */}
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1 text-sm text-slate-600 font-medium">
+                          <Users className="h-3 w-3 text-slate-400" />
+                          {dept.user_count ?? 0}
+                        </span>
+                      </td>
 
-                      {/* Activate / Deactivate Toggle Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(dept)}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition ${
-                          isDeptActive
-                            ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        }`}
-                      >
-                        <Power className="h-3 w-3" />
-                        <span>{isDeptActive ? "Deactivate" : "Activate"}</span>
-                      </button>
-                    </div>
-                  </div>
+                      {/* Cases */}
+                      <td className="whitespace-nowrap px-4 py-3.5 text-sm font-medium text-slate-700">
+                        {dept.grievance_count}
+                      </td>
 
-                  {/* Workload Distribution Bar */}
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isDeptActive ? "bg-emerald-600" : "bg-slate-400"
-                      }`}
-                      style={{ width: `${Math.max(percentage, 3)}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
-          )}
+                      {/* Action - 3 dots menu */}
+                      <td className="whitespace-nowrap px-4 py-3.5">
+                        <div
+                          className="relative"
+                          ref={
+                            openActionMenuId === dept.department_id
+                              ? actionMenuRef
+                              : undefined
+                          }
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenActionMenuId(
+                                openActionMenuId === dept.department_id
+                                  ? null
+                                  : dept.department_id,
+                              )
+                            }
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                          >
+                            <EllipsisVertical className="h-4 w-4" />
+                          </button>
+                          {openActionMenuId === dept.department_id && (
+                            <div className="absolute right-0 top-full z-20 mt-1 min-w-[120px] rounded-xl border border-slate-200 bg-white py-1 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  closeActionMenu();
+                                  openEditModal(dept);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
+                              >
+                                <Pencil className="h-3 w-3" />
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  closeActionMenu();
+                                  handleToggleStatus(dept);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
+                              >
+                                <Power className="h-3 w-3" />
+                                {isDeptActive ? "Deactivate" : "Activate"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Persistent Pagination Footer */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 mt-5 pt-3.5 text-xs text-slate-500">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 mt-5 pt-3.5 text-[13px] text-slate-500">
           <div>
             Showing{" "}
             <span className="font-semibold text-slate-700">
@@ -820,7 +890,7 @@ export function AdminDepartments({
                       <span className="text-amber-800">*</span>
                     </label>
                     <span
-                      className={`text-[10px] font-mono ${
+                      className={`text-xs font-mono ${
                         description.trim().length >= 20
                           ? "text-slate-500"
                           : "text-amber-800 font-semibold"

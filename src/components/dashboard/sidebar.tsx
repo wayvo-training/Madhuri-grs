@@ -20,13 +20,6 @@ interface DashboardSidebarProps {
   onToggleCollapse?: () => void;
 }
 
-const roleBadgeStyles: Record<UserRole, string> = {
-  ADMIN: "bg-purple-50 text-purple-700 border-purple-200",
-  DEPARTMENT_HEAD: "bg-sky-50 text-sky-700 border-sky-200",
-  STAFF: "bg-amber-50 text-amber-700 border-amber-200",
-  END_USER: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
 const roleDisplayLabels: Record<UserRole, string> = {
   ADMIN: "System Admin",
   DEPARTMENT_HEAD: "Department Head",
@@ -180,7 +173,7 @@ export function DashboardSidebar({
                   <p className="text-base font-bold tracking-tight text-slate-900 leading-tight">
                     GRS
                   </p>
-                  <p className="text-[11px] font-medium uppercase tracking-[-0.01em] text-slate-500">
+                  <p className="text-2.75 font-medium uppercase tracking-[-0.01em] text-slate-500">
                     Resolution Portal
                   </p>
                 </div>
@@ -279,7 +272,7 @@ export function DashboardSidebar({
                               {item.title}
                             </span>
                             {item.badge && (
-                              <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                              <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-2.5 font-bold text-amber-300">
                                 {item.badge}
                               </span>
                             )}
@@ -293,7 +286,7 @@ export function DashboardSidebar({
                         key={item.title}
                         href={item.href}
                         onClick={(e) => handleItemClick(e, item.href)}
-                        className={`group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-[15px] font-medium tracking-[-0.01em] transition-all duration-150 ${
+                        className={`group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-3.75 font-medium tracking-[-0.01em] transition-all duration-150 ${
                           isActive
                             ? "bg-[#064E3B] text-white shadow-sm shadow-emerald-950/20"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -347,9 +340,9 @@ export function DashboardSidebar({
                 <div className="pointer-events-none absolute left-full ml-3.5 bottom-0 hidden group-hover:flex flex-col gap-0.5 rounded-xl bg-slate-900 px-3 py-2 text-xs text-white shadow-xl z-50 whitespace-nowrap">
                   <p className="font-bold">{userName}</p>
                   {userEmail && (
-                    <p className="text-[11px] text-slate-300">{userEmail}</p>
+                    <p className="text-2.75 text-slate-300">{userEmail}</p>
                   )}
-                  <p className="text-[11px] text-slate-300">
+                  <p className="text-2.75 text-slate-300">
                     {roleDisplayLabels[userRole]}
                   </p>
                 </div>

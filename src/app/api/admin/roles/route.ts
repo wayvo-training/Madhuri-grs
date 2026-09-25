@@ -10,6 +10,11 @@ export async function GET() {
   try {
     const [roles, permissions] = await Promise.all([
       prisma.roles.findMany({
+        where: {
+          role_name: {
+            not: "ADMIN",
+          },
+        },
         orderBy: { role_id: "asc" },
         include: {
           _count: { select: { users: true } },

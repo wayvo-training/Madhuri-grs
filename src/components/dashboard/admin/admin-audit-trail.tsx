@@ -144,7 +144,7 @@ export function AdminAuditTrail({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Total Audited Events
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-[#064E3B]">
@@ -152,14 +152,12 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? totalCount}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              Recorded
-            </span>
+            <span className="text-xs font-medium text-slate-400">Recorded</span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[#064E3B] font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-[#064E3B] font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
             Immutable system ledger
           </div>
@@ -167,7 +165,7 @@ export function AdminAuditTrail({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               User Sessions & Logins
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
@@ -175,14 +173,14 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-emerald-600">
+            <span className="text-3xl font-bold tracking-tight text-emerald-600">
               {stats?.sessions ?? "-"}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400">
               Auth events
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Sign-ins & session tokens
           </div>
@@ -190,7 +188,7 @@ export function AdminAuditTrail({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               API Requests & Route Calls
             </span>
             <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
@@ -198,14 +196,14 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.apis ?? "-"}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400">
               Transactions
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Automated API telemetry
           </div>
@@ -213,7 +211,7 @@ export function AdminAuditTrail({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Errors & Exceptions
             </span>
             <div className="rounded-xl bg-amber-50 p-2 text-amber-800 border border-amber-200">
@@ -221,14 +219,12 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-amber-900">
+            <span className="text-3xl font-bold tracking-tight text-amber-900">
               {stats?.errors ?? "-"}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              Logged
-            </span>
+            <span className="text-xs font-medium text-slate-400">Logged</span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-amber-800 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-800 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-600" />
             Security & runtime alerts
           </div>
@@ -247,18 +243,18 @@ export function AdminAuditTrail({
                 <span className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
                   <ShieldCheck className="h-4 w-4" />
                 </span>
-                <h2 className="text-base font-bold tracking-tight text-slate-900">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   Observability & Audit Trail
                 </h2>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
                 Complete record of sessions, API requests, route navigation,
                 errors, and administrative governance.
               </p>
             </div>
 
             {/* Search */}
-            <div className="relative min-w-[240px]">
+            <div className="relative min-w-60">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                 <Search className="h-4 w-4" />
               </div>
@@ -305,7 +301,7 @@ export function AdminAuditTrail({
         {/* Logs Table */}
         <div className="overflow-x-auto relative">
           <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <thead className="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="py-3.5 pl-6 pr-3">Timestamp</th>
                 <th className="px-3 py-3.5">Who (Actor & Identity)</th>
@@ -411,7 +407,7 @@ export function AdminAuditTrail({
                           )}
                           <span
                             suppressHydrationWarning
-                            className="font-mono text-[11px]"
+                            className="font-mono text-xs"
                           >
                             {new Date(log.created_at).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -422,7 +418,7 @@ export function AdminAuditTrail({
                         </div>
                         <span
                           suppressHydrationWarning
-                          className="font-mono text-[10px] text-slate-400"
+                          className="font-mono text-xs text-slate-400"
                         >
                           {new Date(log.created_at).toLocaleDateString(
                             "en-US",
@@ -437,7 +433,7 @@ export function AdminAuditTrail({
                       {/* Who Column */}
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-[11px] font-bold text-[#064E3B]">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-xs font-bold text-[#064E3B]">
                             {log.user_name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -447,13 +443,13 @@ export function AdminAuditTrail({
                               </span>
                               {log.role_name && (
                                 <span
-                                  className={`rounded px-1.5 py-0.2 text-[9px] font-bold border ${rolePill}`}
+                                  className={`rounded px-1.5 py-0.2 text-2.25 font-bold border ${rolePill}`}
                                 >
                                   {log.role_name}
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                            <div className="flex items-center gap-1 text-xs text-slate-400">
                               {log.employee_code && (
                                 <span className="font-mono text-slate-500">
                                   {log.employee_code} •{" "}
@@ -468,7 +464,7 @@ export function AdminAuditTrail({
                       {/* Action */}
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <span
-                          className={`inline-block rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold ${
+                          className={`inline-block rounded-md border px-2 py-0.5 font-mono text-xs font-bold ${
                             isError
                               ? "bg-rose-50 text-rose-700 border-rose-200"
                               : "bg-slate-100 text-slate-800 border-slate-200"
@@ -480,18 +476,18 @@ export function AdminAuditTrail({
 
                       {/* Category & Entity */}
                       <td className="whitespace-nowrap px-3 py-3.5">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
                           {log.entity_type}
                         </span>
                         {log.entity_id && (
-                          <span className="ml-1 font-mono text-[10px] text-slate-400">
+                          <span className="ml-1 font-mono text-xs text-slate-400">
                             #{log.entity_id}
                           </span>
                         )}
                       </td>
 
                       {/* Source IP / Device */}
-                      <td className="whitespace-nowrap px-3 py-3.5 font-mono text-[11px] text-slate-500">
+                      <td className="whitespace-nowrap px-3 py-3.5 font-mono text-xs text-slate-500">
                         <div className="flex items-center gap-1.5">
                           <Globe className="h-3 w-3 text-slate-400" />
                           <span>{log.ip_address}</span>
@@ -509,7 +505,7 @@ export function AdminAuditTrail({
                                   isExpanded ? null : log.audit_log_id,
                                 )
                               }
-                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-50 transition"
+                              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
                             >
                               <FileCode2 className="h-3 w-3 text-emerald-700" />
                               <span>
@@ -518,7 +514,7 @@ export function AdminAuditTrail({
                             </button>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-slate-400 italic">
+                          <span className="text-xs text-slate-400 italic">
                             None
                           </span>
                         )}
@@ -546,7 +542,7 @@ export function AdminAuditTrail({
                 ✕ Close
               </button>
             </div>
-            <pre className="mt-3 max-h-60 overflow-y-auto rounded bg-slate-950 p-3 text-[11px]">
+            <pre className="mt-3 max-h-60 overflow-y-auto rounded bg-slate-950 p-3 text-xs">
               {JSON.stringify(
                 logs.find((l) => l.audit_log_id === expandedLogId)?.new_value,
                 null,

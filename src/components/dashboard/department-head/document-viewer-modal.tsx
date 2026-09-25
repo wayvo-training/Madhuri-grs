@@ -105,12 +105,12 @@ export function DocumentViewerModal({
                 >
                   {document.name}
                 </h3>
-                <span className="hidden sm:inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200">
+                <span className="hidden sm:inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-2.5 font-semibold text-emerald-800 border border-emerald-200">
                   <ShieldCheck className="h-3 w-3 text-emerald-600" />
                   Verified Evidence
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-2.75 text-slate-500">
                 {document.size} &bull; {document.type || "Official Record"}{" "}
                 &bull; Case:{" "}
                 <strong className="text-slate-700">
@@ -157,7 +157,7 @@ export function DocumentViewerModal({
             <div className="border-b-2 border-emerald-900 pb-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-800">
+                  <div className="text-2.5 font-bold uppercase tracking-widest text-emerald-800">
                     Republic Grievance Redressal System &bull; Official Dossier
                   </div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-1">
@@ -172,18 +172,18 @@ export function DocumentViewerModal({
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200">
+                  <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2.5 py-1 text-2.75 font-semibold text-slate-700 border border-slate-200">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                     AUTHENTICATED
                   </span>
-                  <div className="text-[10px] text-slate-400 mt-1">
+                  <div className="text-2.5 text-slate-400 mt-1">
                     Uploaded: {document.uploadedAt || "24 Sep 2026"}
                   </div>
                 </div>
               </div>
 
               {/* Submitter & Case particulars metadata box */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[11px]">
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-2.75">
                 <div>
                   <span className="text-slate-400 block">Complainant:</span>
                   <strong className="text-slate-800 truncate block">
@@ -204,7 +204,7 @@ export function DocumentViewerModal({
                 </div>
                 <div>
                   <span className="text-slate-400 block">Security Hash:</span>
-                  <span className="font-mono text-[10px] text-emerald-700 block truncate">
+                  <span className="font-mono text-2.5 text-emerald-700 block truncate">
                     SHA256:7b92f...a41c
                   </span>
                 </div>
@@ -317,7 +317,7 @@ export function DocumentViewerModal({
                     <strong className="font-semibold block text-xs">
                       Payroll Auditor Remarks:
                     </strong>
-                    <p className="text-[11px] leading-relaxed">
+                    <p className="text-2.75 leading-relaxed">
                       Deduction code{" "}
                       <code className="bg-white/80 px-1 py-0.5 rounded font-mono">
                         DED_REC_049
@@ -350,7 +350,7 @@ export function DocumentViewerModal({
 
                   <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 font-sans">
                     <div className="rounded-lg bg-white p-3 border border-slate-200/80 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-100 pb-1">
+                      <div className="flex items-center justify-between text-2.75 text-slate-500 border-b border-slate-100 pb-1">
                         <strong className="text-slate-800">
                           Reporting Supervisor
                         </strong>
@@ -367,7 +367,7 @@ export function DocumentViewerModal({
                     </div>
 
                     <div className="rounded-lg bg-emerald-50/70 p-3 border border-emerald-200 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-emerald-800 border-b border-emerald-200/60 pb-1">
+                      <div className="flex items-center justify-between text-2.75 text-emerald-800 border-b border-emerald-200/60 pb-1">
                         <strong className="text-emerald-950">
                           Complainant
                         </strong>
@@ -382,7 +382,7 @@ export function DocumentViewerModal({
                     </div>
 
                     <div className="rounded-lg bg-rose-50/70 p-3 border border-rose-200 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-rose-800 border-b border-rose-200/60 pb-1">
+                      <div className="flex items-center justify-between text-2.75 text-rose-800 border-b border-rose-200/60 pb-1">
                         <strong className="text-rose-950">
                           Reporting Supervisor (Flagged Message)
                         </strong>
@@ -396,7 +396,7 @@ export function DocumentViewerModal({
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-slate-100 p-3 text-[11px] text-slate-600 border border-slate-200">
+                  <div className="rounded-lg bg-slate-100 p-3 text-2.75 text-slate-600 border border-slate-200">
                     <strong className="font-semibold text-slate-800">
                       Investigating Officer Certification:
                     </strong>{" "}
@@ -420,7 +420,7 @@ export function DocumentViewerModal({
 
                   {isImage ? (
                     <div className="space-y-3">
-                      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-900 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-[220px]">
+                      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-900 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-55">
                         <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
                           <ImageIcon className="h-8 w-8" />
                         </div>
@@ -432,7 +432,7 @@ export function DocumentViewerModal({
                             High-resolution photographic observation captured
                             on-site during initial compliance inspection.
                           </p>
-                          <div className="text-[11px] font-mono text-emerald-400 pt-2">
+                          <div className="text-2.75 font-mono text-emerald-400 pt-2">
                             GPS / EXIF: Building B, Bay 4 Floor Junction &bull;
                             2026-09-19 14:35:10 IST
                           </div>
@@ -454,7 +454,7 @@ export function DocumentViewerModal({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
-                          <span className="text-[11px] text-slate-400 uppercase font-semibold">
+                          <span className="text-2.75 text-slate-400 uppercase font-semibold">
                             Location / Area
                           </span>
                           <p className="font-bold text-slate-900 text-xs">
@@ -462,7 +462,7 @@ export function DocumentViewerModal({
                           </p>
                         </div>
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
-                          <span className="text-[11px] text-slate-400 uppercase font-semibold">
+                          <span className="text-2.75 text-slate-400 uppercase font-semibold">
                             Risk Rating
                           </span>
                           <p className="font-bold text-rose-700 text-xs">
@@ -514,7 +514,7 @@ export function DocumentViewerModal({
 
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-[10px] text-slate-400 uppercase block font-semibold">
+                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
                         Leave Type
                       </span>
                       <strong className="text-slate-800 text-xs">
@@ -522,7 +522,7 @@ export function DocumentViewerModal({
                       </strong>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-[10px] text-slate-400 uppercase block font-semibold">
+                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
                         Duration
                       </span>
                       <strong className="text-slate-800 text-xs">
@@ -530,7 +530,7 @@ export function DocumentViewerModal({
                       </strong>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-[10px] text-slate-400 uppercase block font-semibold">
+                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
                         Available Balance
                       </span>
                       <strong className="text-emerald-700 text-xs">
@@ -546,19 +546,19 @@ export function DocumentViewerModal({
                     <div className="space-y-2 text-xs">
                       <div className="flex items-center justify-between text-slate-600">
                         <span>1. Employee Submission</span>
-                        <span className="font-mono text-[11px] text-slate-500">
+                        <span className="font-mono text-2.75 text-slate-500">
                           10 Sep 2026, 11:20 AM &bull; Status: Auto-Validated
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-rose-700 font-medium">
                         <span>2. Manager Approval Step</span>
-                        <span className="font-mono text-[11px]">
+                        <span className="font-mono text-2.75">
                           Pending &bull; Exceeded 48h SLA Window
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-slate-400">
                         <span>3. HR Notification & Credit</span>
-                        <span className="font-mono text-[11px]">
+                        <span className="font-mono text-2.75">
                           Queued upon Stage 2 clearance
                         </span>
                       </div>
@@ -690,7 +690,7 @@ export function DocumentViewerModal({
                       <h5 className="font-bold text-xs">
                         3. Resolution Recommendation:
                       </h5>
-                      <p className="text-[11px] leading-relaxed">
+                      <p className="text-2.75 leading-relaxed">
                         Formal advisory issued to concerned parties. Remedial
                         adjustment instructions submitted to Department Head for
                         final sign-off and closure.
@@ -737,7 +737,7 @@ export function DocumentViewerModal({
                       </p>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-2.75 text-slate-500">
                       <span>
                         Signature of Complainant:{" "}
                         <strong className="text-slate-800">
@@ -751,7 +751,7 @@ export function DocumentViewerModal({
             </div>
 
             {/* Document Footer Authentication */}
-            <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px] text-slate-400">
+            <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-2.5 text-slate-400">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
                 <span>

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
 
@@ -97,8 +98,5 @@ export function ThemeInitScript() {
     })();
   `;
 
-  return (
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: Theme script injection requires inner HTML
-    <script dangerouslySetInnerHTML={{ __html: script }} suppressHydrationWarning />
-  );
+  return <script suppressHydrationWarning>{script}</script>;
 }

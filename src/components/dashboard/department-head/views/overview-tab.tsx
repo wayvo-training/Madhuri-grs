@@ -37,7 +37,7 @@ export function OverviewTab({
                 <h2 className="text-base sm:text-lg font-semibold tracking-tight text-white leading-tight">
                   {currentDepartmentName}
                 </h2>
-                <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-2.5 font-semibold text-emerald-200">
                   Primary Queue
                 </span>
               </div>

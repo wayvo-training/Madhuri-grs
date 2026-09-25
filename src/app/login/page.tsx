@@ -58,7 +58,7 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-50 py-12 sm:px-6 lg:px-8">
       {/* Ambient background glow matching hero */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-gradient-to-b from-emerald-100/50 via-emerald-50/25 to-transparent blur-3xl" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-125 w-200 rounded-full bg-linear-to-b from-emerald-100/50 via-emerald-50/25 to-transparent blur-3xl" />
       </div>
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -74,7 +74,7 @@ export default function LoginPage() {
             <p className="text-lg font-bold tracking-tight text-slate-900">
               GRS
             </p>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <p className="text-2.5 font-medium uppercase tracking-wider text-slate-500">
               Grievance Resolution System
             </p>
           </div>

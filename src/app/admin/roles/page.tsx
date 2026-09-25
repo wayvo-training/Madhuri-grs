@@ -13,6 +13,11 @@ export default async function AdminRolesPage() {
 
   const [rawRoles, rawPermissions] = await Promise.all([
     prisma.roles.findMany({
+      where: {
+        role_name: {
+          not: "ADMIN",
+        },
+      },
       orderBy: { role_id: "asc" },
       include: {
         _count: { select: { users: true } },

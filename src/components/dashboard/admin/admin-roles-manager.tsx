@@ -50,7 +50,9 @@ export function AdminRolesManager({
   availablePermissions,
 }: AdminRolesManagerProps) {
   const router = useRouter();
-  const [roles, setRoles] = useState<SerializedRole[]>(initialRoles);
+  const [roles, setRoles] = useState<SerializedRole[]>(() =>
+    initialRoles.filter((r) => r.role_name !== "ADMIN"),
+  );
   const [permissionsList, setPermissionsList] =
     useState<SerializedPermission[]>(availablePermissions);
 
@@ -303,6 +305,13 @@ export function AdminRolesManager({
   async function handleCreateRole(e: React.FormEvent) {
     e.preventDefault();
     if (!newRoleName.trim()) return;
+    if (newRoleName.trim().toUpperCase() === "ADMIN") {
+      setFeedback({
+        type: "error",
+        text: "The ADMIN role is a reserved system role and cannot be created.",
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -514,7 +523,7 @@ export function AdminRolesManager({
             <ShieldCheck className="h-3.5 w-3.5" />
             <span>Roles Matrix</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                 activeTab === "roles"
                   ? "bg-slate-800 text-slate-200"
                   : "bg-slate-200/70 text-slate-600"
@@ -536,7 +545,7 @@ export function AdminRolesManager({
             <KeyRound className="h-3.5 w-3.5" />
             <span>Security Permissions</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                 activeTab === "permissions"
                   ? "bg-slate-800 text-slate-200"
                   : "bg-slate-200/70 text-slate-600"
@@ -624,7 +633,7 @@ export function AdminRolesManager({
               <p className="mt-2 text-xs font-semibold text-slate-700">
                 No roles match your filter criteria
               </p>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-xs text-slate-400">
                 Try adjusting your search query or status filter.
               </p>
             </div>
@@ -662,7 +671,7 @@ export function AdminRolesManager({
                               </h3>
                               {isAdmin && (
                                 <span
-                                  className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200"
+                                  className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200"
                                   title="Core System Role"
                                 >
                                   <Lock className="h-2.5 w-2.5" />
@@ -670,7 +679,7 @@ export function AdminRolesManager({
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                               {role.description || "No description provided"}
                             </p>
                           </div>
@@ -680,7 +689,7 @@ export function AdminRolesManager({
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                           {/* Active / Inactive Status Badge */}
                           <span
-                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${
                               role.status === "ACTIVE"
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : "bg-rose-50 text-rose-700 border border-rose-200"
@@ -696,7 +705,7 @@ export function AdminRolesManager({
                             {role.status}
                           </span>
 
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
                             <Users className="h-3 w-3 text-slate-400" />
                             {role.user_count} Users
                           </span>
@@ -706,20 +715,20 @@ export function AdminRolesManager({
                       {/* Assigned Permissions */}
                       <div className="mt-4 pt-3 border-t border-slate-200/60">
                         <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                             Assigned Capabilities ({role.permissions.length})
                           </p>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {role.permissions.length === 0 ? (
-                            <span className="text-[11px] text-slate-400 italic">
+                            <span className="text-xs text-slate-400 italic">
                               No permissions assigned
                             </span>
                           ) : (
                             role.permissions.map((p) => (
                               <span
                                 key={p.permission_id}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700 shadow-2xs"
+                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 shadow-2xs"
                               >
                                 <KeyRound className="h-2.5 w-2.5 text-emerald-700" />
                                 {p.permission_code}
@@ -928,7 +937,7 @@ export function AdminRolesManager({
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${
                               perm.status === "ACTIVE"
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : "bg-rose-50 text-rose-700 border border-rose-200"
@@ -1060,7 +1069,7 @@ export function AdminRolesManager({
                 <span className="block text-xs font-semibold text-slate-700">
                   Role Status <span className="text-rose-500">*</span>
                 </span>
-                <p className="text-[11px] text-slate-500 mb-2">
+                <p className="text-xs text-slate-500 mb-2">
                   Configure whether this role is immediately operational for
                   users.
                 </p>
@@ -1077,7 +1086,7 @@ export function AdminRolesManager({
                     <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                     <div>
                       <p className="font-bold">Active</p>
-                      <p className="text-[10px] font-normal text-slate-500">
+                      <p className="text-xs font-normal text-slate-500">
                         Can be assigned to users
                       </p>
                     </div>
@@ -1095,7 +1104,7 @@ export function AdminRolesManager({
                     <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                     <div>
                       <p className="font-bold">Inactive</p>
-                      <p className="text-[10px] font-normal text-slate-500">
+                      <p className="text-xs font-normal text-slate-500">
                         Suspended / Unavailable
                       </p>
                     </div>
@@ -1107,7 +1116,7 @@ export function AdminRolesManager({
                 <span className="block text-xs font-semibold text-slate-700">
                   Assign Permission Capabilities
                 </span>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Select which capabilities members of this role are authorized
                   to perform.
                 </p>
@@ -1138,12 +1147,12 @@ export function AdminRolesManager({
                               {perm.permission_code}
                             </p>
                             {perm.status === "INACTIVE" && (
-                              <span className="rounded bg-rose-100 px-1 text-[9px] font-semibold text-rose-700">
+                              <span className="rounded bg-rose-100 px-1 text-2.25 font-semibold text-rose-700">
                                 Inactive
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-xs text-slate-500">
                             {perm.description || perm.permission_name}
                           </p>
                         </div>
@@ -1236,7 +1245,7 @@ export function AdminRolesManager({
                 <span className="block text-xs font-semibold text-slate-700">
                   Role Status <span className="text-rose-500">*</span>
                 </span>
-                <p className="text-[11px] text-slate-500 mb-2">
+                <p className="text-xs text-slate-500 mb-2">
                   Toggle whether this role is active in user assignment and
                   runtime authentication.
                 </p>
@@ -1263,7 +1272,7 @@ export function AdminRolesManager({
                       <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                       <div>
                         <p className="font-bold">Active</p>
-                        <p className="text-[10px] font-normal text-slate-500">
+                        <p className="text-xs font-normal text-slate-500">
                           Role enabled for users
                         </p>
                       </div>
@@ -1281,7 +1290,7 @@ export function AdminRolesManager({
                       <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                       <div>
                         <p className="font-bold">Inactive</p>
-                        <p className="text-[10px] font-normal text-slate-500">
+                        <p className="text-xs font-normal text-slate-500">
                           Suspended / Unavailable
                         </p>
                       </div>
@@ -1294,7 +1303,7 @@ export function AdminRolesManager({
                 <span className="block text-xs font-semibold text-slate-700">
                   Assigned Permission Capabilities
                 </span>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-xs text-slate-500">
                   Toggle capabilities assigned to users with this role.
                 </p>
 
@@ -1326,12 +1335,12 @@ export function AdminRolesManager({
                               {perm.permission_code}
                             </p>
                             {perm.status === "INACTIVE" && (
-                              <span className="rounded bg-rose-100 px-1 text-[9px] font-semibold text-rose-700">
+                              <span className="rounded bg-rose-100 px-1 text-2.25 font-semibold text-rose-700">
                                 Inactive
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500">
+                          <p className="text-xs text-slate-500">
                             {perm.description || perm.permission_name}
                           </p>
                         </div>

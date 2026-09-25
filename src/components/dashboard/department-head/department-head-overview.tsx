@@ -1128,7 +1128,7 @@ export function DepartmentHeadOverviewInner({
             <Inbox className="h-3.5 w-3.5" />
             <span>Grievance Queue</span>
             <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+              className={`rounded-full px-1.5 py-0.2 text-2.5 ${
                 activeView === "queue"
                   ? "bg-white/20 text-white"
                   : "bg-slate-100 text-slate-700 font-medium"
@@ -1150,7 +1150,7 @@ export function DepartmentHeadOverviewInner({
             <Users className="h-3.5 w-3.5" />
             <span>Staff Workload</span>
             <span
-              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+              className={`rounded-full px-1.5 py-0.2 text-2.5 ${
                 activeView === "staff"
                   ? "bg-white/20 text-white"
                   : "bg-slate-100 text-slate-700"
@@ -1176,7 +1176,7 @@ export function DepartmentHeadOverviewInner({
             />
             <span>SLA & Escalations</span>
             {(atRiskCount > 0 || escalatedCount > 0) && (
-              <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] text-white font-bold">
+              <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-2.5 text-white font-bold">
                 {atRiskCount + escalatedCount}
               </span>
             )}
@@ -1251,7 +1251,7 @@ export function DepartmentHeadOverviewInner({
       {activeView === "overview" && (
         <div className="space-y-3.5 sm:space-y-4">
           {/* 1. Department Header Banner (Compact: ~80-90px height) */}
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-gradient-to-r from-[#064E3B] via-[#043629] to-slate-950 px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-xs">
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-linear-to-r from-[#064E3B] via-[#043629] to-slate-950 px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-xs">
             <div className="relative z-10 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
@@ -1262,7 +1262,7 @@ export function DepartmentHeadOverviewInner({
                     <h2 className="text-base sm:text-lg font-semibold tracking-tight text-white leading-tight">
                       {currentDepartmentName}
                     </h2>
-                    <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                    <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-2.5 font-semibold text-emerald-200">
                       Primary Queue
                     </span>
                   </div>
@@ -1351,7 +1351,7 @@ export function DepartmentHeadOverviewInner({
                   Attention Required
                 </h3>
                 {attentionRequiredList.length > 0 && (
-                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.2 text-[10px] font-semibold text-slate-700">
+                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.2 text-2.5 font-semibold text-slate-700">
                     {attentionRequiredList.length}
                   </span>
                 )}
@@ -1377,13 +1377,13 @@ export function DepartmentHeadOverviewInner({
                 <p className="font-semibold text-slate-700 text-xs">
                   No grievances require intervention
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-2.75 text-slate-400 mt-0.5">
                   All active grievances are operating within their defined SLA
                   thresholds.
                 </p>
               </div>
             ) : (
-              <div className="max-h-[300px] overflow-y-auto custom-scrollbar divide-y divide-slate-100 rounded-lg border border-slate-200/80 bg-white">
+              <div className="max-h-75 overflow-y-auto custom-scrollbar divide-y divide-slate-100 rounded-lg border border-slate-200/80 bg-white">
                 {attentionRequiredList.map((item) => {
                   const isEscalated = item.status === "ESCALATED";
                   const isBreached = item.slaStatus === "BREACHED";
@@ -1396,11 +1396,11 @@ export function DepartmentHeadOverviewInner({
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 transition group min-h-[44px]"
+                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 transition group min-h-11"
                     >
                       {/* Left: Monospace Code & Title */}
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="font-mono text-[11px] font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">
+                        <span className="font-mono text-2.75 font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">
                           {item.ticketCode}
                         </span>
                         <button
@@ -1419,19 +1419,19 @@ export function DepartmentHeadOverviewInner({
                       {/* Right: Fixed-width vertically-aligned columns */}
                       <div className="flex items-center gap-3 shrink-0">
                         {/* 1. Priority Column (fixed 76px width) */}
-                        <div className="w-[76px] flex justify-start shrink-0">
+                        <div className="w-19 flex justify-start shrink-0">
                           <PriorityBadge priority={item.priority} />
                         </div>
 
                         {/* 2. Status Column (fixed 96px width) */}
-                        <div className="w-[96px] flex justify-start shrink-0">
+                        <div className="w-24 flex justify-start shrink-0">
                           <StatusBadge status={item.status} />
                         </div>
 
                         {/* 3. SLA Timer Column (fixed 110px width) */}
-                        <div className="w-[110px] flex justify-center shrink-0">
+                        <div className="w-27.5 flex justify-center shrink-0">
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded font-medium text-center w-full truncate ${
+                            className={`text-2.5 px-2 py-0.5 rounded font-medium text-center w-full truncate ${
                               highlightSla
                                 ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold"
                                 : "text-slate-600 bg-slate-100/80 border border-slate-200/80"
@@ -1442,11 +1442,9 @@ export function DepartmentHeadOverviewInner({
                         </div>
 
                         {/* 4. Assigned Officer Column (fixed 140px width) */}
-                        <div className="w-[140px] shrink-0 text-left truncate hidden sm:block">
-                          <span className="text-[11px] text-slate-400">
-                            To:{" "}
-                          </span>
-                          <span className="text-[11px] font-medium text-slate-700">
+                        <div className="w-35 shrink-0 text-left truncate hidden sm:block">
+                          <span className="text-2.75 text-slate-400">To: </span>
+                          <span className="text-2.75 font-medium text-slate-700">
                             {item.assignedStaffName || (
                               <span className="italic text-slate-400 font-normal">
                                 Unassigned
@@ -1456,14 +1454,14 @@ export function DepartmentHeadOverviewInner({
                         </div>
 
                         {/* 5. Inspect Action Column (fixed 74px width) */}
-                        <div className="w-[74px] flex justify-end shrink-0">
+                        <div className="w-18.5 flex justify-end shrink-0">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedCaseFile(item);
                               setCaseDrawerTab("progress");
                             }}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-2.75 font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
                           >
                             <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
                             <span>Inspect</span>
@@ -1487,7 +1485,7 @@ export function DepartmentHeadOverviewInner({
                   <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
                     Team Capacity
                   </h3>
-                  <span className="text-[11px] text-slate-400 font-normal">
+                  <span className="text-2.75 text-slate-400 font-normal">
                     ({staffList.length})
                   </span>
                 </div>
@@ -1501,7 +1499,7 @@ export function DepartmentHeadOverviewInner({
                 </button>
               </div>
 
-              <div className="max-h-[85px] overflow-y-scroll custom-scrollbar pr-1.5 space-y-2">
+              <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-2">
                 {staffList.length === 0 ? (
                   <p className="text-xs text-slate-400 py-3 text-center font-normal">
                     No officers assigned to this department roster.
@@ -1520,7 +1518,7 @@ export function DepartmentHeadOverviewInner({
                           <span className="font-semibold text-slate-900 text-xs truncate">
                             {staff.name}
                           </span>
-                          <span className="text-slate-600 font-medium text-[11px] shrink-0">
+                          <span className="text-slate-600 font-medium text-2.75 shrink-0">
                             {staff.activeTickets}/{staff.maxCapacity} active
                           </span>
                         </div>
@@ -1551,7 +1549,7 @@ export function DepartmentHeadOverviewInner({
                   <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
                     Recent Activity
                   </h3>
-                  <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">
+                  <span className="text-2.75 text-slate-400 font-normal hidden sm:inline">
                     (Governance)
                   </span>
                 </div>
@@ -1565,7 +1563,7 @@ export function DepartmentHeadOverviewInner({
                 </button>
               </div>
 
-              <div className="max-h-[85px] overflow-y-scroll custom-scrollbar pr-1.5 space-y-1.5 divide-y divide-slate-100">
+              <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-1.5 divide-y divide-slate-100">
                 {governanceAuditFeed.length === 0 ? (
                   <div className="py-4 text-center text-slate-400 text-xs font-normal">
                     No governance audit events recorded yet.
@@ -1612,7 +1610,7 @@ export function DepartmentHeadOverviewInner({
                             <span className="font-semibold text-slate-900 text-xs truncate">
                               {displayActor}
                             </span>
-                            <span className="text-[10px] text-slate-400 shrink-0">
+                            <span className="text-2.5 text-slate-400 shrink-0">
                               {feed.timestamp}
                             </span>
                           </div>
@@ -1620,7 +1618,7 @@ export function DepartmentHeadOverviewInner({
                             {displayAction}
                           </p>
                           {cleanDetails && (
-                            <p className="text-[11px] text-slate-500 font-normal italic truncate">
+                            <p className="text-2.75 text-slate-500 font-normal italic truncate">
                               {cleanDetails}
                             </p>
                           )}
@@ -1675,7 +1673,7 @@ export function DepartmentHeadOverviewInner({
               >
                 <span>All</span>
                 <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "ALL"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1695,7 +1693,7 @@ export function DepartmentHeadOverviewInner({
               >
                 <span>Unassigned</span>
                 <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "UNASSIGNED"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1715,7 +1713,7 @@ export function DepartmentHeadOverviewInner({
               >
                 <span>In Progress</span>
                 <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "IN_PROGRESS"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1736,7 +1734,7 @@ export function DepartmentHeadOverviewInner({
                 <Flame className="h-3 w-3" />
                 <span>High & Critical</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "HIGH_CRITICAL"
                       ? "bg-white/20 text-white font-semibold"
                       : highCriticalCount > 0
@@ -1758,7 +1756,7 @@ export function DepartmentHeadOverviewInner({
               >
                 <span>SLA At Risk</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "AT_RISK"
                       ? "bg-white/20 text-white font-semibold"
                       : atRiskCount > 0
@@ -1781,7 +1779,7 @@ export function DepartmentHeadOverviewInner({
                 <AlertCircle className="h-3 w-3" />
                 <span>Escalated</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "ESCALATED"
                       ? "bg-white/20 text-white font-semibold"
                       : escalatedCount > 0
@@ -1804,7 +1802,7 @@ export function DepartmentHeadOverviewInner({
                 <RotateCcw className="h-3 w-3" />
                 <span>Reopened</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "REOPENED"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1825,7 +1823,7 @@ export function DepartmentHeadOverviewInner({
                 <GitBranch className="h-3 w-3" />
                 <span>Cross-Dept</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "CROSS_DEPT"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1846,7 +1844,7 @@ export function DepartmentHeadOverviewInner({
                 <CheckCircle2 className="h-3 w-3" />
                 <span>Resolution Review</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "RESOLUTION_REVIEW"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1867,7 +1865,7 @@ export function DepartmentHeadOverviewInner({
                 <CheckCircle2 className="h-3 w-3" />
                 <span>Closed</span>
                 <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[11px] ${
+                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
                     selectedTab === "CLOSED"
                       ? "bg-white/20 text-white font-semibold"
                       : "bg-slate-100 text-slate-600 font-medium"
@@ -1918,7 +1916,7 @@ export function DepartmentHeadOverviewInner({
           </div>
 
           {/* Full-width Grievance Cards Grid with dedicated scrollbar (Body of the unit) */}
-          <div className="max-h-[580px] overflow-y-scroll custom-scrollbar p-3.5 sm:p-4 space-y-3 bg-slate-50/40">
+          <div className="max-h-145 overflow-y-scroll custom-scrollbar p-3.5 sm:p-4 space-y-3 bg-slate-50/40">
             {filteredGrievances.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
                 <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500/80" />
@@ -1956,30 +1954,30 @@ export function DepartmentHeadOverviewInner({
                       {item.slaStatus === "BREACHED" &&
                         item.status !== "ESCALATED" &&
                         (item.hodIntervention ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-900">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-2.75 font-semibold text-emerald-900">
                             <CheckCircle2 className="h-3 w-3 text-emerald-700" />
                             Intervention Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-2.75 font-semibold text-amber-900">
                             <AlertCircle className="h-3 w-3 text-amber-600" />
                             SLA Breached
                           </span>
                         ))}
                       {item.slaStatus === "AT_RISK" && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-2.75 font-semibold text-amber-700">
                           <Clock className="h-3 w-3 text-amber-600" />
                           SLA At Risk
                         </span>
                       )}
                       {item.isReopened && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-2.75 font-semibold text-slate-700">
                           <RotateCcw className="h-3 w-3 text-slate-600" />
                           Reopened ({item.reopenCount}x)
                         </span>
                       )}
                       {item.isCrossDepartment && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-2.75 font-semibold text-slate-700">
                           <GitBranch className="h-3 w-3 text-slate-600" />
                           Cross-Dept
                         </span>
@@ -1987,11 +1985,11 @@ export function DepartmentHeadOverviewInner({
                     </div>
 
                     <div className="text-right flex items-center gap-2 shrink-0">
-                      <span className="text-[11px] font-normal text-slate-400">
+                      <span className="text-2.75 font-normal text-slate-400">
                         Submitted {item.createdAt}
                       </span>
                       <span className="text-slate-300">&bull;</span>
-                      <span className="text-[11px] font-normal text-slate-500">
+                      <span className="text-2.75 font-normal text-slate-500">
                         Target SLA:
                       </span>
                       <span
@@ -2046,7 +2044,7 @@ export function DepartmentHeadOverviewInner({
                         {item.collaboratingDepartments.map((dept) => (
                           <span
                             key={dept}
-                            className="rounded bg-white border border-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700"
+                            className="rounded bg-white border border-slate-200 px-2 py-0.5 text-2.75 font-medium text-slate-700"
                           >
                             {dept}
                           </span>
@@ -2063,7 +2061,7 @@ export function DepartmentHeadOverviewInner({
                           Department Head Directive &bull;{" "}
                           {item.hodIntervention.actionLabel}
                         </span>
-                        <span className="text-[11px] font-normal text-emerald-800 shrink-0">
+                        <span className="text-2.75 font-normal text-emerald-800 shrink-0">
                           {item.hodIntervention.intervenedAt} &bull; by{" "}
                           {item.hodIntervention.intervenedBy}
                         </span>
@@ -2084,7 +2082,7 @@ export function DepartmentHeadOverviewInner({
                             Pending HOD Approval &bull; Submitted by{" "}
                             {item.submittedResolution.staffName}
                           </span>
-                          <span className="text-[11px] font-normal">
+                          <span className="text-2.75 font-normal">
                             {item.submittedResolution.submittedAt}
                           </span>
                         </div>
@@ -2095,7 +2093,7 @@ export function DepartmentHeadOverviewInner({
                     )}
 
                   {/* Bottom Row: Metadata on LEFT, Actions on RIGHT - STRICT SINGLE LINE */}
-                  <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100 min-h-[38px]">
+                  <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100 min-h-9.5">
                     <div className="flex items-center gap-x-3 text-xs font-normal text-slate-500 min-w-0 flex-1 overflow-hidden">
                       <span className="truncate shrink-0">
                         <strong className="font-medium text-slate-700">
@@ -2111,7 +2109,7 @@ export function DepartmentHeadOverviewInner({
                           Submitter:
                         </strong>{" "}
                         <span
-                          className="inline-block max-w-[130px] truncate align-bottom text-slate-700 font-medium"
+                          className="inline-block max-w-32.5 truncate align-bottom text-slate-700 font-medium"
                           title={`${item.submitterName} (${item.submitterRole})`}
                         >
                           {item.submitterName}
@@ -2124,7 +2122,7 @@ export function DepartmentHeadOverviewInner({
                         </strong>{" "}
                         {item.assignedStaffName ? (
                           <span
-                            className="inline-flex items-center gap-1 font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 max-w-[150px]"
+                            className="inline-flex items-center gap-1 font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 max-w-37.5"
                             title={`Assigned Officer: ${item.assignedStaffName}`}
                           >
                             <User className="h-3 w-3 text-emerald-700 shrink-0" />
@@ -2306,19 +2304,19 @@ export function DepartmentHeadOverviewInner({
                           </div>
                           <div className="min-w-0">
                             <h4
-                              className="text-sm font-semibold text-slate-900 truncate max-w-[170px]"
+                              className="text-sm font-semibold text-slate-900 truncate max-w-42.5"
                               title={staff.name}
                             >
                               {staff.name}
                             </h4>
                             <p
-                              className="text-xs font-normal text-slate-500 truncate max-w-[170px]"
+                              className="text-xs font-normal text-slate-500 truncate max-w-42.5"
                               title={staff.designation}
                             >
                               {staff.designation}
                             </p>
                             <p
-                              className="text-[11px] font-normal text-slate-400 truncate max-w-[170px]"
+                              className="text-2.75 font-normal text-slate-400 truncate max-w-42.5"
                               title={staff.email}
                             >
                               {staff.email}
@@ -2327,15 +2325,15 @@ export function DepartmentHeadOverviewInner({
                         </div>
 
                         {staff.status === "ON_LEAVE" ? (
-                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-2.75 font-medium text-slate-700">
                             On Leave
                           </span>
                         ) : isOverloaded ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-2.75 font-semibold text-amber-800">
                             High Load
                           </span>
                         ) : (
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-2.75 font-semibold text-emerald-800">
                             Available
                           </span>
                         )}
@@ -2371,7 +2369,7 @@ export function DepartmentHeadOverviewInner({
                       {/* Assigned Tickets Mini-List */}
                       <div className="border-t border-slate-200/70 pt-3 space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                          <div className="text-2.75 font-semibold uppercase tracking-wider text-slate-400">
                             Assigned Tickets ({staffTickets.length})
                           </div>
                           {staffTickets.length > 0 && (
@@ -2381,7 +2379,7 @@ export function DepartmentHeadOverviewInner({
                                 setStaffFilter(staff.id);
                                 switchView("queue");
                               }}
-                              className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 transition"
+                              className="text-2.75 font-semibold text-emerald-700 hover:text-emerald-900 transition"
                               title="Filter all tickets handled by this officer in the queue"
                             >
                               View in Queue &rarr;
@@ -2402,11 +2400,11 @@ export function DepartmentHeadOverviewInner({
                               >
                                 <div className="min-w-0 flex-1 space-y-0.5">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-mono font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 text-[10px]">
+                                    <span className="font-mono font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 text-2.5">
                                       {t.ticketCode}
                                     </span>
                                     <PriorityBadge priority={t.priority} />
-                                    <span className="text-[10px] font-medium text-slate-500">
+                                    <span className="text-2.5 font-medium text-slate-500">
                                       {t.slaTimeLeft}
                                     </span>
                                   </div>
@@ -2430,7 +2428,7 @@ export function DepartmentHeadOverviewInner({
                                       setSelectedCaseFile(t);
                                       setCaseDrawerTab("progress");
                                     }}
-                                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-white hover:border-emerald-300 transition"
+                                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-2.75 font-semibold text-slate-700 hover:bg-white hover:border-emerald-300 transition"
                                     title="Inspect full case file, statements & attachments"
                                   >
                                     <Eye className="h-3 w-3 text-slate-500" />
@@ -2444,7 +2442,7 @@ export function DepartmentHeadOverviewInner({
                                         setAssignModalGrievance(t);
                                         setSelectedStaffId(staff.id);
                                       }}
-                                      className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 transition"
+                                      className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-2.75 font-semibold text-emerald-800 hover:bg-emerald-100 transition"
                                       title="Reassign to another officer"
                                     >
                                       <span>Reassign</span>
@@ -2554,7 +2552,7 @@ export function DepartmentHeadOverviewInner({
             </div>
 
             {/* List of Grievances with Scrollbar */}
-            <div className="max-h-[560px] overflow-y-scroll custom-scrollbar pr-2 space-y-3">
+            <div className="max-h-140 overflow-y-scroll custom-scrollbar pr-2 space-y-3">
               {(() => {
                 const escalatedList = grievances.filter((g) => {
                   return (
@@ -2663,7 +2661,7 @@ export function DepartmentHeadOverviewInner({
                           </span>
                           <span className="text-slate-300">&middot;</span>
                           <span
-                            className="inline-block max-w-[140px] truncate align-bottom text-slate-600"
+                            className="inline-block max-w-35 truncate align-bottom text-slate-600"
                             title={item.submitterName}
                           >
                             {item.submitterName}
@@ -2672,7 +2670,7 @@ export function DepartmentHeadOverviewInner({
                           <span>
                             Assigned:{" "}
                             <strong
-                              className="font-medium text-slate-700 inline-block max-w-[150px] truncate align-bottom"
+                              className="font-medium text-slate-700 inline-block max-w-37.5 truncate align-bottom"
                               title={item.assignedStaffName || "Unassigned"}
                             >
                               {item.assignedStaffName || "Unassigned"}
@@ -2717,7 +2715,7 @@ export function DepartmentHeadOverviewInner({
                               Department Head Directive (
                               {item.hodIntervention.actionLabel})
                             </span>
-                            <span className="text-[11px] font-normal text-slate-500">
+                            <span className="text-2.75 font-normal text-slate-500">
                               {item.hodIntervention.intervenedAt}
                             </span>
                           </div>
@@ -2740,7 +2738,7 @@ export function DepartmentHeadOverviewInner({
                               {item.submittedResolution.note}
                             </span>
                           </div>
-                          <span className="text-[11px] font-normal text-slate-500 shrink-0">
+                          <span className="text-2.75 font-normal text-slate-500 shrink-0">
                             {item.submittedResolution.submittedAt}
                           </span>
                         </div>
@@ -2749,7 +2747,7 @@ export function DepartmentHeadOverviewInner({
                       {/* Action Bar (Aligned footer) */}
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2.5 border-t border-slate-100 gap-2">
                         {/* LEFT: Case summary info */}
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-2 text-2.75 text-slate-500">
                           <span>
                             Case{" "}
                             <strong className="font-semibold text-slate-700">
@@ -3016,7 +3014,7 @@ export function DepartmentHeadOverviewInner({
                       escalationModalGrievance.escalationReason,
                     )}
                   </p>
-                  <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-600 border-t border-amber-200/60">
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-2.75 text-slate-600 border-t border-amber-200/60">
                     <span>
                       Submitter:{" "}
                       <strong>{escalationModalGrievance.submitterName}</strong>
@@ -3054,7 +3052,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       👥 Staff Capacity / Absence
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Officer overloaded or on approved leave
                       </div>
                     </button>
@@ -3069,7 +3067,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       🏢 Cross-Department Dependency
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Awaiting response or approval from Finance/IT
                       </div>
                     </button>
@@ -3084,7 +3082,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       📁 Incomplete Documentation
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Awaiting original bills or vouchers from submitter
                       </div>
                     </button>
@@ -3101,7 +3099,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       🔍 Complex Investigation Required
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Requires audit panel or field verification
                       </div>
                     </button>
@@ -3125,7 +3123,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       👁️ Continue Monitoring
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Acknowledge SLA risk and supervise without reassigning
                       </div>
                     </button>
@@ -3142,7 +3140,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       📢 Notify Assigned Staff
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Send urgent priority nudge to assigned officer
                       </div>
                     </button>
@@ -3159,7 +3157,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       🤝 Add Supporting Dept / Staff
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Enlist supporting department to collaborate
                       </div>
                     </button>
@@ -3174,7 +3172,7 @@ export function DepartmentHeadOverviewInner({
                       }`}
                     >
                       🔄 Reassign to Available Officer
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5">
+                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
                         Transfer ticket to an active officer with spare capacity
                       </div>
                     </button>
@@ -3274,7 +3272,7 @@ export function DepartmentHeadOverviewInner({
 
               {/* Modal Footer (Fixed at bottom) */}
               <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/90 shrink-0 gap-2">
-                <span className="text-[11px] text-slate-500">
+                <span className="text-2.75 text-slate-500">
                   Intervention is logged to the audit trail and dispatched to
                   the assigned officer.
                 </span>
@@ -3339,7 +3337,7 @@ export function DepartmentHeadOverviewInner({
                     Investigating Officer Findings:{" "}
                     {resolutionModalGrievance.submittedResolution?.staffName}
                   </span>
-                  <span className="text-[11px] font-normal text-slate-500">
+                  <span className="text-2.75 font-normal text-slate-500">
                     {resolutionModalGrievance.submittedResolution?.submittedAt}
                   </span>
                 </div>
@@ -3363,7 +3361,7 @@ export function DepartmentHeadOverviewInner({
                     }`}
                   >
                     ✅ Approve & Clear Escalation
-                    <div className="text-[10px] font-normal text-slate-500 mt-0.5">
+                    <div className="text-2.5 font-normal text-slate-500 mt-0.5">
                       Clear escalation flag & mark grievance as CLOSED
                     </div>
                   </button>
@@ -3378,7 +3376,7 @@ export function DepartmentHeadOverviewInner({
                     }`}
                   >
                     🔄 Request Clarification
-                    <div className="text-[10px] font-normal text-slate-500 mt-0.5">
+                    <div className="text-2.5 font-normal text-slate-500 mt-0.5">
                       Return to investigating officer for revision
                     </div>
                   </button>
@@ -3526,7 +3524,7 @@ export function DepartmentHeadOverviewInner({
                       >
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
+                            <span className="font-mono font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200 text-2.75">
                               {item.ticketCode}
                             </span>
                             <PriorityBadge priority={item.priority} />
@@ -3535,7 +3533,7 @@ export function DepartmentHeadOverviewInner({
                           <p className="font-medium text-slate-900 line-clamp-1">
                             {item.title}
                           </p>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-2.75 text-slate-500">
                             {item.category} &rsaquo; {item.subcategory}
                           </span>
                         </div>
@@ -3558,7 +3556,7 @@ export function DepartmentHeadOverviewInner({
                               setSelectedCaseFile(item);
                               setCaseDrawerTab("progress");
                             }}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-2.75 font-semibold text-slate-700 hover:bg-slate-50 transition"
                           >
                             <Eye className="h-3 w-3 text-slate-500" />
                             <span>Inspect</span>
@@ -3700,7 +3698,7 @@ export function DepartmentHeadOverviewInner({
                     <span>{selectedCaseFile.subcategory}</span>
                     <span className="text-slate-300">•</span>
                     <span
-                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${
+                      className={`inline-flex items-center px-1.5 py-0.5 rounded text-2.75 font-semibold ${
                         selectedCaseFile.priority === "CRITICAL"
                           ? "bg-rose-50 text-rose-700 border border-rose-200"
                           : selectedCaseFile.priority === "HIGH"
@@ -3775,7 +3773,7 @@ export function DepartmentHeadOverviewInner({
                 }`}
               >
                 <span>Internal Notes</span>
-                <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] text-slate-600">
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-2.5 text-slate-600">
                   {selectedCaseFile.internalNotes?.length || 0}
                 </span>
               </button>
@@ -3868,7 +3866,7 @@ export function DepartmentHeadOverviewInner({
                     return (
                       <div className="rounded-xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-2xs overflow-hidden">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                          <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 shrink-0">
                             Current Progress
                           </span>
                           <span className="text-xs font-semibold text-emerald-800 text-right truncate max-w-full sm:max-w-[70%]">
@@ -3880,7 +3878,7 @@ export function DepartmentHeadOverviewInner({
                         {/* Visual Multi-Step Stepper (Safely contained inside card) */}
                         <div className="relative flex items-center justify-between pt-2 px-3 sm:px-6">
                           {/* Background track line & active fill bar strictly contained */}
-                          <div className="absolute left-7 sm:left-10 right-7 sm:right-10 top-[24px] h-0.5 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="absolute left-7 sm:left-10 right-7 sm:right-10 top-6 h-0.5 bg-slate-200 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
                               style={{
@@ -3905,7 +3903,7 @@ export function DepartmentHeadOverviewInner({
                                   } ${isCurrent ? "ring-4 ring-emerald-100" : ""}`}
                                 >
                                   {isPastOrCurrent ? (
-                                    <Check className="h-4 w-4 stroke-[3]" />
+                                    <Check className="h-4 w-4 stroke-3" />
                                   ) : (
                                     <span>{idx + 1}</span>
                                   )}
@@ -3981,12 +3979,12 @@ export function DepartmentHeadOverviewInner({
                       return (
                         <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                               <Clock className="h-3.5 w-3.5 text-emerald-800" />
                               SLA Status
                             </span>
                             <span
-                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                              className={`text-2.75 font-bold px-2 py-0.5 rounded-full ${
                                 slaState === "BREACHED"
                                   ? "bg-rose-50 text-rose-700 border border-rose-200"
                                   : slaState === "SLA_AT_RISK"
@@ -4081,11 +4079,11 @@ export function DepartmentHeadOverviewInner({
                       return (
                         <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                               <User className="h-3.5 w-3.5 text-emerald-800" />
                               Assignment
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
+                            <span className="text-2.75 font-semibold text-slate-500">
                               Status:{" "}
                               <strong className="text-slate-800">
                                 {assignmentStatus}
@@ -4103,7 +4101,7 @@ export function DepartmentHeadOverviewInner({
                                   <div className="font-bold text-slate-900 text-sm">
                                     {officerName}
                                   </div>
-                                  <div className="text-[11px] text-slate-500">
+                                  <div className="text-2.75 text-slate-500">
                                     {officerDesignation}
                                   </div>
                                 </div>
@@ -4163,10 +4161,10 @@ export function DepartmentHeadOverviewInner({
                   {/* 3. ACTIVITY TIMELINE */}
                   <div className="rounded-xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500">
                         Activity Timeline
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-2.75 text-slate-400">
                         Chronological Governance Trail
                       </span>
                     </div>
@@ -4199,7 +4197,7 @@ export function DepartmentHeadOverviewInner({
                       }
 
                       return (
-                        <div className="relative pl-6 space-y-5 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
+                        <div className="relative pl-6 space-y-5 before:absolute before:left-2.75 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                           {timelineEvents.map((ev, idx) => (
                             <div key={ev.id || idx} className="relative group">
                               <div
@@ -4214,7 +4212,7 @@ export function DepartmentHeadOverviewInner({
                                   <span className="text-xs font-bold text-slate-900">
                                     {ev.title}
                                   </span>
-                                  <span className="text-[11px] font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200/80 inline-flex items-center gap-1.5 shrink-0">
+                                  <span className="text-2.75 font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200/80 inline-flex items-center gap-1.5 shrink-0">
                                     <Clock className="h-3 w-3 text-slate-400 shrink-0" />
                                     <span>
                                       {ev.timestamp &&
@@ -4228,7 +4226,7 @@ export function DepartmentHeadOverviewInner({
                                 <p className="text-xs text-slate-600 leading-relaxed font-normal">
                                   {ev.description}
                                 </p>
-                                <div className="text-[11px] text-slate-500">
+                                <div className="text-2.75 text-slate-500">
                                   Actor:{" "}
                                   <strong className="font-semibold text-slate-700">
                                     {ev.actor}
@@ -4249,10 +4247,10 @@ export function DepartmentHeadOverviewInner({
                   {/* Submitter Info Card */}
                   <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <span className="text-2.75 font-semibold uppercase tracking-wider text-slate-500">
                         Complainant Details
                       </span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-2.75 text-slate-400">
                         Submitted {selectedCaseFile.createdAt}
                       </span>
                     </div>
@@ -4263,18 +4261,18 @@ export function DepartmentHeadOverviewInner({
                         </div>
                         <div className="min-w-0">
                           <div
-                            className="font-semibold text-slate-900 truncate max-w-[200px]"
+                            className="font-semibold text-slate-900 truncate max-w-50"
                             title={selectedCaseFile.submitterName}
                           >
                             {selectedCaseFile.submitterName}
                           </div>
-                          <div className="text-[11px] text-slate-500">
+                          <div className="text-2.75 text-slate-500">
                             {selectedCaseFile.submitterRole}
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-col justify-center text-xs">
-                        <span className="text-slate-500 text-[11px]">
+                        <span className="text-slate-500 text-2.75">
                           Contact Email
                         </span>
                         <a
@@ -4350,7 +4348,7 @@ export function DepartmentHeadOverviewInner({
                                 <div className="font-semibold text-slate-800 truncate hover:text-emerald-800 transition">
                                   {file.name}
                                 </div>
-                                <div className="text-[11px] text-slate-400">
+                                <div className="text-2.75 text-slate-400">
                                   {file.size} &bull; {file.type || "Document"}
                                 </div>
                               </div>
@@ -4360,7 +4358,7 @@ export function DepartmentHeadOverviewInner({
                               <button
                                 type="button"
                                 onClick={() => handleOpenDocumentPreview(file)}
-                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-2.75 font-semibold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
                               >
                                 <Eye className="h-3 w-3" />
                                 <span>View Document</span>
@@ -4378,7 +4376,7 @@ export function DepartmentHeadOverviewInner({
                                     ).uploadedAt,
                                   })
                                 }
-                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-2.75 font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
                                 title="Download File"
                               >
                                 <Download className="h-3 w-3" />
@@ -4396,7 +4394,7 @@ export function DepartmentHeadOverviewInner({
 
                   {/* Assigned Officer Overview */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-xs">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-2.75 font-semibold uppercase tracking-wider text-slate-500">
                       Handling Officer
                     </span>
                     {selectedCaseFile.assignedStaffName ? (
@@ -4464,7 +4462,7 @@ export function DepartmentHeadOverviewInner({
                         <MessageSquare className="h-3.5 w-3.5 text-emerald-700" />
                         Add Department Head Directive / Internal Note
                       </span>
-                      <span className="text-[10px] text-emerald-700">
+                      <span className="text-2.5 text-emerald-700">
                         Visible to assigned officer
                       </span>
                     </div>
@@ -4505,11 +4503,11 @@ export function DepartmentHeadOverviewInner({
                               <span className="font-semibold text-slate-900">
                                 {n.author}
                               </span>
-                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-medium text-slate-600">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.2 text-2.5 font-medium text-slate-600">
                                 {n.role}
                               </span>
                             </div>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-2.5 text-slate-400">
                               {n.timestamp}
                             </span>
                           </div>

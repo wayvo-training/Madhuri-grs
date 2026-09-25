@@ -18,7 +18,7 @@ export default function Navbar() {
             <p className="text-base font-bold tracking-tight text-slate-900">
               GRS
             </p>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+            <p className="text-2.5 font-medium uppercase tracking-wider text-slate-500">
               Grievance Resolution System
             </p>
           </div>

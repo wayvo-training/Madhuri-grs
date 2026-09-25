@@ -175,7 +175,7 @@ export default function FaqPage() {
                         className="flex w-full items-center justify-between gap-3 text-left"
                       >
                         <div className="pr-2">
-                          <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
+                          <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-2.25 font-semibold text-slate-600 uppercase tracking-wider mb-1">
                             {faq.category}
                           </span>
                           <h3 className="text-sm font-semibold text-slate-900">

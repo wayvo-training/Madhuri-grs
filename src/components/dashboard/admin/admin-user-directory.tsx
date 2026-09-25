@@ -575,7 +575,7 @@ export function AdminUserDirectory({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Total Enrolled Users
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-800">
@@ -583,14 +583,14 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? totalCount}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400">
               Registered
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-800 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-800 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
             Active enterprise directory
           </div>
@@ -609,7 +609,7 @@ export function AdminUserDirectory({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Active Accounts
             </span>
             <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
@@ -617,17 +617,17 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-emerald-600">
+            <span className="text-3xl font-bold tracking-tight text-emerald-600">
               {stats?.active ??
                 usersList.filter(
                   (u: SerializedUser) => (u.status || "ACTIVE") === "ACTIVE",
                 ).length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400">
               Can authenticate
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Access permitted
           </div>
@@ -646,7 +646,7 @@ export function AdminUserDirectory({
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Suspended Accounts
             </span>
             <div className="rounded-xl bg-rose-50 p-2 text-rose-600">
@@ -654,16 +654,14 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-800">
+            <span className="text-3xl font-bold tracking-tight text-slate-800">
               {stats?.inactive ??
                 usersList.filter((u: SerializedUser) => u.status === "INACTIVE")
                   .length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
-              Locked
-            </span>
+            <span className="text-xs font-medium text-slate-400">Locked</span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-rose-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-rose-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-rose-500" />
             Revoked access
           </div>
@@ -671,7 +669,7 @@ export function AdminUserDirectory({
 
         <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-sm font-medium text-slate-500">
               Department Heads & Staff
             </span>
             <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
@@ -679,7 +677,7 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-black tracking-tight text-slate-900">
+            <span className="text-3xl font-bold tracking-tight text-slate-900">
               {stats?.admins ??
                 usersList.filter(
                   (u: SerializedUser) =>
@@ -688,11 +686,11 @@ export function AdminUserDirectory({
                     u.role_name === "STAFF",
                 ).length}
             </span>
-            <span className="text-[11px] font-medium text-slate-400">
+            <span className="text-xs font-medium text-slate-400">
               Operational
             </span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 font-normal">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
             Resolution staff
           </div>
@@ -712,11 +710,11 @@ export function AdminUserDirectory({
                 <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
                   <Users className="h-4 w-4" />
                 </span>
-                <h2 className="text-base font-bold tracking-tight text-slate-900">
+                <h2 className="text-lg font-semibold tracking-tight text-slate-900">
                   System User Directory
                 </h2>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-[13px] font-normal text-slate-500">
                 Directory of {totalCount} authenticated enterprise users, roles,
                 and status controls.
               </p>
@@ -724,7 +722,7 @@ export function AdminUserDirectory({
 
             <div className="flex flex-wrap items-center gap-3">
               {/* Search */}
-              <div className="relative min-w-[200px]">
+              <div className="relative min-w-50">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                   <Search className="h-4 w-4" />
                 </div>
@@ -736,7 +734,7 @@ export function AdminUserDirectory({
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
                 />
               </div>
 
@@ -800,7 +798,7 @@ export function AdminUserDirectory({
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add User</span>
@@ -811,8 +809,8 @@ export function AdminUserDirectory({
 
         {/* Users Table */}
         <div className="overflow-x-auto relative">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="py-3.5 pl-6 pr-3">User & Code</th>
                 <th className="px-3 py-3.5">Email Contact</th>
@@ -920,7 +918,7 @@ export function AdminUserDirectory({
                             <p className="font-bold text-slate-900">
                               {u.first_name} {u.last_name || ""}
                             </p>
-                            <span className="font-mono text-[10px] text-slate-400">
+                            <span className="font-mono text-xs text-slate-400">
                               {u.employee_code}
                             </span>
                           </div>
@@ -936,7 +934,7 @@ export function AdminUserDirectory({
 
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <span
-                          className={`inline-block rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${pillStyle}`}
+                          className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-bold ${pillStyle}`}
                         >
                           {label}
                         </span>
@@ -957,7 +955,7 @@ export function AdminUserDirectory({
 
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <span
-                          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium border ${
+                          className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium border ${
                             u.status === "ACTIVE"
                               ? "bg-emerald-50 text-emerald-800 border-emerald-200"
                               : "bg-slate-100 text-slate-600 border-slate-200"
@@ -976,7 +974,7 @@ export function AdminUserDirectory({
 
                       <td
                         suppressHydrationWarning
-                        className="whitespace-nowrap px-3 py-3.5 font-mono text-[11px] text-slate-400"
+                        className="whitespace-nowrap px-3 py-3.5 font-mono text-xs text-slate-400"
                       >
                         {new Date(u.created_at).toLocaleDateString("en-US", {
                           month: "short",
@@ -991,7 +989,7 @@ export function AdminUserDirectory({
                           <button
                             type="button"
                             onClick={() => openEditModal(u)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-800 transition"
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-800 transition"
                             title="Edit User"
                           >
                             <Pencil className="h-3 w-3 text-emerald-800" />
@@ -1001,7 +999,7 @@ export function AdminUserDirectory({
                           <button
                             type="button"
                             onClick={() => handleInitiateStatusChange(u)}
-                            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition ${
+                            className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition ${
                               u.status === "ACTIVE"
                                 ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300"
                                 : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
@@ -1374,7 +1372,7 @@ export function AdminUserDirectory({
                     <h3 className="text-base font-bold text-slate-900">
                       Edit User Profile
                     </h3>
-                    <p className="text-[11px] text-slate-500">{editEmail}</p>
+                    <p className="text-xs text-slate-500">{editEmail}</p>
                   </div>
                 </div>
                 <button
@@ -1572,7 +1570,7 @@ export function AdminUserDirectory({
                     <h3 className="text-base font-bold text-slate-900">
                       Suspend User Account
                     </h3>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Mandatory documented justification required
                     </p>
                   </div>
@@ -1609,11 +1607,11 @@ export function AdminUserDirectory({
                       {suspensionModalUser.first_name}{" "}
                       {suspensionModalUser.last_name || ""}
                     </span>
-                    <span className="ml-2 font-mono text-[10px] text-slate-500">
+                    <span className="ml-2 font-mono text-xs text-slate-500">
                       ({suspensionModalUser.employee_code})
                     </span>
                   </div>
-                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">
                     {suspensionModalUser.role_name}
                   </span>
                 </div>
@@ -1633,7 +1631,7 @@ export function AdminUserDirectory({
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600" />
                   Security Impact Notice
                 </p>
-                <p className="mt-1 text-[11px] text-amber-700">
+                <p className="mt-1 text-xs text-amber-700">
                   Suspending this user will immediately revoke all active
                   sessions across all devices, block login attempts, and log an
                   audit record with your justification.
@@ -1694,7 +1692,7 @@ export function AdminUserDirectory({
                     onChange={(e) => setSuspensionReason(e.target.value)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 outline-none focus:border-rose-600 focus:ring-1 focus:ring-rose-600 placeholder:text-slate-400"
                   />
-                  <p className="mt-1 text-[10px] text-slate-400">
+                  <p className="mt-1 text-xs text-slate-400">
                     Audit logs require verifiable documentation for regulatory
                     and compliance review.
                   </p>
@@ -1749,7 +1747,7 @@ export function AdminUserDirectory({
                     <h3 className="text-base font-bold text-slate-900">
                       Reactivate User Account
                     </h3>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Restore authentication and enterprise access
                     </p>
                   </div>
@@ -1786,11 +1784,11 @@ export function AdminUserDirectory({
                       {reactivationModalUser.first_name}{" "}
                       {reactivationModalUser.last_name || ""}
                     </span>
-                    <span className="ml-2 font-mono text-[10px] text-slate-500">
+                    <span className="ml-2 font-mono text-xs text-slate-500">
                       ({reactivationModalUser.employee_code})
                     </span>
                   </div>
-                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                  <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">
                     {reactivationModalUser.role_name}
                   </span>
                 </div>

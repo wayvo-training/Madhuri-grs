@@ -66,7 +66,7 @@ export default function HowItsWork() {
                 >
                   {/* Step Connector Line (Desktop Only) */}
                   {idx < stages.length - 1 && (
-                    <div className="hidden md:block absolute top-6 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-0.5 bg-gradient-to-r from-emerald-200 to-slate-200 z-0" />
+                    <div className="hidden md:block absolute top-6 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-0.5 bg-linear-to-r from-emerald-200 to-slate-200 z-0" />
                   )}
 
                   {/* Icon Node */}
@@ -74,7 +74,7 @@ export default function HowItsWork() {
                     <Icon className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
 
                     {/* Small number badge */}
-                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-[9px] font-bold text-white">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-900 text-2.25 font-bold text-white">
                       {idx + 1}
                     </span>
                   </div>

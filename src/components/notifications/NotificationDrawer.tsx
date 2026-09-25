@@ -160,7 +160,7 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs animate-in zoom-in">
+          <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-rose-500 text-2.25 font-bold text-white shadow-xs animate-in zoom-in">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
           </span>
         )}
@@ -168,7 +168,7 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
 
       {isOpen && (
         <div
-          className={`absolute right-0 top-full mt-2 w-80 ${showAll ? "max-h-[80vh]" : "max-h-[28rem]"} overflow-hidden rounded-xl border border-border bg-background shadow-2xl z-[9999] flex flex-col animate-in slide-in-from-top-2 fade-in duration-200`}
+          className={`absolute right-0 top-full mt-2 w-80 ${showAll ? "max-h-[80vh]" : "max-h-112"} overflow-hidden rounded-xl border border-border bg-background shadow-2xl z-9999 flex flex-col animate-in slide-in-from-top-2 fade-in duration-200`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <h2 className="text-sm font-semibold text-foreground">
@@ -178,7 +178,7 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400"
+                className="text-2.75 font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400"
               >
                 Mark all read
               </button>
@@ -220,15 +220,15 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
                             >
                               {notification.title}
                             </p>
-                            <span className="text-[10px] text-muted-foreground shrink-0">
+                            <span className="text-2.5 text-muted-foreground shrink-0">
                               {getRelativeTime(notification.createdAt)}
                             </span>
                           </div>
-                          <p className="text-[11px] text-foreground/70 line-clamp-1">
+                          <p className="text-2.75 text-foreground/70 line-clamp-1">
                             {notification.message}
                           </p>
                           {notification.grievanceId && (
-                            <p className="text-[10px] text-muted-foreground/80 mt-1">
+                            <p className="text-2.5 text-muted-foreground/80 mt-1">
                               {notification.grievanceId}
                             </p>
                           )}
@@ -248,7 +248,7 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
             <div className="p-2 border-t border-border bg-muted/10 text-center">
               <button
                 type="button"
-                className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                className="text-2.75 font-medium text-muted-foreground hover:text-foreground"
                 onClick={() => setShowAll(!showAll)}
               >
                 {showAll ? "Show less" : "View all notifications"}
