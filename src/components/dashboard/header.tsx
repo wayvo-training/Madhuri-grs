@@ -159,33 +159,35 @@ export function DashboardHeader({
       </div>
 
       {/* Center: Search Bar */}
-      <div className="hidden md:flex flex-1 max-w-md mx-6">
-        <form onSubmit={handleFormSubmit} className="relative w-full">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
-            <Search className="h-3.5 w-3.5" />
-          </div>
-          <input
-            id="global-header-search-input"
-            aria-label={placeholderText}
-            type="text"
-            placeholder={placeholderText}
-            value={internalQuery}
-            onChange={handleInputChange}
-            className="h-8.5 w-full rounded-lg border border-border bg-muted/30 pl-8.5 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none transition focus:border-emerald-600 focus:bg-background focus:ring-2 focus:ring-emerald-600/20"
-          />
-          {internalQuery && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
-              title="Clear search"
-              aria-label="Clear search"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </form>
-      </div>
+      {userRole !== "ADMIN" && (
+        <div className="hidden md:flex flex-1 max-w-md mx-6">
+          <form onSubmit={handleFormSubmit} className="relative w-full">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
+              <Search className="h-3.5 w-3.5" />
+            </div>
+            <input
+              id="global-header-search-input"
+              aria-label={placeholderText}
+              type="text"
+              placeholder={placeholderText}
+              value={internalQuery}
+              onChange={handleInputChange}
+              className="h-8.5 w-full rounded-lg border border-border bg-muted/30 pl-8.5 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none transition focus:border-emerald-600 focus:bg-background focus:ring-2 focus:ring-emerald-600/20"
+            />
+            {internalQuery && (
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </form>
+        </div>
+      )}
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">

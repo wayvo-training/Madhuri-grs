@@ -349,7 +349,7 @@ export function DashboardSidebar({
                   {userEmail && (
                     <p className="text-[11px] text-slate-300">{userEmail}</p>
                   )}
-                  <p className="text-[10px] text-emerald-300 uppercase tracking-wider mt-0.5 font-semibold">
+                  <p className="text-[11px] text-slate-300">
                     {roleDisplayLabels[userRole]}
                   </p>
                 </div>
@@ -374,21 +374,17 @@ export function DashboardSidebar({
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
-                  <p className="truncate text-sm font-medium tracking-[-0.01em] text-slate-900">
+                  <p className="truncate text-sm font-medium tracking-[-0.01em] text-foreground">
                     {userName}
                   </p>
                   {userEmail && (
-                    <p className="truncate text-xs font-normal tracking-[-0.01em] text-slate-500">
+                    <p className="truncate text-xs font-normal tracking-[-0.01em] text-muted-foreground">
                       {userEmail}
                     </p>
                   )}
-                  <span
-                    className={`inline-block mt-0.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                      roleBadgeStyles[userRole]
-                    }`}
-                  >
+                  <p className="truncate text-xs font-normal tracking-[-0.01em] text-muted-foreground">
                     {roleDisplayLabels[userRole]}
-                  </span>
+                  </p>
                 </div>
               </div>
 
