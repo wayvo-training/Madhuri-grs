@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NavigationTracker } from "@/components/analytics/navigation-tracker";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ThemeProvider, ThemeInitScript } from "@/components/providers/theme-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -19,13 +20,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} font-sans h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">
-        <QueryProvider>
-          <NavigationTracker />
-          {children}
-        </QueryProvider>
+      <head>
+        <ThemeInitScript />
+      </head>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
+        <ThemeProvider>
+          <QueryProvider>
+            <NavigationTracker />
+            {children}
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
