@@ -4,6 +4,8 @@ import { Bell, Menu, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { UserRole } from "@/components/dashboard/navigation";
+import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface DashboardHeaderProps {
   title: string;
@@ -159,7 +161,7 @@ export function DashboardHeader({
       {/* Center: Search Bar */}
       <div className="hidden md:flex flex-1 max-w-md mx-6">
         <form onSubmit={handleFormSubmit} className="relative w-full">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
             <Search className="h-3.5 w-3.5" />
           </div>
           <input
@@ -187,14 +189,8 @@ export function DashboardHeader({
 
       {/* Right: Notifications Action */}
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          title="Notifications"
-          className="relative rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white" />
-        </button>
+        <ThemeToggle />
+        <NotificationDrawer />
       </div>
     </header>
   );

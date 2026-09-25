@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { NotificationDrawer } from "./notifications/NotificationDrawer";
+import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardHeaderProps {
   title: string;
@@ -76,6 +78,12 @@ export default function DashboardHeader({
             {userEmail && (
               <span className="text-[11px] text-gray-400">{userEmail}</span>
             )}
+          </div>
+
+          {/* In-app Notification Bell */}
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <NotificationDrawer userId={userEmail} />
           </div>
 
           <button
