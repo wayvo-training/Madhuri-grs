@@ -91,13 +91,10 @@ export async function POST(
       : "Assigned Officer";
 
     const actionLabels: Record<string, string> = {
-      MONITOR: "Continue Monitoring (75% SLA Risk Acknowledged by HOD)",
+      MONITOR: "Continue Monitoring (SLA Risk Acknowledged by HOD)",
       NOTIFY_STAFF: `Direct Operational Nudge Dispatched to ${currentStaffName}`,
       REASSIGN: `Reassigned to ${targetStaffName}`,
       CROSS_DEPT: `Enlisted Supporting Department (${targetDeptName || "External Department"})`,
-      EXPEDITE: "Expedited Priority (Fast-Track Override)",
-      OVERRIDE: "Executive Directive / Direct HOD Guidance",
-      SLA_EXTENSION: "Authorized Formal 48h SLA Extension",
     };
 
     const chosenAction = actionLabels[interventionType] || interventionType;
@@ -176,49 +173,28 @@ export async function POST(
         }
       }
 
-      // 3. Update grievance priority, deadline & status
-      let updatedDueAt = grievance.due_at;
-      let updatedSlaStatus = grievance.sla_status;
-      let updatedPriority = grievance.priority;
-
-      if (interventionType === "SLA_EXTENSION") {
-        const currentDue = grievance.due_at || new Date();
-        updatedDueAt = new Date(currentDue.getTime() + 48 * 3600 * 1000);
-        updatedSlaStatus = "ON_TRACK";
-      } else if (interventionType === "EXPEDITE") {
-        updatedPriority = "CRITICAL";
-        updatedSlaStatus = "AT_RISK";
-      }
-
+      // 3. Update grievance status to IN_PROGRESS under active intervention
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
           status: "IN_PROGRESS",
-          priority: updatedPriority,
-          sla_status: updatedSlaStatus,
-          due_at: updatedDueAt,
           updated_at: new Date(),
         },
       });
 
-      // 4. Record sequential Steps 5 to 9 in audit_logs
-      // Step 5: Bottleneck Identified
-      await tx.audit_logs.create({
-        data: {
+      // 4. Mark open escalations as RESOLVED by Department Head
+      await tx.escalations.updateMany({
+        where: {
           grievance_id: grievanceId,
-          user_id: user.user_id,
-          action: "Step 5: Bottleneck Identified",
-          entity_type: "grievance",
-          entity_id: grievanceId,
-          new_value: {
-            bottleneck: chosenBottleneck,
-            details: `Identified primary bottleneck stalling resolution: ${chosenBottleneck}.`,
-            stage: "BOTTLENECK_IDENTIFIED",
-          },
+          status: "OPEN",
+        },
+        data: {
+          status: "RESOLVED",
+          resolved_at: new Date(),
         },
       });
 
-      // Step 6: Intervention Action Taken
+      // Record single genuine HOD Intervention in audit_logs
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,
@@ -230,66 +206,11 @@ export async function POST(
             actionType: interventionType,
             actionLabel: chosenAction,
             bottleneck: chosenBottleneck,
-            note: note || "Proceed with expedited priority.",
+            note: note || undefined,
             intervenedBy: hodFullName,
-            targetStaffName,
-            targetDepartment: targetDeptName,
-            details: `Action: ${chosenAction}. Directive: "${note || "Proceed with expedited priority."}"`,
-            stage: "INTERVENTION_TAKEN",
-          },
-        },
-      });
-
-      // Step 7: Action Logged in Audit Trail
-      await tx.audit_logs.create({
-        data: {
-          grievance_id: grievanceId,
-          user_id: user.user_id,
-          action: "Step 7: Action Logged in Audit Trail",
-          entity_type: "grievance",
-          entity_id: grievanceId,
-          new_value: {
-            details:
-              "Immutable audit entry recorded for Department Head intervention under SLA protocol.",
-            stage: "AUDIT_LOGGED",
-          },
-        },
-      });
-
-      // Step 8: Staff / Supporting Dept Notified
-      const notifyTarget =
-        interventionType === "REASSIGN"
-          ? targetStaffName
-          : interventionType === "CROSS_DEPT"
-            ? targetDeptName || "Supporting Department"
-            : targetStaffName;
-
-      await tx.audit_logs.create({
-        data: {
-          grievance_id: grievanceId,
-          user_id: user.user_id,
-          action: "Step 8: Staff / Supporting Dept Notified",
-          entity_type: "grievance",
-          entity_id: grievanceId,
-          new_value: {
-            details: `Operational directives dispatched to ${notifyTarget}.`,
-            stage: "STAFF_NOTIFIED",
-          },
-        },
-      });
-
-      // Step 9: Grievance Continues
-      await tx.audit_logs.create({
-        data: {
-          grievance_id: grievanceId,
-          user_id: user.user_id,
-          action: "Step 9: Grievance Continues",
-          entity_type: "grievance",
-          entity_id: grievanceId,
-          new_value: {
-            details:
-              "Status resumed as IN_PROGRESS under active intervention safeguards.",
-            stage: "IN_PROGRESS",
+            targetStaffName: targetStaffName || undefined,
+            targetDepartment: targetDeptName || undefined,
+            details: `Intervention: ${chosenAction} (Bottleneck: ${chosenBottleneck}). Directive: "${note || "Proceed with expedited resolution under departmental directives."}"`,
           },
         },
       });

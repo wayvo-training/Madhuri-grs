@@ -86,7 +86,7 @@ export function DashboardShell({
         />
 
         {/* Content scrollbar starts strictly below the header */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 max-w-[1600px] w-full mx-auto custom-scrollbar">
+        <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 max-w-[1600px] w-full mx-auto custom-scrollbar">
           {children}
         </main>
       </div>

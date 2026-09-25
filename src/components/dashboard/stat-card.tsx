@@ -12,6 +12,7 @@ interface StatCardProps {
   description?: string;
   accentColor?: "blue" | "emerald" | "amber" | "rose" | "purple" | "slate";
   badge?: ReactNode;
+  className?: string;
 }
 
 const colorMap = {
@@ -49,49 +50,52 @@ export function StatCard({
   description,
   accentColor = "emerald",
   badge,
+  className = "",
 }: StatCardProps) {
   const styles = colorMap[accentColor] || colorMap.emerald;
 
   return (
     <div
-      className={`rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs transition-all duration-200 hover:shadow-md ${styles.borderGlow}`}
+      className={`rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs transition-all duration-150 hover:shadow-xs flex flex-col justify-between h-[115px] sm:h-[120px] ${styles.borderGlow} ${className}`}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-500">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
           {label}
         </p>
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl ${styles.iconBg}`}
+          className={`flex h-7 w-7 items-center justify-center rounded-lg ${styles.iconBg} shrink-0`}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
 
-      <div className="mt-3.5 flex items-baseline gap-3">
-        <p className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
+      <div className="mt-1 flex items-baseline gap-2">
+        <p className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-none">
           {value}
         </p>
         {badge}
       </div>
 
       {(trend || description) && (
-        <div className="mt-3 flex items-center gap-2 text-xs sm:text-sm font-normal text-slate-600">
+        <div className="mt-auto pt-1 flex items-center gap-1.5 text-xs font-normal text-slate-500">
           {trend && (
             <span
-              className={`inline-flex items-center gap-1 font-semibold ${
+              className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${
                 trend.isPositive ? "text-emerald-600" : "text-rose-600"
               }`}
             >
               {trend.isPositive ? (
-                <TrendingUp className="h-4 w-4" />
+                <TrendingUp className="h-3 w-3" />
               ) : (
-                <TrendingDown className="h-4 w-4" />
+                <TrendingDown className="h-3 w-3" />
               )}
               {trend.value}
             </span>
           )}
           {description && (
-            <span className="truncate font-normal">{description}</span>
+            <span className="truncate text-[11px] text-slate-500">
+              {description}
+            </span>
           )}
         </div>
       )}

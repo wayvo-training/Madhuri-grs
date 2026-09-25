@@ -310,7 +310,7 @@ export async function evaluateGrievanceSla(
   // =========================================================================
   if (consumptionPercent >= 100) {
     updatedSlaStatus = "BREACHED";
-    updatedStatus = "ESCALATED";
+    updatedStatus = grievance.status;
 
     const alreadyBreached =
       existingNotificationTypes.has("SLA_100_BREACH_ESCALATED") ||
@@ -425,15 +425,11 @@ export async function evaluateGrievanceSla(
         });
       });
     } else {
-      if (
-        grievance.sla_status !== "BREACHED" ||
-        grievance.status !== "ESCALATED"
-      ) {
+      if (grievance.sla_status !== "BREACHED") {
         await prisma.grievances.update({
           where: { grievance_id: grievanceId },
           data: {
             sla_status: "BREACHED",
-            status: "ESCALATED",
           },
         });
       }

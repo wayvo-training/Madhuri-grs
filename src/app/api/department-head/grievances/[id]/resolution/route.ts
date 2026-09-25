@@ -113,19 +113,19 @@ export async function POST(
           },
         });
 
-        // Step 11 Audit Log
+        // Final Resolution Acceptance Audit Log
         await tx.audit_logs.create({
           data: {
             grievance_id: grievanceId,
             user_id: user.user_id,
-            action: "Step 11: Escalation Cleared & Grievance Closed",
+            action: "ACCEPT_RESOLUTION",
             entity_type: "grievance",
             entity_id: grievanceId,
             new_value: {
               decision: "APPROVE",
               stage: "ESCALATION_CLEARED",
               details:
-                "Department Head approved final resolution. Escalation cleared, SLA compliance archived, grievance marked CLOSED.",
+                "Department Head approved final resolution. Escalation cleared, grievance successfully closed.",
             },
           },
         });
@@ -185,7 +185,7 @@ export async function POST(
       success: true,
       decision,
       message: isApproved
-        ? `Step 11 Complete: Resolution approved & Escalation Cleared for ${grievance.grievance_number}. Ticket is now officially CLOSED.`
+        ? `Resolution approved & Escalation Cleared for ${grievance.grievance_number}. Ticket is now officially CLOSED.`
         : `Resolution for ${grievance.grievance_number} returned to staff for clarification.`,
     });
   } catch (error) {

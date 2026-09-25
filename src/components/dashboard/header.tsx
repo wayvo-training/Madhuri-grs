@@ -131,25 +131,25 @@ export function DashboardHeader({
       : "Search grievances by ID, subject, or keyword...");
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 shrink-0 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-15 shrink-0 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur-md">
       {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3">
         {/* Mobile Hamburger Menu */}
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden"
+          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+          <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 leading-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="hidden text-sm font-normal text-slate-500 sm:block">
+            <p className="hidden text-xs font-normal text-slate-500 sm:block leading-tight mt-0.5">
               {subtitle}
             </p>
           )}
@@ -159,8 +159,8 @@ export function DashboardHeader({
       {/* Center: Search Bar */}
       <div className="hidden md:flex flex-1 max-w-md mx-6">
         <form onSubmit={handleFormSubmit} className="relative w-full">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-            <Search className="h-4 w-4" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+            <Search className="h-3.5 w-3.5" />
           </div>
           <input
             id="global-header-search-input"
@@ -169,31 +169,31 @@ export function DashboardHeader({
             placeholder={placeholderText}
             value={internalQuery}
             onChange={handleInputChange}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-9 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
+            className="h-8.5 w-full rounded-lg border border-slate-200 bg-slate-50/70 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
           />
           {internalQuery && (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
               title="Clear search"
               aria-label="Clear search"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3 w-3" />
             </button>
           )}
         </form>
       </div>
 
       {/* Right: Notifications Action */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           title="Notifications"
-          className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
+          className="relative rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
         >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-600" />
+          <Bell className="h-4 w-4" />
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white" />
         </button>
       </div>
     </header>

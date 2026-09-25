@@ -49,9 +49,17 @@ export async function GET(request: Request) {
     let crossDeptCount = 0;
     let resolutionReviewCount = 0;
     let highCriticalCount = 0;
+    let closedCount = 0;
 
     for (const dg of deptGrievances) {
       const g = dg.grievances;
+      const isClosed = g.status === "CLOSED" || g.status === "RESOLVED";
+
+      if (isClosed) {
+        closedCount++;
+        continue;
+      }
+
       const hasActiveAssignment = g.assignments.length > 0;
       if (
         !hasActiveAssignment ||
@@ -63,7 +71,7 @@ export async function GET(request: Request) {
       if (g.status === "IN_PROGRESS" || g.status === "ASSIGNED") {
         inProgressCount++;
       }
-      if (g.sla_status === "AT_RISK" || g.sla_status === "BREACHED") {
+      if (g.sla_status === "AT_RISK" && g.status !== "ESCALATED") {
         atRiskCount++;
       }
       if (g.status === "ESCALATED") {
@@ -331,6 +339,7 @@ export async function GET(request: Request) {
         crossDeptCount,
         resolutionReviewCount,
         highCriticalCount,
+        closedCount,
         totalStaffCount,
         activeStaffCount,
         onLeaveStaffCount,

@@ -10,6 +10,89 @@ import { calculateSlaConsumption } from "@/lib/engines/sla-engine";
 import { getPaginationParams, paginatedJsonResponse } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
+function formatAuditEntryDetails(action: string, newValue: unknown): string {
+  if (!newValue) return "Action recorded during grievance processing.";
+
+  let parsed: unknown = newValue;
+  if (typeof newValue === "string") {
+    const trimmed = newValue.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        parsed = trimmed;
+      }
+    } else {
+      return trimmed;
+    }
+  }
+
+  if (typeof parsed === "object" && parsed !== null) {
+    const obj = parsed as Record<string, unknown>;
+    if (obj.details && typeof obj.details === "string") return obj.details;
+    if (obj.note && typeof obj.note === "string") return obj.note;
+    if (obj.remarks && typeof obj.remarks === "string") return obj.remarks;
+    if (obj.outcome && typeof obj.outcome === "string")
+      return String(obj.outcome);
+
+    const act = action.toUpperCase();
+
+    if (
+      act.includes("SLA_100") ||
+      act.includes("BREACH") ||
+      obj.newStatus === "ESCALATED"
+    ) {
+      const escalatedTo = obj.escalatedTo
+        ? ` to ${obj.escalatedTo}`
+        : " to Department Head";
+      return `SLA resolution deadline elapsed. Case automatically escalated${escalatedTo} for intervention directives.`;
+    }
+
+    if (
+      act.includes("SLA_75") ||
+      act.includes("AT_RISK") ||
+      obj.slaStatus === "AT_RISK"
+    ) {
+      return "SLA reached 75% elapsed warning threshold. Department Head notified for proactive review.";
+    }
+
+    if (act.includes("ROUTE") || obj.status === "ROUTED") {
+      return "Grievance triaged and successfully routed to department queue.";
+    }
+
+    if (act.includes("CREATE") || obj.status === "SUBMITTED") {
+      const prio = obj.priority ? ` with ${obj.priority} priority` : "";
+      return `Grievance registered and submitted by complainant${prio}.`;
+    }
+
+    if (act.includes("ASSIGN") || obj.staff_id) {
+      return "Case assigned to designated department officer for inquiry and investigation.";
+    }
+
+    if (act.includes("SUBMIT_RESOLUTION")) {
+      return "Investigating officer submitted resolution findings.";
+    }
+
+    if (act.includes("RESOLUTION") && obj.decision) {
+      return `Resolution review decided: ${obj.decision}.`;
+    }
+
+    const summary = Object.entries(obj)
+      .filter(
+        ([k, v]) =>
+          typeof v !== "object" &&
+          v !== null &&
+          v !== undefined &&
+          k !== "threshold",
+      )
+      .map(([k, v]) => `${k.replace(/([A-Z])/g, " $1").toLowerCase()}: ${v}`)
+      .join(" • ");
+    if (summary) return summary;
+  }
+
+  return String(newValue || "Action recorded.");
+}
+
 export async function GET(request: Request) {
   const auth = await resolveDepartmentHeadAuth(request);
   if ("error" in auth) {
@@ -107,7 +190,8 @@ export async function GET(request: Request) {
       });
     } else if (tab === "AT_RISK") {
       conditions.push({
-        sla_status: { in: ["AT_RISK", "BREACHED"] },
+        sla_status: "AT_RISK",
+        status: { notIn: ["ESCALATED", "CLOSED", "RESOLVED"] },
       });
     } else if (tab === "ESCALATED") {
       conditions.push({
@@ -123,6 +207,10 @@ export async function GET(request: Request) {
     } else if (tab === "RESOLUTION_REVIEW") {
       conditions.push({
         status: "UNDER_REVIEW",
+      });
+    } else if (tab === "CLOSED") {
+      conditions.push({
+        status: { in: ["CLOSED", "RESOLVED"] },
       });
     }
 
@@ -221,11 +309,7 @@ export async function GET(request: Request) {
           actor: `${actor} (${l.users?.roles?.role_name || "System"})`,
           action: l.action.replace(/_/g, " "),
           bottleneck: val?.bottleneck,
-          details:
-            val?.details ||
-            (typeof l.new_value === "object"
-              ? JSON.stringify(l.new_value)
-              : String(l.new_value || "")),
+          details: formatAuditEntryDetails(l.action, l.new_value),
           stage: val?.stage || g.status,
         };
       });
@@ -242,6 +326,8 @@ export async function GET(request: Request) {
         hodIntervention = {
           actionType:
             (iv.actionType as
+              | "MONITOR"
+              | "NOTIFY_STAFF"
               | "REASSIGN"
               | "CROSS_DEPT"
               | "EXPEDITE"
@@ -331,11 +417,14 @@ export async function GET(request: Request) {
           : null,
         auditTrail,
         attachments: g.attachments.map((a) => ({
+          id: a.attachment_id.toString(),
           name: a.file_name,
           size: a.file_size
             ? `${Math.round(Number(a.file_size) / 1024)} KB`
             : "150 KB",
           type: a.file_type,
+          path: a.file_path,
+          uploadedAt: formatFriendlyDate(a.uploaded_at),
         })),
         internalNotes,
       };
