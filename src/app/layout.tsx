@@ -20,13 +20,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} font-sans h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">
-        <QueryProvider>
+      <head>
+        <ThemeInitScript />
+      </head>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
+        <ThemeProvider>
+          <QueryProvider>
             <NavigationTracker />
             {children}
           </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

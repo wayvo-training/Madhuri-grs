@@ -133,25 +133,25 @@ export function DashboardHeader({
       : "Search grievances by ID, subject, or keyword...");
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 sm:h-15 shrink-0 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-15 shrink-0 w-full items-center justify-between border-b border-border bg-background/95 px-4 sm:px-6 backdrop-blur-md">
       {/* Left: Mobile Toggle & Page Title */}
       <div className="flex items-center gap-3">
         {/* Mobile Hamburger Menu */}
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:hidden"
+          className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
           aria-label="Open navigation menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
         <div>
-          <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 leading-tight">
+          <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground leading-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="hidden text-xs font-normal text-slate-500 sm:block leading-tight mt-0.5">
+            <p className="hidden text-xs font-normal text-muted-foreground sm:block leading-tight mt-0.5">
               {subtitle}
             </p>
           )}
@@ -171,13 +171,13 @@ export function DashboardHeader({
             placeholder={placeholderText}
             value={internalQuery}
             onChange={handleInputChange}
-            className="h-8.5 w-full rounded-lg border border-slate-200 bg-slate-50/70 pl-8.5 pr-8 text-xs text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20"
+            className="h-8.5 w-full rounded-lg border border-border bg-muted/30 pl-8.5 pr-8 text-xs text-foreground placeholder:text-muted-foreground outline-none transition focus:border-emerald-600 focus:bg-background focus:ring-2 focus:ring-emerald-600/20"
           />
           {internalQuery && (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               title="Clear search"
               aria-label="Clear search"
             >
