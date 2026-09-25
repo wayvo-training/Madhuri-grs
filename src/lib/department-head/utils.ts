@@ -1,4 +1,6 @@
-export function formatAuditFeedDetails(rawDetails?: string | null): string | null {
+export function formatAuditFeedDetails(
+  rawDetails?: string | null,
+): string | null {
   if (!rawDetails) return null;
   const str = String(rawDetails).trim();
   if (!str.startsWith("{")) return str;

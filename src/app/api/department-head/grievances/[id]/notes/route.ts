@@ -4,6 +4,7 @@ import {
   resolveDepartmentHeadAuth,
 } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
+import { NotificationService } from "@/lib/services/notification.service";
 
 export async function POST(
   request: Request,
@@ -66,6 +67,18 @@ export async function POST(
         },
       },
     });
+
+    // Notify assigned staff
+    const assignment = await prisma.assignments.findFirst({
+      where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" },
+      orderBy: { assigned_at: "desc" },
+    });
+    if (assignment) {
+      await NotificationService.notifyInternalNote(
+        grievanceId,
+        assignment.staff_id,
+      );
+    }
 
     return NextResponse.json({
       success: true,

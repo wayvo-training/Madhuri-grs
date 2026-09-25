@@ -143,6 +143,19 @@ export async function POST(
             recommendation_reasons: { reason: "HOD SLA Intervention" },
           },
         });
+
+        await tx.notifications.create({
+          data: {
+            user_id: parsedTargetStaffId,
+            grievance_id: grievanceId,
+            notification_type: "REASSIGNMENT",
+            channel: "IN_APP",
+            title: `Case Reassigned`,
+            message: `You have been reassigned to Grievance ${grievance.grievance_number} due to a Department Head SLA Intervention.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
       }
 
       // 2. Handle CROSS_DEPT intervention
@@ -169,6 +182,29 @@ export async function POST(
                 assigned_at: new Date(),
               },
             });
+
+            const supportDeptHead = await tx.users.findFirst({
+              where: {
+                department_id: supportDept.department_id,
+                roles: { role_name: "DEPARTMENT_HEAD" },
+                status: "ACTIVE",
+              },
+            });
+
+            if (supportDeptHead) {
+              await tx.notifications.create({
+                data: {
+                  user_id: supportDeptHead.user_id,
+                  grievance_id: grievanceId,
+                  notification_type: "SUPPORTING_STAFF_ADDED",
+                  channel: "IN_APP",
+                  title: `Supporting Department Added`,
+                  message: `Your department has been added as a supporting department for Grievance ${grievance.grievance_number}.`,
+                  status: "PENDING",
+                  created_at: new Date(),
+                },
+              });
+            }
           }
         }
       }

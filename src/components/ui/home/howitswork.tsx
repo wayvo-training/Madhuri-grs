@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  FileText,
-  GitBranch,
-} from "lucide-react";
+import { CheckCircle2, Clock, FileText, GitBranch } from "lucide-react";
 
 const stages = [
   {

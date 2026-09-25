@@ -1,11 +1,10 @@
 "use client";
 
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 interface DashboardHeaderProps {
   title: string;
@@ -189,7 +188,6 @@ export function DashboardHeader({
 
       {/* Right: Notifications Action */}
       <div className="flex items-center gap-2">
-        <ThemeToggle />
         <NotificationDrawer />
       </div>
     </header>

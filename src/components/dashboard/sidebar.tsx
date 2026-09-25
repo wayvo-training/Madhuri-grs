@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, PanelLeft, PanelLeftClose, X } from "lucide-react";
+import { LogOut, PanelLeftClose, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -301,7 +301,7 @@ export function DashboardSidebar({
                       >
                         <div className="flex items-center gap-3">
                           <Icon
-                            className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+                            className={`h-4.5 w-4.5 shrink-0 transition-colors ${
                               isActive
                                 ? "text-white"
                                 : "text-slate-400 group-hover:text-slate-700"

@@ -80,7 +80,13 @@ export interface GrievanceItem {
   } | null;
   auditTrail?: EscalationAuditRecord[];
   description?: string;
-  attachments?: { name: string; size: string; type: string; path?: string; uploadedAt?: string }[];
+  attachments?: {
+    name: string;
+    size: string;
+    type: string;
+    path?: string;
+    uploadedAt?: string;
+  }[];
   internalNotes?: {
     id: string;
     author: string;

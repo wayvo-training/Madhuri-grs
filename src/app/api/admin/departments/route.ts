@@ -107,7 +107,7 @@ export async function POST(request: Request) {
       fullDescription = `${fullDescription} (Contact: ${email})`;
     }
     if (fullDescription.length > 255) {
-      fullDescription = fullDescription.substring(0, 252) + "...";
+      fullDescription = `${fullDescription.substring(0, 252)}...`;
     }
 
     const department = await prisma.$transaction(async (tx) => {

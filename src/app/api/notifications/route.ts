@@ -1,15 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const userIdHeader = req.headers.get("x-user-id");
-    
-    if (!userIdHeader) {
+    const user = await getCurrentUser();
+
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = BigInt(userIdHeader);
+    const userId = user.user_id;
 
     const notifications = await prisma.notifications.findMany({
       where: { user_id: userId },
@@ -32,9 +33,15 @@ export async function GET(req: NextRequest) {
       isRead: n.status === "READ" || n.read_at !== null,
     }));
 
-    return NextResponse.json({ success: true, notifications: serializedNotifications });
+    return NextResponse.json({
+      success: true,
+      notifications: serializedNotifications,
+    });
   } catch (error) {
     console.error("Failed to fetch notifications:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

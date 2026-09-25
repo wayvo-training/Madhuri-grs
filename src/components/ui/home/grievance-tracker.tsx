@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
   CheckCircle2,
@@ -241,7 +240,7 @@ export default function GrievanceTracker() {
             {/* 4-Stage Stepper */}
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                {result.stages.map((stage, idx) => {
+                {result.stages.map((stage, _idx) => {
                   const isDone = stage.isCompleted;
                   const isCurrent = stage.isCurrent;
 

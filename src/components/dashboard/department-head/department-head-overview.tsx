@@ -41,14 +41,21 @@ import { useCallback, useEffect, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import {
+  formatAuditActionTitle,
+  formatAuditFeedDetails,
+  formatAuditLogContent,
+  formatEscalationNotice,
+} from "@/lib/department-head/utils";
+import type {
+  EscalationAuditRecord,
+  GrievanceItem,
+  StaffMember,
+} from "@/types/department-head";
+import { DepartmentHeadProvider } from "./DepartmentHeadContext";
+import {
   type DocumentPreviewData,
   DocumentViewerModal,
 } from "./document-viewer-modal";
-
-import { EscalationAuditRecord, GrievanceItem, StaffMember } from "@/types/department-head";
-import { SLA_LIFECYCLE_STEPS } from "@/lib/department-head/constants";
-import { formatAuditFeedDetails, formatEscalationNotice, formatAuditActionTitle, formatAuditLogContent } from "@/lib/department-head/utils";
-import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 
 interface Props {
   departmentName?: string;
@@ -3904,7 +3911,7 @@ export function DepartmentHeadOverviewInner({
                                   )}
                                 </div>
                                 <span
-                                  className={`mt-2 text-xs font-medium text-center max-w-[75px] sm:max-w-[95px] line-clamp-2 leading-tight ${
+                                  className={`mt-2 text-xs font-medium text-center max-w-18.75 sm:max-w-23.75 line-clamp-2 leading-tight ${
                                     isPastOrCurrent
                                       ? "font-bold text-slate-900"
                                       : "text-slate-400"
@@ -4365,8 +4372,10 @@ export function DepartmentHeadOverviewInner({
                                     name: file.name,
                                     size: file.size,
                                     type: file.type || "Document",
-                                    path: (file as any).path,
-                                    uploadedAt: (file as any).uploadedAt,
+                                    path: (file as { path?: string }).path,
+                                    uploadedAt: (
+                                      file as { uploadedAt?: string }
+                                    ).uploadedAt,
                                   })
                                 }
                                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"

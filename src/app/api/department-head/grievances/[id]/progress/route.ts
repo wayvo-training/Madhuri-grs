@@ -306,6 +306,7 @@ export async function GET(
     ];
 
     // 4. Activity Timeline
+    // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
     const timeline = (grievance.audit_logs || []).map((log: any) => {
       const user = log.users;
       const actorName = user
@@ -429,6 +430,7 @@ export async function GET(
             "Complainant",
           submitterEmail: grievance.users?.email || "N/A",
           submitterRole: grievance.users?.roles?.role_name || "END_USER",
+          // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
           attachments: (grievance.attachments || []).map((a: any) => ({
             id: a.attachment_id.toString(),
             name: a.file_name,

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  Clock,
-  GitBranch,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
 
 interface HeroSectionProps {

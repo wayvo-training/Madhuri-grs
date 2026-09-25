@@ -178,6 +178,7 @@ export async function evaluateGrievanceSla(
 
     if (
       !existingNotificationTypes.has("SLA_50_STAFF_WARNING") &&
+      !existingNotificationTypes.has("SLA_HALF_TIME") &&
       assignedStaff
     ) {
       await prisma.$transaction(async (tx) => {
@@ -185,7 +186,7 @@ export async function evaluateGrievanceSla(
           data: {
             user_id: assignedStaff.user_id,
             grievance_id: grievanceId,
-            notification_type: "SLA_50_STAFF_WARNING",
+            notification_type: "SLA_HALF_TIME",
             channel: "IN_APP",
             title: `Priority Nudge: 50% SLA Consumed (${grievance.grievance_number})`,
             message: `Grievance ${grievance.grievance_number} has reached 50% of its resolution SLA (${consumptionPercent}% consumed). Please prioritize investigation and resolution.`,
@@ -253,12 +254,16 @@ export async function evaluateGrievanceSla(
       });
 
       // 2. Dispatch HOD Notification if not already sent
-      if (!existingNotificationTypes.has("SLA_75_HOD_WARNING") && deptHead) {
+      if (
+        !existingNotificationTypes.has("SLA_75_HOD_WARNING") &&
+        !existingNotificationTypes.has("SLA_AT_RISK") &&
+        deptHead
+      ) {
         await tx.notifications.create({
           data: {
             user_id: deptHead.user_id,
             grievance_id: grievanceId,
-            notification_type: "SLA_75_HOD_WARNING",
+            notification_type: "SLA_AT_RISK",
             channel: "IN_APP",
             title: `SLA At Risk: 75% Consumed (${grievance.grievance_number})`,
             message: `Grievance ${grievance.grievance_number} has reached 75% of its resolution SLA (${consumptionPercent}% consumed). Review required: decide whether to continue monitoring, notify staff, add supporting staff, or reassign.`,
@@ -304,6 +309,44 @@ export async function evaluateGrievanceSla(
   }
 
   // =========================================================================
+  // RULE 3.5: At 90% SLA consumption (>= 90% and < 100%)
+  // Automatically notify Department Head that the grievance is Urgent.
+  // =========================================================================
+  if (consumptionPercent >= 90 && consumptionPercent < 100) {
+    updatedSlaStatus = "AT_RISK";
+
+    if (!existingNotificationTypes.has("SLA_URGENT") && deptHead) {
+      await prisma.$transaction(async (tx) => {
+        await tx.notifications.create({
+          data: {
+            user_id: deptHead.user_id,
+            grievance_id: grievanceId,
+            notification_type: "SLA_URGENT",
+            channel: "IN_APP",
+            title: `SLA Urgent: 90% Consumed (${grievance.grievance_number})`,
+            message: `Grievance ${grievance.grievance_number} has reached 90% of its resolution SLA (${consumptionPercent}% consumed). Immediate action is required.`,
+            status: "PENDING",
+            created_at: evaluationDate,
+          },
+        });
+      });
+      notificationsSent.push("SLA_URGENT");
+    }
+
+    return {
+      grievanceId: grievance.grievance_id.toString(),
+      grievanceNumber: grievance.grievance_number,
+      consumptionPercent,
+      threshold: "AT_75", // Using existing return type threshold logic
+      slaStatus: "AT_RISK",
+      status: grievance.status,
+      notificationsSent,
+      escalated: false,
+      message: `90% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Department Head notified with URGENT priority.`,
+    };
+  }
+
+  // =========================================================================
   // RULE 4: At 100% SLA consumption (>= 100%)
   // Mark the grievance as SLA BREACHED and move it to Escalated status.
   // Triggered ONCE per grievance.
@@ -314,6 +357,7 @@ export async function evaluateGrievanceSla(
 
     const alreadyBreached =
       existingNotificationTypes.has("SLA_100_BREACH_ESCALATED") ||
+      existingNotificationTypes.has("SLA_BREACHED") ||
       (grievance.status === "ESCALATED" && grievance.sla_status === "BREACHED");
 
     if (!alreadyBreached) {
@@ -364,13 +408,14 @@ export async function evaluateGrievanceSla(
         // 4. Send Breach Notification to Department Head (Once)
         if (
           !existingNotificationTypes.has("SLA_100_BREACH_ESCALATED") &&
+          !existingNotificationTypes.has("SLA_BREACHED") &&
           deptHead
         ) {
           await tx.notifications.create({
             data: {
               user_id: deptHead.user_id,
               grievance_id: grievanceId,
-              notification_type: "SLA_100_BREACH_ESCALATED",
+              notification_type: "SLA_BREACHED",
               channel: "IN_APP",
               title: `CRITICAL: SLA Breached & Escalated (${grievance.grievance_number})`,
               message: `Grievance ${grievance.grievance_number} has consumed 100% of its SLA deadline without resolution. Marked SLA BREACHED and moved to ESCALATED. Executive intervention required.`,
@@ -379,7 +424,7 @@ export async function evaluateGrievanceSla(
             },
           });
 
-          notificationsSent.push("SLA_100_BREACH_ESCALATED");
+          notificationsSent.push("SLA_BREACHED");
         }
 
         // 5. Send Notification to Assigned Staff Member (Once)
