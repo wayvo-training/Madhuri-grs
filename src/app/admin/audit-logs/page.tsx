@@ -1,7 +1,7 @@
 import {
   AdminAuditTrail,
   type SerializedAuditLog,
-} from "@/components/dashboard/admin/admin-audit-trail";
+} from "@/components/dashboard/admin/admin-audit";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";

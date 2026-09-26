@@ -1,7 +1,7 @@
 import {
   AdminDepartments,
   type SerializedDepartment,
-} from "@/components/dashboard/admin/admin-departments";
+} from "@/components/dashboard/admin/admin-department-management";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";

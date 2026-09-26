@@ -1,18 +1,11 @@
-import {
-  AlertTriangle,
-  ArrowRight,
-  Building2,
-  Clock,
-  FileText,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-import Link from "next/link";
-import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import { AdminDashboard } from "@/components/dashboard/admin/admin-dashboard";
 import { DashboardShell } from "@/components/dashboard/shell";
-import { StatCard } from "@/components/dashboard/stat-card";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import type {
+  DashboardDepartmentSummary,
+  DashboardRecentGrievance,
+} from "@/types/admin/dashboard";
 
 export default async function AdminDashboardPage() {
   const user = await requirePageRole("ADMIN");
@@ -93,6 +86,36 @@ export default async function AdminDashboardPage() {
       ? ((closedCount / totalGrievances) * 100).toFixed(1)
       : "100";
 
+  const serializedDepartments: DashboardDepartmentSummary[] = departments.map(
+    (d) => ({
+      department_id: d.department_id.toString(),
+      department_name: d.department_name,
+      status: d.status,
+      user_count: d._count.users,
+      grievance_count: d._count.grievance_departments,
+    }),
+  );
+
+  const serializedRecentGrievances: DashboardRecentGrievance[] =
+    recentGrievances.map((g) => ({
+      grievance_id: g.grievance_id.toString(),
+      grievance_number: g.grievance_number,
+      title: g.title,
+      priority: g.priority,
+      status: g.status,
+      created_at: g.created_at.toISOString(),
+      submitter_name: g.users
+        ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
+        : "Anonymous",
+      department_name:
+        (
+          g.grievance_departments as unknown as {
+            departments?: { department_name?: string };
+          }
+        )?.departments?.department_name || null,
+      category_name: g.categories?.category_name || null,
+    }));
+
   return (
     <DashboardShell
       userRole="ADMIN"
@@ -102,242 +125,17 @@ export default async function AdminDashboardPage() {
       title="Admin Control Center"
       subtitle="Executive system oversight, operational health & enterprise governance"
     >
-      <div className="space-y-7">
-        {/* ========================================================================= */}
-        {/* 1. TOP METRIC CARDS ROW                                                   */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Total Raised"
-            value={totalGrievances}
-            icon={FileText}
-            accentColor="slate"
-            description="All-time registered grievances"
-          />
-
-          <StatCard
-            label="Active Workload"
-            value={activeGrievances}
-            icon={Clock}
-            accentColor="slate"
-            description="Currently in progress or triage"
-          />
-
-          {/* Single focal highlight card: Warm amber for escalations & SLA risks */}
-          <StatCard
-            label="SLA At Risk / Breached"
-            value={atRiskSlaCount}
-            icon={AlertTriangle}
-            accentColor={atRiskSlaCount > 0 ? "amber" : "slate"}
-            description={`${escalatedCount} escalated ticket(s)`}
-          />
-
-          <StatCard
-            label="Resolution Rate"
-            value={`${resolutionRate}%`}
-            icon={ShieldCheck}
-            accentColor="emerald"
-            description={`${closedCount} resolved & closed`}
-          />
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 2. ACTION REQUIRED / OPERATIONAL HEALTH BANNER                            */}
-        {/* ========================================================================= */}
-        {routingExceptionsCount > 0 ? (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-amber-100 p-2 text-amber-800 shrink-0 mt-0.5">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-amber-900">
-                  Manual Routing Required ({routingExceptionsCount} ticket
-                  {routingExceptionsCount > 1 ? "s" : ""})
-                </h4>
-                <p className="mt-0.5 text-xs text-amber-800/90 leading-relaxed">
-                  Submitted grievances without automated rule matches await
-                  administrative department assignment.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/admin/grievances?tab=EXCEPTIONS"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-800 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-900 transition shrink-0"
-            >
-              <span>Review Exceptions</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/60 px-5 py-3.5 text-slate-700 shadow-2xs">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="h-4.5 w-4.5 text-emerald-600 shrink-0" />
-              <p className="text-xs font-medium text-slate-700">
-                <span className="font-semibold text-slate-900">
-                  Automated Routing Active:
-                </span>{" "}
-                All incoming grievances have been matched to departments. Zero
-                unrouted exceptions.
-              </p>
-            </div>
-            <Link
-              href="/admin/rules"
-              className="text-xs font-semibold text-emerald-800 hover:underline inline-flex items-center gap-1"
-            >
-              <span>View Rules</span>
-              <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* 3. EXECUTIVE WORKSPACE: Workload Breakdown & Recent Activity               */}
-        {/* ========================================================================= */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-          {/* Department Workload Distribution (2 Cols on lg) */}
-          <div className="lg:col-span-2 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B]">
-                  <Building2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    Department Workload
-                  </h3>
-                  <p className="mt-0.5 text-xs font-normal text-slate-500">
-                    Volume distribution by division
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/admin/departments"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
-              >
-                <span>Departments</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="mt-4 divide-y divide-slate-100/80 flex-1">
-              {departments.length === 0 ? (
-                <p className="py-8 text-center text-xs text-slate-400">
-                  No active departments configured yet.
-                </p>
-              ) : (
-                departments.map((dept) => {
-                  const count = dept._count.grievance_departments;
-
-                  return (
-                    <div
-                      key={dept.department_id.toString()}
-                      className="py-3 first:pt-1 last:pb-1"
-                    >
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B]">
-                            <Building2 className="h-3.5 w-3.5" />
-                          </div>
-                          <span className="font-bold text-slate-900 truncate">
-                            {dept.department_name}
-                          </span>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-1.5 py-0.2 text-2xs font-semibold text-emerald-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Active
-                          </span>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-2 text-xs">
-                          <span
-                            className="inline-flex items-center gap-1 text-2xs font-medium text-slate-500"
-                            title={`${dept._count.users} Staff members`}
-                          >
-                            <Users className="h-3 w-3 text-slate-400" />
-                            {dept._count.users}
-                          </span>
-                          <span
-                            className="font-mono text-2xs font-bold text-slate-700"
-                            title={`${count} cases`}
-                          >
-                            {count}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Recent Grievances Stream (3 Cols on lg) */}
-          <div className="lg:col-span-3 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Recent Grievances
-                </h3>
-                <p className="mt-0.5 text-xs font-normal text-slate-500">
-                  Latest filings across the organization
-                </p>
-              </div>
-              <Link
-                href="/admin/grievances"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
-              >
-                <span>View Full Table</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            <div className="mt-4 overflow-x-auto flex-1">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-100 bg-slate-50/50 text-2.75 font-semibold uppercase tracking-wider text-slate-500">
-                  <tr>
-                    <th className="py-2.5 pl-3 pr-2">Ticket ID</th>
-                    <th className="px-2.5 py-2.5">Category</th>
-                    <th className="px-2.5 py-2.5">Priority</th>
-                    <th className="py-2.5 pl-2 pr-3 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
-                  {recentGrievances.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="py-8 text-center text-xs text-slate-400 font-normal"
-                      >
-                        No grievances registered yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentGrievances.map((g) => (
-                      <tr
-                        key={g.grievance_id.toString()}
-                        className="hover:bg-slate-50/70 transition"
-                      >
-                        <td className="whitespace-nowrap py-3 pl-3 pr-2 font-mono font-medium text-slate-900 text-xs">
-                          {g.grievance_number}
-                        </td>
-                        <td className="whitespace-nowrap px-2.5 py-3 font-normal text-slate-700 text-xs">
-                          {g.categories.category_name}
-                        </td>
-                        <td className="whitespace-nowrap px-2.5 py-3">
-                          <PriorityBadge priority={g.priority} />
-                        </td>
-                        <td className="whitespace-nowrap py-3 pl-2 pr-3 text-right">
-                          <StatusBadge status={g.status} />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminDashboard
+        totalGrievances={totalGrievances}
+        activeGrievances={activeGrievances}
+        atRiskSlaCount={atRiskSlaCount}
+        escalatedCount={escalatedCount}
+        closedCount={closedCount}
+        resolutionRate={resolutionRate}
+        routingExceptionsCount={routingExceptionsCount}
+        departments={serializedDepartments}
+        recentGrievances={serializedRecentGrievances}
+      />
     </DashboardShell>
   );
 }

@@ -1,7 +1,7 @@
 import {
   AdminGrievanceTable,
   type SerializedGrievance,
-} from "@/components/dashboard/admin/admin-grievance-table";
+} from "@/components/dashboard/admin/admin-grievance-management";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";

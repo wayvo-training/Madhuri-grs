@@ -2,7 +2,7 @@ import {
   AdminRolesManager,
   type SerializedPermission,
   type SerializedRole,
-} from "@/components/dashboard/admin/admin-roles-manager";
+} from "@/components/dashboard/admin/admin-role-manager";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
