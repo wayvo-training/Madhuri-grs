@@ -14,7 +14,16 @@ export default async function AdminGrievancesPage() {
     rawGrievances,
     departments,
     totalGrievancesCount,
-    [allCount, exceptionCount, activeCount, slaRiskCount, closedCount],
+    [
+      allCount,
+      exceptionCount,
+      activeCount,
+      slaRiskCount,
+      closedCount,
+      slaCriticalCount,
+      reopenedCount,
+      escalatedCount,
+    ],
   ] = await Promise.all([
     prisma.grievances.findMany({
       take: 10,
@@ -62,22 +71,31 @@ export default async function AdminGrievancesPage() {
       prisma.grievances.count({
         where: {
           status: {
-            in: [
-              "ROUTED",
-              "ASSIGNED",
-              "IN_PROGRESS",
-              "UNDER_REVIEW",
-              "REOPENED",
-              "REOPEN_REVIEW",
-            ],
+            in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
           },
         },
       }),
       prisma.grievances.count({
-        where: { sla_status: { in: ["AT_RISK", "BREACHED"] } },
+        where: { sla_status: "AT_RISK" },
       }),
       prisma.grievances.count({
-        where: { status: "CLOSED" },
+        where: { status: { in: ["CLOSED", "RESOLVED"] } },
+      }),
+      prisma.grievances.count({
+        where: {
+          OR: [{ sla_status: "BREACHED" }, { status: "ESCALATED" }],
+        },
+      }),
+      prisma.grievances.count({
+        where: {
+          OR: [
+            { reopen_count: { gt: 0 } },
+            { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+          ],
+        },
+      }),
+      prisma.grievances.count({
+        where: { status: "ESCALATED" },
       }),
     ]),
   ]);
@@ -152,7 +170,11 @@ export default async function AdminGrievancesPage() {
           all: allCount,
           exceptions: exceptionCount,
           active: activeCount,
+          inProgress: activeCount,
           slaRisk: slaRiskCount,
+          slaCritical: slaCriticalCount,
+          reopened: reopenedCount,
+          escalated: escalatedCount,
           closed: closedCount,
         }}
         departments={serializedDepartments}

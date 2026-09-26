@@ -226,25 +226,25 @@ export function SmartStaffAssignmentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
       <div className="w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/70">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3.5 bg-slate-50/70">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-[#064E3B] border border-emerald-200">
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-[#064E3B] border border-emerald-200">
                 <Sparkles className="h-3 w-3 text-emerald-600" />
                 {isReassignment
                   ? "Change Staff Assignment"
                   : "Staff Assignment"}
               </span>
-              <span className="font-mono text-xs font-semibold text-slate-500">
+              <span className="font-mono text-[11px] font-semibold text-slate-500">
                 {grievance.ticketCode}
               </span>
             </div>
-            <h3 className="text-base font-bold text-slate-900 mt-1">
+            <h3 className="text-sm font-bold text-slate-900 mt-1">
               {isReassignment
                 ? "Change Staff for Grievance"
                 : "Assign Grievance to Staff"}
             </h3>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] text-slate-500">
               Department Head decision support &bull; Review smart
               recommendations and confirm assignment
             </p>
@@ -255,61 +255,63 @@ export function SmartStaffAssignmentModal({
             className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition"
             title="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
           {/* 1. Grievance Context Banner */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-2.5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Grievance Dossier
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 mt-0.5 leading-snug">
+                <h4 className="text-xs font-bold text-slate-900 mt-0.5 leading-snug">
                   {grievance.title}
                 </h4>
               </div>
               <PriorityBadge priority={grievance.priority} />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-200/70 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200/70 text-xs">
               <div>
-                <span className="text-slate-400 block text-2.75">Category</span>
+                <span className="text-slate-400 block text-[10px]">
+                  Category
+                </span>
                 <span
-                  className="font-medium text-slate-800 truncate block"
+                  className="font-medium text-slate-800 truncate block text-xs"
                   title={grievance.category}
                 >
                   {grievance.category}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-2.75">
+                <span className="text-slate-400 block text-[10px]">
                   Subcategory
                 </span>
                 <span
-                  className="font-medium text-slate-800 truncate block"
+                  className="font-medium text-slate-800 truncate block text-xs"
                   title={grievance.subcategory}
                 >
                   {grievance.subcategory}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-2.75">
+                <span className="text-slate-400 block text-[10px]">
                   Current SLA
                 </span>
-                <span className="font-medium text-slate-800 flex items-center gap-1">
+                <span className="font-medium text-slate-800 flex items-center gap-1 text-xs">
                   <Clock className="h-3 w-3 text-slate-400" />
                   {grievance.slaTimeLeft || "On track"}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-2.75">
+                <span className="text-slate-400 block text-[10px]">
                   Department
                 </span>
-                <span className="font-medium text-slate-800 truncate block">
+                <span className="font-medium text-slate-800 truncate block text-xs">
                   {currentDepartmentName}
                 </span>
               </div>
@@ -329,18 +331,18 @@ export function SmartStaffAssignmentModal({
 
           {/* 2. If Reassigning: Show Current Staff Context */}
           {isReassignment && (
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3.5 flex items-start gap-3 text-xs">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-900 font-bold text-xs mt-0.5">
-                <UserCheck className="h-4 w-4" />
+            <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 flex items-start gap-2.5 text-xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-900 font-bold text-xs mt-0.5">
+                <UserCheck className="h-3.5 w-3.5" />
               </div>
               <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="font-semibold text-amber-950">
+                <div className="font-semibold text-amber-950 text-xs">
                   Currently Assigned:{" "}
                   <span className="underline decoration-amber-300">
                     {grievance.assignedStaffName || "Assigned Staff Member"}
                   </span>
                 </div>
-                <p className="text-amber-800">
+                <p className="text-amber-800 text-[11px]">
                   {currentAssignedMember
                     ? `Current Workload: ${currentAssignedMember.activeTickets} / ${currentAssignedMember.maxCapacity} active grievances (${currentAssignedMember.status})`
                     : "Reassigning will record prior assignment as REASSIGNED without resetting the SLA."}
@@ -350,10 +352,10 @@ export function SmartStaffAssignmentModal({
           )}
 
           {/* 3. Smart Staff Recommendations Section */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Award className="h-3.5 w-3.5 text-emerald-700" />
                   <span>Smart Staff Recommendations</span>
                 </h4>
@@ -384,7 +386,7 @@ export function SmartStaffAssignmentModal({
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {recommendedCandidates.length > 0 &&
                   (() => {
                     const topCandidate = recommendedCandidates[0];
@@ -393,44 +395,51 @@ export function SmartStaffAssignmentModal({
                       topCandidate.availabilityStatus === "ON_LEAVE";
 
                     return (
-                      <div className="relative rounded-xl border border-emerald-300/80 bg-emerald-50/20 p-4 shadow-xs">
-                        <div className="absolute -top-2.5 right-4 rounded-full bg-[#064E3B] px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-xs flex items-center gap-1">
+                      <div className="relative rounded-xl border border-emerald-300/80 bg-emerald-50/20 p-3.5 shadow-2xs">
+                        <div className="absolute -top-2.5 right-4 rounded-full bg-[#064E3B] px-2 py-0.5 text-[9px] font-semibold text-white shadow-xs flex items-center gap-1">
                           <Sparkles className="h-2.5 w-2.5" />
                           <span>Top Recommendation</span>
                         </div>
 
-                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1 space-y-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-lg font-bold text-[#064E3B]">
+                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-[#064E3B] shrink-0">
                                 {topCandidate.name.charAt(0)}
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="text-base font-semibold text-slate-900">
+                                  <h5 className="text-xs font-bold text-slate-900">
                                     {topCandidate.name}
                                   </h5>
-                                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
                                     Recommended
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-500">
-                                  {topCandidate.designation} (
-                                  {currentDepartmentName})
+                                <p className="text-[11px] text-slate-500">
+                                  {topCandidate.designation}
+                                  {currentDepartmentName &&
+                                  !topCandidate.designation
+                                    .toLowerCase()
+                                    .includes(
+                                      currentDepartmentName.toLowerCase(),
+                                    )
+                                    ? ` (${currentDepartmentName})`
+                                    : ""}
                                 </p>
-                                <p className="text-xs text-slate-500">
+                                <p className="text-[11px] text-slate-400">
                                   {topCandidate.email}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
                               {topCandidate.bulletReasons.map((reason) => (
                                 <div
                                   key={reason}
-                                  className="flex items-center gap-2"
+                                  className="flex items-center gap-1.5"
                                 >
-                                  <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                  <Check className="h-3 w-3 text-emerald-600 shrink-0" />
                                   <span>
                                     {reason === "Strong category/skill match"
                                       ? "Strong category/skill match"
@@ -450,12 +459,12 @@ export function SmartStaffAssignmentModal({
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-3 shrink-0">
+                          <div className="flex flex-col items-end gap-2.5 shrink-0">
                             <div className="text-right">
-                              <div className="text-2xl font-bold text-[#064E3B]">
+                              <div className="text-xl font-bold text-[#064E3B]">
                                 {topCandidate.score}%
                               </div>
-                              <div className="text-[10px] font-semibold uppercase text-slate-500 tracking-[0.12em]">
+                              <div className="text-[9px] font-semibold uppercase text-slate-500 tracking-wider">
                                 Recommendation Score
                               </div>
                             </div>
@@ -466,7 +475,7 @@ export function SmartStaffAssignmentModal({
                               onClick={() =>
                                 setSelectedStaffId(topCandidate.staffId)
                               }
-                              className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                              className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                                 isSelected
                                   ? "bg-[#064E3B] text-white shadow-xs"
                                   : "border border-slate-300 bg-white text-slate-700 hover:border-emerald-600 hover:text-emerald-900"
@@ -482,8 +491,8 @@ export function SmartStaffAssignmentModal({
                           </div>
                         </div>
 
-                        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-slate-200 pt-3">
-                          <div className="flex items-center gap-4 text-xs text-slate-600">
+                        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-slate-200/80 pt-2.5">
+                          <div className="flex items-center gap-4 text-[11px] text-slate-600">
                             <div>
                               Active Workload:{" "}
                               <strong className="font-semibold text-slate-800">
@@ -520,7 +529,7 @@ export function SmartStaffAssignmentModal({
                   <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
                     <label
                       htmlFor="available-staff-select"
-                      className="mb-1.5 block text-[11px] font-semibold text-slate-700"
+                      className="mb-1 block text-[11px] font-semibold text-slate-700"
                     >
                       Available Staff
                     </label>
@@ -528,7 +537,7 @@ export function SmartStaffAssignmentModal({
                       id="available-staff-select"
                       value={selectedStaffId}
                       onChange={(e) => setSelectedStaffId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-emerald-600 focus:outline-none"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
                     >
                       <option value="">Select another available staff</option>
                       {availableCandidates.map((candidate) => (
@@ -550,14 +559,14 @@ export function SmartStaffAssignmentModal({
 
           {/* 4. Selection Confirmation & Instructions Panel */}
           {selectedCandidate && (
-            <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/30 p-4 space-y-3 animate-in fade-in duration-150">
+            <div className="rounded-xl border border-emerald-300/80 bg-emerald-50/30 p-3.5 space-y-2.5 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs">
-                    <User className="h-3.5 w-3.5" />
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600 text-white font-bold text-xs shrink-0">
+                    <User className="h-3 w-3" />
                   </div>
                   <div>
-                    <span className="text-xs text-emerald-900 font-medium">
+                    <span className="text-[11px] text-emerald-900 font-medium">
                       {isReassignment
                         ? "Selected for Change:"
                         : "Selected for Assignment:"}
@@ -568,7 +577,7 @@ export function SmartStaffAssignmentModal({
                     </h5>
                   </div>
                 </div>
-                <span className="text-xs text-slate-500 font-mono">
+                <span className="text-[11px] text-slate-500 font-mono">
                   {selectedCandidate.activeWorkload} active grievances
                 </span>
               </div>
@@ -586,11 +595,11 @@ export function SmartStaffAssignmentModal({
                   value={assignmentNote}
                   onChange={(e) => setAssignmentNote(e.target.value)}
                   placeholder="e.g. Expedite review of payroll ledger. Contact complainant by tomorrow afternoon."
-                  className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 text-2.75 text-slate-500">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                 <AlertCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                 <span>
                   The Department Head makes the final decision. Submitting will
@@ -609,14 +618,14 @@ export function SmartStaffAssignmentModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-6 py-3.5">
+        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-6 py-3">
           <div className="flex-1" />
 
-          <div className="flex items-center gap-2.5 ml-auto">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              className="rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
             >
               Cancel
             </button>
@@ -625,7 +634,7 @@ export function SmartStaffAssignmentModal({
               type="button"
               disabled={!selectedStaffId || isSubmitting}
               onClick={handleSubmit}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>

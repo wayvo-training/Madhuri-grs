@@ -24,7 +24,7 @@ export function ExecutiveMetricCards({
         label="Total Raised"
         value={totalGrievances}
         icon={FileText}
-        accentColor="slate"
+        accentColor="blue"
         description="All-time registered grievances"
       />
 
@@ -32,7 +32,7 @@ export function ExecutiveMetricCards({
         label="Active Workload"
         value={activeGrievances}
         icon={Clock}
-        accentColor="slate"
+        accentColor="purple"
         description="Currently in progress or triage"
       />
 
@@ -40,7 +40,7 @@ export function ExecutiveMetricCards({
         label="SLA At Risk / Breached"
         value={atRiskSlaCount}
         icon={AlertTriangle}
-        accentColor={atRiskSlaCount > 0 ? "amber" : "slate"}
+        accentColor="amber"
         description={`${escalatedCount} escalated ticket(s)`}
       />
 

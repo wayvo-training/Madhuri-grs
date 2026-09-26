@@ -6,9 +6,10 @@ export interface AdminMetricCardProps {
   value: number | string;
   helper: string;
   icon: LucideIcon;
-  accent?: "emerald" | "rose" | "slate" | "amber";
+  accent?: "emerald" | "rose" | "slate" | "amber" | "blue" | "purple";
   active?: boolean;
   onClick?: () => void;
+  subtext?: string;
 }
 
 export function AdminMetricCard({
@@ -19,13 +20,14 @@ export function AdminMetricCard({
   accent = "emerald",
   active = false,
   onClick,
+  subtext,
 }: AdminMetricCardProps) {
   const accentStyles = {
     emerald: {
       ring: active
         ? "border-emerald-600 ring-2 ring-emerald-600/20 bg-emerald-50/20"
         : "border-slate-200/80 bg-white",
-      icon: "bg-emerald-50 text-emerald-800",
+      icon: "bg-emerald-50 text-emerald-800 border border-emerald-100",
       dot: "bg-emerald-600",
       value: "text-emerald-600",
       helper: "text-emerald-800",
@@ -34,7 +36,7 @@ export function AdminMetricCard({
       ring: active
         ? "border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20"
         : "border-slate-200/80 bg-white",
-      icon: "bg-rose-50 text-rose-600",
+      icon: "bg-rose-50 text-rose-600 border border-rose-200",
       dot: "bg-rose-500",
       value: "text-slate-800",
       helper: "text-rose-600",
@@ -43,7 +45,7 @@ export function AdminMetricCard({
       ring: active
         ? "border-emerald-600 ring-2 ring-emerald-600/20 bg-emerald-50/20"
         : "border-slate-200/80 bg-white",
-      icon: "bg-slate-100 text-slate-700",
+      icon: "bg-slate-100 text-slate-700 border border-slate-200/80",
       dot: "bg-slate-400",
       value: "text-slate-900",
       helper: "text-slate-600",
@@ -52,10 +54,28 @@ export function AdminMetricCard({
       ring: active
         ? "border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/20"
         : "border-slate-200/80 bg-white",
-      icon: "bg-amber-50 text-amber-700",
+      icon: "bg-amber-50 text-amber-700 border border-amber-200",
       dot: "bg-amber-500",
       value: "text-slate-900",
       helper: "text-amber-700",
+    },
+    blue: {
+      ring: active
+        ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20"
+        : "border-slate-200/80 bg-white",
+      icon: "bg-blue-50 text-blue-700 border border-blue-200",
+      dot: "bg-blue-500",
+      value: "text-blue-700",
+      helper: "text-blue-600",
+    },
+    purple: {
+      ring: active
+        ? "border-purple-500 ring-2 ring-purple-500/20 bg-purple-50/20"
+        : "border-slate-200/80 bg-white",
+      icon: "bg-purple-50 text-purple-700 border border-purple-200",
+      dot: "bg-purple-500",
+      value: "text-purple-700",
+      helper: "text-purple-600",
     },
   } as const;
 
@@ -82,23 +102,27 @@ export function AdminMetricCard({
         </span>
         <span className="text-xs font-medium text-slate-400">{helper}</span>
       </div>
-      <div
-        className={cn(
-          "mt-3 flex items-center gap-1.5 text-xs font-normal",
-          styles.helper,
-        )}
-      >
-        <span
-          className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
-        />
-        {title === "Suspended Accounts"
-          ? "Revoked access"
-          : title === "Active Accounts"
-            ? "Access permitted"
-            : title === "Total Enrolled Users"
-              ? "Active enterprise directory"
-              : "Resolution staff"}
-      </div>
+      {subtext ||
+      title === "Suspended Accounts" ||
+      title === "Active Accounts" ||
+      title === "Total Enrolled Users" ? (
+        <div
+          className={cn(
+            "mt-3 flex items-center gap-1.5 text-xs font-normal",
+            styles.helper,
+          )}
+        >
+          <span
+            className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
+          />
+          {subtext ||
+            (title === "Suspended Accounts"
+              ? "Revoked access"
+              : title === "Active Accounts"
+                ? "Access permitted"
+                : "Active enterprise directory")}
+        </div>
+      ) : null}
     </button>
   );
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -8,7 +10,6 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-
 import { AdminMetricCard } from "@/components/dashboard/admin/admin-shared";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
@@ -43,7 +44,7 @@ export function OverviewMetricsSection({
         value={inProgressCount}
         helper="Active cases"
         icon={CheckCircle2}
-        accent="slate"
+        accent="emerald"
       />
       <AdminMetricCard
         title="SLA At Risk"
@@ -57,7 +58,7 @@ export function OverviewMetricsSection({
         value={escalatedCount}
         helper="SLA breach cases"
         icon={AlertTriangle}
-        accent={escalatedCount > 0 ? "amber" : "slate"}
+        accent={escalatedCount > 0 ? "rose" : "slate"}
       />
     </div>
   );

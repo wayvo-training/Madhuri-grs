@@ -1,7 +1,7 @@
 "use client";
 
-import { Filter, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, ChevronDown, Filter, RotateCcw, Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Popover } from "@/components/ui/popover";
 import type {
@@ -47,6 +47,27 @@ export function AdminGrievanceToolbar({
   const [pendingPriority, setPendingPriority] = useState<string>("ALL");
   const [pendingStatus, setPendingStatus] = useState<string>("ALL");
 
+  // View DropdownMenu state
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const viewMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        viewMenuRef.current &&
+        !viewMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsViewOpen(false);
+      }
+    }
+    if (isViewOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isViewOpen]);
+
   useEffect(() => {
     if (isFiltersOpen) {
       setPendingDept(selectedDept);
@@ -68,7 +89,7 @@ export function AdminGrievanceToolbar({
     setIsFiltersOpen(false);
   };
 
-  const handleReset = () => {
+  const handleClear = () => {
     setPendingDept("ALL");
     setPendingPriority("ALL");
     setPendingStatus("ALL");
@@ -79,117 +100,179 @@ export function AdminGrievanceToolbar({
     setIsFiltersOpen(false);
   };
 
+  // Exactly the 8 views requested:
+  // All, Exceptions, In Progress, SLA Risk, SLA Critical, Reopened, Escalated, Closed
+  const viewOptions: {
+    key: TableTab;
+    label: string;
+    count: number;
+    dotColor?: string;
+  }[] = [
+    { key: "ALL", label: "All", count: counts.all },
+    {
+      key: "EXCEPTIONS",
+      label: "Exceptions",
+      count: counts.exceptions,
+      dotColor: "bg-amber-400",
+    },
+    {
+      key: "ACTIVE",
+      label: "In Progress",
+      count: counts.inProgress ?? counts.active,
+      dotColor: "bg-emerald-500",
+    },
+    {
+      key: "SLA_RISK",
+      label: "SLA Risk",
+      count: counts.slaRisk,
+      dotColor: "bg-amber-500",
+    },
+    {
+      key: "SLA_CRITICAL",
+      label: "SLA Critical",
+      count: counts.slaCritical ?? counts.slaRisk,
+      dotColor: "bg-rose-500",
+    },
+    {
+      key: "REOPENED",
+      label: "Reopened",
+      count: counts.reopened ?? 0,
+      dotColor: "bg-purple-500",
+    },
+    {
+      key: "ESCALATED",
+      label: "Escalated",
+      count: counts.escalated ?? 0,
+      dotColor: "bg-red-600",
+    },
+    { key: "CLOSED", label: "Closed", count: counts.closed },
+  ];
+
+  const activeOption =
+    viewOptions.find((v) => v.key === activeTab) ||
+    (activeTab === "IN_PROGRESS"
+      ? viewOptions.find((v) => v.key === "ACTIVE")
+      : null);
+
+  const activeLabel =
+    activeOption && activeOption.key !== "ALL"
+      ? `View: ${activeOption.label}`
+      : "View";
+
   return (
-    <div className="mt-4 flex flex-col gap-4">
-      {/* Top Filter Buttons / Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("ALL");
-            setCurrentPage(1);
-          }}
-          className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === "ALL"
-              ? "bg-[#064E3B] text-white shadow-xs"
-              : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/60"
-          }`}
-        >
-          All ({counts.all})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("EXCEPTIONS");
-            setCurrentPage(1);
-          }}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === "EXCEPTIONS"
-              ? "bg-amber-600 text-white shadow-xs"
-              : "bg-amber-50 text-amber-700 hover:bg-amber-100/70"
-          }`}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-          Exceptions ({counts.exceptions})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("ACTIVE");
-            setCurrentPage(1);
-          }}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === "ACTIVE"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/60"
-          }`}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          In Progress ({counts.active})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("SLA_RISK");
-            setCurrentPage(1);
-          }}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === "SLA_RISK"
-              ? "bg-rose-600 text-white shadow-xs"
-              : "bg-rose-50 text-rose-700 hover:bg-rose-100/70"
-          }`}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-          SLA Critical ({counts.slaRisk})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("CLOSED");
-            setCurrentPage(1);
-          }}
-          className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === "CLOSED"
-              ? "bg-slate-700 text-white shadow-xs"
-              : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/60"
-          }`}
-        >
-          Resolved ({counts.closed})
-        </button>
+    <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Search Input */}
+      <div className="relative w-full sm:w-80">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search by ID, keyword, or submitter..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      {/* Search and Filters Popover */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by ID, keyword, or submitter..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
-          />
+      {/* Controls: [ View ▼ ] DropdownMenu & [ Filters ] Popover */}
+      <div className="flex items-center gap-2">
+        {activeFiltersCount > 0 && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>Reset</span>
+          </button>
+        )}
+
+        {/* [ View ▼ ] DropdownMenu */}
+        <div className="relative inline-block" ref={viewMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsViewOpen(!isViewOpen)}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
+              activeTab !== "ALL"
+                ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <span>{activeLabel}</span>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+          </button>
+
+          {isViewOpen && (
+            <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
+              <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                View ▾
+              </div>
+              <div className="border-t border-slate-100 my-1" />
+              {viewOptions.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    setCurrentPage(1);
+                    setIsViewOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between px-3.5 py-2 text-xs transition cursor-pointer ${
+                    activeTab === item.key ||
+                    (item.key === "ACTIVE" && activeTab === "IN_PROGRESS")
+                      ? "bg-emerald-50/80 font-semibold text-emerald-900"
+                      : "font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {item.dotColor && (
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
+                      />
+                    )}
+                    <span>{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-normal text-slate-400">
+                      ({item.count})
+                    </span>
+                    {(activeTab === item.key ||
+                      (item.key === "ACTIVE" &&
+                        activeTab === "IN_PROGRESS")) && (
+                      <Check className="h-3.5 w-3.5 text-emerald-700" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Filter Popover Button */}
+        {/* [ Filters ] Popover Button */}
         <Popover
           isOpen={isFiltersOpen}
           onOpenChange={setIsFiltersOpen}
+          widthClass="w-80"
           trigger={
             <button
               type="button"
-              className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+              onClick={() => setIsFiltersOpen((prev) => !prev)}
+              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
                 activeFiltersCount > 0
                   ? "border-emerald-600 bg-emerald-50 text-emerald-800"
                   : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
               <Filter className="h-3.5 w-3.5 text-slate-500" />
-              <span>Filter View</span>
+              <span>Filters</span>
               {activeFiltersCount > 0 && (
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
                   {activeFiltersCount}
@@ -206,8 +289,8 @@ export function AdminGrievanceToolbar({
               {activeFiltersCount > 0 && (
                 <button
                   type="button"
-                  onClick={handleReset}
-                  className="text-xs font-medium text-emerald-800 hover:underline"
+                  onClick={handleClear}
+                  className="text-xs font-medium text-emerald-800 hover:underline cursor-pointer"
                 >
                   Reset all
                 </button>
@@ -225,7 +308,7 @@ export function AdminGrievanceToolbar({
                 options={[
                   { value: "ALL", label: "All Departments" },
                   ...departments.map((d) => ({
-                    value: d.department_id,
+                    value: d.department_name,
                     label: d.department_name,
                   })),
                 ]}
@@ -273,21 +356,21 @@ export function AdminGrievanceToolbar({
               />
             </div>
 
-            {/* Actions */}
-            <div className="mt-2 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+            {/* Actions: [Clear] [Apply] */}
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
               <button
                 type="button"
-                onClick={() => setIsFiltersOpen(false)}
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                onClick={handleClear}
+                className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 transition cursor-pointer"
               >
-                Cancel
+                Clear
               </button>
               <button
                 type="button"
                 onClick={handleApply}
-                className="rounded-lg bg-[#064E3B] px-3 py-1 text-xs font-medium text-white shadow-xs hover:bg-emerald-900"
+                className="rounded-lg bg-[#064E3B] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition cursor-pointer"
               >
-                Apply Filters
+                Apply
               </button>
             </div>
           </div>

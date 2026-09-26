@@ -27,26 +27,34 @@ export async function GET(request: Request) {
       conditions.push({
         OR: [{ status: "SUBMITTED" }, { grievance_departments: { is: null } }],
       });
-    } else if (tab === "ACTIVE") {
+    } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
       conditions.push({
         status: {
-          in: [
-            "ROUTED",
-            "ASSIGNED",
-            "IN_PROGRESS",
-            "UNDER_REVIEW",
-            "REOPENED",
-            "REOPEN_REVIEW",
-          ],
+          in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
         },
       });
     } else if (tab === "SLA_RISK") {
       conditions.push({
-        sla_status: { in: ["AT_RISK", "BREACHED"] },
+        sla_status: "AT_RISK",
+      });
+    } else if (tab === "SLA_CRITICAL") {
+      conditions.push({
+        OR: [{ sla_status: "BREACHED" }, { status: "ESCALATED" }],
+      });
+    } else if (tab === "REOPENED") {
+      conditions.push({
+        OR: [
+          { reopen_count: { gt: 0 } },
+          { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+        ],
+      });
+    } else if (tab === "ESCALATED") {
+      conditions.push({
+        status: "ESCALATED",
       });
     } else if (tab === "CLOSED") {
       conditions.push({
-        status: "CLOSED",
+        status: { in: ["CLOSED", "RESOLVED"] },
       });
     }
 
@@ -103,7 +111,16 @@ export async function GET(request: Request) {
     const [
       total,
       rawGrievances,
-      [allCount, exceptionCount, activeCount, slaRiskCount, closedCount],
+      [
+        allCount,
+        exceptionCount,
+        activeCount,
+        slaRiskCount,
+        closedCount,
+        slaCriticalCount,
+        reopenedCount,
+        escalatedCount,
+      ],
     ] = await Promise.all([
       prisma.grievances.count({ where }),
       prisma.grievances.findMany({
@@ -142,22 +159,31 @@ export async function GET(request: Request) {
         prisma.grievances.count({
           where: {
             status: {
-              in: [
-                "ROUTED",
-                "ASSIGNED",
-                "IN_PROGRESS",
-                "UNDER_REVIEW",
-                "REOPENED",
-                "REOPEN_REVIEW",
-              ],
+              in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
             },
           },
         }),
         prisma.grievances.count({
-          where: { sla_status: { in: ["AT_RISK", "BREACHED"] } },
+          where: { sla_status: "AT_RISK" },
         }),
         prisma.grievances.count({
-          where: { status: "CLOSED" },
+          where: { status: { in: ["CLOSED", "RESOLVED"] } },
+        }),
+        prisma.grievances.count({
+          where: {
+            OR: [{ sla_status: "BREACHED" }, { status: "ESCALATED" }],
+          },
+        }),
+        prisma.grievances.count({
+          where: {
+            OR: [
+              { reopen_count: { gt: 0 } },
+              { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+            ],
+          },
+        }),
+        prisma.grievances.count({
+          where: { status: "ESCALATED" },
         }),
       ]),
     ]);
@@ -223,8 +249,12 @@ export async function GET(request: Request) {
         all: allCount,
         exceptions: exceptionCount,
         active: activeCount,
+        inProgress: activeCount,
         slaRisk: slaRiskCount,
         closed: closedCount,
+        slaCritical: slaCriticalCount,
+        reopened: reopenedCount,
+        escalated: escalatedCount,
       },
     });
   } catch (error) {

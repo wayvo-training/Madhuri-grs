@@ -27,11 +27,24 @@ export interface TabCounts {
   all: number;
   exceptions: number;
   active: number;
+  inProgress?: number;
   slaRisk: number;
+  slaCritical?: number;
+  reopened?: number;
+  escalated?: number;
   closed: number;
 }
 
-export type TableTab = "ALL" | "EXCEPTIONS" | "ACTIVE" | "SLA_RISK" | "CLOSED";
+export type TableTab =
+  | "ALL"
+  | "EXCEPTIONS"
+  | "ACTIVE"
+  | "IN_PROGRESS"
+  | "SLA_RISK"
+  | "SLA_CRITICAL"
+  | "REOPENED"
+  | "ESCALATED"
+  | "CLOSED";
 
 export interface DepartmentOption {
   department_id: string;

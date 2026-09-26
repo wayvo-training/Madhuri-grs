@@ -1,4 +1,4 @@
-import { DepartmentHeadOverview } from "@/components/dashboard/department-head/department-head-overview";
+import { DepartmentHeadOverview } from "@/components/dashboard/department-head";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";

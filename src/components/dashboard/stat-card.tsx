@@ -25,20 +25,20 @@ const colorMap = {
     borderGlow: "hover:border-emerald-300",
   },
   blue: {
-    iconBg: "bg-sky-50 text-sky-700",
-    borderGlow: "hover:border-sky-200",
+    iconBg: "bg-blue-50 text-blue-700 border border-blue-200",
+    borderGlow: "hover:border-blue-300",
   },
   amber: {
     iconBg: "bg-amber-50 text-amber-800 border border-amber-200",
     borderGlow: "hover:border-amber-300",
   },
   rose: {
-    iconBg: "bg-rose-50 text-rose-700",
+    iconBg: "bg-rose-50 text-rose-700 border border-rose-200",
     borderGlow: "hover:border-rose-200",
   },
   purple: {
-    iconBg: "bg-purple-50 text-purple-600",
-    borderGlow: "hover:border-purple-200",
+    iconBg: "bg-purple-50 text-purple-700 border border-purple-200",
+    borderGlow: "hover:border-purple-300",
   },
 };
 

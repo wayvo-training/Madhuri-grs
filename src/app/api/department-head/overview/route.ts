@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return auth.error;
   }
 
-  const { departmentId, department, isAdmin } = auth;
+  const { departmentId, department } = auth;
 
   try {
     // 0. Proactively evaluate SLA threshold rules for department's active queue
@@ -301,19 +301,17 @@ export async function GET(request: Request) {
       },
     });
 
-    // 5. Fetch all active departments for Admin preview department-switcher
-    const allDepartments = isAdmin
-      ? (
-          await prisma.departments.findMany({
-            where: { status: "ACTIVE" },
-            orderBy: { department_name: "asc" },
-            select: { department_id: true, department_name: true },
-          })
-        ).map((d) => ({
-          id: d.department_id.toString(),
-          name: d.department_name,
-        }))
-      : [];
+    // 5. Fetch all active departments for department-switcher & queue filtering
+    const allDepartments = (
+      await prisma.departments.findMany({
+        where: { status: "ACTIVE" },
+        orderBy: { department_name: "asc" },
+        select: { department_id: true, department_name: true },
+      })
+    ).map((d) => ({
+      id: d.department_id.toString(),
+      name: d.department_name,
+    }));
 
     return NextResponse.json({
       success: true,
