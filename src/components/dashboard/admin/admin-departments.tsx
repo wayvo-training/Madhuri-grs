@@ -8,17 +8,23 @@ import {
   ChevronLeft,
   ChevronRight,
   EllipsisVertical,
-  Loader2,
   Pencil,
   Plus,
   Power,
   RotateCcw,
-  Search,
   Users,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { DepartmentModals } from "@/components/dashboard/admin/admin-departments-modals";
+import {
+  AdminFilterToolbar,
+  AdminMetricCard,
+  AdminPanelHeader,
+  AdminSearchInput,
+  AdminToolbarAction,
+} from "@/components/dashboard/admin/admin-shared";
 
 export interface SerializedDepartment {
   department_id: string;
@@ -343,175 +349,91 @@ export function AdminDepartments({
 
   return (
     <div className="space-y-6">
-      {/* Executive Metric Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">
-              Total Departments
-            </span>
-            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-800">
-              <Building2 className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              {stats?.total ?? departments.length}
-            </span>
-            <span className="text-xs font-normal text-slate-400">
-              Divisions
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-800 font-normal">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-600" />
-            Enterprise organization units
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">
-              Active Departments
-            </span>
-            <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-emerald-600">
-              {stats?.active ??
-                departments.filter((d) => (d.status || "ACTIVE") === "ACTIVE")
-                  .length}
-            </span>
-            <span className="text-xs font-normal text-slate-400">
-              Routing enabled
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-600 font-normal">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Accepting grievances
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">
-              Deactivated / Inactive
-            </span>
-            <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
-              <Power className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-slate-800">
-              {stats?.inactive ??
-                departments.filter((d) => d.status === "INACTIVE").length}
-            </span>
-            <span className="text-xs font-normal text-slate-400">
-              Suspended
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-500 font-normal">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
-            Excluded from new intake
-          </div>
-        </div>
-
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-500">
-              Assigned Grievances
-            </span>
-            <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
-              <Activity className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-slate-900">
-              {stats?.totalGrievances ?? totalGrievances}
-            </span>
-            <span className="text-xs font-normal text-slate-400">
-              In lifecycle
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-slate-600 font-normal">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
-            System-wide distribution
-          </div>
-        </div>
+        <AdminMetricCard
+          title="Total Departments"
+          value={stats?.total ?? departments.length}
+          helper="Divisions"
+          icon={Building2}
+          accent="emerald"
+        />
+        <AdminMetricCard
+          title="Active Departments"
+          value={
+            stats?.active ??
+            departments.filter((d) => (d.status || "ACTIVE") === "ACTIVE")
+              .length
+          }
+          helper="Routing enabled"
+          icon={CheckCircle2}
+          accent="emerald"
+        />
+        <AdminMetricCard
+          title="Deactivated / Inactive"
+          value={
+            stats?.inactive ??
+            departments.filter((d) => d.status === "INACTIVE").length
+          }
+          helper="Suspended"
+          icon={Power}
+          accent="amber"
+        />
+        <AdminMetricCard
+          title="Assigned Grievances"
+          value={stats?.totalGrievances ?? totalGrievances}
+          helper="In lifecycle"
+          icon={Activity}
+          accent="slate"
+        />
       </div>
 
-      {/* Main Departments Panel */}
       <div
         id="departments"
         className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs"
       >
-        {/* Header with Search, Filter & New Button */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
-                <Building2 className="h-4 w-4" />
-              </span>
-              <h3 className="text-lg font-semibold text-slate-900">
-                Department Workload & Governance
-              </h3>
-            </div>
-            <p className="mt-0.5 text-[13px] font-normal text-slate-500">
-              Enterprise divisions configured for automated routing, status
-              governance, and workload resolution.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Search Input */}
-            <div className="relative w-48 sm:w-56 shrink-0">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <Search className="h-4 w-4" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search department..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
-              />
-            </div>
-
-            {/* Status Filter Dropdown */}
-            <div className="relative shrink-0">
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(
-                    e.target.value as "ALL" | "ACTIVE" | "INACTIVE",
-                  );
-                  setCurrentPage(1);
-                }}
-                className="h-9 appearance-none rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+        <div className="border-b border-slate-100 pb-5">
+          <AdminPanelHeader
+            title="Department Workload & Governance"
+            description="Enterprise divisions configured for automated routing, status governance, and workload resolution."
+            action={
+              <AdminFilterToolbar
+                action={
+                  <AdminToolbarAction onClick={() => setIsModalOpen(true)}>
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>New Department</span>
+                  </AdminToolbarAction>
+                }
               >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-                <ChevronDown className="h-3.5 w-3.5" />
-              </div>
-            </div>
-
-            {/* New Department Button */}
-            <button
-              type="button"
-              onClick={() => setIsModalOpen(true)}
-              className="inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-xl bg-[#064E3B] px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-900 active:scale-95"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Department</span>
-            </button>
-          </div>
+                <AdminSearchInput
+                  value={searchQuery}
+                  onChange={(value) => {
+                    setSearchQuery(value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search department..."
+                />
+                <div className="relative shrink-0">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(
+                        e.target.value as "ALL" | "ACTIVE" | "INACTIVE",
+                      );
+                      setCurrentPage(1);
+                    }}
+                    className="h-9 appearance-none rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-8 text-sm font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+                  >
+                    <option value="ALL">All Status</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              </AdminFilterToolbar>
+            }
+          />
         </div>
 
         {/* Departments Table */}
@@ -751,345 +673,43 @@ export function AdminDepartments({
           </div>
         </div>
 
-        {/* Modal: Create Department */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
-                    <Building2 className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Create New Department
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setFeedback(null);
-                  }}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {feedback && (
-                <div
-                  className={`mt-4 rounded-xl border p-3 text-xs ${
-                    feedback.type === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                      : "border-rose-200 bg-rose-50 text-rose-800"
-                  }`}
-                >
-                  {feedback.text}
-                </div>
-              )}
-
-              <form
-                onSubmit={handleCreateDepartment}
-                className="mt-4 space-y-4"
-              >
-                <div>
-                  <label
-                    htmlFor="new-dept-name"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Name <span className="text-amber-800">*</span>
-                  </label>
-                  <input
-                    id="new-dept-name"
-                    type="text"
-                    required
-                    placeholder="e.g. Legal & Compliance, Facilities Management, People Ops"
-                    value={deptName}
-                    onChange={(e) => setDeptName(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="new-dept-code"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Code <span className="text-amber-800">*</span>
-                  </label>
-                  <input
-                    id="new-dept-code"
-                    type="text"
-                    required
-                    maxLength={6}
-                    placeholder="e.g. FIN, HR, IT, LEGAL"
-                    value={deptCode}
-                    onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
-                    className="mt-1 h-9 w-full uppercase font-mono rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="new-dept-head"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Head <span className="text-amber-800">*</span>
-                  </label>
-                  <select
-                    id="new-dept-head"
-                    required
-                    value={selectedHeadId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedHeadId(id);
-                      const head = departmentHeads.find(
-                        (h) => h.user_id === id,
-                      );
-                      if (head && !contactEmail) {
-                        setContactEmail(head.email);
-                      }
-                    }}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  >
-                    <option value="">Select Department Head</option>
-                    {departmentHeads.map((head) => (
-                      <option key={head.user_id} value={head.user_id}>
-                        {head.first_name} {head.last_name} ({head.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="new-dept-email"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Contact Email{" "}
-                    <span className="text-amber-800">*</span>
-                  </label>
-                  <input
-                    id="new-dept-email"
-                    type="email"
-                    required
-                    placeholder="finance@company.com"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="new-dept-desc"
-                      className="block text-xs font-semibold text-slate-700"
-                    >
-                      Mandate & Scope Description{" "}
-                      <span className="text-amber-800">*</span>
-                    </label>
-                    <span
-                      className={`text-xs font-mono ${
-                        description.trim().length >= 20
-                          ? "text-slate-500"
-                          : "text-amber-800 font-semibold"
-                      }`}
-                    >
-                      {description.length} / 255 (min 20 chars)
-                    </span>
-                  </div>
-                  <textarea
-                    id="new-dept-desc"
-                    rows={3}
-                    required
-                    maxLength={255}
-                    placeholder="Describe specific grievances handled (e.g. Responsible for workplace disputes, leave policies, payroll issues, and employee benefits)..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="new-dept-status"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Initial Status
-                  </label>
-                  <select
-                    id="new-dept-status"
-                    value={deptStatus}
-                    onChange={(e) =>
-                      setDeptStatus(e.target.value as "ACTIVE" | "INACTIVE")
-                    }
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  >
-                    <option value="ACTIVE">ACTIVE (Accepts grievances)</option>
-                    <option value="INACTIVE">
-                      INACTIVE (Routing suspended)
-                    </option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Create Department</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Modal: Edit Department */}
-        {isEditModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-emerald-50 p-1.5 text-emerald-800">
-                    <Pencil className="h-4 w-4" />
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    Edit Department
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    setEditFeedback(null);
-                  }}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {editFeedback && (
-                <div
-                  className={`mt-4 rounded-xl border p-3 text-xs ${
-                    editFeedback.type === "success"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                      : "border-rose-200 bg-rose-50 text-rose-800"
-                  }`}
-                >
-                  {editFeedback.text}
-                </div>
-              )}
-
-              <form
-                onSubmit={handleSaveEditDepartment}
-                className="mt-4 space-y-4"
-              >
-                <div>
-                  <label
-                    htmlFor="edit-dept-name"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="edit-dept-name"
-                    type="text"
-                    required
-                    value={editDeptName}
-                    onChange={(e) => setEditDeptName(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="edit-dept-desc"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-dept-desc"
-                    rows={2}
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-xs text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="edit-dept-status"
-                    className="block text-xs font-semibold text-slate-700"
-                  >
-                    Department Status
-                  </label>
-                  <select
-                    id="edit-dept-status"
-                    value={editStatus}
-                    onChange={(e) =>
-                      setEditStatus(e.target.value as "ACTIVE" | "INACTIVE")
-                    }
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white"
-                  >
-                    <option value="ACTIVE">ACTIVE (Accepts grievances)</option>
-                    <option value="INACTIVE">
-                      INACTIVE (Routing suspended)
-                    </option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isEditSubmitting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 disabled:opacity-50"
-                  >
-                    {isEditSubmitting ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Save Changes</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <DepartmentModals
+          isModalOpen={isModalOpen}
+          feedback={feedback}
+          deptName={deptName}
+          deptCode={deptCode}
+          selectedHeadId={selectedHeadId}
+          description={description}
+          contactEmail={contactEmail}
+          deptStatus={deptStatus}
+          isSubmitting={isSubmitting}
+          departmentHeads={departmentHeads}
+          onCloseCreate={() => {
+            setIsModalOpen(false);
+            setFeedback(null);
+          }}
+          onSubmitCreate={handleCreateDepartment}
+          onSetDeptName={setDeptName}
+          onSetDeptCode={setDeptCode}
+          onSetSelectedHeadId={setSelectedHeadId}
+          onSetDescription={setDescription}
+          onSetContactEmail={setContactEmail}
+          onSetDeptStatus={setDeptStatus}
+          isEditModalOpen={isEditModalOpen}
+          editDeptName={editDeptName}
+          editDescription={editDescription}
+          editStatus={editStatus}
+          isEditSubmitting={isEditSubmitting}
+          editFeedback={editFeedback}
+          onCloseEdit={() => {
+            setIsEditModalOpen(false);
+            setEditFeedback(null);
+          }}
+          onSubmitEdit={handleSaveEditDepartment}
+          onSetEditDeptName={setEditDeptName}
+          onSetEditDescription={setEditDescription}
+          onSetEditStatus={setEditStatus}
+        />
       </div>
     </div>
   );

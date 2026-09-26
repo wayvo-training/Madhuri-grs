@@ -4,7 +4,6 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  ArrowRight,
   Building2,
   Check,
   CheckCircle2,
@@ -28,7 +27,6 @@ import {
   Search,
   Send,
   ShieldAlert,
-  ShieldCheck,
   User,
   UserCheck,
   UserPlus,
@@ -37,6 +35,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  AdminMetricCard,
+  AdminPanelHeader,
+} from "@/components/dashboard/admin/admin-shared";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
@@ -52,6 +54,17 @@ import type {
   StaffMember,
 } from "@/types/department-head";
 import { DepartmentHeadProvider } from "./DepartmentHeadContext";
+import {
+  DepartmentHeadEscalationModal,
+  DepartmentHeadLeaveReassignmentModal,
+  DepartmentHeadResolutionModal,
+} from "./department-head-overview-modals";
+import {
+  AttentionRequiredPanel,
+  OverviewMetricsSection,
+  RecentActivityPanel,
+  TeamCapacityPanel,
+} from "./department-head-overview-sections";
 import {
   type DocumentPreviewData,
   DocumentViewerModal,
@@ -1332,324 +1345,31 @@ export function DepartmentHeadOverviewInner({
             </div>
           </div>
 
-          {/* 2. Department Overview Metrics (4 Clear, Compact KPI Cards: ~115-120px) */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label="Unassigned"
-              value={unassignedCount}
-              icon={Inbox}
-              accentColor="slate"
-              description="Awaiting assignment"
-            />
-            <StatCard
-              label="In Progress"
-              value={inProgressCount}
-              icon={Clock}
-              accentColor="slate"
-              description="Active cases"
-            />
-            <StatCard
-              label="SLA At Risk"
-              value={slaAtRiskCount}
-              icon={AlertTriangle}
-              accentColor="amber"
-              description="75%+ SLA consumed"
-            />
-            <StatCard
-              label="Escalated"
-              value={escalatedCount}
-              icon={ShieldAlert}
-              accentColor={escalatedCount > 0 ? "amber" : "slate"}
-              description="SLA breach cases"
-            />
-          </div>
+          <OverviewMetricsSection
+            unassignedCount={unassignedCount}
+            inProgressCount={inProgressCount}
+            slaAtRiskCount={slaAtRiskCount}
+            escalatedCount={escalatedCount}
+          />
 
-          {/* 3. Attention Required (Compact Scrollable Triage List) */}
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-3 h-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
-                  Attention Required
-                </h3>
-                {attentionRequiredList.length > 0 && (
-                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                    {attentionRequiredList.length}
-                  </span>
-                )}
-                <span className="text-slate-300 hidden sm:inline">&bull;</span>
-                <p className="text-xs text-slate-500 font-normal hidden sm:inline">
-                  Grievances requiring review or intervention
-                </p>
-              </div>
+          <AttentionRequiredPanel
+            attentionRequiredList={attentionRequiredList}
+            onInspect={(item, tab) => {
+              setSelectedCaseFile(item);
+              setCaseDrawerTab(tab ?? "progress");
+            }}
+            onViewFullQueue={() => switchView("queue")}
+          />
 
-              <button
-                type="button"
-                onClick={() => switchView("queue")}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
-              >
-                <span>View Full Queue</span>
-                <ArrowRight className="h-3 w-3" />
-              </button>
-            </div>
-
-            {attentionRequiredList.length === 0 ? (
-              <div className="py-6 text-center text-xs font-normal text-slate-400">
-                <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1.5" />
-                <p className="font-semibold text-slate-700 text-xs">
-                  No grievances require intervention
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  All active grievances are operating within their defined SLA
-                  thresholds.
-                </p>
-              </div>
-            ) : (
-              <div className="max-h-75 overflow-y-auto custom-scrollbar divide-y divide-slate-100 rounded-lg border border-slate-200/80 bg-white">
-                {attentionRequiredList.map((item) => {
-                  const isEscalated = item.status === "ESCALATED";
-                  const isBreached = item.slaStatus === "BREACHED";
-
-                  // Enterprise rule: No red color, and color for ONLY escalated OR breached (never both).
-                  // If Escalated: StatusBadge gets the amber pill; SLA timer is neutral slate.
-                  // If Not Escalated & Breached: SLA timer gets the amber pill; StatusBadge is neutral slate.
-                  const highlightSla = !isEscalated && isBreached;
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 transition group min-h-11"
-                    >
-                      {/* Left: Monospace Code & Title */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="font-mono text-xs font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">
-                          {item.ticketCode}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedCaseFile(item);
-                            setCaseDrawerTab("statement");
-                          }}
-                          className="text-xs font-medium text-slate-800 hover:text-emerald-900 transition truncate text-left"
-                          title={item.title}
-                        >
-                          {item.title}
-                        </button>
-                      </div>
-
-                      {/* Right: Fixed-width vertically-aligned columns */}
-                      <div className="flex items-center gap-3 shrink-0">
-                        {/* 1. Priority Column (fixed 80px width) */}
-                        <div className="w-20 flex justify-start shrink-0">
-                          <PriorityBadge priority={item.priority} />
-                        </div>
-
-                        {/* 2. Status Column (fixed 96px width) */}
-                        <div className="w-24 flex justify-start shrink-0">
-                          <StatusBadge status={item.status} />
-                        </div>
-
-                        {/* 3. SLA Timer Column (fixed 136px width - no truncation) */}
-                        <div className="w-34 flex justify-center shrink-0">
-                          <span
-                            className={`text-xs px-2.5 py-0.5 rounded font-medium text-center w-full whitespace-nowrap ${
-                              highlightSla
-                                ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold"
-                                : "text-slate-600 bg-slate-100/80 border border-slate-200/80"
-                            }`}
-                          >
-                            {item.slaTimeLeft}
-                          </span>
-                        </div>
-
-                        {/* 4. Assigned Officer Column (fixed 144px width) */}
-                        <div className="w-36 shrink-0 text-left truncate hidden sm:block">
-                          <span className="text-xs text-slate-400">To: </span>
-                          <span className="text-xs font-medium text-slate-700">
-                            {item.assignedStaffName || (
-                              <span className="italic text-slate-400 font-normal">
-                                Unassigned
-                              </span>
-                            )}
-                          </span>
-                        </div>
-
-                        {/* 5. Inspect Action Column */}
-                        <div className="w-20 flex justify-end shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCaseFile(item);
-                              setCaseDrawerTab("progress");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
-                          >
-                            <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
-                            <span>Inspect</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 4 & 5. Team Capacity & Recent Activity (Side-by-side, content-driven height with items-start) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-            {/* 4. Team Capacity (~42-45% width, content-driven ~150-200px) */}
-            <div className="lg:col-span-5 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-2.5 h-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-4 w-4 text-emerald-800" />
-                  <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
-                    Team Capacity
-                  </h3>
-                  <span className="text-2.75 text-slate-400 font-normal">
-                    ({staffList.length})
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => switchView("staff")}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
-                >
-                  <span>Full Roster</span>
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
-
-              <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-2">
-                {staffList.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-3 text-center font-normal">
-                    No staff assigned to this department roster.
-                  </p>
-                ) : (
-                  staffList.map((staff) => {
-                    const pct = Math.round(
-                      (staff.activeTickets / staff.maxCapacity) * 100,
-                    );
-                    return (
-                      <div
-                        key={staff.id}
-                        className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold text-slate-900 text-xs truncate">
-                            {staff.name}
-                          </span>
-                          <span className="text-slate-600 font-medium text-2.75 shrink-0">
-                            {staff.activeTickets}/{staff.maxCapacity} active
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              staff.status === "ON_LEAVE"
-                                ? "bg-slate-400"
-                                : pct >= 80
-                                  ? "bg-amber-500"
-                                  : "bg-[#064E3B]"
-                            }`}
-                            style={{ width: `${Math.min(pct, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            {/* 5. Recent Activity (Governance Summary: ~55-58% width, compact rows ~60-65px) */}
-            <div className="lg:col-span-7 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-2.5 h-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-4 w-4 text-emerald-700" />
-                  <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
-                    Recent Activity
-                  </h3>
-                  <span className="text-2.75 text-slate-400 font-normal hidden sm:inline">
-                    (Governance)
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => switchView("activity")}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
-                >
-                  <span>View Full Activity</span>
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
-
-              <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-1.5 divide-y divide-slate-100">
-                {governanceAuditFeed.length === 0 ? (
-                  <div className="py-4 text-center text-slate-400 text-xs font-normal">
-                    No governance audit events recorded yet.
-                  </div>
-                ) : (
-                  governanceAuditFeed.map((feed) => {
-                    const isSlaEngineAction =
-                      feed.action.includes("SLA") ||
-                      feed.action.includes("Auto-");
-                    const displayActor =
-                      isSlaEngineAction &&
-                      feed.actor.includes("DEPARTMENT_HEAD")
-                        ? "SLA Governance Engine"
-                        : feed.actor;
-                    const displayAction = feed.action
-                      .replace(
-                        /SLA 100 BREACH ESCALATED/g,
-                        "SLA Breached & Case Escalated",
-                      )
-                      .replace(
-                        /SLA 75 PERCENT HOD ALERT/g,
-                        "SLA At Risk (75% Threshold Alert)",
-                      )
-                      .replace(
-                        /SLA 50 PERCENT WARNING/g,
-                        "50% SLA Priority Warning",
-                      );
-                    const cleanDetails = formatAuditFeedDetails(feed.details);
-
-                    return (
-                      <div
-                        key={feed.id}
-                        className="pt-2 first:pt-0 flex items-start gap-2.5 text-xs"
-                      >
-                        <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 border border-slate-200/60">
-                          {isSlaEngineAction ? (
-                            <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
-                          ) : (
-                            <FileCheck className="h-3.5 w-3.5 text-emerald-700" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-semibold text-slate-900 text-xs truncate">
-                              {displayActor}
-                            </span>
-                            <span className="text-2.5 text-slate-400 shrink-0">
-                              {feed.timestamp}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 text-xs font-medium leading-snug">
-                            {displayAction}
-                          </p>
-                          {cleanDetails && (
-                            <p className="text-2.75 text-slate-500 font-normal italic truncate">
-                              {cleanDetails}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+            <TeamCapacityPanel
+              staffList={staffList}
+              onViewFullRoster={() => switchView("staff")}
+            />
+            <RecentActivityPanel
+              governanceAuditFeed={governanceAuditFeed}
+              onViewFullActivity={() => switchView("activity")}
+            />
           </div>
         </div>
       )}
@@ -2075,55 +1795,50 @@ export function DepartmentHeadOverviewInner({
         <div className="space-y-6">
           {/* Team Capacity Metrics Banner */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label="Total Staff"
+            <AdminMetricCard
+              title="Total Staff"
               value={staffList.length}
+              helper={`${currentDepartmentName} department`}
               icon={Users}
-              accentColor="emerald"
-              description={`${currentDepartmentName} department`}
+              accent="emerald"
             />
-            <StatCard
-              label="On Active Duty"
+            <AdminMetricCard
+              title="On Active Duty"
               value={activeStaffCount}
+              helper={`${onLeaveStaffCount} staff member(s) on approved leave`}
               icon={UserCheck}
-              accentColor="slate"
-              description={`${onLeaveStaffCount} staff member(s) on approved leave`}
+              accent="slate"
             />
-            <StatCard
-              label="Active Assigned Grievances"
+            <AdminMetricCard
+              title="Active Assigned Grievances"
               value={`${totalActiveTickets} Grievances`}
+              helper={`Across ${activeStaffCount} active staff members`}
               icon={Inbox}
-              accentColor="slate"
-              description={`Across ${activeStaffCount} active staff members`}
+              accent="slate"
             />
-            <StatCard
-              label="Department Load Factor"
+            <AdminMetricCard
+              title="Department Load Factor"
               value={`${Math.round((totalActiveTickets / totalStaffCapacity) * 100)}%`}
+              helper={`${totalStaffCapacity - totalActiveTickets} slots available`}
               icon={Layers}
-              accentColor="slate"
-              description={`${totalStaffCapacity - totalActiveTickets} slots available`}
+              accent="slate"
             />
           </div>
 
           {/* Full-Width Staff Roster Cards Grid */}
           <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4 gap-2">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Department Staff Workload & Availability Matrix
-                </h3>
-                <p className="text-xs font-normal text-slate-500">
-                  Manage duty availability and inspect live grievance
-                  assignments per staff member
-                </p>
-              </div>
-              <span className="text-xs font-medium text-slate-600">
-                Department Utilization:{" "}
-                <strong className="font-semibold text-emerald-800">
-                  {totalActiveTickets} / {totalStaffCapacity} capacity
-                </strong>
-              </span>
-            </div>
+            <AdminPanelHeader
+              title="Department Staff Workload & Availability Matrix"
+              description="Manage duty availability and inspect live grievance assignments per staff member"
+              action={
+                <span className="text-xs font-medium text-slate-600">
+                  Department Utilization:{" "}
+                  <strong className="font-semibold text-emerald-800">
+                    {totalActiveTickets} / {totalStaffCapacity} capacity
+                  </strong>
+                </span>
+              }
+            />
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {staffList.map((staff) => {
@@ -2783,700 +2498,59 @@ export function DepartmentHeadOverviewInner({
       {/* ESCALATION INTERVENTION MODAL (Steps 4, 5, 6 -> Advances to 7, 8, 9)       */}
       {/* ========================================================================= */}
       {escalationModalGrievance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-          <div className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 bg-white shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
-                  <ShieldAlert className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">
-                    SLA Escalation Intervention
-                  </h3>
-                  <p className="text-xs font-normal text-slate-500">
-                    Ticket{" "}
-                    <span className="font-mono font-semibold text-amber-800">
-                      {escalationModalGrievance.ticketCode}
-                    </span>{" "}
-                    &bull; {escalationModalGrievance.slaTimeLeft}
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEscalationModalGrievance(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleEscalationSubmit}
-              className="flex flex-col flex-1 min-h-0"
-            >
-              {/* Scrollable Form Body */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
-                {/* Grievance Context & SLA Breach Details */}
-                <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-amber-950">
-                      {escalationModalGrievance.title}
-                    </span>
-                    <PriorityBadge
-                      priority={escalationModalGrievance.priority}
-                    />
-                  </div>
-                  <p className="text-amber-950 font-normal">
-                    <strong>Breach Context:</strong>{" "}
-                    {formatEscalationNotice(
-                      escalationModalGrievance.escalationReason,
-                    )}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3 pt-1 text-2.75 text-slate-600 border-t border-amber-200/60">
-                    <span>
-                      Submitter:{" "}
-                      <strong>{escalationModalGrievance.submitterName}</strong>
-                    </span>
-                    <span>&bull;</span>
-                    <span>
-                      Currently Assigned:{" "}
-                      <strong>
-                        {escalationModalGrievance.assignedStaffName ||
-                          "Unassigned"}
-                      </strong>
-                    </span>
-                    <span>&bull;</span>
-                    <span>
-                      Category:{" "}
-                      <strong>{escalationModalGrievance.category}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Identify Bottleneck */}
-                <div>
-                  <div className="block text-xs font-semibold text-slate-900 mb-1.5">
-                    Identify Root Operational Bottleneck{" "}
-                    <span className="text-rose-500">*</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEscalationBottleneck("STAFF_CAPACITY")}
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationBottleneck === "STAFF_CAPACITY"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      👥 Staff Capacity / Absence
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Staff member overloaded or on approved leave
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEscalationBottleneck("CROSS_DEPT")}
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationBottleneck === "CROSS_DEPT"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      🏢 Cross-Department Dependency
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Awaiting response or approval from Finance/IT
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEscalationBottleneck("MISSING_DOCS")}
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationBottleneck === "MISSING_DOCS"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      📁 Incomplete Documentation
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Awaiting original bills or vouchers from submitter
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEscalationBottleneck("COMPLEX_INVESTIGATION")
-                      }
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationBottleneck === "COMPLEX_INVESTIGATION"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      🔍 Complex Investigation Required
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Requires audit panel or field verification
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Intervention Action */}
-                <div>
-                  <div className="block text-xs font-semibold text-slate-900 mb-1.5">
-                    Choose Corrective Intervention Action{" "}
-                    <span className="text-rose-500">*</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEscalationInterventionType("MONITOR")}
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationInterventionType === "MONITOR"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      👁️ Continue Monitoring
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Acknowledge SLA risk and supervise without reassigning
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEscalationInterventionType("NOTIFY_STAFF")
-                      }
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationInterventionType === "NOTIFY_STAFF"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      📢 Notify Assigned Staff
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Send urgent priority nudge to assigned staff member
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEscalationInterventionType("CROSS_DEPT")
-                      }
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationInterventionType === "CROSS_DEPT"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      🤝 Add Supporting Dept / Staff
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Enlist supporting department to collaborate
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setEscalationInterventionType("REASSIGN")}
-                      className={`rounded-xl border p-2.5 text-left text-xs transition ${
-                        escalationInterventionType === "REASSIGN"
-                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      🔄 Reassign to Available Staff
-                      <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Transfer grievance to an active staff member with spare
-                        capacity
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Dynamic Target Selection based on Intervention Type */}
-                {escalationInterventionType === "REASSIGN" && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <label
-                      htmlFor="escalation-target-staff"
-                      className="block text-xs font-semibold text-slate-900 mb-1"
-                    >
-                      Select Target Staff Member{" "}
-                      <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      id="escalation-target-staff"
-                      required
-                      value={escalationTargetStaffId}
-                      onChange={(e) =>
-                        setEscalationTargetStaffId(e.target.value)
-                      }
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
-                    >
-                      <option value="">
-                        -- Choose an Available Staff Member --
-                      </option>
-                      {staffList.map((s) => (
-                        <option
-                          key={s.id}
-                          value={s.id}
-                          disabled={s.status === "ON_LEAVE"}
-                        >
-                          {s.name} ({s.designation}) &bull; {s.activeTickets}/
-                          {s.maxCapacity} grievances{" "}
-                          {s.status === "ON_LEAVE"
-                            ? "[ON LEAVE]"
-                            : "[AVAILABLE]"}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {escalationInterventionType === "CROSS_DEPT" && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <label
-                      htmlFor="escalation-target-dept"
-                      className="block text-xs font-semibold text-slate-900 mb-1"
-                    >
-                      Select Collaborating Department{" "}
-                      <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      id="escalation-target-dept"
-                      value={escalationTargetDept}
-                      onChange={(e) => setEscalationTargetDept(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
-                    >
-                      <option value="Finance & Accounts">
-                        Finance & Accounts
-                      </option>
-                      <option value="Medical Superintendent Services">
-                        Medical Superintendent Services
-                      </option>
-                      <option value="General Administration">
-                        General Administration
-                      </option>
-                      <option value="Human Resources & Legal">
-                        Human Resources & Legal
-                      </option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Intervention Directive & Justification Note */}
-                <div>
-                  <label
-                    htmlFor="escalation-action-note"
-                    className="block text-xs font-semibold text-slate-900 mb-1.5"
-                  >
-                    Intervention Directive & Justification (Logged to Audit
-                    Trail) <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    id="escalation-action-note"
-                    required
-                    rows={3}
-                    value={escalationNote}
-                    onChange={(e) => setEscalationNote(e.target.value)}
-                    placeholder="Explain the operational bottleneck resolved and specific directives given to staff..."
-                    className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer (Fixed at bottom) */}
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/90 shrink-0 gap-2">
-                <span className="text-2.75 text-slate-500">
-                  Intervention is logged to the audit trail and dispatched to
-                  the assigned staff member.
-                </span>
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => setEscalationModalGrievance(null)}
-                    className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={
-                      escalationInterventionType === "REASSIGN" &&
-                      !escalationTargetStaffId
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition disabled:opacity-50"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    <span>Confirm & Execute Intervention &rarr;</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
+        <DepartmentHeadEscalationModal
+          grievance={escalationModalGrievance}
+          staffList={staffList}
+          bottleneck={escalationBottleneck}
+          interventionType={escalationInterventionType}
+          targetStaffId={escalationTargetStaffId}
+          targetDept={escalationTargetDept}
+          note={escalationNote}
+          onClose={() => setEscalationModalGrievance(null)}
+          onSubmit={handleEscalationSubmit}
+          onBottleneckChange={setEscalationBottleneck}
+          onInterventionTypeChange={setEscalationInterventionType}
+          onTargetStaffIdChange={setEscalationTargetStaffId}
+          onTargetDeptChange={setEscalationTargetDept}
+          onNoteChange={setEscalationNote}
+        />
       )}
 
       {/* ========================================================================= */}
       {/* RESOLUTION REVIEW & CLEARANCE MODAL                                       */}
       {/* ========================================================================= */}
       {resolutionModalGrievance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  Resolution Review & Clearance
-                </h3>
-                <p className="text-xs font-normal text-slate-500">
-                  Final sign-off for{" "}
-                  <span className="font-mono font-semibold text-[#064E3B]">
-                    {resolutionModalGrievance.ticketCode}
-                  </span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setResolutionModalGrievance(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleResolutionSubmit} className="mt-4 space-y-4">
-              {/* Step 10 Findings */}
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold text-emerald-950">
-                  <span>
-                    Assigned Staff Findings:{" "}
-                    {resolutionModalGrievance.submittedResolution?.staffName}
-                  </span>
-                  <span className="text-2.75 font-normal text-slate-500">
-                    {resolutionModalGrievance.submittedResolution?.submittedAt}
-                  </span>
-                </div>
-                <p className="font-normal leading-relaxed">
-                  {resolutionModalGrievance.submittedResolution?.note}
-                </p>
-              </div>
-
-              <div>
-                <div className="block text-xs font-semibold text-slate-800 mb-1.5">
-                  Department Head Final Decision
-                </div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setResolutionDecision("APPROVE")}
-                    className={`rounded-xl border p-3 text-xs text-left transition ${
-                      resolutionDecision === "APPROVE"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-900 font-semibold ring-1 ring-emerald-600"
-                        : "border-slate-200 hover:bg-slate-50 text-slate-700 font-normal"
-                    }`}
-                  >
-                    ✅ Approve & Clear Escalation
-                    <div className="text-2.5 font-normal text-slate-500 mt-0.5">
-                      Clear escalation flag & mark grievance as CLOSED
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setResolutionDecision("REJECT")}
-                    className={`rounded-xl border p-3 text-xs text-left transition ${
-                      resolutionDecision === "REJECT"
-                        ? "border-slate-800 bg-slate-100 text-slate-900 font-semibold ring-1 ring-slate-800"
-                        : "border-slate-200 hover:bg-slate-50 text-slate-700 font-normal"
-                    }`}
-                  >
-                    🔄 Request Clarification
-                    <div className="text-2.5 font-normal text-slate-500 mt-0.5">
-                      Return to assigned staff member for revision
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="review-feedback"
-                  className="block text-xs font-semibold text-slate-800 mb-1.5"
-                >
-                  {resolutionDecision === "APPROVE"
-                    ? "Final Approval Remarks (Logged to Audit Trail)"
-                    : "Clarification Directives"}
-                </label>
-                <textarea
-                  id="review-feedback"
-                  rows={3}
-                  value={resolutionFeedback}
-                  onChange={(e) => setResolutionFeedback(e.target.value)}
-                  placeholder={
-                    resolutionDecision === "APPROVE"
-                      ? "e.g. Resolution verified and sanctioned. All compliance requirements fulfilled."
-                      : "e.g. Please verify additional bank annexures before final submission."
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setResolutionModalGrievance(null)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition ${
-                    resolutionDecision === "APPROVE"
-                      ? "bg-[#064E3B] hover:bg-emerald-900"
-                      : "bg-slate-800 hover:bg-slate-900"
-                  }`}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>
-                    {resolutionDecision === "APPROVE"
-                      ? "Approve Resolution & Close Grievance"
-                      : "Return to Staff with Feedback"}
-                  </span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <DepartmentHeadResolutionModal
+          grievance={resolutionModalGrievance}
+          decision={resolutionDecision}
+          feedback={resolutionFeedback}
+          onClose={() => setResolutionModalGrievance(null)}
+          onSubmit={handleResolutionSubmit}
+          onDecisionChange={setResolutionDecision}
+          onFeedbackChange={setResolutionFeedback}
+        />
       )}
 
       {/* ========================================================================= */}
       {/* LEAVE REASSIGNMENT HELPER MODAL                                           */}
       {/* ========================================================================= */}
       {leaveReassignmentModalStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 overflow-y-auto">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl my-8">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100/70 text-[#064E3B]">
-                  <UserPlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">
-                    Officer Has Active Grievances — Reassignment Recommended
-                  </h3>
-                  <p className="text-xs font-normal text-slate-500">
-                    <span className="font-semibold text-slate-700">
-                      {leaveReassignmentModalStaff.name}
-                    </span>{" "}
-                    ({leaveReassignmentModalStaff.designation}) &bull;{" "}
-                    <span className="font-semibold text-slate-700">
-                      {
-                        grievances.filter(
-                          (g) =>
-                            g.assignedStaffId ===
-                              leaveReassignmentModalStaff.id &&
-                            g.status !== "CLOSED",
-                        ).length
-                      }{" "}
-                      Active Case(s)
-                    </span>
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLeaveReassignmentModalStaff(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleBulkReassignAndMarkLeave}
-              className="mt-4 space-y-4"
-            >
-              {/* Context Alert Banner */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-800 space-y-1">
-                <div className="flex items-center gap-1.5 font-semibold text-slate-900">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-slate-600" />
-                  <span>SLA Protection Advisory</span>
-                </div>
-                <p className="font-normal text-slate-700 leading-relaxed">
-                  Marking this officer on leave will freeze their availability.
-                  To prevent active tickets from stalling or breaching
-                  resolution SLAs, it is recommended to bulk-transfer these
-                  grievances to another available officer.
-                </p>
-              </div>
-
-              {/* Active Tickets List */}
-              <div className="space-y-2">
-                <div className="block text-xs font-semibold text-slate-800">
-                  Currently Assigned Active Grievances (
-                  {
-                    grievances.filter(
-                      (g) =>
-                        g.assignedStaffId === leaveReassignmentModalStaff.id &&
-                        g.status !== "CLOSED",
-                    ).length
-                  }
-                  )
-                </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {grievances
-                    .filter(
-                      (g) =>
-                        g.assignedStaffId === leaveReassignmentModalStaff.id &&
-                        g.status !== "CLOSED",
-                    )
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3 gap-2 text-xs"
-                      >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200 text-2.75">
-                              {item.ticketCode}
-                            </span>
-                            <PriorityBadge priority={item.priority} />
-                            <StatusBadge status={item.status} />
-                          </div>
-                          <p className="font-medium text-slate-900 line-clamp-1">
-                            {item.title}
-                          </p>
-                          <span className="text-2.75 text-slate-500">
-                            {item.category} &rsaquo; {item.subcategory}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          <span
-                            className={`text-xs font-semibold ${
-                              item.slaStatus === "BREACHED"
-                                ? "text-amber-800 font-semibold"
-                                : item.slaStatus === "AT_RISK"
-                                  ? "text-amber-700"
-                                  : "text-slate-600"
-                            }`}
-                          >
-                            {item.slaTimeLeft}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCaseFile(item);
-                              setCaseDrawerTab("progress");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-2.75 font-semibold text-slate-700 hover:bg-slate-50 transition"
-                          >
-                            <Eye className="h-3 w-3 text-slate-500" />
-                            <span>Inspect</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Target Staff Member Dropdown */}
-              <div>
-                <label
-                  htmlFor="leave-target-staff"
-                  className="block text-xs font-semibold text-slate-800 mb-1.5"
-                >
-                  Select Staff Member to Receive Reassigned Grievances{" "}
-                  <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="leave-target-staff"
-                  required
-                  value={leaveReassignTargetStaffId}
-                  onChange={(e) =>
-                    setLeaveReassignTargetStaffId(e.target.value)
-                  }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-2xs focus:border-emerald-600 focus:outline-hidden"
-                >
-                  <option value="">
-                    -- Choose an Available Staff Member --
-                  </option>
-                  {staffList
-                    .filter((s) => s.id !== leaveReassignmentModalStaff.id)
-                    .map((s) => (
-                      <option
-                        key={s.id}
-                        value={s.id}
-                        disabled={s.status === "ON_LEAVE"}
-                      >
-                        {s.name} ({s.designation}) &bull; {s.activeTickets}/
-                        {s.maxCapacity} active tickets{" "}
-                        {s.status === "ON_LEAVE" ? "[ON LEAVE]" : "[AVAILABLE]"}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              {/* HOD Directive / Handoff Note */}
-              <div>
-                <label
-                  htmlFor="leave-reassign-note"
-                  className="block text-xs font-semibold text-slate-800 mb-1.5"
-                >
-                  Department Head Handoff Directive (Logged to Grievance Audit
-                  Trail)
-                </label>
-                <textarea
-                  id="leave-reassign-note"
-                  rows={2}
-                  value={leaveReassignNote}
-                  onChange={(e) => setLeaveReassignNote(e.target.value)}
-                  placeholder="e.g. Staff member approved on leave. Reassigned to prevent SLA delay..."
-                  className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setLeaveReassignmentModalStaff(null)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
-                >
-                  Cancel
-                </button>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleKeepTicketsAndMarkLeave}
-                    className="rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition"
-                  >
-                    Keep Tickets & Mark On Leave
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={!leaveReassignTargetStaffId}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Reassign All & Mark On Leave</span>
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
+        <DepartmentHeadLeaveReassignmentModal
+          staff={leaveReassignmentModalStaff}
+          grievances={grievances}
+          targetStaffId={leaveReassignTargetStaffId}
+          note={leaveReassignNote}
+          onClose={() => setLeaveReassignmentModalStaff(null)}
+          onSubmit={handleBulkReassignAndMarkLeave}
+          onTargetStaffIdChange={setLeaveReassignTargetStaffId}
+          onNoteChange={setLeaveReassignNote}
+          onInspect={(item) => {
+            setSelectedCaseFile(item);
+            setCaseDrawerTab("progress");
+          }}
+          onMarkLeave={handleKeepTicketsAndMarkLeave}
+          staffList={staffList}
+        />
       )}
       {/* ========================================================================= */}
       {/* CASE FILE INSPECTION DIALOG (Centered Popover Review)                     */}

@@ -7,11 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  Layers,
-  Loader2,
-  Plus,
   RotateCcw,
-  Search,
   Sliders,
   Sparkles,
   Trash2,
@@ -20,6 +16,22 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+
+import {
+  AdminRuleConfigModal,
+  ConfirmRuleDeleteModal,
+} from "@/components/dashboard/admin/admin-rule-modals";
+import {
+  CreatePolicyMenu,
+  type MainTab,
+  type ModalRuleType,
+  RulesFilterPopover,
+} from "@/components/dashboard/admin/admin-rules-panels";
+import {
+  AdminFilterToolbar,
+  AdminPanelHeader,
+  AdminSearchInput,
+} from "@/components/dashboard/admin/admin-shared";
 import { PriorityBadge } from "@/components/dashboard/badges";
 
 export interface SerializedPriorityRule {
@@ -85,9 +97,6 @@ interface AdminMasterRulesProps {
   departments?: { department_id: string; department_name: string }[];
   categories?: SerializedCategory[];
 }
-
-export type MainTab = "matrix" | "global";
-export type ModalRuleType = "routing" | "priority" | "sla" | "reopen";
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} mins`;
@@ -745,7 +754,7 @@ export function AdminMasterRules({
   };
 
   // Modal State for Rule Configuration / Creation
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [modalRuleType, setModalRuleType] = useState<ModalRuleType>("routing");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
@@ -834,7 +843,7 @@ export function AdminMasterRules({
 
     setPriorityLevel(currentPriority || "HIGH");
     setRuleName(`${subcatName} Routing to ${deptName}`);
-    setIsModalOpen(true);
+    setRuleModalOpen(true);
   };
 
   async function handleCreateRule(e: React.FormEvent) {
@@ -988,7 +997,7 @@ export function AdminMasterRules({
       );
 
       setTimeout(() => {
-        setIsModalOpen(false);
+        setRuleModalOpen(false);
         resetForm();
         router.refresh();
       }, 1000);
@@ -1010,175 +1019,52 @@ export function AdminMasterRules({
     >
       {/* Header & Tabs */}
       <div className="border-b border-slate-100 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
-                <Layers className="h-4 w-4" />
-              </span>
-              <h2 className="text-base font-bold tracking-tight text-slate-900">
-                Master Governance & Rules Engine
-              </h2>
+        <AdminPanelHeader
+          title="Master Governance & Rules Engine"
+          description="Unified administrative engine controlling grievance triage, departmental routing, SLA timers, and global policies."
+          action={
+            <div className="flex items-center gap-3 shrink-0 flex-nowrap">
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("matrix")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
+                    activeTab === "matrix"
+                      ? "bg-white text-[#064E3B] shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Workflow className="h-3.5 w-3.5" />
+                  <span>Policy Matrix ({totalMatrixGrievanceTypes})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("global")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
+                    activeTab === "global"
+                      ? "bg-white text-[#064E3B] shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Global Policies ({reopenPolicies.length})</span>
+                </button>
+              </div>
+
+              <CreatePolicyMenu
+                activeDropdown={activeDropdown}
+                setActiveDropdown={setActiveDropdown}
+                onSelectType={(type) => {
+                  resetForm();
+                  setModalRuleType(type);
+                  setRuleModalOpen(true);
+                }}
+              />
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Unified administrative engine controlling grievance triage,
-              departmental routing, SLA timers, and global policies.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 flex-nowrap">
-            {/* Top Navigation Tabs */}
-            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold shrink-0">
-              <button
-                type="button"
-                onClick={() => setActiveTab("matrix")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
-                  activeTab === "matrix"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Workflow className="h-3.5 w-3.5" />
-                <span>Policy Matrix ({totalMatrixGrievanceTypes})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("global")}
-                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
-                  activeTab === "global"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Global Policies ({reopenPolicies.length})</span>
-              </button>
-            </div>
-
-            {/* Configure Rule Dropdown Button */}
-            <div className="relative shrink-0" data-dropdown-container>
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveDropdown(
-                    activeDropdown === "create-policy" ? null : "create-policy",
-                  )
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 whitespace-nowrap cursor-pointer"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Configure New Policy</span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform duration-200 ${activeDropdown === "create-policy" ? "rotate-180" : ""}`}
-                />
-              </button>
-
-              {activeDropdown === "create-policy" && (
-                <div className="absolute right-0 top-full mt-1.5 z-40 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95">
-                  <div className="px-2 py-1 text-2xs font-bold uppercase tracking-wider text-slate-400">
-                    Select Policy Type
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setModalRuleType("routing");
-                      setIsModalOpen(true);
-                      setActiveDropdown(null);
-                    }}
-                    className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-slate-50 transition group"
-                  >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100">
-                      <Workflow className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-950">
-                        Routing Policy
-                      </div>
-                      <div className="text-2xs text-slate-500">
-                        Route categories to departments
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setModalRuleType("priority");
-                      setIsModalOpen(true);
-                      setActiveDropdown(null);
-                    }}
-                    className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-slate-50 transition group"
-                  >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 group-hover:bg-amber-100">
-                      <Sliders className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-950">
-                        Priority Rule
-                      </div>
-                      <div className="text-2xs text-slate-500">
-                        Severity scoring & keywords triage
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setModalRuleType("sla");
-                      setIsModalOpen(true);
-                      setActiveDropdown(null);
-                    }}
-                    className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-slate-50 transition group"
-                  >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 group-hover:bg-blue-100">
-                      <Clock className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-950">
-                        SLA Policy
-                      </div>
-                      <div className="text-2xs text-slate-500">
-                        Deadlines & escalation thresholds
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="my-1 border-t border-slate-100" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetForm();
-                      setModalRuleType("reopen");
-                      setIsModalOpen(true);
-                      setActiveDropdown(null);
-                    }}
-                    className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-slate-50 transition group"
-                  >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B] group-hover:bg-emerald-100">
-                      <RotateCcw className="h-3.5 w-3.5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-950">
-                        Global Reopen Policy
-                      </div>
-                      <div className="text-2xs text-slate-500">
-                        Case reopening window & limits
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          }
+        />
       </div>
-
       {/* Global Action Banner (Msg Box) */}
       {actionNotice && (
         <div
@@ -1206,191 +1092,46 @@ export function AdminMasterRules({
           </button>
         </div>
       )}
-
       {/* Filter Toolbar */}
       <div className="border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-1 flex-wrap items-center gap-2.5">
-            {/* Search Input */}
-            <div className="relative w-48 sm:w-64 shrink-0">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                <Search className="h-3.5 w-3.5" />
-              </div>
-              <input
-                type="text"
-                placeholder={
-                  activeTab === "matrix"
-                    ? "Search grievance types, routes, SLAs..."
-                    : "Search global reopen policies..."
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-8.5 pr-3 text-xs text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-              />
-            </div>
+        <AdminFilterToolbar>
+          <AdminSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={
+              activeTab === "matrix"
+                ? "Search grievance types, routes, SLAs..."
+                : "Search global reopen policies..."
+            }
+          />
 
-            {/* Unified Combined Filters Popover (Department, Category, Status) */}
-            <div className="relative shrink-0" data-dropdown-container>
-              <button
-                type="button"
-                id="matrix-combined-filters"
-                aria-label="Filter rules"
-                onClick={() =>
-                  setActiveDropdown(
-                    activeDropdown === "filters" ? null : "filters",
-                  )
-                }
-                className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition cursor-pointer shadow-2xs ${
-                  isFiltered
-                    ? "border-emerald-600/60 bg-emerald-50/80 text-emerald-950 font-bold"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                <Sliders className="h-3.5 w-3.5 text-slate-500" />
-                <span>Filters</span>
-                {isFiltered && (
-                  <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#064E3B] px-1 text-2xs font-bold text-white">
-                    {(deptFilter !== "ALL" ? 1 : 0) +
-                      (catFilter !== "ALL" ? 1 : 0) +
-                      (statusFilter !== "ALL" ? 1 : 0)}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${activeDropdown === "filters" ? "rotate-180" : ""}`}
-                />
-              </button>
+          <RulesFilterPopover
+            activeTab={activeTab}
+            activeDropdown={activeDropdown}
+            setActiveDropdown={setActiveDropdown}
+            isFiltered={isFiltered}
+            onReset={handleResetFilters}
+            departments={departments}
+            categoryOptions={categoryOptions}
+            deptFilter={deptFilter}
+            setDeptFilter={setDeptFilter}
+            catFilter={catFilter}
+            setCatFilter={setCatFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+          />
 
-              {activeDropdown === "filters" && (
-                <div className="absolute left-0 top-full mt-1.5 z-40 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95 space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <span className="text-xs font-bold text-slate-900">
-                      Filter Matrix Rules
-                    </span>
-                    {isFiltered && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleResetFilters();
-                          setActiveDropdown(null);
-                        }}
-                        className="text-2xs font-semibold text-emerald-700 hover:text-emerald-900 transition cursor-pointer"
-                      >
-                        Reset All
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Department Filter (Only for Matrix tab) */}
-                  {activeTab === "matrix" && (
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="filter-popover-dept"
-                        className="text-2xs font-bold uppercase tracking-wider text-slate-400"
-                      >
-                        Department
-                      </label>
-                      <select
-                        id="filter-popover-dept"
-                        aria-label="Filter by department"
-                        value={deptFilter}
-                        onChange={(e) => setDeptFilter(e.target.value)}
-                        className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-                      >
-                        <option value="ALL">All Departments</option>
-                        {departments.map((d) => (
-                          <option
-                            key={d.department_id}
-                            value={d.department_name}
-                          >
-                            {d.department_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Category Filter (Only for Matrix tab) */}
-                  {activeTab === "matrix" && (
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="filter-popover-cat"
-                        className="text-2xs font-bold uppercase tracking-wider text-slate-400"
-                      >
-                        Category
-                      </label>
-                      <select
-                        id="filter-popover-cat"
-                        aria-label="Filter by category"
-                        value={catFilter}
-                        onChange={(e) => setCatFilter(e.target.value)}
-                        className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-                      >
-                        <option value="ALL">All Categories</option>
-                        {categoryOptions.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Status Filter */}
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="filter-popover-status"
-                      className="text-2xs font-bold uppercase tracking-wider text-slate-400"
-                    >
-                      Status
-                    </label>
-                    <select
-                      id="filter-popover-status"
-                      aria-label="Filter by status"
-                      value={statusFilter}
-                      onChange={(e) =>
-                        setStatusFilter(
-                          e.target.value as "ALL" | "ACTIVE" | "INACTIVE",
-                        )
-                      }
-                      className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-                    >
-                      <option value="ALL">All Statuses</option>
-                      <option value="ACTIVE">Active</option>
-                      <option value="INACTIVE">Deactivated</option>
-                    </select>
-                  </div>
-
-                  {/* Popover Footer */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-2xs text-slate-400">
-                      {isFiltered
-                        ? "Active filters applied"
-                        : "No filters applied"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdown(null)}
-                      className="rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-800 transition cursor-pointer"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Clear Filters Button (When filtered) */}
-            {isFiltered && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Reset</span>
-              </button>
-            )}
-          </div>
+          {/* Clear Filters Button (When filtered) */}
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>Reset</span>
+            </button>
+          )}
 
           {/* Expand/Collapse All (Matrix Tab) */}
           {activeTab === "matrix" && (
@@ -1411,9 +1152,8 @@ export function AdminMasterRules({
               </button>
             </div>
           )}
-        </div>
+        </AdminFilterToolbar>
       </div>
-
       {/* Main Tab Content */}
       <div className="p-5 sm:p-6">
         {/* Toast / Feedback Notice */}
@@ -2210,7 +1950,7 @@ export function AdminMasterRules({
                             setMaxReviews(
                               policy.max_manual_review_count.toString(),
                             );
-                            setIsModalOpen(true);
+                            setRuleModalOpen(true);
                           }}
                           className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50 transition"
                         >
@@ -2240,654 +1980,63 @@ export function AdminMasterRules({
           </div>
         )}
       </div>
-
       {/* ============================================================== */}
       {/* Interactive Policy Creation / Configuration Modal */}
       {/* ============================================================== */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-          <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Configure Policy Rule
-                </h3>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Define automated triage, routing pathways, resolution SLAs, or
-                  reopen parameters.
-                </p>
-              </div>
+      <AdminRuleConfigModal
+        open={ruleModalOpen}
+        onClose={() => setRuleModalOpen(false)}
+        modalRuleType={modalRuleType}
+        setModalRuleType={setModalRuleType}
+        ruleName={ruleName}
+        setRuleName={setRuleName}
+        priorityLevel={priorityLevel}
+        setPriorityLevel={setPriorityLevel}
+        ruleOrder={ruleOrder}
+        setRuleOrder={setRuleOrder}
+        isDefault={isDefault}
+        setIsDefault={setIsDefault}
+        selectedDeptId={selectedDeptId}
+        setSelectedDeptId={setSelectedDeptId}
+        selectedCatId={selectedCatId}
+        setSelectedCatId={setSelectedCatId}
+        selectedRoutingSubcatId={selectedRoutingSubcatId}
+        setSelectedRoutingSubcatId={setSelectedRoutingSubcatId}
+        involvementType={involvementType}
+        setInvolvementType={setInvolvementType}
+        selectedSupportingDepts={selectedSupportingDepts}
+        setSelectedSupportingDepts={setSelectedSupportingDepts}
+        selectedPriorityCatId={selectedPriorityCatId}
+        setSelectedPriorityCatId={setSelectedPriorityCatId}
+        selectedPrioritySubcatId={selectedPrioritySubcatId}
+        setSelectedPrioritySubcatId={setSelectedPrioritySubcatId}
+        durationHours={durationHours}
+        setDurationHours={setDurationHours}
+        warningPercent={warningPercent}
+        setWarningPercent={setWarningPercent}
+        escalationPercent={escalationPercent}
+        setEscalationPercent={setEscalationPercent}
+        reopenWindowHours={reopenWindowHours}
+        setReopenWindowHours={setReopenWindowHours}
+        maxReopens={maxReopens}
+        setMaxReopens={setMaxReopens}
+        maxReviews={maxReviews}
+        setMaxReviews={setMaxReviews}
+        ruleStatus={ruleStatus}
+        setRuleStatus={setRuleStatus}
+        isSubmitting={isSubmitting}
+        feedback={feedback}
+        departments={departments}
+        categories={categories}
+        onSubmit={handleCreateRule}
+      />
 
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Rule Type Selector */}
-            <div className="mt-4 flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setModalRuleType("routing")}
-                className={`flex-1 rounded-lg py-1.5 text-center transition ${
-                  modalRuleType === "routing"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Routing Rule
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalRuleType("priority")}
-                className={`flex-1 rounded-lg py-1.5 text-center transition ${
-                  modalRuleType === "priority"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Priority Rule
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalRuleType("sla")}
-                className={`flex-1 rounded-lg py-1.5 text-center transition ${
-                  modalRuleType === "sla"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                SLA Policy
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalRuleType("reopen")}
-                className={`flex-1 rounded-lg py-1.5 text-center transition ${
-                  modalRuleType === "reopen"
-                    ? "bg-white text-[#064E3B] shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Reopen Policy
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleCreateRule}
-              className="mt-4 space-y-4 text-xs"
-            >
-              <div>
-                <label
-                  htmlFor="rule-name-input"
-                  className="block font-semibold text-slate-700"
-                >
-                  Policy Rule Name *
-                </label>
-                <input
-                  id="rule-name-input"
-                  type="text"
-                  required
-                  placeholder={
-                    modalRuleType === "priority"
-                      ? "e.g. Critical Safety Escalation"
-                      : modalRuleType === "routing"
-                        ? "e.g. Salary & Pay Primary Routing"
-                        : modalRuleType === "sla"
-                          ? "e.g. High Priority Resolution SLA"
-                          : "e.g. Standard 72hr Reopen Policy"
-                  }
-                  value={ruleName}
-                  onChange={(e) => setRuleName(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                />
-              </div>
-
-              {/* Priority Fields */}
-              {modalRuleType === "priority" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="priority-level-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Assigned Priority *
-                      </label>
-                      <select
-                        id="priority-level-select"
-                        value={priorityLevel}
-                        onChange={(e) => setPriorityLevel(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="CRITICAL">Critical</option>
-                        <option value="HIGH">High</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="LOW">Low</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="rule-order-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Execution Order *
-                      </label>
-                      <input
-                        id="rule-order-input"
-                        type="number"
-                        min="1"
-                        value={ruleOrder}
-                        onChange={(e) => setRuleOrder(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isDefault}
-                        onChange={(e) => {
-                          setIsDefault(e.target.checked);
-                          if (e.target.checked) {
-                            setSelectedPriorityCatId("");
-                            setSelectedPrioritySubcatId("");
-                          }
-                        }}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className="font-semibold text-slate-700">
-                        Default Fallback Rule
-                      </span>
-                    </label>
-                  </div>
-
-                  {!isDefault && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label
-                          htmlFor="prio-cat-select"
-                          className="block font-semibold text-slate-700"
-                        >
-                          Category Scope *
-                        </label>
-                        <select
-                          id="prio-cat-select"
-                          value={selectedPriorityCatId}
-                          required={!isDefault}
-                          onChange={(e) => {
-                            setSelectedPriorityCatId(e.target.value);
-                            setSelectedPrioritySubcatId("");
-                          }}
-                          className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                        >
-                          <option value="">-- Select Category --</option>
-                          {categories.map((c) => (
-                            <option key={c.category_id} value={c.category_id}>
-                              {c.category_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label
-                          htmlFor="prio-subcat-select"
-                          className="block font-semibold text-slate-700"
-                        >
-                          Subcategory Scope
-                        </label>
-                        <select
-                          id="prio-subcat-select"
-                          value={selectedPrioritySubcatId}
-                          disabled={!selectedPriorityCatId}
-                          onChange={(e) =>
-                            setSelectedPrioritySubcatId(e.target.value)
-                          }
-                          className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                        >
-                          <option value="">-- All Subcategories --</option>
-                          {categories
-                            .find(
-                              (c) => c.category_id === selectedPriorityCatId,
-                            )
-                            ?.subcategories?.map((s) => (
-                              <option
-                                key={s.subcategory_id}
-                                value={s.subcategory_id}
-                              >
-                                {s.subcategory_name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Routing Fields */}
-              {modalRuleType === "routing" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="dept-target-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Primary Lead Department *
-                      </label>
-                      <select
-                        id="dept-target-select"
-                        value={selectedDeptId}
-                        required
-                        onChange={(e) => {
-                          setSelectedDeptId(e.target.value);
-                          setSelectedSupportingDepts((prev) =>
-                            prev.filter((d) => {
-                              const dept = departments.find(
-                                (item) => item.department_id === e.target.value,
-                              );
-                              return dept ? d !== dept.department_name : true;
-                            }),
-                          );
-                        }}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="">-- Select Department --</option>
-                        {departments.map((d) => (
-                          <option key={d.department_id} value={d.department_id}>
-                            {d.department_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="involvement-type-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Involvement Type *
-                      </label>
-                      <select
-                        id="involvement-type-select"
-                        value={involvementType}
-                        onChange={(e) => setInvolvementType(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="PRIMARY">PRIMARY (Lead Owner)</option>
-                        <option value="SUPPORTING">
-                          SUPPORTING (Collaborator)
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="routing-cat-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Category Scope *
-                      </label>
-                      <select
-                        id="routing-cat-select"
-                        value={selectedCatId}
-                        required
-                        onChange={(e) => {
-                          setSelectedCatId(e.target.value);
-                          setSelectedRoutingSubcatId("");
-                        }}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="">-- Select Category --</option>
-                        {categories.map((c) => (
-                          <option key={c.category_id} value={c.category_id}>
-                            {c.category_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="routing-subcat-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Subcategory Scope *
-                      </label>
-                      <select
-                        id="routing-subcat-select"
-                        value={selectedRoutingSubcatId}
-                        disabled={!selectedCatId}
-                        required
-                        onChange={(e) =>
-                          setSelectedRoutingSubcatId(e.target.value)
-                        }
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="">-- Select Subcategory --</option>
-                        {categories
-                          .find((c) => c.category_id === selectedCatId)
-                          ?.subcategories?.map((s) => (
-                            <option
-                              key={s.subcategory_id}
-                              value={s.subcategory_id}
-                            >
-                              {s.subcategory_name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Supporting Departments Checklist */}
-                  <div>
-                    <span className="block font-semibold text-slate-700 mb-1">
-                      Supporting Department(s)
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {departments
-                        .filter((d) => d.department_id !== selectedDeptId)
-                        .map((d) => {
-                          const isChecked = selectedSupportingDepts.includes(
-                            d.department_name,
-                          );
-                          return (
-                            <button
-                              key={d.department_id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedSupportingDepts((prev) =>
-                                  isChecked
-                                    ? prev.filter(
-                                        (name) => name !== d.department_name,
-                                      )
-                                    : [...prev, d.department_name],
-                                );
-                              }}
-                              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border ${
-                                isChecked
-                                  ? "bg-sky-50 border-sky-300 text-sky-700 font-semibold"
-                                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                              }`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  isChecked ? "bg-sky-500" : "bg-slate-300"
-                                }`}
-                              />
-                              {d.department_name}
-                            </button>
-                          );
-                        })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* SLA Fields */}
-              {modalRuleType === "sla" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="sla-priority-select"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Priority Tier Scope *
-                      </label>
-                      <select
-                        id="sla-priority-select"
-                        value={priorityLevel}
-                        onChange={(e) => setPriorityLevel(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      >
-                        <option value="CRITICAL">Critical Priority Tier</option>
-                        <option value="HIGH">High Priority Tier</option>
-                        <option value="MEDIUM">Medium Priority Tier</option>
-                        <option value="LOW">Low Priority Tier</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="target-duration-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Target Duration (Hours) *
-                      </label>
-                      <input
-                        id="target-duration-input"
-                        type="number"
-                        min="1"
-                        value={durationHours}
-                        onChange={(e) => setDurationHours(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="warning-percent-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Warning Warning Threshold (%) *
-                      </label>
-                      <input
-                        id="warning-percent-input"
-                        type="number"
-                        min="1"
-                        max="99"
-                        value={warningPercent}
-                        onChange={(e) => setWarningPercent(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="escalation-percent-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Escalation Breach Threshold (%) *
-                      </label>
-                      <input
-                        id="escalation-percent-input"
-                        type="number"
-                        min="100"
-                        value={escalationPercent}
-                        onChange={(e) => setEscalationPercent(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Reopen Fields */}
-              {modalRuleType === "reopen" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label
-                        htmlFor="reopen-window-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Reopen Window (Hours) *
-                      </label>
-                      <input
-                        id="reopen-window-input"
-                        type="number"
-                        min="1"
-                        value={reopenWindowHours}
-                        onChange={(e) => setReopenWindowHours(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="max-reopens-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Max Reopens *
-                      </label>
-                      <input
-                        id="max-reopens-input"
-                        type="number"
-                        min="1"
-                        value={maxReopens}
-                        onChange={(e) => setMaxReopens(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="max-reviews-input"
-                        className="block font-semibold text-slate-700"
-                      >
-                        Manual Reviews *
-                      </label>
-                      <input
-                        id="max-reviews-input"
-                        type="number"
-                        min="1"
-                        value={maxReviews}
-                        onChange={(e) => setMaxReviews(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Status Radio */}
-              <div>
-                <span className="block font-semibold text-slate-700 mb-1.5">
-                  Initial Status
-                </span>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="ruleStatus"
-                      checked={ruleStatus === "ACTIVE"}
-                      onChange={() => setRuleStatus("ACTIVE")}
-                      className="text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="text-slate-800 font-medium">Active</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="ruleStatus"
-                      checked={ruleStatus === "INACTIVE"}
-                      onChange={() => setRuleStatus("INACTIVE")}
-                      className="text-slate-600 focus:ring-slate-500"
-                    />
-                    <span className="text-slate-800 font-medium">
-                      Deactivated
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Feedback Alert */}
-              {feedback && (
-                <div
-                  className={`rounded-xl p-3 text-xs ${
-                    feedback.type === "success"
-                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-                      : "border border-rose-200 bg-rose-50 text-rose-800"
-                  }`}
-                >
-                  {feedback.text}
-                </div>
-              )}
-
-              {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-800 disabled:opacity-50"
-                >
-                  {isSubmitting && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  )}
-                  <span>Save Policy</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 ring-4 ring-rose-50/50">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Confirm Rule Deletion
-                </h3>
-                <p className="text-xs text-slate-500">
-                  This action requires explicit administrative confirmation.
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 text-xs text-slate-700 leading-relaxed">
-              Are you sure you want to delete{" "}
-              <strong className="text-slate-900">
-                &lsquo;{deleteModal.name}&rsquo;
-              </strong>
-              ? This will deactivate the rule and remove it from live triage
-              evaluation. Historical audit records will be preserved.
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeleteModal(null)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={executeDelete}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-rose-700 transition cursor-pointer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Yes, Delete</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmRuleDeleteModal
+        open={Boolean(deleteModal)}
+        onClose={() => setDeleteModal(null)}
+        ruleName={deleteModal?.name ?? ""}
+        onConfirm={executeDelete}
+      />
     </div>
   );
 }

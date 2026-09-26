@@ -70,7 +70,7 @@ export function StatCard({
       </div>
 
       <div className="mt-1 flex items-baseline gap-2">
-        <p className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 leading-none">
+        <p className="text-xl font-bold tracking-tight text-slate-900 leading-none">
           {value}
         </p>
         {badge}
