@@ -43,7 +43,7 @@ export default function HowItsWork() {
             RESOLUTION JOURNEY
           </span>
 
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
             How a grievance moves to resolution
           </h2>
 

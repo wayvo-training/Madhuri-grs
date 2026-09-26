@@ -97,7 +97,7 @@ export default function FaqPage() {
               HELP CENTER
             </span>
 
-            <h1 className="mt-2.5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="mt-2.5 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
               Frequently Asked Questions
             </h1>
 

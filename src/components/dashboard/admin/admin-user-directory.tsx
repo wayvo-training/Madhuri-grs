@@ -583,7 +583,7 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? totalCount}
             </span>
             <span className="text-xs font-medium text-slate-400">
@@ -617,7 +617,7 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-emerald-600">
+            <span className="text-2xl font-bold tracking-tight text-emerald-600">
               {stats?.active ??
                 usersList.filter(
                   (u: SerializedUser) => (u.status || "ACTIVE") === "ACTIVE",
@@ -654,7 +654,7 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-800">
+            <span className="text-2xl font-bold tracking-tight text-slate-800">
               {stats?.inactive ??
                 usersList.filter((u: SerializedUser) => u.status === "INACTIVE")
                   .length}
@@ -677,7 +677,7 @@ export function AdminUserDirectory({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.admins ??
                 usersList.filter(
                   (u: SerializedUser) =>

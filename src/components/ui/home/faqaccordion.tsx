@@ -52,7 +52,7 @@ export default function FaqAccordion() {
               FAQ
             </span>
 
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
               Questions, answered.
             </h2>
 

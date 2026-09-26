@@ -355,7 +355,7 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? departments.length}
             </span>
             <span className="text-xs font-normal text-slate-400">
@@ -378,7 +378,7 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-emerald-600">
+            <span className="text-2xl font-bold tracking-tight text-emerald-600">
               {stats?.active ??
                 departments.filter((d) => (d.status || "ACTIVE") === "ACTIVE")
                   .length}
@@ -403,7 +403,7 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-800">
+            <span className="text-2xl font-bold tracking-tight text-slate-800">
               {stats?.inactive ??
                 departments.filter((d) => d.status === "INACTIVE").length}
             </span>
@@ -427,7 +427,7 @@ export function AdminDepartments({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.totalGrievances ?? totalGrievances}
             </span>
             <span className="text-xs font-normal text-slate-400">

@@ -102,7 +102,7 @@ export default function GrievanceTracker() {
             LIVE STATUS TRACKER
           </span>
 
-          <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
             Track Grievance Resolution Progress
           </h2>
 

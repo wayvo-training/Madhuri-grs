@@ -152,7 +152,7 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.total ?? totalCount}
             </span>
             <span className="text-xs font-medium text-slate-400">Recorded</span>
@@ -173,7 +173,7 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-emerald-600">
+            <span className="text-2xl font-bold tracking-tight text-emerald-600">
               {stats?.sessions ?? "-"}
             </span>
             <span className="text-xs font-medium text-slate-400">
@@ -196,7 +196,7 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-slate-900">
+            <span className="text-2xl font-bold tracking-tight text-slate-900">
               {stats?.apis ?? "-"}
             </span>
             <span className="text-xs font-medium text-slate-400">
@@ -219,7 +219,7 @@ export function AdminAuditTrail({
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-amber-900">
+            <span className="text-2xl font-bold tracking-tight text-amber-900">
               {stats?.errors ?? "-"}
             </span>
             <span className="text-xs font-medium text-slate-400">Logged</span>

@@ -31,7 +31,7 @@ export default function HeroSection({
         </div>
 
         {/* Headline */}
-        <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950">
           {headline}
         </h1>
 

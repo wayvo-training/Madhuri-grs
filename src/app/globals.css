@@ -154,6 +154,8 @@
       var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -165,7 +167,39 @@
       var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
     font-size: 0.9375rem;
+    font-style: normal;
+    font-weight: 400;
     line-height: 1.55;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--foreground);
+  }
+
+  h1 {
+    font-size: clamp(1.5rem, 2vw, 2rem);
+  }
+
+  h2 {
+    font-size: clamp(1.25rem, 1.7vw, 1.625rem);
+  }
+
+  h3 {
+    font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: 1rem;
   }
 
   /* Force green brand accents on form controls and select boxes */

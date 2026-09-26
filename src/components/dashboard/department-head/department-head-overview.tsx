@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Bell,
   Building2,
   Check,
   CheckCircle2,
@@ -40,6 +39,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { ActionMenu } from "@/components/ui/action-menu";
 import {
   formatAuditActionTitle,
   formatAuditFeedDetails,
@@ -56,6 +56,7 @@ import {
   type DocumentPreviewData,
   DocumentViewerModal,
 } from "./document-viewer-modal";
+import { SmartStaffAssignmentModal } from "./smart-staff-assignment-modal";
 
 interface Props {
   departmentName?: string;
@@ -158,14 +159,19 @@ export function DepartmentHeadOverviewInner({
 
   // Active View Switcher (Synced with Sidebar hash navigation: #overview, #queue, #staff, #sla)
   const [activeView, setActiveView] = useState<
-    "overview" | "queue" | "staff" | "sla"
+    "overview" | "queue" | "staff" | "sla" | "activity"
   >("overview");
 
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (hash === "queue" || hash === "staff" || hash === "sla") {
-        setActiveView(hash as "queue" | "staff" | "sla");
+      if (
+        hash === "queue" ||
+        hash === "staff" ||
+        hash === "sla" ||
+        hash === "activity"
+      ) {
+        setActiveView(hash as "queue" | "staff" | "sla" | "activity");
       } else {
         setActiveView("overview");
       }
@@ -176,7 +182,9 @@ export function DepartmentHeadOverviewInner({
     return () => window.removeEventListener("hashchange", handleHash);
   }, []);
 
-  const switchView = (view: "overview" | "queue" | "staff" | "sla") => {
+  const switchView = (
+    view: "overview" | "queue" | "staff" | "sla" | "activity",
+  ) => {
     setActiveView(view);
     if (typeof window !== "undefined") {
       if (view === "overview") {
@@ -453,12 +461,25 @@ export function DepartmentHeadOverviewInner({
   const crossDeptCount = grievances.filter(
     (g) => g.isCrossDepartment && g.status !== "CLOSED",
   ).length;
-  const resolutionReviewCount = grievances.filter(
-    (g) => g.status === "UNDER_REVIEW",
+  const requiresHeadResolutionReview = (item: GrievanceItem) => {
+    if (item.status === "CLOSED" || item.status === "RESOLVED") {
+      return false;
+    }
+    if (item.status === "UNDER_REVIEW") return true;
+    if (item.hodIntervention) return true;
+    if (item.status === "ESCALATED") return true;
+    if ((item.reopenCount ?? 0) >= 3) return true;
+    if (item.slaStatus === "BREACHED") return true;
+    if (!item.submittedResolution) return false;
+    return false;
+  };
+  const resolutionReviewCount = grievances.filter((g) =>
+    requiresHeadResolutionReview(g),
   ).length;
   const closedCount = grievances.filter(
     (g) => g.status === "CLOSED" || g.status === "RESOLVED",
   ).length;
+
   const highCriticalCount = grievances.filter(
     (g) =>
       (g.priority === "CRITICAL" || g.priority === "HIGH") &&
@@ -473,7 +494,7 @@ export function DepartmentHeadOverviewInner({
       const isAtRisk = g.slaStatus === "AT_RISK";
       const isUnassigned =
         !g.assignedStaffId || g.status === "SUBMITTED" || g.status === "ROUTED";
-      const isPendingReview = g.status === "UNDER_REVIEW";
+      const isPendingReview = requiresHeadResolutionReview(g);
       const isException =
         g.isReopened || g.status === "REOPENED" || g.isCrossDepartment;
       return (
@@ -537,7 +558,7 @@ export function DepartmentHeadOverviewInner({
     if (selectedTab === "REOPENED" && !g.isReopened && g.status !== "REOPENED")
       return false;
     if (selectedTab === "CROSS_DEPT" && !g.isCrossDepartment) return false;
-    if (selectedTab === "RESOLUTION_REVIEW" && g.status !== "UNDER_REVIEW")
+    if (selectedTab === "RESOLUTION_REVIEW" && !requiresHeadResolutionReview(g))
       return false;
 
     if (searchQuery.trim()) {
@@ -569,7 +590,7 @@ export function DepartmentHeadOverviewInner({
   });
 
   // Handlers
-  const handleAssignSubmit = (e: React.FormEvent) => {
+  const _handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignModalGrievance || !selectedStaffId) return;
 
@@ -753,7 +774,7 @@ export function DepartmentHeadOverviewInner({
   };
 
   // Step 10: Resolution Submitted by Staff
-  const handleSimulateResolution = (grievanceId: string) => {
+  const _handleSimulateResolution = (grievanceId: string) => {
     const target = grievances.find((g) => g.id === grievanceId);
     if (!target) return;
 
@@ -1156,7 +1177,7 @@ export function DepartmentHeadOverviewInner({
                   : "bg-slate-100 text-slate-700"
               }`}
             >
-              {staffList.length} Officers
+              {staffList.length} Staff
             </span>
           </button>
 
@@ -1351,7 +1372,7 @@ export function DepartmentHeadOverviewInner({
                   Attention Required
                 </h3>
                 {attentionRequiredList.length > 0 && (
-                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.2 text-2.5 font-semibold text-slate-700">
+                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
                     {attentionRequiredList.length}
                   </span>
                 )}
@@ -1377,7 +1398,7 @@ export function DepartmentHeadOverviewInner({
                 <p className="font-semibold text-slate-700 text-xs">
                   No grievances require intervention
                 </p>
-                <p className="text-2.75 text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-400 mt-0.5">
                   All active grievances are operating within their defined SLA
                   thresholds.
                 </p>
@@ -1400,7 +1421,7 @@ export function DepartmentHeadOverviewInner({
                     >
                       {/* Left: Monospace Code & Title */}
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="font-mono text-2.75 font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">
+                        <span className="font-mono text-xs font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">
                           {item.ticketCode}
                         </span>
                         <button
@@ -1418,8 +1439,8 @@ export function DepartmentHeadOverviewInner({
 
                       {/* Right: Fixed-width vertically-aligned columns */}
                       <div className="flex items-center gap-3 shrink-0">
-                        {/* 1. Priority Column (fixed 76px width) */}
-                        <div className="w-19 flex justify-start shrink-0">
+                        {/* 1. Priority Column (fixed 80px width) */}
+                        <div className="w-20 flex justify-start shrink-0">
                           <PriorityBadge priority={item.priority} />
                         </div>
 
@@ -1428,10 +1449,10 @@ export function DepartmentHeadOverviewInner({
                           <StatusBadge status={item.status} />
                         </div>
 
-                        {/* 3. SLA Timer Column (fixed 110px width) */}
-                        <div className="w-27.5 flex justify-center shrink-0">
+                        {/* 3. SLA Timer Column (fixed 136px width - no truncation) */}
+                        <div className="w-34 flex justify-center shrink-0">
                           <span
-                            className={`text-2.5 px-2 py-0.5 rounded font-medium text-center w-full truncate ${
+                            className={`text-xs px-2.5 py-0.5 rounded font-medium text-center w-full whitespace-nowrap ${
                               highlightSla
                                 ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold"
                                 : "text-slate-600 bg-slate-100/80 border border-slate-200/80"
@@ -1441,10 +1462,10 @@ export function DepartmentHeadOverviewInner({
                           </span>
                         </div>
 
-                        {/* 4. Assigned Officer Column (fixed 140px width) */}
-                        <div className="w-35 shrink-0 text-left truncate hidden sm:block">
-                          <span className="text-2.75 text-slate-400">To: </span>
-                          <span className="text-2.75 font-medium text-slate-700">
+                        {/* 4. Assigned Officer Column (fixed 144px width) */}
+                        <div className="w-36 shrink-0 text-left truncate hidden sm:block">
+                          <span className="text-xs text-slate-400">To: </span>
+                          <span className="text-xs font-medium text-slate-700">
                             {item.assignedStaffName || (
                               <span className="italic text-slate-400 font-normal">
                                 Unassigned
@@ -1453,15 +1474,15 @@ export function DepartmentHeadOverviewInner({
                           </span>
                         </div>
 
-                        {/* 5. Inspect Action Column (fixed 74px width) */}
-                        <div className="w-18.5 flex justify-end shrink-0">
+                        {/* 5. Inspect Action Column */}
+                        <div className="w-20 flex justify-end shrink-0">
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedCaseFile(item);
                               setCaseDrawerTab("progress");
                             }}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-2.75 font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
                           >
                             <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
                             <span>Inspect</span>
@@ -1502,7 +1523,7 @@ export function DepartmentHeadOverviewInner({
               <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-2">
                 {staffList.length === 0 ? (
                   <p className="text-xs text-slate-400 py-3 text-center font-normal">
-                    No officers assigned to this department roster.
+                    No staff assigned to this department roster.
                   </p>
                 ) : (
                   staffList.map((staff) => {
@@ -1555,10 +1576,10 @@ export function DepartmentHeadOverviewInner({
                 </div>
                 <button
                   type="button"
-                  onClick={() => switchView("sla")}
+                  onClick={() => switchView("activity")}
                   className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
                 >
-                  <span>View Full Audit</span>
+                  <span>View Full Activity</span>
                   <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
@@ -1644,7 +1665,7 @@ export function DepartmentHeadOverviewInner({
               <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search queue by ticket code, subject, submitter, or category..."
+                placeholder="Search queue by grievance number, subject, submitter, or category..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:outline-hidden"
@@ -1660,236 +1681,53 @@ export function DepartmentHeadOverviewInner({
               )}
             </div>
 
-            {/* 9 Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-3">
-              <button
-                type="button"
-                onClick={() => setSelectedTab("ALL")}
-                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "ALL"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <span>All</span>
-                <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "ALL"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {grievances.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("UNASSIGNED")}
-                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "UNASSIGNED"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <span>Unassigned</span>
-                <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "UNASSIGNED"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {unassignedCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("IN_PROGRESS")}
-                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "IN_PROGRESS"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <span>In Progress</span>
-                <span
-                  className={`ml-1.5 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "IN_PROGRESS"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {inProgressCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("HIGH_CRITICAL")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "HIGH_CRITICAL"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <Flame className="h-3 w-3" />
-                <span>High & Critical</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "HIGH_CRITICAL"
-                      ? "bg-white/20 text-white font-semibold"
-                      : highCriticalCount > 0
-                        ? "bg-slate-200 text-slate-800 font-bold"
-                        : "bg-slate-100 text-slate-500 font-medium"
-                  }`}
-                >
-                  {highCriticalCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("AT_RISK")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "AT_RISK"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <span>SLA At Risk</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "AT_RISK"
-                      ? "bg-white/20 text-white font-semibold"
-                      : atRiskCount > 0
-                        ? "bg-amber-100 text-amber-800 font-bold"
-                        : "bg-slate-100 text-slate-500 font-medium"
-                  }`}
-                >
-                  {atRiskCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("ESCALATED")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "ESCALATED"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <AlertCircle className="h-3 w-3" />
-                <span>Escalated</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "ESCALATED"
-                      ? "bg-white/20 text-white font-semibold"
-                      : escalatedCount > 0
-                        ? "bg-amber-100 text-amber-800 font-bold"
-                        : "bg-slate-100 text-slate-500 font-medium"
-                  }`}
-                >
-                  {escalatedCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("REOPENED")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "REOPENED"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Reopened</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "REOPENED"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {reopenedCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("CROSS_DEPT")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "CROSS_DEPT"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <GitBranch className="h-3 w-3" />
-                <span>Cross-Dept</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "CROSS_DEPT"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {crossDeptCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("RESOLUTION_REVIEW")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "RESOLUTION_REVIEW"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <CheckCircle2 className="h-3 w-3" />
-                <span>Resolution Review</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "RESOLUTION_REVIEW"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {resolutionReviewCount}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedTab("CLOSED")}
-                className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  selectedTab === "CLOSED"
-                    ? "bg-[#064E3B] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                <CheckCircle2 className="h-3 w-3" />
-                <span>Closed</span>
-                <span
-                  className={`ml-1 rounded-md px-1.5 py-0.5 text-2.75 ${
-                    selectedTab === "CLOSED"
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-slate-100 text-slate-600 font-medium"
-                  }`}
-                >
-                  {closedCount}
-                </span>
-              </button>
-            </div>
+            {/* Filter Dropdowns Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 pt-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                  <Filter className="h-3.5 w-3.5 text-slate-400" />
+                  <span>Filters:</span>
+                </div>
 
-            <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-xs">
-              <span className="text-slate-500 font-normal">
-                Showing{" "}
-                <strong className="font-semibold text-slate-800">
-                  {filteredGrievances.length}
-                </strong>{" "}
-                of {grievances.length} grievances in queue
-              </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-3.5 w-3.5 text-slate-400" />
+                {/* 1. Queue Status / Category Dropdown */}
+                <select
+                  value={selectedTab}
+                  onChange={(e) =>
+                    setSelectedTab(e.target.value as typeof selectedTab)
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20 shadow-2xs cursor-pointer"
+                >
+                  <option value="ALL">
+                    All Grievances ({grievances.length})
+                  </option>
+                  <option value="UNASSIGNED">
+                    Unassigned ({unassignedCount})
+                  </option>
+                  <option value="IN_PROGRESS">
+                    In Progress ({inProgressCount})
+                  </option>
+                  <option value="HIGH_CRITICAL">
+                    High & Critical ({highCriticalCount})
+                  </option>
+                  <option value="AT_RISK">SLA At Risk ({atRiskCount})</option>
+                  <option value="ESCALATED">
+                    Escalated ({escalatedCount})
+                  </option>
+                  <option value="REOPENED">Reopened ({reopenedCount})</option>
+                  <option value="CROSS_DEPT">
+                    Cross-Department ({crossDeptCount})
+                  </option>
+                  <option value="RESOLUTION_REVIEW">
+                    Resolution Review ({resolutionReviewCount})
+                  </option>
+                  <option value="CLOSED">Closed ({closedCount})</option>
+                </select>
+
+                {/* 2. Priority Filter Dropdown */}
                 <select
                   value={priorityFilter}
                   onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 outline-none"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20 shadow-2xs cursor-pointer"
                 >
                   <option value="ALL">All Priorities</option>
                   <option value="CRITICAL">Critical Priority</option>
@@ -1898,12 +1736,13 @@ export function DepartmentHeadOverviewInner({
                   <option value="LOW">Low Priority</option>
                 </select>
 
+                {/* 3. Assigned Staff Filter Dropdown */}
                 <select
                   value={staffFilter}
                   onChange={(e) => setStaffFilter(e.target.value)}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 outline-none"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/20 shadow-2xs cursor-pointer"
                 >
-                  <option value="ALL">All Assigned Officers</option>
+                  <option value="ALL">All Assigned Staff</option>
                   <option value="UNASSIGNED">Unassigned Only</option>
                   {staffList.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -1911,314 +1750,320 @@ export function DepartmentHeadOverviewInner({
                     </option>
                   ))}
                 </select>
+
+                {/* Reset Filters Button */}
+                {(selectedTab !== "ALL" ||
+                  priorityFilter !== "ALL" ||
+                  staffFilter !== "ALL" ||
+                  searchQuery) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTab("ALL");
+                      setPriorityFilter("ALL");
+                      setStaffFilter("ALL");
+                      setSearchQuery("");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Counter Display */}
+              <div className="text-xs text-slate-500 font-normal">
+                Showing{" "}
+                <strong className="font-semibold text-slate-900">
+                  {filteredGrievances.length}
+                </strong>{" "}
+                of {grievances.length} grievances in queue
               </div>
             </div>
           </div>
 
-          {/* Full-width Grievance Cards Grid with dedicated scrollbar (Body of the unit) */}
-          <div className="max-h-145 overflow-y-scroll custom-scrollbar p-3.5 sm:p-4 space-y-3 bg-slate-50/40">
-            {filteredGrievances.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-                <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500/80" />
-                <h3 className="mt-3 text-sm font-semibold text-slate-900">
-                  No grievances match this filter
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedTab("ALL");
-                    setSearchQuery("");
-                    setPriorityFilter("ALL");
-                    setStaffFilter("ALL");
-                  }}
-                  className="mt-3 text-xs font-semibold text-emerald-700 hover:text-emerald-900"
-                >
-                  Reset filters
-                </button>
-              </div>
-            ) : (
-              filteredGrievances.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs transition hover:border-emerald-300 hover:shadow-sm space-y-2.5"
-                >
-                  {/* Top Header: Badges (Left) & Date / Target SLA (Right) */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200/80">
-                        {item.ticketCode}
-                      </span>
-                      <PriorityBadge priority={item.priority} />
-                      <StatusBadge status={item.status} />
-
-                      {item.slaStatus === "BREACHED" &&
-                        item.status !== "ESCALATED" &&
-                        (item.hodIntervention ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-2.75 font-semibold text-emerald-900">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-700" />
-                            Intervention Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-2.75 font-semibold text-amber-900">
-                            <AlertCircle className="h-3 w-3 text-amber-600" />
-                            SLA Breached
-                          </span>
-                        ))}
-                      {item.slaStatus === "AT_RISK" && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-2.75 font-semibold text-amber-700">
-                          <Clock className="h-3 w-3 text-amber-600" />
-                          SLA At Risk
-                        </span>
-                      )}
-                      {item.isReopened && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-2.75 font-semibold text-slate-700">
-                          <RotateCcw className="h-3 w-3 text-slate-600" />
-                          Reopened ({item.reopenCount}x)
-                        </span>
-                      )}
-                      {item.isCrossDepartment && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-2.75 font-semibold text-slate-700">
-                          <GitBranch className="h-3 w-3 text-slate-600" />
-                          Cross-Dept
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-right flex items-center gap-2 shrink-0">
-                      <span className="text-2.75 font-normal text-slate-400">
-                        Submitted {item.createdAt}
-                      </span>
-                      <span className="text-slate-300">&bull;</span>
-                      <span className="text-2.75 font-normal text-slate-500">
-                        Target SLA:
-                      </span>
-                      <span
-                        className={`text-xs font-semibold ${
-                          item.status === "ESCALATED"
-                            ? "text-slate-700 font-medium"
-                            : item.slaStatus === "BREACHED"
-                              ? "text-amber-800 font-semibold"
-                              : item.slaStatus === "AT_RISK"
-                                ? "text-amber-700"
-                                : "text-slate-700"
-                        }`}
-                      >
-                        {item.slaTimeLeft}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Grievance Title */}
-                  <h3 className="text-base font-semibold text-slate-900">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCaseFile(item);
-                        setCaseDrawerTab("statement");
-                      }}
-                      className="text-left hover:text-emerald-800 transition flex items-center gap-1.5 group"
-                      title="Click to inspect full case file"
+          {/* Grievances Data Table */}
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-[11px] border-collapse">
+              <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+                <tr>
+                  <th className="py-3 pl-4 pr-3 whitespace-nowrap">
+                    Grievance ID
+                  </th>
+                  <th className="py-3 px-3 min-w-64">Grievance & Category</th>
+                  <th className="py-3 px-3 whitespace-nowrap">Priority</th>
+                  <th className="py-3 px-3 whitespace-nowrap">Status</th>
+                  <th className="py-3 px-3 whitespace-nowrap">SLA Status</th>
+                  <th className="py-3 px-3 whitespace-nowrap">
+                    Assigned Staff
+                  </th>
+                  <th className="py-3 px-3 whitespace-nowrap">Submitted</th>
+                  <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white font-medium text-slate-700">
+                {filteredGrievances.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="py-12 text-center text-slate-400 font-normal"
                     >
-                      <span>{item.title}</span>
-                      <Eye className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-700 transition" />
-                    </button>
-                  </h3>
-
-                  {item.reopenReason && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-800">
-                      <span className="font-semibold text-slate-900">
-                        Reopen Reason:{" "}
-                      </span>
-                      <span className="font-normal text-slate-700">
-                        {item.reopenReason}
-                      </span>
-                    </div>
-                  )}
-
-                  {item.isCrossDepartment && item.collaboratingDepartments && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-800 flex items-center gap-2">
-                      <span className="font-semibold text-slate-900">
-                        Joint Ownership:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {item.collaboratingDepartments.map((dept) => (
-                          <span
-                            key={dept}
-                            className="rounded bg-white border border-slate-200 px-2 py-0.5 text-2.75 font-medium text-slate-700"
-                          >
-                            {dept}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {item.hodIntervention && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs text-emerald-950 space-y-1">
-                      <div className="flex items-center justify-between font-semibold">
-                        <span className="flex items-center gap-1.5 text-emerald-900">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
-                          Department Head Directive &bull;{" "}
-                          {item.hodIntervention.actionLabel}
-                        </span>
-                        <span className="text-2.75 font-normal text-emerald-800 shrink-0">
-                          {item.hodIntervention.intervenedAt} &bull; by{" "}
-                          {item.hodIntervention.intervenedBy}
-                        </span>
-                      </div>
-                      {item.hodIntervention.note && (
-                        <p className="font-normal text-emerald-900 italic">
-                          &ldquo;{item.hodIntervention.note}&rdquo;
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {item.submittedResolution &&
-                    item.status === "UNDER_REVIEW" && (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs text-emerald-900 space-y-1">
-                        <div className="flex items-center justify-between font-semibold">
-                          <span>
-                            Pending HOD Approval &bull; Submitted by{" "}
-                            {item.submittedResolution.staffName}
-                          </span>
-                          <span className="text-2.75 font-normal">
-                            {item.submittedResolution.submittedAt}
-                          </span>
-                        </div>
-                        <p className="font-normal">
-                          {item.submittedResolution.note}
-                        </p>
-                      </div>
-                    )}
-
-                  {/* Bottom Row: Metadata on LEFT, Actions on RIGHT - STRICT SINGLE LINE */}
-                  <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-slate-100 min-h-9.5">
-                    <div className="flex items-center gap-x-3 text-xs font-normal text-slate-500 min-w-0 flex-1 overflow-hidden">
-                      <span className="truncate shrink-0">
-                        <strong className="font-medium text-slate-700">
-                          Category:
-                        </strong>{" "}
-                        <span className="text-slate-600 font-medium">
-                          {item.category} &rsaquo; {item.subcategory}
-                        </span>
-                      </span>
-                      <span className="text-slate-300 shrink-0">&bull;</span>
-                      <span className="inline-flex items-center gap-1 shrink-0">
-                        <strong className="font-medium text-slate-700">
-                          Submitter:
-                        </strong>{" "}
-                        <span
-                          className="inline-block max-w-32.5 truncate align-bottom text-slate-700 font-medium"
-                          title={`${item.submitterName} (${item.submitterRole})`}
-                        >
-                          {item.submitterName}
-                        </span>
-                      </span>
-                      <span className="text-slate-300 shrink-0">&bull;</span>
-                      <span className="inline-flex items-center gap-1 shrink-0">
-                        <strong className="font-medium text-slate-700">
-                          Assigned Officer:
-                        </strong>{" "}
-                        {item.assignedStaffName ? (
-                          <span
-                            className="inline-flex items-center gap-1 font-semibold text-emerald-900 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 max-w-37.5"
-                            title={`Assigned Officer: ${item.assignedStaffName}`}
-                          >
-                            <User className="h-3 w-3 text-emerald-700 shrink-0" />
-                            <span className="truncate">
-                              {item.assignedStaffName}
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                            Unassigned
-                          </span>
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
+                      <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                      <p className="font-semibold text-slate-700 text-xs">
+                        No grievances match this filter
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Try changing your search keywords or filter criteria.
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedCaseFile(item);
-                          setCaseDrawerTab("progress");
+                          setSelectedTab("ALL");
+                          setSearchQuery("");
+                          setPriorityFilter("ALL");
+                          setStaffFilter("ALL");
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs"
+                        className="mt-3 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
                       >
-                        <Eye className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Inspect</span>
+                        Reset filters
                       </button>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredGrievances.map((item) => {
+                    const isEscalated = item.status === "ESCALATED";
+                    const isBreached = item.slaStatus === "BREACHED";
+                    const highlightSla = !isEscalated && isBreached;
 
-                      {item.status === "UNDER_REVIEW" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setResolutionModalGrievance(item);
-                            setResolutionDecision("APPROVE");
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          <span>Review Resolution</span>
-                        </button>
-                      )}
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/70 transition group"
+                      >
+                        {/* 1. Ticket Code */}
+                        <td className="py-3 pl-4 pr-3 whitespace-nowrap align-top">
+                          <span className="font-mono text-xs font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/80 inline-block">
+                            {item.ticketCode}
+                          </span>
+                        </td>
 
-                      {item.status === "ESCALATED" && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEscalationModalGrievance(item);
-                            setEscalationBottleneck("STAFF_CAPACITY");
-                            setEscalationInterventionType("REASSIGN");
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
-                        >
-                          <AlertCircle className="h-3.5 w-3.5" />
-                          <span>Take Escalation Action</span>
-                        </button>
-                      )}
+                        {/* 2. Title & Category & Badges */}
+                        <td className="py-3 px-3 align-top">
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedCaseFile(item);
+                                setCaseDrawerTab("statement");
+                              }}
+                              className="font-semibold text-xs text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block"
+                            >
+                              {item.title}
+                            </button>
+                            <p className="text-xs text-slate-500 font-normal">
+                              {item.category}{" "}
+                              <span className="text-slate-300">&rsaquo;</span>{" "}
+                              {item.subcategory}
+                            </p>
 
-                      {item.assignedStaffName ? (
-                        item.status !== "ESCALATED" &&
-                        item.status !== "CLOSED" &&
-                        item.status !== "RESOLVED" &&
-                        item.slaStatus === "BREACHED" ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAssignModalGrievance(item);
-                              setSelectedStaffId(item.assignedStaffId || "");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
-                            title={`Currently assigned to ${item.assignedStaffName}. Click to reassign.`}
-                          >
-                            <UserCheck className="h-3.5 w-3.5 text-emerald-800" />
-                            <span>Reassign</span>
-                          </button>
-                        ) : null
-                      ) : (
-                        item.status !== "CLOSED" &&
-                        item.status !== "RESOLVED" && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAssignModalGrievance(item);
-                              setSelectedStaffId("");
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900"
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            <span>Assign Staff</span>
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+                            {/* Tags: Reopened, Cross-dept, Intervention */}
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {item.isReopened && (
+                                <span className="inline-flex items-center gap-1 rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-700">
+                                  <RotateCcw className="h-2.5 w-2.5 text-slate-500" />
+                                  Reopened ({item.reopenCount}x)
+                                </span>
+                              )}
+                              {item.isCrossDepartment && (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-700"
+                                  title={item.collaboratingDepartments?.join(
+                                    ", ",
+                                  )}
+                                >
+                                  <GitBranch className="h-2.5 w-2.5 text-slate-500" />
+                                  Cross-Dept
+                                </span>
+                              )}
+                              {item.hodIntervention && (
+                                <span className="inline-flex items-center gap-1 rounded bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-xs font-medium text-emerald-900">
+                                  <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
+                                  Directive: {item.hodIntervention.actionLabel}
+                                </span>
+                              )}
+                              {item.submittedResolution &&
+                                item.status === "UNDER_REVIEW" && (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-xs font-medium text-amber-900">
+                                    <Clock className="h-2.5 w-2.5 text-amber-600" />
+                                    Resolution Submitted
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 3. Priority */}
+                        <td className="py-3 px-3 whitespace-nowrap align-top">
+                          <PriorityBadge priority={item.priority} />
+                        </td>
+
+                        {/* 4. Status */}
+                        <td className="py-3 px-3 whitespace-nowrap align-top">
+                          <StatusBadge status={item.status} />
+                        </td>
+
+                        {/* 5. SLA Status */}
+                        <td className="py-3 px-3 whitespace-nowrap align-top">
+                          <div className="flex flex-col items-start gap-1">
+                            <span
+                              className={`text-xs px-2.5 py-0.5 rounded font-medium whitespace-nowrap ${
+                                highlightSla
+                                  ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold"
+                                  : item.slaStatus === "AT_RISK"
+                                    ? "text-amber-800 bg-amber-50/60 border border-amber-200 font-medium"
+                                    : "text-slate-600 bg-slate-100/80 border border-slate-200/80"
+                              }`}
+                            >
+                              {item.slaTimeLeft}
+                            </span>
+                            {item.slaStatus === "BREACHED" && (
+                              <span className="text-xs font-semibold text-amber-800">
+                                SLA Breached
+                              </span>
+                            )}
+                            {item.slaStatus === "AT_RISK" && (
+                              <span className="text-xs font-medium text-amber-700">
+                                SLA At Risk
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 6. Assigned Officer */}
+                        <td className="py-3 px-3 whitespace-nowrap align-top">
+                          {item.assignedStaffName ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-800">
+                              <User className="h-3 w-3 text-slate-400" />
+                              <span>{item.assignedStaffName}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">
+                              Unassigned
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 7. Submitter & Date */}
+                        <td className="py-3 px-3 whitespace-nowrap align-top">
+                          <div className="text-xs">
+                            <p className="font-medium text-slate-800">
+                              {item.submitterName}
+                            </p>
+                            <p className="text-xs text-slate-400 font-normal mt-0.5">
+                              {item.createdAt}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* 8. Actions */}
+                        <td className="py-3 pl-3 pr-4 text-right whitespace-nowrap align-top">
+                          <ActionMenu
+                            widthClass="w-40"
+                            items={[
+                              {
+                                label: "Inspect",
+                                icon: <Eye className="h-3.5 w-3.5" />,
+                                onClick: () => {
+                                  setSelectedCaseFile(item);
+                                  setCaseDrawerTab("progress");
+                                },
+                              },
+                              ...(item.status === "UNDER_REVIEW"
+                                ? [
+                                    {
+                                      label: "Review",
+                                      icon: (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => {
+                                        setResolutionModalGrievance(item);
+                                        setResolutionDecision("APPROVE");
+                                      },
+                                    },
+                                  ]
+                                : []),
+                              ...(item.status === "ESCALATED"
+                                ? [
+                                    {
+                                      label: "Intervene",
+                                      icon: (
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "warning" as const,
+                                      onClick: () => {
+                                        setEscalationModalGrievance(item);
+                                        setEscalationBottleneck(
+                                          "STAFF_CAPACITY",
+                                        );
+                                        setEscalationInterventionType(
+                                          "REASSIGN",
+                                        );
+                                      },
+                                    },
+                                  ]
+                                : []),
+                              ...(item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.status !== "ESCALATED" &&
+                              !item.assignedStaffName &&
+                              !item.assignedStaffId
+                                ? [
+                                    {
+                                      label: "Assign",
+                                      icon: (
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => {
+                                        setAssignModalGrievance(item);
+                                        setSelectedStaffId("");
+                                      },
+                                    },
+                                  ]
+                                : []),
+                              ...(item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.status !== "ESCALATED" &&
+                              (item.assignedStaffName || item.assignedStaffId)
+                                ? [
+                                    {
+                                      label: "Change Assignment",
+                                      icon: (
+                                        <UserCheck className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => {
+                                        setAssignModalGrievance(item);
+                                        setSelectedStaffId(
+                                          item.assignedStaffId || "",
+                                        );
+                                      },
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -2231,7 +2076,7 @@ export function DepartmentHeadOverviewInner({
           {/* Team Capacity Metrics Banner */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
-              label="Total Officers"
+              label="Total Staff"
               value={staffList.length}
               icon={Users}
               accentColor="emerald"
@@ -2242,14 +2087,14 @@ export function DepartmentHeadOverviewInner({
               value={activeStaffCount}
               icon={UserCheck}
               accentColor="slate"
-              description={`${onLeaveStaffCount} officer(s) on approved leave`}
+              description={`${onLeaveStaffCount} staff member(s) on approved leave`}
             />
             <StatCard
-              label="Active Assigned Queue"
-              value={`${totalActiveTickets} Tickets`}
+              label="Active Assigned Grievances"
+              value={`${totalActiveTickets} Grievances`}
               icon={Inbox}
               accentColor="slate"
-              description={`Across ${activeStaffCount} active officers`}
+              description={`Across ${activeStaffCount} active staff members`}
             />
             <StatCard
               label="Department Load Factor"
@@ -2268,8 +2113,8 @@ export function DepartmentHeadOverviewInner({
                   Department Staff Workload & Availability Matrix
                 </h3>
                 <p className="text-xs font-normal text-slate-500">
-                  Manage duty availability and inspect live ticket assignments
-                  per officer
+                  Manage duty availability and inspect live grievance
+                  assignments per staff member
                 </p>
               </div>
               <span className="text-xs font-medium text-slate-600">
@@ -2296,7 +2141,7 @@ export function DepartmentHeadOverviewInner({
                     className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 shadow-2xs hover:border-emerald-300 hover:bg-white transition"
                   >
                     <div className="space-y-3.5">
-                      {/* Officer Header */}
+                      {/* Staff Header */}
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100/80 text-base font-bold text-[#064E3B]">
@@ -2346,8 +2191,8 @@ export function DepartmentHeadOverviewInner({
                             Active Workload
                           </span>
                           <span className="font-semibold text-slate-800">
-                            {staff.activeTickets} / {staff.maxCapacity} tickets
-                            ({loadPercentage}%)
+                            {staff.activeTickets} / {staff.maxCapacity}{" "}
+                            grievances ({loadPercentage}%)
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -2366,11 +2211,11 @@ export function DepartmentHeadOverviewInner({
                         </div>
                       </div>
 
-                      {/* Assigned Tickets Mini-List */}
+                      {/* Assigned Grievances Mini-List */}
                       <div className="border-t border-slate-200/70 pt-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="text-2.75 font-semibold uppercase tracking-wider text-slate-400">
-                            Assigned Tickets ({staffTickets.length})
+                            Assigned Grievances ({staffTickets.length})
                           </div>
                           {staffTickets.length > 0 && (
                             <button
@@ -2380,7 +2225,7 @@ export function DepartmentHeadOverviewInner({
                                 switchView("queue");
                               }}
                               className="text-2.75 font-semibold text-emerald-700 hover:text-emerald-900 transition"
-                              title="Filter all tickets handled by this officer in the queue"
+                              title="Filter all grievances handled by this staff member in the queue"
                             >
                               View in Queue &rarr;
                             </button>
@@ -2389,7 +2234,7 @@ export function DepartmentHeadOverviewInner({
 
                         {staffTickets.length === 0 ? (
                           <p className="text-xs italic text-slate-400 py-1">
-                            No active tickets assigned.
+                            No active grievances assigned.
                           </p>
                         ) : (
                           <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
@@ -2435,7 +2280,8 @@ export function DepartmentHeadOverviewInner({
                                     <span>Inspect</span>
                                   </button>
                                   {(t.status === "ESCALATED" ||
-                                    t.slaStatus === "BREACHED") && (
+                                    t.slaStatus === "BREACHED" ||
+                                    t.status === "ASSIGNED") && (
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -2443,7 +2289,7 @@ export function DepartmentHeadOverviewInner({
                                         setSelectedStaffId(staff.id);
                                       }}
                                       className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-2.75 font-semibold text-emerald-800 hover:bg-emerald-100 transition"
-                                      title="Reassign to another officer"
+                                      title="Reassign to another staff member"
                                     >
                                       <span>Reassign</span>
                                     </button>
@@ -2456,7 +2302,7 @@ export function DepartmentHeadOverviewInner({
                       </div>
                     </div>
 
-                    {/* Officer Status Toggle Footer */}
+                    {/* Staff Status Toggle Footer */}
                     <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs">
                       <span className="text-slate-500">
                         Status:{" "}
@@ -2477,6 +2323,108 @@ export function DepartmentHeadOverviewInner({
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VIEW 4: ACTIVITY / AUDIT CENTER                                          */}
+      {/* ========================================================================= */}
+      {activeView === "activity" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
+            <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Department Head Activity / Audit
+                </h3>
+                <p className="text-xs font-normal text-slate-500">
+                  Historical governance events, staff actions, interventions,
+                  and SLA-related changes across this department.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => switchView("overview")}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                <span>Back to Overview</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-[11px] border-collapse">
+                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+                  <tr>
+                    <th className="py-3 pl-4 pr-3 whitespace-nowrap">
+                      Grievance
+                    </th>
+                    <th className="py-3 px-3 whitespace-nowrap">Activity</th>
+                    <th className="py-3 px-3 whitespace-nowrap">
+                      Performed By
+                    </th>
+                    <th className="py-3 px-3 whitespace-nowrap">Role</th>
+                    <th className="py-3 px-3 whitespace-nowrap">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {governanceAuditFeed.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-xs text-slate-400"
+                      >
+                        No activity records are available for this department
+                        yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    governanceAuditFeed.map((feed) => {
+                      const feedGrievanceRef = feed.action.includes(":")
+                        ? feed.action.split(":")[0].trim()
+                        : "N/A";
+
+                      return (
+                        <tr
+                          key={feed.id}
+                          className="border-b border-slate-100 last:border-0 align-top"
+                        >
+                          <td className="py-3 pl-4 pr-3 whitespace-nowrap">
+                            <span className="inline-block rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-950">
+                              {feedGrievanceRef}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="space-y-1">
+                              <div className="font-semibold text-slate-800 text-[11px]">
+                                {feed.action}
+                              </div>
+                              <div className="text-[10px] leading-relaxed text-slate-500">
+                                {formatAuditFeedDetails(feed.details)}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-[11px] font-medium text-slate-700">
+                            {feed.actor}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
+                            {feed.actor.includes("DEPARTMENT_HEAD")
+                              ? "Department Head"
+                              : feed.actor.includes("SLA")
+                                ? "System"
+                                : "Staff"}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
+                            {feed.timestamp}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2513,7 +2461,7 @@ export function DepartmentHeadOverviewInner({
               description="Requires Department Head action"
             />
             <StatCard
-              label="Reopened Tickets"
+              label="Reopened Grievances"
               value={reopenedCount}
               icon={RotateCcw}
               accentColor="slate"
@@ -2533,8 +2481,8 @@ export function DepartmentHeadOverviewInner({
                     Escalation & SLA Governance
                   </h3>
                   <p className="text-xs font-normal text-slate-500">
-                    Review escalated grievances, execute corrective
-                    interventions, and approve resolutions.
+                    Review escalated grievances, monitor SLA breaches, and take
+                    corrective intervention when required.
                   </p>
                 </div>
               </div>
@@ -2551,291 +2499,232 @@ export function DepartmentHeadOverviewInner({
               </span>
             </div>
 
-            {/* List of Grievances with Scrollbar */}
-            <div className="max-h-140 overflow-y-scroll custom-scrollbar pr-2 space-y-3">
-              {(() => {
-                const escalatedList = grievances.filter((g) => {
-                  return (
-                    g.status === "ESCALATED" ||
-                    g.hodIntervention ||
-                    g.status === "UNDER_REVIEW" ||
-                    g.slaStatus === "BREACHED"
-                  );
-                });
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-[11px] border-collapse">
+                <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+                  <tr>
+                    <th className="py-3 pl-4 pr-3 whitespace-nowrap">
+                      Grievance
+                    </th>
+                    <th className="py-3 px-3 whitespace-nowrap">SLA</th>
+                    <th className="py-3 px-3 whitespace-nowrap">Escalation</th>
+                    <th className="py-3 px-3 whitespace-nowrap">
+                      Assigned Staff
+                    </th>
+                    <th className="py-3 px-3 whitespace-nowrap">Status</th>
+                    <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  {(() => {
+                    const escalatedList = grievances.filter((g) => {
+                      return (
+                        g.status === "ESCALATED" ||
+                        g.hodIntervention ||
+                        g.status === "UNDER_REVIEW" ||
+                        g.slaStatus === "BREACHED" ||
+                        (g.submittedResolution &&
+                          requiresHeadResolutionReview(g))
+                      );
+                    });
 
-                if (escalatedList.length === 0) {
-                  return (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-8 text-center text-slate-500 text-xs">
-                      No active escalations requiring intervention.
-                    </div>
-                  );
-                }
-
-                return escalatedList.map((item) => {
-                  const isEscalated = item.status === "ESCALATED";
-                  const isUnderIntervention =
-                    item.status === "IN_PROGRESS" && item.hodIntervention;
-                  const isResolutionReady =
-                    item.status === "UNDER_REVIEW" && item.submittedResolution;
-                  const isCleared =
-                    item.status === "CLOSED" &&
-                    item.escalationStage === "ESCALATION_CLEARED";
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs hover:border-emerald-300 transition space-y-2.5"
-                    >
-                      {/* Ticket Header & Status Pill */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-2.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70">
-                            {item.ticketCode}
-                          </span>
-                          <PriorityBadge priority={item.priority} />
-
-                          {/* Simplified Status: If resolution submitted, highlight resolution review; if escalated, show amber badge */}
-                          {item.submittedResolution ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                              <FileCheck className="h-3 w-3 text-emerald-600" />
-                              Resolution Pending Review
-                            </span>
-                          ) : isEscalated ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-                              <Bell className="h-3 w-3 text-amber-600" />
-                              Escalated to Head
-                            </span>
-                          ) : isUnderIntervention ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
-                              <RefreshCw className="h-3 w-3 text-amber-600" />
-                              Under Intervention
-                            </span>
-                          ) : isCleared ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                              Escalation Cleared
-                            </span>
-                          ) : (
-                            <StatusBadge status={item.status} />
-                          )}
-                        </div>
-
-                        <div className="text-right">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded ${
-                              item.submittedResolution ||
-                              isEscalated ||
-                              isUnderIntervention
-                                ? "text-slate-600 bg-slate-50 border border-slate-200/80"
-                                : item.slaStatus === "BREACHED"
-                                  ? "text-amber-800 bg-amber-50 border border-amber-200 font-semibold"
-                                  : item.slaStatus === "AT_RISK"
-                                    ? "text-amber-800 bg-amber-50 border border-amber-200"
-                                    : "text-slate-600 bg-slate-50 border border-slate-200"
-                            }`}
+                    if (escalatedList.length === 0) {
+                      return (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="py-10 text-center text-slate-500 text-xs"
                           >
-                            {item.slaTimeLeft}
-                          </span>
-                        </div>
-                      </div>
+                            No active escalations requiring intervention.
+                          </td>
+                        </tr>
+                      );
+                    }
 
-                      {/* Ticket Title & Metadata */}
-                      <div className="space-y-1">
-                        <h4 className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCaseFile(item);
-                              setCaseDrawerTab("statement");
-                            }}
-                            className="text-left hover:text-[#064E3B] transition inline-flex items-center gap-1.5 group"
-                            title="Click to inspect full case file"
-                          >
-                            <span>{item.title}</span>
-                            <Eye className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-700 transition shrink-0" />
-                          </button>
-                        </h4>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 font-normal">
-                          <span>
-                            {item.category} / {item.subcategory}
-                          </span>
-                          <span className="text-slate-300">&middot;</span>
-                          <span
-                            className="inline-block max-w-35 truncate align-bottom text-slate-600"
-                            title={item.submitterName}
-                          >
-                            {item.submitterName}
-                          </span>
-                          <span className="text-slate-300">&middot;</span>
-                          <span>
-                            Assigned:{" "}
-                            <strong
-                              className="font-medium text-slate-700 inline-block max-w-37.5 truncate align-bottom"
-                              title={item.assignedStaffName || "Unassigned"}
-                            >
+                    return escalatedList.map((item) => {
+                      const isEscalated = item.status === "ESCALATED";
+                      const isUnderIntervention =
+                        item.status === "IN_PROGRESS" && item.hodIntervention;
+                      const needsReview = requiresHeadResolutionReview(item);
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-50/60 transition"
+                        >
+                          <td className="py-3 pl-4 pr-3 align-top">
+                            <div className="space-y-1">
+                              <span className="inline-block font-mono text-[11px] font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70">
+                                {item.ticketCode}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCaseFile(item);
+                                  setCaseDrawerTab("statement");
+                                }}
+                                className="block text-left text-xs font-semibold text-slate-900 hover:text-emerald-900 transition"
+                              >
+                                {item.title}
+                              </button>
+                              <p className="text-[10px] text-slate-500">
+                                {item.category} / {item.subcategory}
+                              </p>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 align-top">
+                            <div className="flex flex-col items-start gap-1">
+                              <span
+                                className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium border ${
+                                  item.slaStatus === "BREACHED"
+                                    ? "border-amber-200 bg-amber-50 text-amber-900"
+                                    : item.slaStatus === "AT_RISK"
+                                      ? "border-amber-200 bg-amber-50 text-amber-800"
+                                      : "border-slate-200 bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {item.slaTimeLeft}
+                              </span>
+                              {item.slaStatus === "BREACHED" && (
+                                <span className="text-[10px] font-semibold text-amber-800">
+                                  Breached
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 align-top">
+                            <div className="flex flex-col gap-1">
+                              {isEscalated ? (
+                                <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                  Escalated
+                                </span>
+                              ) : isUnderIntervention ? (
+                                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                  Under Intervention
+                                </span>
+                              ) : needsReview ? (
+                                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                  Review Required
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                                  Monitor
+                                </span>
+                              )}
+                              {item.hodIntervention && (
+                                <span className="text-[10px] text-slate-500">
+                                  {item.hodIntervention.actionLabel}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 align-top">
+                            <span className="text-xs text-slate-700">
                               {item.assignedStaffName || "Unassigned"}
-                            </strong>
-                          </span>
-                        </div>
-                      </div>
+                            </span>
+                          </td>
 
-                      {/* Context Alert Banner (compact, no red, no duplicate icons, no raw percentages) */}
-                      {item.submittedResolution ? (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-950 flex items-start sm:items-center gap-2">
-                          <FileCheck className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5 sm:mt-0" />
-                          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-                            <span className="font-semibold text-emerald-950 shrink-0">
-                              Resolution Pending Approval:
-                            </span>
-                            <span className="font-normal text-emerald-800 text-xs truncate">
-                              Staff submitted corrective action & findings —
-                              awaiting Department Head review & sign-off.
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-950 flex items-start sm:items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
-                          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-                            <span className="font-semibold text-amber-950 shrink-0">
-                              SLA Deadline Exceeded:
-                            </span>
-                            <span className="font-normal text-amber-900 text-xs truncate">
-                              {formatEscalationNotice(item.escalationReason)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                          <td className="py-3 px-3 align-top">
+                            <StatusBadge status={item.status} />
+                          </td>
 
-                      {/* HOD Intervention Directive Banner (if present) */}
-                      {item.hodIntervention && (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-950 space-y-1">
-                          <div className="flex items-center justify-between font-semibold text-emerald-900">
-                            <span>
-                              Department Head Directive (
-                              {item.hodIntervention.actionLabel})
-                            </span>
-                            <span className="text-2.75 font-normal text-slate-500">
-                              {item.hodIntervention.intervenedAt}
-                            </span>
-                          </div>
-                          {item.hodIntervention.note && (
-                            <p className="font-normal text-slate-700 italic truncate">
-                              &ldquo;{item.hodIntervention.note}&rdquo;
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Submitted Resolution Details (if present) */}
-                      {item.submittedResolution && (
-                        <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/50 px-3 py-2 text-xs text-slate-800 flex items-center justify-between gap-2">
-                          <div className="truncate">
-                            <span className="font-semibold text-emerald-950">
-                              Submitted Action:{" "}
-                            </span>
-                            <span className="text-slate-700">
-                              {item.submittedResolution.note}
-                            </span>
-                          </div>
-                          <span className="text-2.75 font-normal text-slate-500 shrink-0">
-                            {item.submittedResolution.submittedAt}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Action Bar (Aligned footer) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2.5 border-t border-slate-100 gap-2">
-                        {/* LEFT: Case summary info */}
-                        <div className="flex items-center gap-2 text-2.75 text-slate-500">
-                          <span>
-                            Case{" "}
-                            <strong className="font-semibold text-slate-700">
-                              {item.ticketCode}
-                            </strong>
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span>Logged {item.createdAt}</span>
-                        </div>
-
-                        {/* RIGHT: Action Buttons */}
-                        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedCaseFile(item);
-                              setCaseDrawerTab("progress");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs"
-                          >
-                            <Eye className="h-3 w-3 text-slate-500" />
-                            <span>Inspect Case File</span>
-                          </button>
-
-                          {item.submittedResolution ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setResolutionModalGrievance(item);
-                                setResolutionDecision("APPROVE");
-                                setResolutionFeedback("");
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
-                            >
-                              <FileCheck className="h-3.5 w-3.5" />
-                              <span>Review Resolution &rarr;</span>
-                            </button>
-                          ) : isEscalated ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEscalationModalGrievance(item);
-                                setEscalationBottleneck("STAFF_CAPACITY");
-                                setEscalationInterventionType("REASSIGN");
-                                setEscalationTargetStaffId("");
-                                setEscalationNote("");
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
-                            >
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              <span>Intervene & Reassign &rarr;</span>
-                            </button>
-                          ) : isUnderIntervention ? (
-                            <button
-                              type="button"
-                              onClick={() => handleSimulateResolution(item.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-slate-800 transition"
-                            >
-                              <FileCheck className="h-3.5 w-3.5" />
-                              <span>Simulate Staff Resolution &rarr;</span>
-                            </button>
-                          ) : isResolutionReady ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setResolutionModalGrievance(item);
-                                setResolutionDecision("APPROVE");
-                                setResolutionFeedback("");
-                              }}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              <span>Review Resolution &rarr;</span>
-                            </button>
-                          ) : null}
-
-                          {isCleared && (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                              Escalation Cleared & Closed
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
+                          <td className="py-3 pl-3 pr-4 text-right align-top">
+                            <ActionMenu
+                              widthClass="w-40"
+                              items={[
+                                {
+                                  label: "Inspect",
+                                  icon: <Eye className="h-3.5 w-3.5" />,
+                                  onClick: () => {
+                                    setSelectedCaseFile(item);
+                                    setCaseDrawerTab("progress");
+                                  },
+                                },
+                                ...(needsReview && item.submittedResolution
+                                  ? [
+                                      {
+                                        label: "Review",
+                                        icon: (
+                                          <FileCheck className="h-3.5 w-3.5" />
+                                        ),
+                                        variant: "default" as const,
+                                        onClick: () => {
+                                          setResolutionModalGrievance(item);
+                                          setResolutionDecision("APPROVE");
+                                          setResolutionFeedback("");
+                                        },
+                                      },
+                                    ]
+                                  : []),
+                                ...(isEscalated
+                                  ? [
+                                      {
+                                        label: "Intervene",
+                                        icon: (
+                                          <AlertCircle className="h-3.5 w-3.5" />
+                                        ),
+                                        variant: "warning" as const,
+                                        onClick: () => {
+                                          setEscalationModalGrievance(item);
+                                          setEscalationBottleneck(
+                                            "STAFF_CAPACITY",
+                                          );
+                                          setEscalationInterventionType(
+                                            "REASSIGN",
+                                          );
+                                          setEscalationTargetStaffId("");
+                                          setEscalationNote("");
+                                        },
+                                      },
+                                    ]
+                                  : []),
+                                ...(item.status === "CLOSED" ||
+                                item.status === "RESOLVED"
+                                  ? []
+                                  : item.assignedStaffName ||
+                                      item.assignedStaffId
+                                    ? [
+                                        {
+                                          label: "Change Assignment",
+                                          icon: (
+                                            <UserCheck className="h-3.5 w-3.5" />
+                                          ),
+                                          variant: "default" as const,
+                                          onClick: () => {
+                                            setAssignModalGrievance(item);
+                                            setSelectedStaffId(
+                                              item.assignedStaffId || "",
+                                            );
+                                          },
+                                        },
+                                      ]
+                                    : [
+                                        {
+                                          label: "Assign",
+                                          icon: (
+                                            <UserPlus className="h-3.5 w-3.5" />
+                                          ),
+                                          variant: "default" as const,
+                                          onClick: () => {
+                                            setAssignModalGrievance(item);
+                                            setSelectedStaffId("");
+                                          },
+                                        },
+                                      ]),
+                              ]}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -2845,117 +2734,49 @@ export function DepartmentHeadOverviewInner({
       {/* MODALS: ASSIGNMENT, STEP 4-6 ESCALATION INTERVENTION, STEP 11 RESOLUTION   */}
       {/* ========================================================================= */}
       {assignModalGrievance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">
-                  {assignModalGrievance.assignedStaffName
-                    ? "Reassign Grievance"
-                    : "Assign Grievance to Staff"}
-                </h3>
-                <p className="text-xs font-normal text-slate-500">
-                  Dispatching{" "}
-                  <span className="font-mono font-semibold text-[#064E3B]">
-                    {assignModalGrievance.ticketCode}
-                  </span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAssignModalGrievance(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        <SmartStaffAssignmentModal
+          grievance={assignModalGrievance}
+          currentDepartmentName={currentDepartmentName}
+          staffList={staffList}
+          onClose={() => setAssignModalGrievance(null)}
+          onAssignmentSuccess={(staffId, staffName) => {
+            setStaffList((prev) =>
+              prev.map((s) => {
+                if (s.id === staffId) {
+                  return { ...s, activeTickets: s.activeTickets + 1 };
+                }
+                if (assignModalGrievance.assignedStaffId === s.id) {
+                  return {
+                    ...s,
+                    activeTickets: Math.max(0, s.activeTickets - 1),
+                  };
+                }
+                return s;
+              }),
+            );
 
-            <form onSubmit={handleAssignSubmit} className="mt-4 space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs space-y-1">
-                <div className="font-semibold text-slate-900">
-                  {assignModalGrievance.title}
-                </div>
-                <div className="font-normal text-slate-600">
-                  Category: {assignModalGrievance.category} &rsaquo;{" "}
-                  {assignModalGrievance.subcategory}
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <PriorityBadge priority={assignModalGrievance.priority} />
-                  <span className="font-normal text-slate-500">
-                    Target SLA: {assignModalGrievance.slaDeadline}
-                  </span>
-                </div>
-              </div>
+            setGrievances((prev) =>
+              prev.map((g) =>
+                g.id === assignModalGrievance.id
+                  ? {
+                      ...g,
+                      assignedStaffId: staffId,
+                      assignedStaffName: staffName,
+                      status: "ASSIGNED",
+                    }
+                  : g,
+              ),
+            );
 
-              <div>
-                <label
-                  htmlFor="staff-select"
-                  className="block text-xs font-semibold text-slate-800 mb-1.5"
-                >
-                  Select Department Officer{" "}
-                  <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="staff-select"
-                  required
-                  value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-2xs focus:border-emerald-600 focus:outline-hidden"
-                >
-                  <option value="">
-                    -- Choose an Officer from {currentDepartmentName} --
-                  </option>
-                  {staffList.map((staff) => (
-                    <option
-                      key={staff.id}
-                      value={staff.id}
-                      disabled={staff.status === "ON_LEAVE"}
-                    >
-                      {staff.name} ({staff.designation}) — {staff.activeTickets}
-                      /{staff.maxCapacity} active tickets{" "}
-                      {staff.status === "ON_LEAVE" ? "[ON LEAVE]" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            setActionSuccessMessage(
+              `Assigned grievance ${assignModalGrievance.ticketCode} to ${staffName}.`,
+            );
 
-              <div>
-                <label
-                  htmlFor="internal-instructions"
-                  className="block text-xs font-semibold text-slate-800 mb-1.5"
-                >
-                  Internal Instructions & Priority Notes (Optional)
-                </label>
-                <textarea
-                  id="internal-instructions"
-                  rows={3}
-                  value={assignmentNote}
-                  onChange={(e) => setAssignmentNote(e.target.value)}
-                  placeholder="e.g. Please verify with payroll register for Feb before responding. Expedite due to high priority."
-                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setAssignModalGrievance(null)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!selectedStaffId}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Confirm Assignment</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            setAssignModalGrievance(null);
+            loadData(undefined, true);
+            setTimeout(() => setActionSuccessMessage(null), 4000);
+          }}
+        />
       )}
 
       {/* ========================================================================= */}
@@ -3047,13 +2868,13 @@ export function DepartmentHeadOverviewInner({
                       onClick={() => setEscalationBottleneck("STAFF_CAPACITY")}
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationBottleneck === "STAFF_CAPACITY"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
                       👥 Staff Capacity / Absence
                       <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Officer overloaded or on approved leave
+                        Staff member overloaded or on approved leave
                       </div>
                     </button>
 
@@ -3062,7 +2883,7 @@ export function DepartmentHeadOverviewInner({
                       onClick={() => setEscalationBottleneck("CROSS_DEPT")}
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationBottleneck === "CROSS_DEPT"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -3077,7 +2898,7 @@ export function DepartmentHeadOverviewInner({
                       onClick={() => setEscalationBottleneck("MISSING_DOCS")}
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationBottleneck === "MISSING_DOCS"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -3094,7 +2915,7 @@ export function DepartmentHeadOverviewInner({
                       }
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationBottleneck === "COMPLEX_INVESTIGATION"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -3118,7 +2939,7 @@ export function DepartmentHeadOverviewInner({
                       onClick={() => setEscalationInterventionType("MONITOR")}
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationInterventionType === "MONITOR"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -3135,13 +2956,13 @@ export function DepartmentHeadOverviewInner({
                       }
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationInterventionType === "NOTIFY_STAFF"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
                       📢 Notify Assigned Staff
                       <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Send urgent priority nudge to assigned officer
+                        Send urgent priority nudge to assigned staff member
                       </div>
                     </button>
 
@@ -3152,7 +2973,7 @@ export function DepartmentHeadOverviewInner({
                       }
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationInterventionType === "CROSS_DEPT"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
@@ -3167,13 +2988,14 @@ export function DepartmentHeadOverviewInner({
                       onClick={() => setEscalationInterventionType("REASSIGN")}
                       className={`rounded-xl border p-2.5 text-left text-xs transition ${
                         escalationInterventionType === "REASSIGN"
-                          ? "border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                          ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
-                      🔄 Reassign to Available Officer
+                      🔄 Reassign to Available Staff
                       <div className="text-2.75 font-normal text-slate-500 mt-0.5">
-                        Transfer ticket to an active officer with spare capacity
+                        Transfer grievance to an active staff member with spare
+                        capacity
                       </div>
                     </button>
                   </div>
@@ -3186,7 +3008,7 @@ export function DepartmentHeadOverviewInner({
                       htmlFor="escalation-target-staff"
                       className="block text-xs font-semibold text-slate-900 mb-1"
                     >
-                      Select Target Officer{" "}
+                      Select Target Staff Member{" "}
                       <span className="text-rose-500">*</span>
                     </label>
                     <select
@@ -3199,7 +3021,7 @@ export function DepartmentHeadOverviewInner({
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
                     >
                       <option value="">
-                        -- Choose an Available Officer --
+                        -- Choose an Available Staff Member --
                       </option>
                       {staffList.map((s) => (
                         <option
@@ -3208,7 +3030,7 @@ export function DepartmentHeadOverviewInner({
                           disabled={s.status === "ON_LEAVE"}
                         >
                           {s.name} ({s.designation}) &bull; {s.activeTickets}/
-                          {s.maxCapacity} tickets{" "}
+                          {s.maxCapacity} grievances{" "}
                           {s.status === "ON_LEAVE"
                             ? "[ON LEAVE]"
                             : "[AVAILABLE]"}
@@ -3274,7 +3096,7 @@ export function DepartmentHeadOverviewInner({
               <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/90 shrink-0 gap-2">
                 <span className="text-2.75 text-slate-500">
                   Intervention is logged to the audit trail and dispatched to
-                  the assigned officer.
+                  the assigned staff member.
                 </span>
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                   <button
@@ -3334,7 +3156,7 @@ export function DepartmentHeadOverviewInner({
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
                 <div className="flex items-center justify-between font-semibold text-emerald-950">
                   <span>
-                    Investigating Officer Findings:{" "}
+                    Assigned Staff Findings:{" "}
                     {resolutionModalGrievance.submittedResolution?.staffName}
                   </span>
                   <span className="text-2.75 font-normal text-slate-500">
@@ -3377,7 +3199,7 @@ export function DepartmentHeadOverviewInner({
                   >
                     🔄 Request Clarification
                     <div className="text-2.5 font-normal text-slate-500 mt-0.5">
-                      Return to investigating officer for revision
+                      Return to assigned staff member for revision
                     </div>
                   </button>
                 </div>
@@ -3573,7 +3395,7 @@ export function DepartmentHeadOverviewInner({
                   htmlFor="leave-target-staff"
                   className="block text-xs font-semibold text-slate-800 mb-1.5"
                 >
-                  Select Officer to Receive Reassigned Grievances{" "}
+                  Select Staff Member to Receive Reassigned Grievances{" "}
                   <span className="text-rose-500">*</span>
                 </label>
                 <select
@@ -3585,7 +3407,9 @@ export function DepartmentHeadOverviewInner({
                   }
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 shadow-2xs focus:border-emerald-600 focus:outline-hidden"
                 >
-                  <option value="">-- Choose an Available Officer --</option>
+                  <option value="">
+                    -- Choose an Available Staff Member --
+                  </option>
                   {staffList
                     .filter((s) => s.id !== leaveReassignmentModalStaff.id)
                     .map((s) => (
@@ -3608,14 +3432,15 @@ export function DepartmentHeadOverviewInner({
                   htmlFor="leave-reassign-note"
                   className="block text-xs font-semibold text-slate-800 mb-1.5"
                 >
-                  HOD Handoff Directive (Logged to Ticket Audit Trail)
+                  Department Head Handoff Directive (Logged to Grievance Audit
+                  Trail)
                 </label>
                 <textarea
                   id="leave-reassign-note"
                   rows={2}
                   value={leaveReassignNote}
                   onChange={(e) => setLeaveReassignNote(e.target.value)}
-                  placeholder="e.g. Officer approved on leave. Reassigned to prevent SLA delay..."
+                  placeholder="e.g. Staff member approved on leave. Reassigned to prevent SLA delay..."
                   className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
                 />
               </div>
@@ -3689,10 +3514,10 @@ export function DepartmentHeadOverviewInner({
               {/* Row 2: Title, Status Pill, Category & Priority */}
               <div className="flex flex-wrap items-start justify-between gap-3 pt-0.5">
                 <div className="space-y-1 max-w-[70%]">
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug line-clamp-1">
+                  <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-[-0.02em] line-clamp-1">
                     {selectedCaseFile.title}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                  <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
                     <span>{selectedCaseFile.category}</span>
                     <span className="text-slate-300">•</span>
                     <span>{selectedCaseFile.subcategory}</span>
@@ -3737,7 +3562,7 @@ export function DepartmentHeadOverviewInner({
             </div>
 
             {/* Navigation Tabs inside Dialog (Fixed) */}
-            <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-xs font-semibold shrink-0">
+            <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0">
               <button
                 type="button"
                 onClick={() => setCaseDrawerTab("progress")}
@@ -3866,10 +3691,10 @@ export function DepartmentHeadOverviewInner({
                     return (
                       <div className="rounded-xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-2xs overflow-hidden">
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                          <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                          <span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-500 shrink-0">
                             Current Progress
                           </span>
-                          <span className="text-xs font-semibold text-emerald-800 text-right truncate max-w-full sm:max-w-[70%]">
+                          <span className="text-sm font-semibold text-emerald-800 text-right truncate max-w-full sm:max-w-[70%]">
                             Stage {stageNumber} of {steps.length}:{" "}
                             {currentStageLabel}
                           </span>
@@ -3909,7 +3734,7 @@ export function DepartmentHeadOverviewInner({
                                   )}
                                 </div>
                                 <span
-                                  className={`mt-2 text-xs font-medium text-center max-w-18.75 sm:max-w-23.75 line-clamp-2 leading-tight ${
+                                  className={`mt-2 text-sm font-medium text-center max-w-18.75 sm:max-w-23.75 line-clamp-2 leading-tight ${
                                     isPastOrCurrent
                                       ? "font-bold text-slate-900"
                                       : "text-slate-400"
@@ -3923,7 +3748,7 @@ export function DepartmentHeadOverviewInner({
                         </div>
 
                         {/* Last Activity row */}
-                        <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-slate-600 border-t border-slate-100 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 pt-2 text-sm text-slate-600 border-t border-slate-100 min-w-0">
                           <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                           <span className="truncate max-w-full">
                             Last Activity:{" "}
@@ -3979,12 +3804,12 @@ export function DepartmentHeadOverviewInner({
                       return (
                         <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-500 flex items-center gap-1.5">
                               <Clock className="h-3.5 w-3.5 text-emerald-800" />
                               SLA Status
                             </span>
                             <span
-                              className={`text-2.75 font-bold px-2 py-0.5 rounded-full ${
+                              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                                 slaState === "BREACHED"
                                   ? "bg-rose-50 text-rose-700 border border-rose-200"
                                   : slaState === "SLA_AT_RISK"
@@ -4079,11 +3904,11 @@ export function DepartmentHeadOverviewInner({
                       return (
                         <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                            <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                            <span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-500 flex items-center gap-1.5">
                               <User className="h-3.5 w-3.5 text-emerald-800" />
                               Assignment
                             </span>
-                            <span className="text-2.75 font-semibold text-slate-500">
+                            <span className="text-sm font-semibold text-slate-500">
                               Status:{" "}
                               <strong className="text-slate-800">
                                 {assignmentStatus}
@@ -4161,10 +3986,10 @@ export function DepartmentHeadOverviewInner({
                   {/* 3. ACTIVITY TIMELINE */}
                   <div className="rounded-xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-2xs">
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <span className="text-2.75 font-bold uppercase tracking-wider text-slate-500">
+                      <span className="text-sm font-bold uppercase tracking-[0.08em] text-slate-500">
                         Activity Timeline
                       </span>
-                      <span className="text-2.75 text-slate-400">
+                      <span className="text-sm text-slate-400">
                         Chronological Governance Trail
                       </span>
                     </div>
@@ -4207,12 +4032,12 @@ export function DepartmentHeadOverviewInner({
                                     : "bg-slate-400"
                                 }`}
                               />
-                              <div className="space-y-1">
+                              <div className="space-y-1.5">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <span className="text-xs font-bold text-slate-900">
+                                  <span className="text-sm font-bold text-slate-900">
                                     {ev.title}
                                   </span>
-                                  <span className="text-2.75 font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200/80 inline-flex items-center gap-1.5 shrink-0">
+                                  <span className="text-xs font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200/80 inline-flex items-center gap-1.5 shrink-0">
                                     <Clock className="h-3 w-3 text-slate-400 shrink-0" />
                                     <span>
                                       {ev.timestamp &&
@@ -4223,10 +4048,10 @@ export function DepartmentHeadOverviewInner({
                                     </span>
                                   </span>
                                 </div>
-                                <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                                <p className="text-sm text-slate-600 leading-relaxed font-normal">
                                   {ev.description}
                                 </p>
-                                <div className="text-2.75 text-slate-500">
+                                <div className="text-sm text-slate-500">
                                   Actor:{" "}
                                   <strong className="font-semibold text-slate-700">
                                     {ev.actor}
@@ -4247,10 +4072,10 @@ export function DepartmentHeadOverviewInner({
                   {/* Submitter Info Card */}
                   <div className="rounded-xl border border-slate-200/90 bg-slate-50/70 p-4 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                      <span className="text-2.75 font-semibold uppercase tracking-wider text-slate-500">
+                      <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">
                         Complainant Details
                       </span>
-                      <span className="text-2.75 text-slate-400">
+                      <span className="text-sm text-slate-400">
                         Submitted {selectedCaseFile.createdAt}
                       </span>
                     </div>
@@ -4266,13 +4091,13 @@ export function DepartmentHeadOverviewInner({
                           >
                             {selectedCaseFile.submitterName}
                           </div>
-                          <div className="text-2.75 text-slate-500">
+                          <div className="text-sm text-slate-500">
                             {selectedCaseFile.submitterRole}
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-col justify-center text-xs">
-                        <span className="text-slate-500 text-2.75">
+                        <span className="text-slate-500 text-sm">
                           Contact Email
                         </span>
                         <a
@@ -4394,7 +4219,7 @@ export function DepartmentHeadOverviewInner({
 
                   {/* Assigned Officer Overview */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-xs">
-                    <span className="text-2.75 font-semibold uppercase tracking-wider text-slate-500">
+                    <span className="text-sm font-semibold uppercase tracking-wider text-slate-500">
                       Handling Officer
                     </span>
                     {selectedCaseFile.assignedStaffName ? (
@@ -4609,8 +4434,8 @@ export function DepartmentHeadOverviewInner({
                     </button>
                   )}
 
-                {/* If UNDER_REVIEW, also offer Review Resolution */}
-                {selectedCaseFile.status === "UNDER_REVIEW" &&
+                {/* Head review only when intervention or rule-based review is required */}
+                {requiresHeadResolutionReview(selectedCaseFile) &&
                   selectedCaseFile.submittedResolution && (
                     <button
                       type="button"

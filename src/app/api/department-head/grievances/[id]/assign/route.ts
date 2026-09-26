@@ -17,7 +17,7 @@ export async function POST(
   try {
     const grievanceId = BigInt(id);
     const body = await request.json();
-    const { staffId, note } = body;
+    const { staffId, note, recommendationScore, recommendationReasons } = body;
 
     if (!staffId) {
       return NextResponse.json(
@@ -66,6 +66,18 @@ export async function POST(
     const grievance = grievanceDept.grievances;
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
+    // Prepare recommendation payload if provided
+    const reasonsPayload = recommendationReasons
+      ? {
+          ...(typeof recommendationReasons === "object"
+            ? recommendationReasons
+            : {}),
+          ...(note ? { directive_note: note } : {}),
+        }
+      : note
+        ? { note }
+        : undefined;
+
     // 3. Database transaction: Complete prior active assignment, create new assignment, update status and logs
     await prisma.$transaction(async (tx) => {
       // Mark any existing active assignment as REASSIGNED
@@ -89,7 +101,11 @@ export async function POST(
           assigned_by: user.user_id,
           assigned_at: new Date(),
           assignment_status: "ASSIGNED",
-          recommendation_reasons: note ? { note } : undefined,
+          recommendation_score:
+            recommendationScore !== undefined && recommendationScore !== null
+              ? Number(recommendationScore)
+              : null,
+          recommendation_reasons: reasonsPayload,
         },
       });
 
@@ -131,7 +147,9 @@ export async function POST(
             staff_name: staffName,
             note: note || "Assigned by Department Head",
             stage: "ASSIGNED",
-            details: `Dispatched to ${staffName}`,
+            recommendation_score: recommendationScore ?? null,
+            recommendation_reasons: reasonsPayload ?? null,
+            details: `Assigned to ${staffName}${recommendationScore ? ` (Match score: ${recommendationScore}%)` : ""}`,
           },
         },
       });
@@ -150,7 +168,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Dispatched ${grievance.grievance_number} to ${staffName}.`,
+      message: `Assigned grievance ${grievance.grievance_number} to ${staffName}.`,
       assignedStaff: {
         id: staff.user_id.toString(),
         name: staffName,
