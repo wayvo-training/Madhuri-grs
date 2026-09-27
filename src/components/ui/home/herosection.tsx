@@ -31,12 +31,12 @@ export default function HeroSection({
         </div>
 
         {/* Headline */}
-        <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950">
+        <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.14]">
           {headline}
         </h1>
 
         {/* Subtitle */}
-        <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+        <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg lg:text-xl leading-relaxed text-slate-600 font-normal">
           {subtext}
         </p>
 

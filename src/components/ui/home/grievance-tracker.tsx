@@ -102,11 +102,11 @@ export default function GrievanceTracker() {
             LIVE STATUS TRACKER
           </span>
 
-          <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
+          <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
             Track Grievance Resolution Progress
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+          <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600 max-w-xl mx-auto">
             Enter your grievance reference code to inspect the live handling
             stage, assigned department, and resolution timeline.
           </p>

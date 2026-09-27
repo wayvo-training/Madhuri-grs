@@ -42,27 +42,27 @@ export default function FaqAccordion() {
   return (
     <section
       id="faq"
-      className="border-t border-slate-200/80 bg-white py-6 sm:py-8"
+      className="border-t border-slate-200/80 bg-white py-12 sm:py-16"
     >
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
-        <div className="grid items-start gap-6 lg:grid-cols-[0.7fr_1.3fr] lg:gap-10">
+        <div className="grid items-start gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-12">
           {/* Left */}
-          <div>
-            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+          <div className="space-y-2">
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 shadow-2xs">
               FAQ
             </span>
 
-            <h2 className="mt-2 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
               Questions, answered.
             </h2>
 
-            <p className="mt-1.5 text-xs leading-5 text-slate-500 sm:text-sm">
+            <p className="text-sm sm:text-base leading-relaxed text-slate-600">
               Quick answers on submission, tracking, and resolution procedures.
             </p>
           </div>
 
           {/* Right */}
-          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-xs">
+          <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/90 bg-white shadow-xs">
             {faqs.map((faq, index) => {
               const isOpen = openIndex === index;
 
@@ -71,26 +71,26 @@ export default function FaqAccordion() {
                   <button
                     type="button"
                     onClick={() => setOpenIndex(isOpen ? null : index)}
-                    className="flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-5 sm:py-3.5 text-left transition-colors hover:bg-slate-50/50"
+                    className="flex w-full items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-4.5 text-left transition-colors hover:bg-slate-50/50 cursor-pointer"
                     aria-expanded={isOpen}
                   >
-                    <span className="text-xs sm:text-sm font-semibold text-slate-900">
+                    <span className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
                       {faq.question}
                     </span>
 
                     <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-transform duration-200 ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-transform duration-200 ${
                         isOpen
                           ? "rotate-180 border-emerald-500 bg-emerald-50 text-emerald-800"
                           : "border-slate-200 text-slate-400"
                       }`}
                     >
-                      <ChevronDown className="h-3.5 w-3.5" />
+                      <ChevronDown className="h-4 w-4" />
                     </div>
                   </button>
 
                   {isOpen && (
-                    <div className="px-4 pb-3 sm:px-5 sm:pb-3.5 text-xs leading-5 text-slate-600 animate-in fade-in duration-150">
+                    <div className="px-5 pb-4 sm:px-6 sm:pb-5 text-sm leading-relaxed text-slate-600 border-t border-slate-50 pt-2.5 animate-in fade-in duration-150">
                       {faq.answer}
                     </div>
                   )}
