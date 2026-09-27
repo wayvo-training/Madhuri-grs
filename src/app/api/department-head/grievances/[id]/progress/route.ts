@@ -309,9 +309,6 @@ export async function GET(
     // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
     const timeline = (grievance.audit_logs || []).map((log: any) => {
       const user = log.users;
-      const actorName = user
-        ? `${user.first_name} ${user.last_name || ""}`.trim()
-        : "System";
       const actorRole = user?.roles?.role_name || "System";
 
       let val: Record<string, unknown> = {};
@@ -347,6 +344,24 @@ export async function GET(
           : `Assigned to ${assignment.staffName}`;
       } else if (act.includes("HOD_INTERVENTION")) {
         title = "Department Head Intervention";
+      } else if (
+        act === "HOD_DIRECTIVE_NOTE" ||
+        act === "HEAD_DIRECTIVE_ISSUED"
+      ) {
+        title = "Internal Note";
+        description =
+          (val.note as string) ||
+          (val.details as string) ||
+          "Department Head internal note.";
+      } else if (
+        act === "INVESTIGATION_NOTE_ADDED" ||
+        act === "INTERNAL_NOTE_ADDED"
+      ) {
+        title = "Investigation Note";
+        description =
+          (val.note as string) ||
+          (val.details as string) ||
+          "Staff investigation note.";
       } else if (act.includes("ACCEPT_RESOLUTION") || act.includes("APPROVE")) {
         title = "Resolution Approved & Case Closed";
       } else if (act.includes("REJECT_RESOLUTION") || act.includes("REOPEN")) {
@@ -395,6 +410,18 @@ export async function GET(
           `Submitted by ${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim();
       }
 
+      let actor = "System";
+      if (user) {
+        const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+        if (actorRole === "DEPARTMENT_HEAD") {
+          actor = `Department Head — ${rawName}`;
+        } else if (actorRole === "STAFF") {
+          actor = `Staff — ${rawName}`;
+        } else {
+          actor = `${rawName} (${actorRole})`;
+        }
+      }
+
       return {
         id: log.audit_log_id.toString(),
         timestamp: formatFullDateTime(log.created_at),
@@ -402,9 +429,66 @@ export async function GET(
         title,
         description:
           description || "Action recorded in grievance governance trail.",
-        actor: `${actorName} (${actorRole})`,
+        actor,
       };
     });
+
+    // Extract internal notes (chronological: oldest to newest)
+    const internalNotes = (grievance.audit_logs || [])
+      .filter(
+        (l) =>
+          l.action === "HOD_DIRECTIVE_NOTE" ||
+          l.action === "INVESTIGATION_NOTE_ADDED" ||
+          l.action === "INTERNAL_NOTE_ADDED" ||
+          l.action === "HEAD_DIRECTIVE_ISSUED",
+      )
+      .slice()
+      .reverse()
+      .map((l) => {
+        const user = l.users;
+        const userRole = user?.roles?.role_name;
+        let val: Record<string, unknown> = {};
+        if (typeof l.new_value === "string") {
+          try {
+            val = JSON.parse(l.new_value);
+          } catch {
+            val = { note: l.new_value };
+          }
+        } else if (l.new_value && typeof l.new_value === "object") {
+          val = l.new_value as Record<string, unknown>;
+        }
+
+        const roleDisplay =
+          (val?.role as string) ||
+          (userRole === "DEPARTMENT_HEAD"
+            ? "Department Head"
+            : userRole === "STAFF"
+              ? "Staff"
+              : userRole || "Staff");
+
+        const rawName = user
+          ? `${user.first_name} ${user.last_name || ""}`.trim()
+          : "User";
+
+        const authorDisplay =
+          (val?.author as string) ||
+          (userRole === "DEPARTMENT_HEAD"
+            ? `Department Head — ${rawName}`
+            : userRole === "STAFF"
+              ? `Staff — ${rawName}`
+              : rawName);
+
+        return {
+          id: l.audit_log_id.toString(),
+          author: authorDisplay,
+          role: roleDisplay,
+          timestamp: formatRelativeTime(l.created_at),
+          note:
+            (val?.note as string) ||
+            (val?.details as string) ||
+            String(l.new_value || ""),
+        };
+      });
 
     // 5. Latest Activity
     const latestEvent = timeline[0] || null;
@@ -441,6 +525,7 @@ export async function GET(
             path: a.file_path,
             uploadedAt: formatFullDateTime(a.uploaded_at),
           })),
+          internalNotes,
         },
         currentStage: {
           key: currentStageKey,
@@ -452,6 +537,7 @@ export async function GET(
         sla,
         latestActivity,
         timeline,
+        internalNotes,
       },
     });
   } catch (error) {

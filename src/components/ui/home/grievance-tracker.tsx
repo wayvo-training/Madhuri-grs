@@ -79,6 +79,8 @@ export default function GrievanceTracker() {
         return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "ESCALATED":
         return "bg-rose-50 text-rose-700 border-rose-200";
+      case "WAITING_ON_USER":
+        return "bg-amber-50 text-amber-800 border-amber-300 font-semibold";
       case "IN_PROGRESS":
       case "UNDER_INVESTIGATION":
         return "bg-blue-50 text-blue-700 border-blue-200";
@@ -135,7 +137,7 @@ export default function GrievanceTracker() {
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#064E3B] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <>
@@ -255,7 +257,7 @@ export default function GrievanceTracker() {
                           isDone
                             ? "border-emerald-600 bg-emerald-600 text-white shadow-xs"
                             : isCurrent
-                              ? "border-[#064E3B] bg-emerald-50 text-[#064E3B] ring-4 ring-emerald-100"
+                              ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] ring-4 ring-teal-100"
                               : "border-slate-200 bg-slate-50 text-slate-400"
                         }`}
                       >

@@ -259,7 +259,7 @@ export async function GET(request: Request) {
             include: {
               users: { include: { roles: true } },
             },
-            take: 20,
+            take: 50,
           },
         },
         orderBy: [{ priority: "desc" }, { created_at: "desc" }],
@@ -276,38 +276,93 @@ export async function GET(request: Request) {
       const latestEscalation = g.escalations[0];
       const latestResolution = g.resolutions[0];
 
-      // Extract internal directives and audit history from audit logs
+      // Extract two-way internal notes from audit logs (chronological: oldest to newest)
       const internalNotes = g.audit_logs
-        .filter((l) => l.action === "HOD_DIRECTIVE_NOTE")
+        .filter(
+          (l) =>
+            l.action === "HOD_DIRECTIVE_NOTE" ||
+            l.action === "INVESTIGATION_NOTE_ADDED" ||
+            l.action === "INTERNAL_NOTE_ADDED" ||
+            l.action === "HEAD_DIRECTIVE_ISSUED",
+        )
+        .slice()
+        .reverse()
         .map((l) => {
-          const val = l.new_value as { note?: string } | null;
-          const authorName = l.users
-            ? `${l.users.first_name} ${l.users.last_name || ""}`.trim()
-            : "Department Head";
+          const user = l.users;
+          const userRole = user?.roles?.role_name;
+          const val = l.new_value as {
+            note?: string;
+            details?: string;
+            author?: string;
+            role?: string;
+          } | null;
+
+          const roleDisplay =
+            val?.role ||
+            (userRole === "DEPARTMENT_HEAD"
+              ? "Department Head"
+              : userRole === "STAFF"
+                ? "Staff"
+                : userRole || "Staff");
+
+          const rawName = user
+            ? `${user.first_name} ${user.last_name || ""}`.trim()
+            : "User";
+
+          const authorDisplay =
+            val?.author ||
+            (userRole === "DEPARTMENT_HEAD"
+              ? `Department Head — ${rawName}`
+              : userRole === "STAFF"
+                ? `Staff — ${rawName}`
+                : rawName);
+
           return {
             id: l.audit_log_id.toString(),
-            author: authorName,
-            role: l.users?.roles?.role_name || "Department Head",
+            author: authorDisplay,
+            role: roleDisplay,
             timestamp: formatRelativeTime(l.created_at),
-            note: val?.note || String(l.new_value || ""),
+            note: val?.note || val?.details || String(l.new_value || ""),
           };
         });
 
       const auditTrail = g.audit_logs.map((l) => {
-        const actor = l.users
-          ? `${l.users.first_name} ${l.users.last_name || ""}`.trim()
-          : "System";
+        const user = l.users;
+        const userRole = user?.roles?.role_name;
+        let actor = "System";
+        if (user) {
+          const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+          if (userRole === "DEPARTMENT_HEAD") {
+            actor = `Department Head — ${rawName}`;
+          } else if (userRole === "STAFF") {
+            actor = `Staff — ${rawName}`;
+          } else {
+            actor = `${rawName} (${userRole || "User"})`;
+          }
+        }
+
         const val = l.new_value as {
           details?: string;
+          note?: string;
           bottleneck?: string;
           stage?: string;
         } | null;
 
+        let actionTitle = l.action.replace(/_/g, " ");
+        if (l.action === "HOD_DIRECTIVE_NOTE") {
+          actionTitle = "Internal Note";
+        } else if (
+          l.action === "INVESTIGATION_NOTE_ADDED" ||
+          l.action === "INTERNAL_NOTE_ADDED"
+        ) {
+          actionTitle = "Investigation Note";
+        }
+
         return {
           id: l.audit_log_id.toString(),
           timestamp: formatRelativeTime(l.created_at),
-          actor: `${actor} (${l.users?.roles?.role_name || "System"})`,
-          action: l.action.replace(/_/g, " "),
+          actor,
+          action: actionTitle,
           bottleneck: val?.bottleneck,
           details: formatAuditEntryDetails(l.action, l.new_value),
           stage: val?.stage || g.status,

@@ -62,9 +62,11 @@ export function SmartStaffAssignmentModal({
   const fallbackFromStaffList = useCallback(() => {
     const fallbackList: StaffRecommendationResult[] = staffList.map(
       (s, index) => {
-        const isTop = index === 0 && s.status === "ACTIVE";
+        const effectiveMax = 10;
+        const isAtCap = s.activeTickets >= effectiveMax;
+        const isTop = index === 0 && s.status === "ACTIVE" && !isAtCap;
         const loadPercentage = Math.round(
-          (s.activeTickets / s.maxCapacity) * 100,
+          (s.activeTickets / effectiveMax) * 100,
         );
         return {
           staffId: s.id,
@@ -74,20 +76,22 @@ export function SmartStaffAssignmentModal({
           score: isTop ? 88 : Math.max(50, 80 - index * 6),
           isTopRecommendation: isTop,
           activeWorkload: s.activeTickets,
-          maxCapacity: s.maxCapacity,
+          maxCapacity: effectiveMax,
           availabilityStatus:
             s.status === "ON_LEAVE"
               ? "ON_LEAVE"
-              : loadPercentage >= 80
+              : isAtCap || loadPercentage >= 80
                 ? "BUSY"
                 : "AVAILABLE",
           matchedSkills: ["Department Redressal Operations"],
           bulletReasons: [
             "Eligible department staff member",
-            `Active workload: ${s.activeTickets} / ${s.maxCapacity} grievances`,
+            `Active workload: ${s.activeTickets} / ${effectiveMax} grievances (Available Capacity: ${Math.max(0, effectiveMax - s.activeTickets)})`,
             s.status === "ON_LEAVE"
               ? "On approved leave"
-              : "Available for assignment",
+              : isAtCap
+                ? "Maximum active capacity reached (10 / 10 assigned) - Ineligible for new assignments"
+                : "Available for assignment",
           ],
           rawReasons: {
             matched_skills: ["Department Redressal Operations"],
@@ -181,6 +185,13 @@ export function SmartStaffAssignmentModal({
     e.preventDefault();
     if (!selectedStaffId || !selectedCandidate) return;
 
+    if (selectedCandidate.activeWorkload >= 10) {
+      setErrorMsg(
+        "This Staff member has reached the maximum active workload of 10 grievances.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg(null);
 
@@ -229,8 +240,8 @@ export function SmartStaffAssignmentModal({
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3.5 bg-slate-50/70">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-[#064E3B] border border-emerald-200">
-                <Sparkles className="h-3 w-3 text-emerald-600" />
+              <span className="inline-flex items-center gap-1 rounded-md bg-[#F0FDFA] px-2 py-0.5 text-[11px] font-semibold text-[#0F766E] border border-teal-200">
+                <Sparkles className="h-3 w-3 text-[#0F766E]" />
                 {isReassignment
                   ? "Change Staff Assignment"
                   : "Staff Assignment"}
@@ -396,7 +407,7 @@ export function SmartStaffAssignmentModal({
 
                     return (
                       <div className="relative rounded-xl border border-emerald-300/80 bg-emerald-50/20 p-3.5 shadow-2xs">
-                        <div className="absolute -top-2.5 right-4 rounded-full bg-[#064E3B] px-2 py-0.5 text-[9px] font-semibold text-white shadow-xs flex items-center gap-1">
+                        <div className="absolute -top-2.5 right-4 rounded-full bg-[#0F766E] px-2 py-0.5 text-[9px] font-semibold text-white shadow-xs flex items-center gap-1">
                           <Sparkles className="h-2.5 w-2.5" />
                           <span>Top Recommendation</span>
                         </div>
@@ -404,7 +415,7 @@ export function SmartStaffAssignmentModal({
                         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
                           <div className="min-w-0 flex-1 space-y-2.5">
                             <div className="flex items-center gap-2.5">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-[#064E3B] shrink-0">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200 shrink-0">
                                 {topCandidate.name.charAt(0)}
                               </div>
                               <div className="min-w-0">
@@ -461,7 +472,7 @@ export function SmartStaffAssignmentModal({
 
                           <div className="flex flex-col items-end gap-2.5 shrink-0">
                             <div className="text-right">
-                              <div className="text-xl font-bold text-[#064E3B]">
+                              <div className="text-xl font-bold text-[#0F766E]">
                                 {topCandidate.score}%
                               </div>
                               <div className="text-[9px] font-semibold uppercase text-slate-500 tracking-wider">
@@ -471,33 +482,51 @@ export function SmartStaffAssignmentModal({
 
                             <button
                               type="button"
-                              disabled={isUnavailable}
+                              disabled={
+                                isUnavailable ||
+                                topCandidate.activeWorkload >= 10
+                              }
                               onClick={() =>
                                 setSelectedStaffId(topCandidate.staffId)
                               }
                               className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                                 isSelected
-                                  ? "bg-[#064E3B] text-white shadow-xs"
-                                  : "border border-slate-300 bg-white text-slate-700 hover:border-emerald-600 hover:text-emerald-900"
+                                  ? "bg-[#0F766E] text-white shadow-xs"
+                                  : "border border-slate-300 bg-white text-slate-700 hover:border-[#0F766E] hover:text-[#0F766E]"
                               } disabled:opacity-40 disabled:cursor-not-allowed`}
                             >
                               {isSelected ? (
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                               ) : null}
                               <span>
-                                {isSelected ? "Selected" : "Select Staff"}
+                                {topCandidate.activeWorkload >= 10
+                                  ? "At Capacity (10/10)"
+                                  : isSelected
+                                    ? "Selected"
+                                    : "Select Staff"}
                               </span>
                             </button>
                           </div>
                         </div>
 
                         <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-slate-200/80 pt-2.5">
-                          <div className="flex items-center gap-4 text-[11px] text-slate-600">
+                          <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-600">
                             <div>
                               Active Workload:{" "}
                               <strong className="font-semibold text-slate-800">
-                                {topCandidate.activeWorkload} /{" "}
-                                {topCandidate.maxCapacity}
+                                {topCandidate.activeWorkload} / 10
+                              </strong>
+                            </div>
+                            <div>
+                              Available Capacity:{" "}
+                              <strong
+                                className={`font-semibold ${
+                                  topCandidate.activeWorkload >= 10
+                                    ? "text-rose-600"
+                                    : "text-emerald-700"
+                                }`}
+                              >
+                                {Math.max(0, 10 - topCandidate.activeWorkload)}
                               </strong>
                             </div>
                             <div>
@@ -505,18 +534,25 @@ export function SmartStaffAssignmentModal({
                               <span
                                 className={`font-semibold ${
                                   topCandidate.availabilityStatus ===
-                                  "AVAILABLE"
+                                    "AVAILABLE" &&
+                                  topCandidate.activeWorkload < 10
                                     ? "text-emerald-700"
-                                    : topCandidate.availabilityStatus === "BUSY"
-                                      ? "text-amber-700"
-                                      : "text-slate-500"
+                                    : topCandidate.activeWorkload >= 10
+                                      ? "text-rose-600"
+                                      : topCandidate.availabilityStatus ===
+                                          "BUSY"
+                                        ? "text-amber-700"
+                                        : "text-slate-500"
                                 }`}
                               >
-                                {topCandidate.availabilityStatus === "AVAILABLE"
-                                  ? "Available"
-                                  : topCandidate.availabilityStatus === "BUSY"
-                                    ? "Near Capacity"
-                                    : "On Leave"}
+                                {topCandidate.activeWorkload >= 10
+                                  ? "At Capacity (10/10)"
+                                  : topCandidate.availabilityStatus ===
+                                      "AVAILABLE"
+                                    ? "Available"
+                                    : topCandidate.availabilityStatus === "BUSY"
+                                      ? "Near Capacity"
+                                      : "On Leave"}
                               </span>
                             </div>
                           </div>
@@ -540,16 +576,29 @@ export function SmartStaffAssignmentModal({
                       className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
                     >
                       <option value="">Select another available staff</option>
-                      {availableCandidates.map((candidate) => (
-                        <option
-                          key={candidate.staffId}
-                          value={candidate.staffId}
-                          disabled={candidate.availabilityStatus === "ON_LEAVE"}
-                        >
-                          {candidate.name} — {candidate.activeWorkload} case
-                          {candidate.activeWorkload === 1 ? "" : "s"} assigned
-                        </option>
-                      ))}
+                      {availableCandidates.map((candidate) => {
+                        const isAtCap = candidate.activeWorkload >= 10;
+                        const availCap = Math.max(
+                          0,
+                          10 - candidate.activeWorkload,
+                        );
+                        return (
+                          <option
+                            key={candidate.staffId}
+                            value={candidate.staffId}
+                            disabled={
+                              candidate.availabilityStatus === "ON_LEAVE" ||
+                              isAtCap
+                            }
+                          >
+                            {candidate.name} — Active Workload:{" "}
+                            {candidate.activeWorkload} / 10{" "}
+                            {isAtCap
+                              ? "(At Capacity - 10/10)"
+                              : `(Available Capacity: ${availCap})`}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 )}
@@ -634,7 +683,7 @@ export function SmartStaffAssignmentModal({
               type="button"
               disabled={!selectedStaffId || isSubmitting}
               onClick={handleSubmit}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>

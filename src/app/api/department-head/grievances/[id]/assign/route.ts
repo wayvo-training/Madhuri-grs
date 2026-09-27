@@ -44,7 +44,30 @@ export async function POST(
       );
     }
 
-    // 2. Verify grievance belongs to head's department (or Admin preview)
+    // 2. Enforce maximum active workload capacity of 10 grievances
+    const activeAssignedCount = await prisma.assignments.count({
+      where: {
+        staff_id: targetStaffId,
+        assignment_status: "ASSIGNED",
+        grievance_id: { not: grievanceId },
+        grievances: {
+          status: { notIn: ["CLOSED"] },
+        },
+      },
+    });
+
+    if (activeAssignedCount >= 10) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "This Staff member has reached the maximum active workload of 10 grievances.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // 3. Verify grievance belongs to head's department (or Admin preview)
     const grievanceDept = await prisma.grievance_departments.findFirst({
       where: {
         grievance_id: grievanceId,

@@ -83,12 +83,12 @@ export function DocumentViewerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative flex flex-col w-full max-w-4xl max-h-[92vh] bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Top Control Bar */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-[#064E3B]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F0FDFA] text-[#0F766E] border border-teal-200/60">
               {isImage ? (
                 <ImageIcon className="h-5 w-5 text-blue-600" />
               ) : isExcel ? (

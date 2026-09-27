@@ -55,18 +55,18 @@ export function OverviewView({
   return (
     <div className="space-y-3.5 sm:space-y-4">
       {/* 1. Department Header Banner */}
-      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-linear-to-r from-[#064E3B] via-[#043629] to-slate-950 px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-xs">
+      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-linear-to-r from-[#0F766E] via-[#115E59] to-slate-950 px-4 py-3 sm:px-5 sm:py-3.5 text-white shadow-xs">
         <div className="relative z-10 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-300">
-              <Building2 className="h-4.5 w-4.5 text-emerald-300" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 border border-teal-400/30 text-teal-300">
+              <Building2 className="h-4.5 w-4.5 text-teal-300" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-semibold tracking-tight text-white leading-tight">
                   {currentDepartmentName}
                 </h2>
-                <span className="rounded-md bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-2.5 font-semibold text-emerald-200">
+                <span className="rounded-md bg-teal-500/20 border border-teal-400/30 px-2 py-0.5 text-2.5 font-semibold text-teal-200">
                   Primary Queue
                 </span>
               </div>
@@ -76,7 +76,7 @@ export function OverviewView({
                   {currentHodName}
                 </strong>{" "}
                 &bull; {currentHodEmail} &bull; Code:{" "}
-                <span className="font-mono text-emerald-300">
+                <span className="font-mono text-teal-300">
                   {currentEmployeeCode}
                 </span>
               </p>

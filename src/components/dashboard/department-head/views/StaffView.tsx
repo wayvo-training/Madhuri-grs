@@ -107,13 +107,13 @@ export function StaffView({
             return (
               <div
                 key={staff.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 shadow-2xs hover:border-emerald-300 hover:bg-white transition"
+                className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 shadow-2xs hover:border-teal-300 hover:bg-white transition"
               >
                 <div className="space-y-3.5">
                   {/* Staff Header */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100/80 text-base font-bold text-[#064E3B]">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80">
                         {staff.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
@@ -142,6 +142,10 @@ export function StaffView({
                       <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                         On Leave
                       </span>
+                    ) : staff.activeTickets >= (staff.maxCapacity || 10) ? (
+                      <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-800">
+                        At Capacity
+                      </span>
                     ) : isOverloaded ? (
                       <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                         High Load
@@ -159,10 +163,25 @@ export function StaffView({
                       <span className="font-normal text-slate-500">
                         Active Workload
                       </span>
-                      <span className="font-semibold text-slate-800">
-                        {staff.activeTickets} / {staff.maxCapacity} grievances (
-                        {loadPercentage}%)
-                      </span>
+                      <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                        <span>
+                          {staff.activeTickets} / {staff.maxCapacity || 10}
+                        </span>
+                        <span className="text-slate-400 font-normal">•</span>
+                        <span
+                          className={`text-[11px] ${
+                            staff.activeTickets >= (staff.maxCapacity || 10)
+                              ? "text-rose-600 font-bold"
+                              : "text-emerald-700 font-medium"
+                          }`}
+                        >
+                          Avail:{" "}
+                          {Math.max(
+                            0,
+                            (staff.maxCapacity || 10) - staff.activeTickets,
+                          )}
+                        </span>
+                      </div>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
                       <div

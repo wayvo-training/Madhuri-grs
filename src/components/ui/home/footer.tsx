@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           {/* Brand */}
           <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#064E3B] text-sm font-bold text-white shadow-xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F766E] text-sm font-bold text-white shadow-xs">
               G
             </div>
             <div>
@@ -42,7 +42,7 @@ export default function Footer() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-1 font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="inline-flex items-center gap-1 font-semibold text-teal-400 hover:text-teal-300 transition-colors"
             >
               Login
               <ArrowUpRight className="h-3 w-3" />
@@ -54,7 +54,7 @@ export default function Footer() {
         <div className="mt-6 flex flex-col gap-2 border-t border-slate-900 pt-4 sm:flex-row sm:items-center sm:justify-between text-2.75 text-slate-500">
           <p>© 2026 Grievance Resolution System. Internal platform.</p>
           <div className="flex items-center gap-1.5 text-slate-500">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
             <span>Controlled access & immutable audit trails</span>
           </div>
         </div>

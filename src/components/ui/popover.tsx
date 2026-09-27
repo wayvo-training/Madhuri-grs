@@ -9,6 +9,7 @@ interface PopoverProps {
   onOpenChange: (open: boolean) => void;
   widthClass?: string;
   className?: string;
+  align?: "left" | "right";
 }
 
 export function Popover({
@@ -18,6 +19,7 @@ export function Popover({
   onOpenChange,
   widthClass = "w-72",
   className = "relative flex items-center gap-2",
+  align = "right",
 }: PopoverProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +48,7 @@ export function Popover({
 
       {isOpen && (
         <div
-          className={`absolute right-0 top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ${widthClass}`}
+          className={`absolute ${align === "right" ? "right-0" : "left-0"} top-full z-50 mt-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl ${widthClass}`}
         >
           {children}
         </div>

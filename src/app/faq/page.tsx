@@ -129,7 +129,7 @@ export default function FaqPage() {
                   onClick={() => setActiveCategory(cat)}
                   className={`rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                     activeCategory === cat
-                      ? "bg-[#064E3B] text-white shadow-xs"
+                      ? "bg-[#0F766E] text-white shadow-xs"
                       : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >

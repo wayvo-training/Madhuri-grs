@@ -28,7 +28,7 @@ export function CreatePolicyMenu({
             activeDropdown === "create-policy" ? null : "create-policy",
           )
         }
-        className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 whitespace-nowrap cursor-pointer"
+        className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] whitespace-nowrap cursor-pointer"
       >
         <Plus className="h-3.5 w-3.5" />
         <span>Configure New Policy</span>
@@ -118,11 +118,11 @@ export function CreatePolicyMenu({
             }}
             className="flex w-full items-start gap-2.5 rounded-lg p-2 text-left hover:bg-slate-50 transition group"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B] group-hover:bg-emerald-100">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F0FDFA] text-[#0F766E] group-hover:bg-teal-100">
               <RotateCcw className="h-3.5 w-3.5" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-950">
+              <div className="text-xs font-bold text-slate-900 group-hover:text-[#115E59]">
                 Global Reopen Policy
               </div>
               <div className="text-2xs text-slate-500">

@@ -187,7 +187,7 @@ function ResetPasswordFlow() {
                   required
                   disabled={requestLoading}
                   placeholder="name@organization.com"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
                 />
               </div>
             </div>
@@ -195,7 +195,7 @@ function ResetPasswordFlow() {
             <button
               type="submit"
               disabled={requestLoading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#064E3B] text-sm font-semibold text-white shadow-md shadow-emerald-950/25 transition-all duration-200 hover:bg-emerald-900 hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F766E] text-sm font-semibold text-white shadow-md shadow-teal-950/25 transition-all duration-200 hover:bg-[#115E59] hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {requestLoading ? (
                 <>
@@ -327,7 +327,7 @@ function ResetPasswordFlow() {
             <button
               type="submit"
               disabled={resetLoading || Boolean(resetSuccess)}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#064E3B] text-sm font-semibold text-white shadow-md shadow-emerald-950/25 transition-all duration-200 hover:bg-emerald-900 hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F766E] text-sm font-semibold text-white shadow-md shadow-teal-950/25 transition-all duration-200 hover:bg-[#115E59] hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {resetLoading ? (
                 <>
@@ -347,7 +347,7 @@ function ResetPasswordFlow() {
 
       {/* Security note */}
       <div className="mt-6 border-t border-slate-100 pt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
-        <ShieldCheck className="h-4 w-4 text-emerald-600" />
+        <ShieldCheck className="h-4 w-4 text-[#0F766E]" />
         <span>Controlled access & auditability</span>
       </div>
     </div>
@@ -359,7 +359,7 @@ export default function ResetPasswordPage() {
     <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-50 py-12 sm:px-6 lg:px-8">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-125 w-200 rounded-full bg-linear-to-b from-emerald-100/50 via-emerald-50/25 to-transparent blur-3xl" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-125 w-200 rounded-full bg-linear-to-b from-teal-100/50 via-teal-50/25 to-transparent blur-3xl" />
       </div>
 
       <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -368,7 +368,7 @@ export default function ResetPasswordPage() {
           href="/"
           className="group inline-flex items-center gap-3 transition-transform hover:scale-[1.02]"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold text-white shadow-md shadow-emerald-950/25">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25">
             G
           </div>
           <div className="text-left">

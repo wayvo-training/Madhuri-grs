@@ -159,6 +159,28 @@ export async function POST(
       },
     });
 
+    // Validate that target staff does not exceed 10 active assigned grievances
+    const toStaffActiveCount = await prisma.assignments.count({
+      where: {
+        staff_id: toStaffId,
+        assignment_status: "ASSIGNED",
+        grievances: {
+          status: { notIn: ["CLOSED"] },
+        },
+      },
+    });
+
+    if (toStaffActiveCount + activeAssignments.length > 10) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "This Staff member has reached the maximum active workload of 10 grievances.",
+        },
+        { status: 400 },
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
       // 1. Reassign each active ticket
       for (const assign of activeAssignments) {

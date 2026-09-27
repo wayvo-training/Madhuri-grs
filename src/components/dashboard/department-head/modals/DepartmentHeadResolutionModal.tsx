@@ -35,7 +35,7 @@ export function DepartmentHeadResolutionModal({
             </h3>
             <p className="text-xs font-normal text-slate-500">
               Final sign-off for{" "}
-              <span className="font-mono font-semibold text-[#064E3B]">
+              <span className="font-mono font-semibold text-[#0F766E]">
                 {grievance.ticketCode}
               </span>
             </p>
@@ -137,7 +137,7 @@ export function DepartmentHeadResolutionModal({
               type="submit"
               className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition ${
                 decision === "APPROVE"
-                  ? "bg-[#064E3B] hover:bg-emerald-900"
+                  ? "bg-[#0F766E] hover:bg-[#115E59]"
                   : "bg-slate-800 hover:bg-slate-900"
               }`}
             >

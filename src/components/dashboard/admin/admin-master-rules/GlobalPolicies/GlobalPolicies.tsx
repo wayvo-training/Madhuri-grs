@@ -30,7 +30,7 @@ export function GlobalPolicies({
             manual review limits, and escalation parameters.
           </p>
         </div>
-        <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-[#064E3B]">
+        <span className="rounded-md bg-[#F0FDFA] px-2.5 py-1 text-xs font-semibold text-[#0F766E]">
           {reopenPolicies.length} Active Organization{" "}
           {reopenPolicies.length === 1 ? "Policy" : "Policies"}
         </span>

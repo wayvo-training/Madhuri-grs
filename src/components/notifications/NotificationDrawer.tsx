@@ -136,6 +136,19 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
     if (type === "GRIEVANCE_UPDATE" || t.includes("internal note")) {
       return <Info className="h-4 w-4 text-blue-500" />;
     }
+    if (
+      type === "ADDITIONAL_INFO_REQUESTED" ||
+      t.includes("additional info") ||
+      t.includes("action required")
+    ) {
+      return <CircleAlert className="h-4 w-4 text-amber-500" />;
+    }
+    if (
+      type === "ADDITIONAL_INFO_SUBMITTED" ||
+      t.includes("responded with documents")
+    ) {
+      return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
+    }
     if (type === "ASSIGNMENT") {
       return <Briefcase className="h-4 w-4 text-emerald-500" />;
     }

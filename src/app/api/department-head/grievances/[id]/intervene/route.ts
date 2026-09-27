@@ -82,6 +82,30 @@ export async function POST(
       } catch {
         // ignore
       }
+
+      if (parsedTargetStaffId) {
+        const activeCount = await prisma.assignments.count({
+          where: {
+            staff_id: parsedTargetStaffId,
+            assignment_status: "ASSIGNED",
+            grievance_id: { not: grievanceId },
+            grievances: {
+              status: { notIn: ["CLOSED"] },
+            },
+          },
+        });
+
+        if (activeCount >= 10) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "This Staff member has reached the maximum active workload of 10 grievances.",
+            },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     const currentAssignedStaff =

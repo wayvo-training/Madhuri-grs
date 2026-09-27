@@ -145,7 +145,7 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("routing")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "routing"
-                ? "bg-white text-[#064E3B] shadow-xs"
+                ? "bg-white text-[#0F766E] shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -156,7 +156,7 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("priority")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "priority"
-                ? "bg-white text-[#064E3B] shadow-xs"
+                ? "bg-white text-[#0F766E] shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -167,7 +167,7 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("sla")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "sla"
-                ? "bg-white text-[#064E3B] shadow-xs"
+                ? "bg-white text-[#0F766E] shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -178,7 +178,7 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("reopen")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "reopen"
-                ? "bg-white text-[#064E3B] shadow-xs"
+                ? "bg-white text-[#0F766E] shadow-xs"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -679,7 +679,7 @@ export function AdminRuleConfigModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-800 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               <span>Save Policy</span>

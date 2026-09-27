@@ -66,11 +66,11 @@ export default function HowItsWork() {
                 >
                   {/* Step Connector Line (Desktop Only) */}
                   {idx < stages.length - 1 && (
-                    <div className="hidden md:block absolute top-6 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-0.5 bg-linear-to-r from-emerald-200 to-slate-200 z-0" />
+                    <div className="hidden md:block absolute top-6 left-[calc(50%+28px)] right-[calc(-50%+28px)] h-0.5 bg-linear-to-r from-teal-200 to-slate-200 z-0" />
                   )}
 
                   {/* Icon Node */}
-                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-emerald-100 bg-emerald-50 text-[#064E3B] shadow-xs transition-all duration-300 group-hover:scale-105 group-hover:border-emerald-500 group-hover:bg-[#064E3B] group-hover:text-white">
+                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-teal-100 bg-[#F0FDFA] text-[#0F766E] shadow-xs transition-all duration-300 group-hover:scale-105 group-hover:border-teal-500 group-hover:bg-[#0F766E] group-hover:text-white">
                     <Icon className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
 
                     {/* Small number badge */}
@@ -80,7 +80,7 @@ export default function HowItsWork() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="mt-4 text-sm font-bold text-slate-950 transition-colors group-hover:text-emerald-800">
+                  <h3 className="mt-4 text-sm font-bold text-slate-950 transition-colors group-hover:text-[#0F766E]">
                     {stage.title}
                   </h3>
 

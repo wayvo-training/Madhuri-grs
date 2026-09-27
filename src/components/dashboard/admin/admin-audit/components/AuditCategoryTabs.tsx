@@ -23,7 +23,7 @@ export function AuditCategoryTabs({
             onClick={() => onTabChange(tab.id)}
             className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
               isActive
-                ? "bg-[#064E3B] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white shadow-xs"
                 : "bg-slate-100/80 text-slate-600 hover:bg-slate-200/70"
             }`}
           >

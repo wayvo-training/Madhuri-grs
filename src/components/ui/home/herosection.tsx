@@ -44,7 +44,7 @@ export default function HeroSection({
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <Link
             href={ctaHref}
-            className="group inline-flex items-center gap-2 rounded-xl bg-[#064E3B] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-emerald-950/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-900"
+            className="group inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-teal-950/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#115E59]"
           >
             {ctaText}
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
@@ -52,9 +52,9 @@ export default function HeroSection({
 
           <a
             href="#track"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/40 hover:text-emerald-900"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-[#F0FDFA] hover:text-[#0F766E]"
           >
-            <Search className="h-4 w-4 text-emerald-700" />
+            <Search className="h-4 w-4 text-[#0F766E]" />
             Track Existing Grievance
           </a>
         </div>

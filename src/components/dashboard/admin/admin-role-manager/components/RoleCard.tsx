@@ -32,7 +32,7 @@ export function RoleCard({
             <div
               className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold text-xs ${
                 role.status === "ACTIVE"
-                  ? "bg-emerald-100 text-[#064E3B]"
+                  ? "bg-[#F0FDFA] text-[#0F766E] border border-teal-200/60"
                   : "bg-slate-200 text-slate-600"
               }`}
             >

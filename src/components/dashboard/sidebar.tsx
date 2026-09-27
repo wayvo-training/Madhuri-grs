@@ -152,7 +152,7 @@ export function DashboardSidebar({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold text-white shadow-md shadow-emerald-950/25 hover:scale-105 hover:bg-[#043d2e] transition-all cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25 hover:scale-105 hover:bg-[#115E59] transition-all cursor-pointer"
                 title="Open sidebar"
                 aria-label="Open sidebar"
               >
@@ -166,7 +166,7 @@ export function DashboardSidebar({
           ) : (
             <>
               <Link href="/" className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold text-white shadow-md shadow-emerald-950/25">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25">
                   G
                 </div>
                 <div>
@@ -258,7 +258,7 @@ export function DashboardSidebar({
                             onClick={(e) => handleItemClick(e, item.href)}
                             className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150 ${
                               isActive
-                                ? "bg-[#064E3B] text-white shadow-sm shadow-emerald-950/20"
+                                ? "bg-[#0F766E] text-white shadow-sm shadow-teal-950/20"
                                 : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                             }`}
                             aria-label={item.title}
@@ -288,7 +288,7 @@ export function DashboardSidebar({
                         onClick={(e) => handleItemClick(e, item.href)}
                         className={`group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-3.75 font-medium tracking-[-0.01em] transition-all duration-150 ${
                           isActive
-                            ? "bg-[#064E3B] text-white shadow-sm shadow-emerald-950/20"
+                            ? "bg-[#0F766E] text-white shadow-sm shadow-teal-950/20"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                       >
@@ -333,7 +333,7 @@ export function DashboardSidebar({
               <div className="relative group">
                 <div
                   title={`${userName} (${roleDisplayLabels[userRole]})`}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100/80 text-base font-bold text-[#064E3B] cursor-pointer shadow-2xs hover:ring-2 hover:ring-emerald-600/30 transition"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80 cursor-pointer shadow-2xs hover:ring-2 hover:ring-teal-600/30 transition"
                 >
                   {userName.charAt(0).toUpperCase()}
                 </div>
@@ -363,7 +363,7 @@ export function DashboardSidebar({
           ) : (
             <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-3">
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100/80 text-base font-bold text-[#064E3B]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80">
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">

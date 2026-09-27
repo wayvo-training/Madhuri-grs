@@ -27,7 +27,7 @@ export function AdminToolbarAction({
       size="sm"
       className={cn(
         "rounded-xl",
-        variant === "default" && "bg-[#064E3B] text-white hover:bg-emerald-900",
+        variant === "default" && "bg-[#0F766E] text-white hover:bg-[#115E59]",
       )}
     >
       {children}

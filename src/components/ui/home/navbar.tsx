@@ -10,7 +10,7 @@ export default function Navbar() {
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#064E3B] text-lg font-bold text-white shadow-sm shadow-emerald-950/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-sm shadow-teal-950/20">
             G
           </div>
 
@@ -28,34 +28,34 @@ export default function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 sm:block"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block"
           >
             Home
           </Link>
 
           <Link
             href="/#track"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 sm:block"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block"
           >
             Track Status
           </Link>
 
           <Link
             href="/#how-it-works"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 md:block"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] md:block"
           >
             How It Works
           </Link>
 
           <Link
             href="/faq"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-700 sm:block"
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block"
           >
             FAQ
           </Link>
 
           <Link href="/login">
-            <Button className="rounded-xl bg-[#064E3B] px-5 font-medium text-white shadow-sm transition-all hover:bg-emerald-900">
+            <Button className="rounded-xl bg-[#0F766E] px-5 font-medium text-white shadow-sm transition-all hover:bg-[#115E59]">
               Login
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>

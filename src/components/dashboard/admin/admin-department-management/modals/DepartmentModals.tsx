@@ -262,7 +262,7 @@ export function DepartmentModals({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
                 >
                   {isSubmitting ? (
                     <>
@@ -387,7 +387,7 @@ export function DepartmentModals({
                 <button
                   type="submit"
                   disabled={isEditSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
                 >
                   {isEditSubmitting ? (
                     <>

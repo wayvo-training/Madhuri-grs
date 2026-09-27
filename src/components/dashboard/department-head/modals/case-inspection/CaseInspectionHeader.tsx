@@ -30,13 +30,13 @@ export function CaseInspectionHeader({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-emerald-900 transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#0F766E] transition cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to SLA Monitoring</span>
         </button>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold text-[#064E3B] bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/80">
+          <span className="font-mono text-xs font-bold text-[#0F766E] bg-[#F0FDFA] px-2.5 py-1 rounded-md border border-teal-200/80">
             {ticketCode}
           </span>
           <button

@@ -74,6 +74,13 @@ export function CaseFileInspectionModal({
       .then((json) => {
         if (isMounted && json.success && json.data) {
           setCaseProgressData(json.data);
+          if (json.data.internalNotes || json.data.grievance?.internalNotes) {
+            setCurrentGrievance((prev) => ({
+              ...prev,
+              internalNotes:
+                json.data.internalNotes || json.data.grievance?.internalNotes,
+            }));
+          }
         }
       })
       .catch((err) => {
@@ -140,7 +147,7 @@ export function CaseFileInspectionModal({
             onClick={() => setActiveTab("progress")}
             className={`py-3 border-b-2 transition flex items-center gap-1.5 cursor-pointer ${
               activeTab === "progress"
-                ? "border-[#064E3B] text-[#064E3B]"
+                ? "border-[#0F766E] text-[#0F766E]"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -154,7 +161,7 @@ export function CaseFileInspectionModal({
             onClick={() => setActiveTab("statement")}
             className={`py-3 border-b-2 transition cursor-pointer ${
               activeTab === "statement"
-                ? "border-[#064E3B] text-[#064E3B]"
+                ? "border-[#0F766E] text-[#0F766E]"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
@@ -165,7 +172,7 @@ export function CaseFileInspectionModal({
             onClick={() => setActiveTab("notes")}
             className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
               activeTab === "notes"
-                ? "border-[#064E3B] text-[#064E3B]"
+                ? "border-[#0F766E] text-[#0F766E]"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >

@@ -86,7 +86,7 @@ export function AuditLogTable({
             <tr>
               <td colSpan={6} className="py-14 text-center">
                 <div className="mx-auto flex max-w-sm flex-col items-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-[#064E3B] ring-8 ring-emerald-50/50">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0FDFA] text-[#0F766E] ring-8 ring-teal-50/50">
                     <Activity className="h-6 w-6" />
                   </div>
                   <h3 className="mt-4 text-sm font-bold text-slate-900">
@@ -156,7 +156,7 @@ export function AuditLogTable({
 
                   <td className="whitespace-nowrap px-3 py-3.5">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-xs font-bold text-[#064E3B]">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F0FDFA] text-xs font-bold text-[#0F766E]">
                         {log.user_name.charAt(0).toUpperCase()}
                       </div>
                       <div>

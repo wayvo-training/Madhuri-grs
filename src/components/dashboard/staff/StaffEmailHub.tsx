@@ -100,7 +100,7 @@ export function StaffEmailHub({
               href={directGmailUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               <span>Open Official Gmail</span>
@@ -198,7 +198,7 @@ export function StaffEmailHub({
                           onClick={() => setSelectedCase(c)}
                           className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer ${
                             isSelected
-                              ? "bg-emerald-800 text-white"
+                              ? "bg-[#0F766E] text-white"
                               : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                           }`}
                         >
@@ -208,7 +208,7 @@ export function StaffEmailHub({
                           href={inquiryUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
                           title={`Send official inquiry to ${c.submitterName} via Gmail`}
                         >
                           <Send className="h-3 w-3" />

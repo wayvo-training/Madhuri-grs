@@ -274,6 +274,7 @@ CREATE TABLE grievances (
             'ROUTED',
             'ASSIGNED',
             'IN_PROGRESS',
+            'WAITING_ON_USER',
             'UNDER_REVIEW',
             'REOPENED',
             'REOPEN_REVIEW',

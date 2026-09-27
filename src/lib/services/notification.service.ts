@@ -14,6 +14,8 @@ export type NotificationType =
   | "RESOLUTION_SUBMITTED"
   | "RESOLUTION_ACCEPTED"
   | "REWORK_REQUIRED"
+  | "ADDITIONAL_INFO_REQUESTED"
+  | "ADDITIONAL_INFO_SUBMITTED"
   // Legacy support
   | "SLA_WARNING"
   | "SLA_BREACH"

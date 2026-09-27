@@ -54,7 +54,7 @@ export function DepartmentHeadViewSwitcher({
             onClick={() => switchView("overview")}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition shadow-2xs ${
               activeView === "overview"
-                ? "bg-[#064E3B] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
@@ -67,7 +67,7 @@ export function DepartmentHeadViewSwitcher({
             onClick={() => switchView("queue")}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition shadow-2xs ${
               activeView === "queue"
-                ? "bg-[#064E3B] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
@@ -89,7 +89,7 @@ export function DepartmentHeadViewSwitcher({
             onClick={() => switchView("staff")}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition shadow-2xs ${
               activeView === "staff"
-                ? "bg-[#064E3B] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
@@ -111,7 +111,7 @@ export function DepartmentHeadViewSwitcher({
             onClick={() => switchView("sla")}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition shadow-2xs ${
               activeView === "sla"
-                ? "bg-[#064E3B] text-white shadow-xs"
+                ? "bg-[#0F766E] text-white shadow-xs"
                 : "bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >

@@ -7,7 +7,7 @@ export interface ActionMenuItem {
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
-  variant?: "default" | "warning" | "danger";
+  variant?: "default" | "primary" | "warning" | "danger";
 }
 
 interface ActionMenuProps {
@@ -16,7 +16,7 @@ interface ActionMenuProps {
   widthClass?: string;
 }
 
-export function ActionMenu({ items, widthClass = "w-32" }: ActionMenuProps) {
+export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,9 +44,10 @@ export function ActionMenu({ items, widthClass = "w-32" }: ActionMenuProps) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition shadow-xs"
+        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer"
         aria-expanded={isOpen}
         aria-haspopup="true"
+        title="More actions"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -58,14 +59,17 @@ export function ActionMenu({ items, widthClass = "w-32" }: ActionMenuProps) {
           <div className="p-1">
             {items.map((item) => {
               const baseClass =
-                "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition";
+                "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition cursor-pointer text-left";
 
               let variantClass =
-                "text-slate-700 hover:bg-slate-50 hover:text-emerald-700";
+                "text-slate-700 hover:bg-[#F0FDFA] hover:text-[#0F766E]";
+              if (item.variant === "primary")
+                variantClass =
+                  "text-[#0F766E] font-semibold hover:bg-[#F0FDFA]";
               if (item.variant === "warning")
                 variantClass = "text-amber-700 hover:bg-amber-50";
               if (item.variant === "danger")
-                variantClass = "text-red-700 hover:bg-red-50";
+                variantClass = "text-rose-700 hover:bg-rose-50";
 
               // If no icon is provided, center the text for a cleaner look
               const alignmentClass = item.icon

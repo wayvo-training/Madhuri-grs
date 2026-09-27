@@ -41,7 +41,7 @@ export function DepartmentHeadLeaveReassignmentModal({
       <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl my-8">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100/70 text-[#064E3B]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0FDFA] text-[#0F766E]">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
@@ -153,12 +153,27 @@ export function DepartmentHeadLeaveReassignmentModal({
                   (candidate) =>
                     candidate.id !== staff.id && candidate.status === "ACTIVE",
                 )
-                .map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name} ({candidate.designation}) &bull;{" "}
-                    {candidate.activeTickets}/{candidate.maxCapacity} active
-                  </option>
-                ))}
+                .map((candidate) => {
+                  const capacity = candidate.maxCapacity || 10;
+                  const available = Math.max(
+                    0,
+                    capacity - candidate.activeTickets,
+                  );
+                  const cannotAcceptAll =
+                    candidate.activeTickets + staff.activeTickets > capacity;
+                  return (
+                    <option
+                      key={candidate.id}
+                      value={candidate.id}
+                      disabled={cannotAcceptAll}
+                    >
+                      {candidate.name} ({candidate.designation}) &bull; Active
+                      Workload: {candidate.activeTickets} / {capacity}{" "}
+                      (Available Capacity: {available})
+                      {cannotAcceptAll ? " [EXCEEDS 10 LIMIT]" : ""}
+                    </option>
+                  );
+                })}
             </select>
           </div>
 
@@ -197,7 +212,7 @@ export function DepartmentHeadLeaveReassignmentModal({
             <button
               type="submit"
               disabled={!targetStaffId}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50"
             >
               <UserPlus className="h-3.5 w-3.5" />
               <span>Bulk Reassign & Mark Leave</span>

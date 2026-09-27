@@ -1,10 +1,13 @@
 import {
   AlertTriangle,
   Building2,
+  CheckCircle2,
   FileText,
   LayoutDashboard,
+  Search,
   ShieldCheck,
   Sliders,
+  User,
   Users,
 } from "lucide-react";
 import type { ElementType } from "react";
@@ -116,12 +119,42 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
 
   STAFF: [
     {
-      label: "Staff Workspace",
+      label: "Work",
       items: [
         {
-          title: "Staff Overview",
+          title: "Dashboard",
           href: "/staff/dashboard",
           icon: LayoutDashboard,
+        },
+        {
+          title: "My Grievances",
+          href: "/staff/dashboard#queue",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      label: "Processing",
+      items: [
+        {
+          title: "Investigation",
+          href: "/staff/dashboard#investigation",
+          icon: Search,
+        },
+        {
+          title: "Resolution",
+          href: "/staff/dashboard#resolutions",
+          icon: CheckCircle2,
+        },
+      ],
+    },
+    {
+      label: "Other",
+      items: [
+        {
+          title: "Profile",
+          href: "/staff/dashboard#profile",
+          icon: User,
         },
       ],
     },

@@ -55,7 +55,12 @@ export async function GET(req: NextRequest) {
     if (statusUpper === "ASSIGNED") {
       currentStage = 2;
     } else if (
-      ["UNDER_INVESTIGATION", "IN_PROGRESS", "ESCALATED"].includes(statusUpper)
+      [
+        "UNDER_INVESTIGATION",
+        "IN_PROGRESS",
+        "WAITING_ON_USER",
+        "ESCALATED",
+      ].includes(statusUpper)
     ) {
       currentStage = 3;
     } else if (["RESOLVED", "CLOSED"].includes(statusUpper)) {
@@ -71,9 +76,12 @@ export async function GET(req: NextRequest) {
     );
 
     const investigatingHistory = grievance.grievance_status_history.find((h) =>
-      ["IN_PROGRESS", "UNDER_INVESTIGATION", "ESCALATED"].includes(
-        h.new_status,
-      ),
+      [
+        "IN_PROGRESS",
+        "UNDER_INVESTIGATION",
+        "WAITING_ON_USER",
+        "ESCALATED",
+      ].includes(h.new_status),
     );
 
     return NextResponse.json({

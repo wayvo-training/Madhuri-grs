@@ -5,6 +5,7 @@ export type GrievanceStatus =
   | "ROUTED"
   | "ASSIGNED"
   | "IN_PROGRESS"
+  | "WAITING_ON_USER"
   | "UNDER_REVIEW"
   | "REOPENED"
   | "REOPEN_REVIEW"
@@ -78,8 +79,15 @@ export function StatusBadge({ status }: { status: GrievanceStatus | string }) {
       );
     case "IN_PROGRESS":
       return (
-        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/80 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+        <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
           In Progress
+        </span>
+      );
+    case "WAITING_ON_USER":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+          Waiting on User
         </span>
       );
     case "UNDER_REVIEW":
@@ -131,8 +139,8 @@ export function SlaBadge({ status }: { status?: SlaStatus | string | null }) {
   switch (normalized) {
     case "BREACHED":
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-900">
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-600" />
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-800">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
           SLA Breached
         </span>
       );

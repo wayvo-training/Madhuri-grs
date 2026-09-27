@@ -202,16 +202,18 @@ export async function calculateStaffRecommendations(
 
   const affinityKeywords = CATEGORY_SKILL_AFFINITY[categoryName] || [];
 
-  const maxCapacity = 8;
+  const maxCapacity = 10;
 
   // 3. Score each candidate
   const scoredList: StaffRecommendationResult[] = candidates.map((staff) => {
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
-    // Workload calculation
+    // Workload calculation (only active assigned cases, excluding closed)
     const activeAssignments =
       staff.assignments_assignments_staff_idTousers.filter(
-        (a) => a.assignment_status === "ASSIGNED",
+        (a) =>
+          a.assignment_status === "ASSIGNED" &&
+          a.grievances?.status !== "CLOSED",
       );
     const activeWorkload = activeAssignments.length;
 
@@ -303,18 +305,20 @@ export async function calculateStaffRecommendations(
     if (activeWorkload === 0) workloadScore = 20;
     else if (activeWorkload === 1) workloadScore = 19;
     else if (activeWorkload === 2) workloadScore = 18;
-    else if (activeWorkload === 3) workloadScore = 15;
-    else if (activeWorkload === 4) workloadScore = 12;
-    else if (activeWorkload === 5) workloadScore = 9;
-    else if (activeWorkload === 6) workloadScore = 6;
-    else if (activeWorkload === 7) workloadScore = 3;
+    else if (activeWorkload === 3) workloadScore = 16;
+    else if (activeWorkload === 4) workloadScore = 14;
+    else if (activeWorkload === 5) workloadScore = 12;
+    else if (activeWorkload === 6) workloadScore = 9;
+    else if (activeWorkload === 7) workloadScore = 6;
+    else if (activeWorkload === 8) workloadScore = 4;
+    else if (activeWorkload === 9) workloadScore = 2;
     else workloadScore = 0;
 
     // --- Factor 4: Availability (10%) ---
     let availabilityScore = 0;
-    if (availabilityStatus === "AVAILABLE") {
+    if (availabilityStatus === "AVAILABLE" && activeWorkload < 10) {
       availabilityScore = activeWorkload <= 4 ? 10 : 7;
-    } else if (availabilityStatus === "BUSY") {
+    } else if (availabilityStatus === "BUSY" || activeWorkload >= 10) {
       availabilityScore = 2;
     } else {
       availabilityScore = 0;
@@ -378,26 +382,35 @@ export async function calculateStaffRecommendations(
       bulletReasons.push("Qualified for category procedures");
     }
 
-    if (availabilityStatus === "AVAILABLE") {
+    if (availabilityStatus === "AVAILABLE" && activeWorkload < 10) {
       bulletReasons.push("Available on active duty");
+    } else if (activeWorkload >= 10) {
+      bulletReasons.push(
+        "Maximum active capacity reached (10 / 10 assigned) - Ineligible for new assignments",
+      );
     } else if (availabilityStatus === "BUSY") {
       bulletReasons.push("Currently near maximum assignment capacity");
     } else {
       bulletReasons.push("On approved leave");
     }
 
-    if (activeWorkload <= 2) {
-      bulletReasons.push(
-        `Low current workload (${activeWorkload} / ${maxCapacity} assigned)`,
-      );
-    } else if (activeWorkload <= 5) {
-      bulletReasons.push(
-        `Moderate workload (${activeWorkload} / ${maxCapacity} assigned)`,
-      );
+    if (activeWorkload >= 10) {
+      bulletReasons.push("Available Capacity: 0");
     } else {
-      bulletReasons.push(
-        `High active workload (${activeWorkload} / ${maxCapacity} assigned)`,
-      );
+      const availCap = 10 - activeWorkload;
+      if (activeWorkload <= 2) {
+        bulletReasons.push(
+          `Low current workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+        );
+      } else if (activeWorkload <= 6) {
+        bulletReasons.push(
+          `Moderate workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+        );
+      } else {
+        bulletReasons.push(
+          `High active workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+        );
+      }
     }
 
     if (isHighPriority) {
@@ -448,20 +461,30 @@ export async function calculateStaffRecommendations(
     };
   });
 
-  // Sort by score descending (and lower workload secondary)
+  // Sort candidates:
+  // 1. Prefer eligible Staff whose active workload is below 10 (ranked ahead of 10/10 candidates)
+  // 2. Score descending
+  // 3. Lower active workload secondary
   scoredList.sort((a, b) => {
+    const aEligible =
+      a.activeWorkload < 10 && a.availabilityStatus !== "ON_LEAVE";
+    const bEligible =
+      b.activeWorkload < 10 && b.availabilityStatus !== "ON_LEAVE";
+    if (aEligible !== bEligible) {
+      return aEligible ? -1 : 1;
+    }
     if (b.score !== a.score) {
       return b.score - a.score;
     }
     return a.activeWorkload - b.activeWorkload;
   });
 
-  // Flag the top recommendation
-  if (
-    scoredList.length > 0 &&
-    scoredList[0].availabilityStatus === "AVAILABLE"
-  ) {
-    scoredList[0].isTopRecommendation = true;
+  // Flag the top recommendation (ONLY eligible staff with activeWorkload < 10 can be top recommendation)
+  const topEligible = scoredList.find(
+    (c) => c.availabilityStatus === "AVAILABLE" && c.activeWorkload < 10,
+  );
+  if (topEligible) {
+    topEligible.isTopRecommendation = true;
   }
 
   return {

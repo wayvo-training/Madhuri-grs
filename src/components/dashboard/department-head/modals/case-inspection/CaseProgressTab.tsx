@@ -374,7 +374,7 @@ export function CaseProgressTab({
               <button
                 type="button"
                 onClick={() => onAssignClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900 transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 <span>Assign Officer Now</span>

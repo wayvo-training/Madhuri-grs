@@ -21,10 +21,10 @@ function MetricCard({
 }) {
   const styles = {
     emerald: {
-      chip: "bg-emerald-50 text-[#064E3B]",
+      chip: "bg-[#F0FDFA] text-[#0F766E]",
       value: "text-slate-900",
-      accent: "text-[#064E3B]",
-      dot: "bg-emerald-600",
+      accent: "text-[#0F766E]",
+      dot: "bg-[#0F766E]",
     },
     amber: {
       chip: "bg-amber-50 text-amber-800 border border-amber-200",

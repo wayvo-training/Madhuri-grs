@@ -334,9 +334,13 @@ export function useGrievanceActions({
       const trimmedNote = noteText.trim();
       if (!trimmedNote) return;
 
+      const headDisplayName = currentHodName.startsWith("Department Head")
+        ? currentHodName
+        : `Department Head — ${currentHodName}`;
+
       const newNoteObj = {
         id: `note-${Date.now()}`,
-        author: `${currentHodName} (Department Head)`,
+        author: headDisplayName,
         role: "Department Head",
         timestamp: "Just now",
         note: trimmedNote,
@@ -345,30 +349,39 @@ export function useGrievanceActions({
       const newAudit: EscalationAuditRecord = {
         id: `aud-${Date.now()}-note`,
         timestamp: "Just now",
-        actor: `${hodName} (Department Head)`,
-        action: "HOD Internal Directive Recorded",
-        details: `Directive: "${trimmedNote}"`,
+        actor: headDisplayName,
+        action: "Internal Note",
+        details: trimmedNote,
         stage: grievance.status,
       };
 
       const updatedGrievance: GrievanceItem = {
         ...grievance,
         internalNotes: [...(grievance.internalNotes || []), newNoteObj],
-        auditTrail: [...(grievance.auditTrail || []), newAudit],
+        auditTrail: [newAudit, ...(grievance.auditTrail || [])],
       };
 
       setGrievances((prev) =>
         prev.map((g) => (g.id === grievance.id ? updatedGrievance : g)),
       );
 
-      showSuccess(`Added internal directive to ${grievance.ticketCode}`, 4000);
+      showSuccess(`Added internal note to ${grievance.ticketCode}`, 4000);
 
       try {
-        await fetch(`/api/department-head/grievances/${grievance.id}/notes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ note: trimmedNote }),
-        });
+        const res = await fetch(
+          `/api/department-head/grievances/${grievance.id}/notes`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ note: trimmedNote }),
+          },
+        );
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson?.note?.id) {
+            newNoteObj.id = resJson.note.id;
+          }
+        }
         loadData(undefined, true);
       } catch (err) {
         console.error("Failed to persist internal note to database:", err);
@@ -376,7 +389,7 @@ export function useGrievanceActions({
 
       return updatedGrievance;
     },
-    [currentHodName, hodName, loadData, setGrievances, showSuccess],
+    [currentHodName, loadData, setGrievances, showSuccess],
   );
 
   const handleDownloadDocument = useCallback(

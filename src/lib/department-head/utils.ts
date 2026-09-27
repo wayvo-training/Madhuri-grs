@@ -79,7 +79,13 @@ export function formatAuditActionTitle(action: string): string {
     return "Department Head Intervention Directive";
   }
   if (act.includes("HOD_DIRECTIVE_NOTE")) {
-    return "Internal Directive Note";
+    return "Internal Note";
+  }
+  if (
+    act.includes("INVESTIGATION_NOTE_ADDED") ||
+    act.includes("INTERNAL_NOTE_ADDED")
+  ) {
+    return "Investigation Note";
   }
   return action
     .replace(/_/g, " ")

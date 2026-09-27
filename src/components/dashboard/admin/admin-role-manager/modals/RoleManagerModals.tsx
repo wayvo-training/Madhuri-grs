@@ -67,7 +67,7 @@ export function RoleManagerModals({
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
+                <div className="rounded-lg bg-[#F0FDFA] p-1.5 text-[#0F766E]">
                   <KeyRound className="h-4 w-4" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">
@@ -246,7 +246,7 @@ export function RoleManagerModals({
                 <button
                   type="submit"
                   disabled={isSubmitting || !newRoleName.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50"
                 >
                   {isSubmitting && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -264,7 +264,7 @@ export function RoleManagerModals({
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-emerald-50 p-1.5 text-[#064E3B]">
+                <div className="rounded-lg bg-[#F0FDFA] p-1.5 text-[#0F766E]">
                   <Pencil className="h-4 w-4" />
                 </div>
                 <h3 className="text-base font-bold text-slate-900">
@@ -429,7 +429,7 @@ export function RoleManagerModals({
                 <button
                   type="submit"
                   disabled={isEditSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50"
                 >
                   {isEditSubmitting && (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />

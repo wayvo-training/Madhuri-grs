@@ -108,7 +108,10 @@ export async function GET(request: Request) {
         email: true,
         status: true,
         assignments_assignments_staff_idTousers: {
-          where: { assignment_status: "ASSIGNED" },
+          where: {
+            assignment_status: "ASSIGNED",
+            grievances: { status: { notIn: ["CLOSED"] } },
+          },
           select: { assignment_id: true },
         },
       },
@@ -121,7 +124,7 @@ export async function GET(request: Request) {
     const onLeaveStaffCount = staffMembers.filter(
       (s) => s.status === "ON_LEAVE",
     ).length;
-    const totalStaffCapacity = totalStaffCount * 8; // standard 8 ticket capacity per officer
+    const totalStaffCapacity = totalStaffCount * 10; // 10 active grievances capacity per staff member
     const totalActiveTickets = staffMembers.reduce(
       (acc, s) => acc + s.assignments_assignments_staff_idTousers.length,
       0,

@@ -159,7 +159,7 @@ Department Head`;
               type="button"
               onClick={handlePostInApp}
               disabled={isSubmitting || !directiveText.trim()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
             >
               <Send className="h-3.5 w-3.5" />
               <span>

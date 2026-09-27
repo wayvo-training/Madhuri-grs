@@ -16,7 +16,10 @@ export interface CustomSelectProps {
   options: CustomSelectOption[];
   placeholder?: string;
   className?: string;
+  buttonClassName?: string;
   disabled?: boolean;
+  align?: "left" | "right";
+  size?: "sm" | "md";
   "aria-label"?: string;
   id?: string;
 }
@@ -27,7 +30,10 @@ export function CustomSelect({
   options,
   placeholder,
   className = "",
+  buttonClassName = "",
   disabled = false,
+  align = "left",
+  size = "md",
   "aria-label": ariaLabel,
   id,
 }: CustomSelectProps) {
@@ -72,12 +78,21 @@ export function CustomSelect({
     ? selectedOption.label
     : placeholder || options[0]?.label || "";
 
-  const isActive = value !== "ALL" && value !== "" && value !== undefined;
+  const isActive =
+    Boolean(value) &&
+    value.toUpperCase() !== "ALL" &&
+    value.toLowerCase() !== "all" &&
+    value !== "sla";
 
   const handleSelect = (val: string) => {
     onChange(val);
     setIsOpen(false);
   };
+
+  const sizeClasses =
+    size === "sm"
+      ? "h-8 px-2.5 rounded-lg text-xs"
+      : "h-9 px-3 rounded-xl text-xs";
 
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
@@ -89,13 +104,13 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel || displayLabel}
-        className={`inline-flex h-9 w-full items-center justify-between gap-2 rounded-xl border px-3 text-xs font-medium outline-none transition-all ${
+        className={`inline-flex w-full items-center justify-between gap-2 border font-medium outline-none transition-all ${sizeClasses} ${
           isOpen
             ? "border-emerald-600 bg-white ring-2 ring-emerald-600/20"
             : isActive
               ? "border-emerald-400 bg-emerald-50/70 text-emerald-950 font-semibold ring-1 ring-emerald-600/10 hover:bg-emerald-50"
               : "border-slate-200 bg-slate-50/70 text-slate-700 hover:border-slate-300 hover:bg-slate-100/60"
-        } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+        } ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${buttonClassName}`}
       >
         <span className="truncate flex items-center gap-1.5">
           {selectedOption?.icon}
@@ -112,7 +127,9 @@ export function CustomSelect({
         <div
           role="listbox"
           tabIndex={-1}
-          className="absolute left-0 top-full mt-1.5 z-50 min-w-full max-h-64 w-max overflow-y-auto rounded-xl border border-emerald-100/80 bg-white p-1 shadow-xl shadow-emerald-950/10 ring-1 ring-black/5 animate-in fade-in-0 zoom-in-95 duration-150 custom-scrollbar"
+          className={`absolute ${
+            align === "right" ? "right-0" : "left-0"
+          } top-full mt-1.5 z-50 min-w-full max-h-64 w-max overflow-y-auto rounded-xl border border-emerald-100/80 bg-white p-1 shadow-xl shadow-emerald-950/10 ring-1 ring-black/5 animate-in fade-in-0 zoom-in-95 duration-150 custom-scrollbar`}
         >
           {options.map((option) => {
             const isSelected = option.value === value;

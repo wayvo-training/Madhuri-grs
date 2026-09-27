@@ -127,7 +127,7 @@ export function CaseStatementTab({
                   onClick={() => onDocumentClick(file)}
                   className="flex items-center gap-3 cursor-pointer flex-1 min-w-0 text-left bg-transparent border-0 p-0"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-[#064E3B] shrink-0">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F0FDFA] text-[#0F766E] border border-teal-200/60 shrink-0">
                     {file.name.endsWith(".pdf") ? (
                       <FileText className="h-4.5 w-4.5 text-rose-600" />
                     ) : file.name.endsWith(".jpg") ||
@@ -227,7 +227,7 @@ export function CaseStatementTab({
                 <button
                   type="button"
                   onClick={() => onAssignClick(currentGrievance)}
-                  className="rounded-lg bg-[#064E3B] px-3 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-900"
+                  className="rounded-lg bg-[#0F766E] px-3 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59]"
                 >
                   Assign Officer Now
                 </button>

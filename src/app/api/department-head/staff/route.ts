@@ -24,6 +24,9 @@ export async function GET(request: Request) {
         assignments_assignments_staff_idTousers: {
           where: {
             assignment_status: "ASSIGNED",
+            grievances: {
+              status: { notIn: ["CLOSED"] },
+            },
           },
           select: {
             assignment_id: true,
@@ -35,7 +38,7 @@ export async function GET(request: Request) {
 
     const staffMembers = rawStaff.map((u) => {
       const activeTickets = u.assignments_assignments_staff_idTousers.length;
-      const maxCapacity = 8;
+      const maxCapacity = 10;
 
       let status: "ACTIVE" | "ON_LEAVE" | "BUSY" = "ACTIVE";
       if (u.status === "ON_LEAVE" || u.status === "INACTIVE") {
@@ -47,7 +50,7 @@ export async function GET(request: Request) {
       const roleDisplay =
         u.roles.role_name === "DEPARTMENT_HEAD"
           ? "Department Head"
-          : "Grievance Officer";
+          : "Grievance Staff";
 
       return {
         id: u.user_id.toString(),

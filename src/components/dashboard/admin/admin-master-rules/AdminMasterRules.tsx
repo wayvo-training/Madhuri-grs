@@ -274,7 +274,7 @@ export function AdminMasterRules({
                   onClick={() => setActiveTab("matrix")}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
                     activeTab === "matrix"
-                      ? "bg-white text-[#064E3B] shadow-xs"
+                      ? "bg-white text-[#0F766E] shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
@@ -287,7 +287,7 @@ export function AdminMasterRules({
                   onClick={() => setActiveTab("global")}
                   className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
                     activeTab === "global"
-                      ? "bg-white text-[#064E3B] shadow-xs"
+                      ? "bg-white text-[#0F766E] shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >

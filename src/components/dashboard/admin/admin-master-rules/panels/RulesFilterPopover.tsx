@@ -43,14 +43,14 @@ export function RulesFilterPopover({
         }
         className={`inline-flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition cursor-pointer shadow-2xs ${
           isFiltered
-            ? "border-emerald-600/60 bg-emerald-50/80 text-emerald-950 font-bold"
+            ? "border-teal-600/60 bg-[#F0FDFA] text-[#0F766E] font-bold"
             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
         }`}
       >
         <Sliders className="h-3.5 w-3.5 text-slate-500" />
         <span>Filters</span>
         {isFiltered && (
-          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#064E3B] px-1 text-2xs font-bold text-white">
+          <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#0F766E] px-1 text-2xs font-bold text-white">
             {(deptFilter !== "ALL" ? 1 : 0) +
               (catFilter !== "ALL" ? 1 : 0) +
               (statusFilter !== "ALL" ? 1 : 0)}
@@ -162,7 +162,7 @@ export function RulesFilterPopover({
             <button
               type="button"
               onClick={() => setActiveDropdown(null)}
-              className="rounded-lg bg-[#064E3B] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-emerald-800 transition cursor-pointer"
+              className="rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
             >
               Done
             </button>

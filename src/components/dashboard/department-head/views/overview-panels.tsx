@@ -239,7 +239,13 @@ export function TeamCapacityPanel({
                     {staff.name}
                   </span>
                   <span className="text-slate-600 font-medium text-2.75 shrink-0">
-                    {staff.activeTickets}/{staff.maxCapacity} active
+                    Active Workload: {staff.activeTickets} /{" "}
+                    {staff.maxCapacity || 10} (Available Capacity:{" "}
+                    {Math.max(
+                      0,
+                      (staff.maxCapacity || 10) - staff.activeTickets,
+                    )}
+                    )
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -249,7 +255,7 @@ export function TeamCapacityPanel({
                         ? "bg-slate-400"
                         : pct >= 80
                           ? "bg-amber-500"
-                          : "bg-[#064E3B]"
+                          : "bg-[#0F766E]"
                     }`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />

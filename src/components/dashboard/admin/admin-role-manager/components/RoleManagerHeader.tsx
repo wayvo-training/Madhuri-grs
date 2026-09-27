@@ -71,9 +71,9 @@ export function RoleManagerHeader({
         <button
           type="button"
           onClick={() => onTabChange("roles")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer ${
             activeTab === "roles"
-              ? "bg-slate-900 text-white shadow-xs"
+              ? "bg-[#0F766E] text-white shadow-xs"
               : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/60"
           }`}
         >
@@ -82,7 +82,7 @@ export function RoleManagerHeader({
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-bold ${
               activeTab === "roles"
-                ? "bg-slate-800 text-slate-200"
+                ? "bg-white/20 text-white"
                 : "bg-slate-200/70 text-slate-600"
             }`}
           >
@@ -93,9 +93,9 @@ export function RoleManagerHeader({
         <button
           type="button"
           onClick={() => onTabChange("permissions")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer ${
             activeTab === "permissions"
-              ? "bg-slate-900 text-white shadow-xs"
+              ? "bg-[#0F766E] text-white shadow-xs"
               : "bg-slate-100/70 text-slate-600 hover:bg-slate-200/60"
           }`}
         >
@@ -104,7 +104,7 @@ export function RoleManagerHeader({
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-bold ${
               activeTab === "permissions"
-                ? "bg-slate-800 text-slate-200"
+                ? "bg-white/20 text-white"
                 : "bg-slate-200/70 text-slate-600"
             }`}
           >

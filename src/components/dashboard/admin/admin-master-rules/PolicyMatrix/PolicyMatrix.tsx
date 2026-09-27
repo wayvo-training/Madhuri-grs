@@ -54,7 +54,7 @@ export function PolicyMatrix({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-[#064E3B]">
+          <span className="rounded-md bg-[#F0FDFA] px-2.5 py-1 text-xs font-semibold text-[#0F766E]">
             {totalMatrixGrievanceTypes} Grievance{" "}
             {totalMatrixGrievanceTypes === 1 ? "Type" : "Types"} Configured
           </span>

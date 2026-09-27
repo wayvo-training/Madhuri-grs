@@ -139,7 +139,7 @@ export function DepartmentHeadEscalationModal({
                     }
                     className={`rounded-xl border p-2.5 text-left text-xs transition ${
                       bottleneck === value
-                        ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                        ? "w-fit max-w-full self-start border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] font-semibold ring-1 ring-[#0F766E]"
                         : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                     }`}
                   >
@@ -190,7 +190,7 @@ export function DepartmentHeadEscalationModal({
                     }
                     className={`rounded-xl border p-2.5 text-left text-xs transition ${
                       interventionType === value
-                        ? "w-fit max-w-full self-start border-[#064E3B] bg-emerald-50 text-emerald-950 font-semibold ring-1 ring-[#064E3B]"
+                        ? "w-fit max-w-full self-start border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] font-semibold ring-1 ring-[#0F766E]"
                         : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                     }`}
                   >
@@ -222,17 +222,27 @@ export function DepartmentHeadEscalationModal({
                   <option value="">
                     -- Choose an Available Staff Member --
                   </option>
-                  {staffList.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      disabled={s.status === "ON_LEAVE"}
-                    >
-                      {s.name} ({s.designation}) &bull; {s.activeTickets}/
-                      {s.maxCapacity} grievances{" "}
-                      {s.status === "ON_LEAVE" ? "[ON LEAVE]" : "[AVAILABLE]"}
-                    </option>
-                  ))}
+                  {staffList.map((s) => {
+                    const capacity = s.maxCapacity || 10;
+                    const isAtCapacity = s.activeTickets >= capacity;
+                    const availCap = Math.max(0, capacity - s.activeTickets);
+                    return (
+                      <option
+                        key={s.id}
+                        value={s.id}
+                        disabled={s.status === "ON_LEAVE" || isAtCapacity}
+                      >
+                        {s.name} ({s.designation}) &bull; Active Workload:{" "}
+                        {s.activeTickets}/{capacity} (Available Capacity:{" "}
+                        {availCap}){" "}
+                        {s.status === "ON_LEAVE"
+                          ? "[ON LEAVE]"
+                          : isAtCapacity
+                            ? "[AT CAPACITY]"
+                            : "[AVAILABLE]"}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
@@ -302,7 +312,7 @@ export function DepartmentHeadEscalationModal({
               <button
                 type="submit"
                 disabled={interventionType === "REASSIGN" && !targetStaffId}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#064E3B] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />
                 <span>Confirm & Execute Intervention &rarr;</span>

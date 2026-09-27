@@ -368,7 +368,7 @@ export function AdminGrievanceToolbar({
               <button
                 type="button"
                 onClick={handleApply}
-                className="rounded-lg bg-[#064E3B] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-900 transition cursor-pointer"
+                className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
               >
                 Apply
               </button>
