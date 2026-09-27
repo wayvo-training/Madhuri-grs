@@ -155,7 +155,7 @@ export async function calculateStaffRecommendations(
       department_id: targetDeptId,
       status: "ACTIVE",
       roles: {
-        role_name: { in: ["STAFF", "DEPARTMENT_HEAD"] },
+        role_name: "STAFF",
       },
     },
     include: {

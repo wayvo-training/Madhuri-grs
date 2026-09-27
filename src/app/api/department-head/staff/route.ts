@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       where: {
         department_id: departmentId,
         roles: {
-          role_name: { in: ["STAFF", "DEPARTMENT_HEAD"] },
+          role_name: "STAFF",
         },
       },
       include: {
