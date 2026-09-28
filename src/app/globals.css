@@ -71,10 +71,10 @@
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
-  --color-teal-primary: #0F766E;
-  --color-teal-deep: #115E59;
-  --color-teal-accent: #14B8A6;
-  --color-teal-light: #F0FDFA;
+  --color-teal-primary: #0E7490;
+  --color-teal-deep: #155E75;
+  --color-teal-accent: #06B6D4;
+  --color-teal-light: #ECFEFF;
 }
 
 :root {
@@ -88,8 +88,8 @@
   --popover: #FFFFFF;
   --popover-foreground: #0F172A;
 
-  /* GRS Primary Teal (#0F766E) */
-  --primary: #0F766E;
+  /* GRS Primary Teal Blue (#0E7490) */
+  --primary: #0E7490;
   --primary-foreground: #FFFFFF;
 
   /* Secondary - Soft Neutral Slate */
@@ -100,41 +100,41 @@
   --muted: #F1F5F9;
   --muted-foreground: #64748B;
 
-  /* Accent - Light Teal (#F0FDFA) with Primary Teal text */
-  --accent: #F0FDFA;
-  --accent-foreground: #0F766E;
+  /* Accent - Light Teal Blue (#ECFEFF) with Primary Teal Blue text */
+  --accent: #ECFEFF;
+  --accent-foreground: #0E7490;
 
   --destructive: #EF4444;
 
   /* Neutral Border & Ring */
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #0F766E;
+  --ring: #0E7490;
 
-  /* Defined Enterprise Teal Palette */
-  --teal-primary: #0F766E;
-  --teal-deep: #115E59;
-  --teal-accent: #14B8A6;
-  --teal-light: #F0FDFA;
+  /* Defined Enterprise Teal Blue Palette */
+  --teal-primary: #0E7490;
+  --teal-deep: #155E75;
+  --teal-accent: #06B6D4;
+  --teal-light: #ECFEFF;
 
-  /* Chart Colors - Primary Teal, Deep Teal, Accent Teal, Amber, Slate */
-  --chart-1: #0F766E;
-  --chart-2: #115E59;
-  --chart-3: #14B8A6;
+  /* Chart Colors - Primary Teal Blue, Deep Teal Blue, Accent Cyan, Amber, Slate */
+  --chart-1: #0E7490;
+  --chart-2: #155E75;
+  --chart-3: #06B6D4;
   --chart-4: #F59E0B;
   --chart-5: #64748B;
 
   --radius: 0.75rem;
 
-  /* Sidebar - Deep Teal Ground with Teal Elements */
-  --sidebar: #115E59;
+  /* Sidebar - Deep Teal Blue Ground with Teal Blue Elements */
+  --sidebar: #155E75;
   --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #0F766E;
+  --sidebar-primary: #0E7490;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #0F766E;
+  --sidebar-accent: #0E7490;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #14B8A6;
+  --sidebar-ring: #06B6D4;
 }
 
 .dark {
@@ -144,31 +144,31 @@
   --card-foreground: #F8FAFC;
   --popover: #0F172A;
   --popover-foreground: #F8FAFC;
-  --primary: #14B8A6;
-  --primary-foreground: #042F2C;
+  --primary: #06B6D4;
+  --primary-foreground: #042F2E;
   --secondary: #1E293B;
   --secondary-foreground: #F8FAFC;
   --muted: #1E293B;
   --muted-foreground: #94A3B8;
-  --accent: #134E4A;
-  --accent-foreground: #F0FDFA;
+  --accent: #164E63;
+  --accent-foreground: #ECFEFF;
   --destructive: #F87171;
   --border: rgba(255, 255, 255, 0.12);
   --input: rgba(255, 255, 255, 0.16);
-  --ring: #14B8A6;
-  --chart-1: #14B8A6;
-  --chart-2: #0F766E;
-  --chart-3: #2DD4BF;
+  --ring: #06B6D4;
+  --chart-1: #06B6D4;
+  --chart-2: #0E7490;
+  --chart-3: #22D3EE;
   --chart-4: #F59E0B;
   --chart-5: #94A3B8;
-  --sidebar: #042F2C;
+  --sidebar: #0C1E2C;
   --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #14B8A6;
-  --sidebar-primary-foreground: #042F2C;
-  --sidebar-accent: #0F766E;
+  --sidebar-primary: #06B6D4;
+  --sidebar-primary-foreground: #042F2E;
+  --sidebar-accent: #155E75;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #14B8A6;
+  --sidebar-ring: #06B6D4;
 }
 
 @layer base {
@@ -238,20 +238,30 @@
     font-size: 1rem;
   }
 
-  /* Force teal brand accents on form controls and select boxes */
-  select {
-    accent-color: #0F766E;
+  /* Universal selection styling in Teal Blue theme */
+  ::selection {
+    background-color: #0E7490;
+    color: #ffffff;
+  }
+
+  /* Force teal blue brand accents on form controls and select boxes */
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: #0E7490;
   }
 
   select:focus,
   select:focus-visible {
     outline: none;
-    border-color: #0F766E;
-    box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
+    border-color: #0E7490;
+    box-shadow: 0 0 0 2px rgba(14, 116, 144, 0.2);
   }
 
   select option:checked {
-    background-color: #0F766E;
+    background-color: #0E7490;
     color: #ffffff;
   }
 }
@@ -260,20 +270,77 @@
   .grs-gradient {
     background: linear-gradient(
       135deg,
-      #0F766E,
-      #115E59
+      #0E7490,
+      #155E75
     );
   }
 
   .grs-text-gradient {
     background: linear-gradient(
       135deg,
-      #0F766E,
-      #14B8A6
+      #0E7490,
+      #06B6D4
     );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  /* Seamless bridge: Map legacy teal-green arbitrary classes directly to authentic Teal Blue */
+  .bg-\[\#0F766E\],
+  [class*="bg-[#0F766E]"] {
+    background-color: #0E7490 !important;
+  }
+
+  .hover\:bg-\[\#115E59\]:hover,
+  [class*="hover:bg-[#115E59]"]:hover {
+    background-color: #155E75 !important;
+  }
+
+  .text-\[\#0F766E\],
+  [class*="text-[#0F766E]"] {
+    color: #0E7490 !important;
+  }
+
+  .border-\[\#0F766E\],
+  [class*="border-[#0F766E]"] {
+    border-color: #0E7490 !important;
+  }
+
+  .ring-\[\#0F766E\],
+  [class*="ring-[#0F766E]"] {
+    --tw-ring-color: #0E7490 !important;
+  }
+
+  .bg-\[\#115E59\],
+  [class*="bg-[#115E59]"] {
+    background-color: #155E75 !important;
+  }
+
+  .bg-\[\#F0FDFA\],
+  [class*="bg-[#F0FDFA]"] {
+    background-color: #ECFEFF !important;
+  }
+
+  .border-teal-200,
+  [class*="border-teal-200"] {
+    border-color: #A5F3FC !important;
+  }
+
+  /* Landing page & FAQ badge adjustments to ensure zero unwanted green */
+  #track .border-emerald-200,
+  #how-it-works .border-emerald-200,
+  #faq .border-emerald-200,
+  .faq-badge {
+    border-color: #A5F3FC !important;
+    background-color: #ECFEFF !important;
+    color: #0E7490 !important;
+  }
+
+  #track .bg-emerald-600,
+  #how-it-works .bg-emerald-600,
+  #faq .bg-emerald-600 {
+    background-color: #0891B2 !important;
   }
 
   /* Modern sleek scrollbar for internal scroll containers */
@@ -298,5 +365,215 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.6);
+  }
+
+  /* ==========================================================================
+     Comprehensive Application-Wide Dark Mode Support
+     Structured in ascending specificity to ensure clean cascade & 0 linter warnings.
+     ========================================================================== */
+  .dark body {
+    background-color: #0B1120 !important;
+    color: #F8FAFC !important;
+  }
+
+  /* General Page Shell & Background Containers */
+  .dark .bg-slate-50,
+  .dark .bg-slate-50\/50,
+  .dark .bg-slate-50\/60,
+  .dark .bg-slate-50\/70,
+  .dark .bg-\[\#F8FAFC\],
+  .dark [class*="bg-[#F8FAFC]"] {
+    background-color: #0B1120 !important;
+  }
+
+  .dark .bg-slate-100 {
+    background-color: #1E293B !important;
+  }
+
+  /* General Cards, Modals, Drawers & Panels */
+  .dark .bg-white,
+  .dark .bg-white\/90,
+  .dark .bg-white\/95 {
+    background-color: #111C2E !important;
+    color: #F1F5F9 !important;
+  }
+
+  /* General Universal Borders & Dividers */
+  .dark .border-slate-200,
+  .dark .border-slate-200\/80,
+  .dark .border-slate-200\/90,
+  .dark .border-slate-100,
+  .dark .border-slate-300,
+  .dark .border-slate-300\/80 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .dark .divide-slate-100 > * + *,
+  .dark .divide-slate-200 > * + * {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* General Typography Contrast */
+  .dark .text-slate-950,
+  .dark .text-slate-900,
+  .dark .text-slate-800 {
+    color: #F8FAFC !important;
+  }
+
+  .dark .text-slate-700,
+  .dark .text-slate-600 {
+    color: #CBD5E1 !important;
+  }
+
+  .dark .text-slate-500,
+  .dark .text-slate-400 {
+    color: #94A3B8 !important;
+  }
+
+  /* General Hover States */
+  .dark .hover\:bg-slate-50:hover,
+  .dark .hover\:bg-slate-50\/50:hover,
+  .dark .hover\:bg-slate-100:hover {
+    background-color: #1E293B !important;
+  }
+
+  /* General Form Inputs & Controls */
+  .dark input:not([type="checkbox"]):not([type="radio"]),
+  .dark textarea,
+  .dark select {
+    background-color: #0B1120 !important;
+    color: #F8FAFC !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748B !important;
+  }
+
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: #06B6D4 !important;
+    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+  }
+
+  /* General Table Elements */
+  .dark th {
+    background-color: #0C1828 !important;
+    color: #94A3B8 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .dark tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  /* General Badges & Chips */
+  .dark .bg-\[\#ECFEFF\],
+  .dark [class*="bg-[#ECFEFF]"],
+  .dark .bg-cyan-50,
+  .dark .bg-teal-light {
+    background-color: rgba(6, 182, 212, 0.15) !important;
+    color: #22D3EE !important;
+  }
+
+  .dark .border-\[\#A5F3FC\],
+  .dark [class*="border-[#A5F3FC]"],
+  .dark .border-cyan-200 {
+    border-color: rgba(6, 182, 212, 0.3) !important;
+  }
+
+  .dark .text-\[\#0E7490\],
+  .dark [class*="text-[#0E7490]"],
+  .dark .text-teal-primary {
+    color: #22D3EE !important;
+  }
+
+  /* Status Badges */
+  .dark .bg-rose-50,
+  .dark .bg-rose-100 {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    color: #FDA4AF !important;
+  }
+  .dark .border-rose-200 {
+    border-color: rgba(244, 63, 94, 0.3) !important;
+  }
+
+  .dark .bg-amber-50,
+  .dark .bg-amber-100 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #FCD34D !important;
+  }
+  .dark .border-amber-200 {
+    border-color: rgba(245, 158, 11, 0.3) !important;
+  }
+
+  .dark .bg-emerald-50,
+  .dark .bg-emerald-100 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #6EE7B7 !important;
+  }
+  .dark .border-emerald-200 {
+    border-color: rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .dark .bg-blue-50,
+  .dark .bg-blue-100 {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #93C5FD !important;
+  }
+
+  .dark .bg-purple-50,
+  .dark .bg-purple-100 {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    color: #D8B4FE !important;
+  }
+
+  /* Component-Specific Nested Rules (Higher Specificity) */
+  .dark aside,
+  .dark aside .bg-white {
+    background-color: #0C1E2C !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  .dark aside .text-slate-600 {
+    color: #94A3B8 !important;
+  }
+
+  .dark aside .border-slate-100,
+  .dark aside .border-slate-200 {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .dark aside .hover\:bg-slate-100:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .dark aside .hover\:text-slate-900:hover {
+    color: #FFFFFF !important;
+  }
+
+  /* Landing Page Section Badges (ID Specificity) */
+  #track .border-emerald-200,
+  #how-it-works .border-emerald-200,
+  #faq .border-emerald-200,
+  .faq-badge {
+    border-color: #A5F3FC !important;
+    background-color: #ECFEFF !important;
+    color: #0E7490 !important;
+  }
+
+  #track .bg-emerald-600,
+  #how-it-works .bg-emerald-600,
+  #faq .bg-emerald-600 {
+    background-color: #0891B2 !important;
+  }
+
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+  }
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
   }
 }

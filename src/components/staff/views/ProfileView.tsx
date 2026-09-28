@@ -56,7 +56,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-md">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#0E7490] text-white shadow-md">
               <User className="h-7 w-7" />
             </div>
             <div>
@@ -64,7 +64,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
                 <h2 className="text-xl font-bold text-slate-900">
                   {profile.name}
                 </h2>
-                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-xs font-semibold text-emerald-800">
+                <span className="rounded-full bg-[#ECFEFF] border border-[#A5F3FC] px-3 py-0.5 text-xs font-semibold text-[#0E7490]">
                   {profile.departmentName}
                 </span>
                 <span className="rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-xs font-medium">
@@ -101,7 +101,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
               >
-                <Shield className="h-4 w-4 text-emerald-700" />
+                <Shield className="h-4 w-4 text-[#0E7490]" />
                 <span>Contact HOD ({profile.hodName || "Head"})</span>
                 <ExternalLink className="h-3 w-3 opacity-70" />
               </a>
@@ -125,7 +125,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-700" />
+                <Users className="w-4 h-4 text-[#0E7490]" />
                 Active Workload Capacity Policy
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -143,7 +143,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
               </span>
               <span
                 className={`text-xs font-semibold block mt-0.5 ${
-                  availableCapacity === 0 ? "text-rose-600" : "text-emerald-700"
+                  availableCapacity === 0 ? "text-rose-600" : "text-[#0E7490]"
                 }`}
               >
                 Available Capacity: {availableCapacity}
@@ -193,7 +193,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
         {/* Supervisor Card */}
         <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-3">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-emerald-700" />
+            <Shield className="w-4 h-4 text-[#0E7490]" />
             Supervisory Department Head
           </h3>
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1 text-xs">
@@ -201,7 +201,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
               <span className="font-bold text-slate-900 text-sm">
                 {profile.hodName || "Department Head"}
               </span>
-              <span className="text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-semibold border border-emerald-200">
+              <span className="text-[#0E7490] bg-[#ECFEFF] px-2 py-0.5 rounded text-[11px] font-semibold border border-[#A5F3FC]">
                 Department Head
               </span>
             </div>

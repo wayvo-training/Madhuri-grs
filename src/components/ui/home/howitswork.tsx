@@ -38,8 +38,8 @@ export default function HowItsWork() {
       <div className="mx-auto max-w-6xl px-6 lg:px-8">
         {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-[#ECFEFF] px-3 py-1 text-xs font-semibold text-[#0E7490]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#0891B2]" />
             RESOLUTION JOURNEY
           </span>
 

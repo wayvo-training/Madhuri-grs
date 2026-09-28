@@ -400,20 +400,20 @@ export function GrievanceQueue({
                 onClick={() => setIsFilterMenuOpen((prev) => !prev)}
                 className={`inline-flex items-center gap-1.5 rounded-xl border px-3 h-8 text-xs font-semibold transition cursor-pointer ${
                   appliedFiltersCount > 0
-                    ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                    ? "border-[#0E7490] bg-[#ECFEFF] text-[#0E7490]"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
                 <span>Filters</span>
                 {appliedFiltersCount > 0 && (
-                  <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">
+                  <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#0E7490] text-[10px] font-bold text-white">
                     {appliedFiltersCount}
                   </span>
                 )}
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-                    isFilterMenuOpen ? "rotate-180 text-emerald-700" : ""
+                    isFilterMenuOpen ? "rotate-180 text-[#0E7490]" : ""
                   }`}
                 />
               </button>
@@ -423,7 +423,7 @@ export function GrievanceQueue({
               {/* Popover Header */}
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-1.5">
-                  <Filter className="w-3.5 h-3.5 text-emerald-700" />
+                  <Filter className="w-3.5 h-3.5 text-[#0E7490]" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                     Filter Grievances
                   </span>
@@ -511,7 +511,7 @@ export function GrievanceQueue({
                 <button
                   type="button"
                   onClick={() => setIsFilterMenuOpen(false)}
-                  className="rounded-lg bg-emerald-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition cursor-pointer"
+                  className="rounded-lg bg-[#0E7490] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#155E75] transition cursor-pointer"
                 >
                   Done
                 </button>
@@ -521,14 +521,14 @@ export function GrievanceQueue({
 
           {/* Active Filter Chips */}
           {filters.priority !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
               Priority: {filters.priority}
               <button
                 type="button"
                 onClick={() =>
                   setFilters((prev) => ({ ...prev, priority: "ALL" }))
                 }
-                className="hover:text-emerald-950 cursor-pointer ml-0.5"
+                className="hover:text-[#155E75] cursor-pointer ml-0.5"
                 title="Remove priority filter"
               >
                 <X className="w-3 h-3" />
@@ -537,7 +537,7 @@ export function GrievanceQueue({
           )}
 
           {filters.status !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
               Status:{" "}
               {statusOptions.find((s) => s.value === filters.status)?.label ||
                 filters.status}
@@ -546,7 +546,7 @@ export function GrievanceQueue({
                 onClick={() =>
                   setFilters((prev) => ({ ...prev, status: "ALL" }))
                 }
-                className="hover:text-emerald-950 cursor-pointer ml-0.5"
+                className="hover:text-[#155E75] cursor-pointer ml-0.5"
                 title="Remove status filter"
               >
                 <X className="w-3 h-3" />
@@ -555,14 +555,14 @@ export function GrievanceQueue({
           )}
 
           {filters.category !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs max-w-[220px]">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs max-w-[220px]">
               <span className="truncate">Category: {filters.category}</span>
               <button
                 type="button"
                 onClick={() =>
                   setFilters((prev) => ({ ...prev, category: "ALL" }))
                 }
-                className="hover:text-emerald-950 cursor-pointer ml-0.5 shrink-0"
+                className="hover:text-[#155E75] cursor-pointer ml-0.5 shrink-0"
                 title="Remove category filter"
               >
                 <X className="w-3 h-3" />

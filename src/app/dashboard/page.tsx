@@ -80,9 +80,9 @@ export default async function UserDashboardPage() {
     >
       <div className="space-y-6">
         {/* Role Confirmation Banner */}
-        <div className="rounded-2xl border border-teal-200/80 bg-[#F0FDFA] p-6 shadow-xs">
+        <div className="rounded-2xl border border-teal-200/80 bg-teal-light p-6 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0F766E] text-white shadow-xs">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-primary text-white shadow-xs">
               <User className="h-6 w-6" />
             </div>
             <div>
@@ -90,7 +90,7 @@ export default async function UserDashboardPage() {
                 <h2 className="text-lg font-bold text-slate-900">
                   Role: End User (Employee)
                 </h2>
-                <span className="rounded-full bg-[#F0FDFA] border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-[#0F766E]">
+                <span className="rounded-full bg-teal-light border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-primary">
                   Employee Portal
                 </span>
               </div>

@@ -99,8 +99,8 @@ export default function GrievanceTracker() {
       <div className="mx-auto max-w-5xl px-6 lg:px-8">
         {/* Header */}
         <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-[#ECFEFF] px-3 py-1 text-xs font-semibold text-[#0E7490]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#0891B2]" />
             LIVE STATUS TRACKER
           </span>
 
@@ -121,7 +121,7 @@ export default function GrievanceTracker() {
               e.preventDefault();
               handleTrack();
             }}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20"
+            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-[#0E7490] focus-within:ring-2 focus-within:ring-cyan-500/20"
           >
             <div className="flex flex-1 items-center gap-3 pl-3">
               <Search className="h-5 w-5 text-slate-400" />

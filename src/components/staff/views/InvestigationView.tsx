@@ -59,7 +59,7 @@ export function InvestigationView({
         {/* Quick Protocol Guidelines */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-800">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ECFEFF] text-[11px] font-bold text-[#0E7490]">
               1
             </span>
             <span>

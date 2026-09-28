@@ -48,7 +48,7 @@ export default function FaqAccordion() {
         <div className="grid items-start gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-12">
           {/* Left */}
           <div className="space-y-2">
-            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 shadow-2xs">
+            <span className="inline-flex rounded-full border border-[#A5F3FC] bg-[#ECFEFF] px-3 py-1 text-xs font-semibold text-[#0E7490] shadow-2xs">
               FAQ
             </span>
 
@@ -56,7 +56,7 @@ export default function FaqAccordion() {
               Questions, answered.
             </h2>
 
-            <p className="text-sm sm:text-base leading-relaxed text-slate-600">
+            <p className="text-xs sm:text-sm leading-relaxed text-slate-600">
               Quick answers on submission, tracking, and resolution procedures.
             </p>
           </div>
@@ -67,22 +67,25 @@ export default function FaqAccordion() {
               const isOpen = openIndex === index;
 
               return (
-                <div key={faq.question}>
+                <div
+                  key={faq.question}
+                  className="transition-colors hover:bg-slate-50/40"
+                >
                   <button
                     type="button"
                     onClick={() => setOpenIndex(isOpen ? null : index)}
-                    className="flex w-full items-center justify-between gap-4 px-5 py-4 sm:px-6 sm:py-4.5 text-left transition-colors hover:bg-slate-50/50 cursor-pointer"
+                    className="group flex w-full items-center justify-between gap-4 px-5 py-3.5 sm:px-6 sm:py-4 text-left cursor-pointer"
                     aria-expanded={isOpen}
                   >
-                    <span className="text-sm sm:text-base font-semibold text-slate-900 leading-snug">
+                    <span className="text-sm sm:text-[15px] font-semibold text-slate-800 group-hover:text-[#0E7490] transition-colors leading-snug">
                       {faq.question}
                     </span>
 
                     <div
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-transform duration-200 ${
                         isOpen
-                          ? "rotate-180 border-emerald-500 bg-emerald-50 text-emerald-800"
-                          : "border-slate-200 text-slate-400"
+                          ? "rotate-180 border-[#A5F3FC] bg-[#ECFEFF] text-[#0E7490]"
+                          : "border-slate-200 bg-slate-50 text-slate-400 group-hover:border-[#A5F3FC] group-hover:text-[#0E7490]"
                       }`}
                     >
                       <ChevronDown className="h-4 w-4" />
@@ -90,7 +93,7 @@ export default function FaqAccordion() {
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-4 sm:px-6 sm:pb-5 text-sm leading-relaxed text-slate-600 border-t border-slate-50 pt-2.5 animate-in fade-in duration-150">
+                    <div className="px-5 pb-4 sm:px-6 sm:pb-4.5 text-xs sm:text-[13.5px] leading-relaxed text-slate-600 border-t border-slate-100/90 pt-2.5 animate-in fade-in duration-150">
                       {faq.answer}
                     </div>
                   )}

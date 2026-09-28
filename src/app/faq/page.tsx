@@ -90,24 +90,24 @@ export default function FaqPage() {
 
       <main className="flex-1">
         {/* Header Section */}
-        <section className="bg-slate-50/70 border-b border-slate-200/80 pt-10 pb-8 sm:pt-14 sm:pb-10">
+        <section className="bg-slate-50/70 border-b border-slate-200/80 pt-10 pb-8 sm:pt-12 sm:pb-9">
           <div className="mx-auto max-w-3xl px-6 text-center lg:px-8">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs">
-              <HelpCircle className="h-3.5 w-3.5 text-emerald-700" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#A5F3FC] bg-teal-light px-3.5 py-1 text-xs font-semibold text-teal-primary shadow-2xs">
+              <HelpCircle className="h-3.5 w-3.5 text-teal-primary" />
               HELP CENTER
             </span>
 
-            <h1 className="mt-3.5 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950">
+            <h1 className="mt-3.5 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
               Frequently Asked Questions
             </h1>
 
-            <p className="mx-auto mt-2.5 max-w-xl text-sm sm:text-base leading-relaxed text-slate-600">
-              Clear answers on submission, investigator allocation, and SLA
-              escalation rules.
+            <p className="mx-auto mt-2 max-w-xl text-xs sm:text-sm leading-relaxed text-slate-600">
+              Clear answers on grievance submission, investigator allocation,
+              and SLA escalation rules.
             </p>
 
             {/* Search Bar & Category Filter */}
-            <div className="mx-auto mt-6 max-w-lg">
+            <div className="mx-auto mt-5 max-w-lg">
               <div className="relative flex items-center">
                 <Search className="absolute left-3.5 h-4 w-4 text-slate-400" />
                 <input
@@ -115,22 +115,22 @@ export default function FaqPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search questions or keywords..."
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-2xs transition-all placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-xs sm:text-sm text-slate-900 shadow-2xs transition-all placeholder:text-slate-400 focus:border-teal-primary focus:outline-none focus:ring-2 focus:ring-teal-primary/20"
                 />
               </div>
             </div>
 
             {/* Filter Pills */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2">
               {categories.map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className={`rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                  className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
                     activeCategory === cat
-                      ? "bg-[#0F766E] text-white shadow-xs"
-                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-teal-primary text-white shadow-xs"
+                      : "border border-slate-200 bg-white text-slate-600 hover:bg-teal-light/50 hover:border-[#A5F3FC] hover:text-teal-primary"
                   }`}
                 >
                   {cat}
@@ -141,11 +141,11 @@ export default function FaqPage() {
         </section>
 
         {/* FAQ Accordion List */}
-        <section className="py-8 sm:py-12">
+        <section className="py-7 sm:py-10">
           <div className="mx-auto max-w-3xl px-6 lg:px-8">
             {filteredFaqs.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-600">
-                <p className="text-sm font-semibold">
+                <p className="text-xs sm:text-sm font-semibold">
                   No questions match your search.
                 </p>
                 <button
@@ -154,7 +154,7 @@ export default function FaqPage() {
                     setSearchQuery("");
                     setActiveCategory("All");
                   }}
-                  className="mt-2 text-sm font-semibold text-emerald-800 underline cursor-pointer"
+                  className="mt-2 text-xs sm:text-sm font-semibold text-teal-primary hover:text-teal-deep underline cursor-pointer"
                 >
                   Reset filters
                 </button>
@@ -167,18 +167,18 @@ export default function FaqPage() {
                   return (
                     <div
                       key={faq.question}
-                      className="px-5 py-4 sm:px-6 sm:py-5 transition-colors"
+                      className="px-5 py-3.5 sm:px-6 sm:py-4 transition-colors hover:bg-slate-50/40"
                     >
                       <button
                         type="button"
                         onClick={() => setOpenIndex(isOpen ? null : index)}
-                        className="flex w-full items-center justify-between gap-4 text-left cursor-pointer"
+                        className="group flex w-full items-center justify-between gap-4 text-left cursor-pointer"
                       >
                         <div className="pr-2 space-y-1">
-                          <span className="inline-block rounded-md bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                          <span className="inline-block rounded-full bg-teal-light border border-[#A5F3FC] px-2.5 py-0.5 text-[10px] font-bold text-teal-primary uppercase tracking-wider">
                             {faq.category}
                           </span>
-                          <h3 className="text-base sm:text-lg font-semibold text-slate-900 tracking-tight leading-snug">
+                          <h3 className="text-sm sm:text-[15px] font-semibold text-slate-800 group-hover:text-teal-primary transition-colors leading-snug">
                             {faq.question}
                           </h3>
                         </div>
@@ -186,8 +186,8 @@ export default function FaqPage() {
                         <div
                           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-transform duration-200 ${
                             isOpen
-                              ? "rotate-180 border-emerald-500 bg-emerald-50 text-emerald-800"
-                              : "border-slate-200 text-slate-400"
+                              ? "rotate-180 border-[#A5F3FC] bg-teal-light text-teal-primary"
+                              : "border-slate-200 bg-slate-50 text-slate-400 group-hover:border-[#A5F3FC] group-hover:text-teal-primary"
                           }`}
                         >
                           <ChevronDown className="h-4 w-4" />
@@ -195,7 +195,7 @@ export default function FaqPage() {
                       </button>
 
                       {isOpen && (
-                        <div className="mt-3 pr-6 text-sm sm:text-base leading-relaxed text-slate-600 border-t border-slate-100 pt-3 animate-in fade-in duration-150">
+                        <div className="mt-2.5 pr-4 text-xs sm:text-[13.5px] leading-relaxed text-slate-600 border-t border-slate-100/90 pt-2.5 animate-in fade-in duration-150">
                           {faq.answer}
                         </div>
                       )}
@@ -206,14 +206,14 @@ export default function FaqPage() {
             )}
 
             {/* Compact Bottom Helper Strip */}
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-xs text-slate-600">
+            <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-[#A5F3FC] bg-teal-light/60 px-4 py-3 text-xs text-slate-600">
               <span className="font-medium text-slate-700">
                 Need specific case assistance?
               </span>
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
-                  className="font-semibold text-emerald-800 hover:text-emerald-950 inline-flex items-center gap-1"
+                  className="font-semibold text-teal-primary hover:text-teal-deep inline-flex items-center gap-1"
                 >
                   Log in to portal
                   <ArrowRight className="h-3 w-3" />

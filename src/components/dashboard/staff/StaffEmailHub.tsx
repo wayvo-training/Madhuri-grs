@@ -73,7 +73,7 @@ export function StaffEmailHub({
       <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-xs">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0E7490] text-white shadow-xs">
               <Mail className="h-5 w-5" />
             </div>
             <div>
@@ -81,7 +81,7 @@ export function StaffEmailHub({
                 <h3 className="text-base font-bold text-slate-900">
                   Staff Communications & Mail Desk
                 </h3>
-                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                <span className="rounded-full bg-[#ECFEFF] border border-[#A5F3FC] px-2.5 py-0.5 text-xs font-semibold text-[#0E7490]">
                   Official Account Active
                 </span>
               </div>

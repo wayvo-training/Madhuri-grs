@@ -20,13 +20,13 @@ export default function HeroSection({
     <section className="relative overflow-hidden bg-white pt-10 pb-6 sm:pt-14 sm:pb-8">
       {/* Subtle background ambient blur */}
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu justify-center overflow-hidden blur-3xl">
-        <div className="aspect-1155/478 w-[72.1875rem] bg-linear-to-tr from-emerald-100 via-teal-50 to-slate-50 opacity-60" />
+        <div className="aspect-1155/478 w-[72.1875rem] bg-linear-to-tr from-cyan-100 via-sky-50 to-slate-50 opacity-60" />
       </div>
 
       <div className="mx-auto max-w-5xl px-6 text-center lg:px-8">
         {/* Category Pill */}
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-semibold text-slate-800 shadow-xs backdrop-blur-xs">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
           Enterprise Grievance Resolution & SLA Governance
         </div>
 

@@ -40,7 +40,7 @@ export function StaffWorkloadCard({
       >
         {/* Left: Profile Badge */}
         <div className="flex items-start gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0E7490] text-white shadow-xs">
             <User className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -91,7 +91,7 @@ export function StaffWorkloadCard({
           <span>Available Capacity:</span>
           <strong
             className={`font-bold ${
-              availableCapacity === 0 ? "text-rose-600" : "text-emerald-700"
+              availableCapacity === 0 ? "text-rose-600" : "text-[#0E7490]"
             }`}
           >
             {availableCapacity}
@@ -106,7 +106,7 @@ export function StaffWorkloadCard({
                   ? "bg-rose-500"
                   : loadPercent >= 75
                     ? "bg-amber-500"
-                    : "bg-emerald-600"
+                    : "bg-[#0E7490]"
               }`}
               style={{ width: `${loadPercent}%` }}
             />
