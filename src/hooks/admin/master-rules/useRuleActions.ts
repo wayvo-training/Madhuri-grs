@@ -1,5 +1,6 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import type {
   DepartmentOption,
   ModalRuleType,
@@ -10,7 +11,6 @@ import type {
   SerializedRoutingRule,
   SerializedSlaPolicy,
 } from "@/types/admin/master-rules";
-import { toast } from "sonner";
 
 export interface UseRuleActionsParams {
   departments: DepartmentOption[];
@@ -324,7 +324,9 @@ export function useRuleActions({
 
       if (modalRuleType === "priority") {
         if (!isDefault && !selectedPriorityCatId) {
-          toast.error("Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).");
+          toast.error(
+            "Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).",
+          );
           setIsSubmitting(false);
           return;
         }
@@ -365,7 +367,9 @@ export function useRuleActions({
         };
       } else if (modalRuleType === "routing") {
         if (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId) {
-          toast.error("Primary Department, Category, and Subcategory are strictly required.");
+          toast.error(
+            "Primary Department, Category, and Subcategory are strictly required.",
+          );
           setIsSubmitting(false);
           return;
         }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   SerializedGrievance,
   SupportingDepartment,
@@ -17,8 +17,16 @@ export function useAdminGrievances(
   initialCounts?: TabCounts,
 ) {
   const router = useRouter();
+  const deduped = useMemo(
+    () =>
+      Array.from(
+        new Map(initialGrievances.map((g) => [g.grievance_id, g])).values(),
+      ),
+    [initialGrievances],
+  );
+
   const [grievancesList, setGrievancesList] =
-    useState<SerializedGrievance[]>(initialGrievances);
+    useState<SerializedGrievance[]>(deduped);
   const [totalCount, setTotalCount] = useState<number>(
     initialTotalCount || initialGrievances.length,
   );
@@ -36,9 +44,10 @@ export function useAdminGrievances(
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState<string>("ALL");
-  const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
-  const [selectedDept, setSelectedDept] = useState<string>("ALL");
+  const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedDept, setSelectedDept] = useState<string[]>([]);
+  const [selectedSla, setSelectedSla] = useState<string[]>([]);
   const [activeModalGrievance, setActiveModalGrievance] =
     useState<SerializedGrievance | null>(null);
 
@@ -85,9 +94,10 @@ export function useAdminGrievances(
       page: number,
       tab: TableTab,
       search: string,
-      priority: string,
-      status: string,
-      dept: string,
+      priority: string[],
+      status: string[],
+      dept: string[],
+      sla: string[],
     ) => {
       try {
         setIsLoading(true);
@@ -96,16 +106,25 @@ export function useAdminGrievances(
           limit: PAGE_SIZE.toString(),
           tab,
           search,
-          priority,
-          status,
-          department: dept,
         });
+        if (priority.length > 0) params.append("priority", priority.join(","));
+        if (status.length > 0) params.append("status", status.join(","));
+        if (dept.length > 0) params.append("department", dept.join(","));
+        if (sla.length > 0) params.append("sla_status", sla.join(","));
 
         const res = await fetch(`/api/admin/grievances?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch grievances");
         const data = await res.json();
         if (data.success) {
-          setGrievancesList(data.grievances);
+          const unique = Array.from(
+            new Map(
+              (data.grievances as SerializedGrievance[]).map((g) => [
+                g.grievance_id,
+                g,
+              ]),
+            ).values(),
+          );
+          setGrievancesList(unique);
           setTotalCount(data.pagination.total);
           if (data.counts) {
             setCounts(data.counts);
@@ -166,6 +185,7 @@ export function useAdminGrievances(
       selectedPriority,
       selectedStatus,
       selectedDept,
+      selectedSla,
     );
 
     router.refresh();
@@ -198,6 +218,7 @@ export function useAdminGrievances(
           selectedPriority,
           selectedStatus,
           selectedDept,
+          selectedSla,
         );
       } else {
         isInitialMount.current = false;
@@ -213,6 +234,7 @@ export function useAdminGrievances(
       selectedPriority,
       selectedStatus,
       selectedDept,
+      selectedSla,
     );
   }, [
     activeTab,
@@ -220,6 +242,7 @@ export function useAdminGrievances(
     selectedPriority,
     selectedStatus,
     selectedDept,
+    selectedSla,
     fetchGrievances,
   ]);
 
@@ -235,6 +258,7 @@ export function useAdminGrievances(
       selectedPriority,
       selectedStatus,
       selectedDept,
+      selectedSla,
     );
   }
 
@@ -255,6 +279,8 @@ export function useAdminGrievances(
     setSelectedStatus,
     selectedDept,
     setSelectedDept,
+    selectedSla,
+    setSelectedSla,
     activeTab,
     setActiveTab,
     activeModalGrievance,

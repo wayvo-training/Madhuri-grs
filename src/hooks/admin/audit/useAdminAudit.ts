@@ -49,7 +49,7 @@ export function useAdminAudit(
         setIsLoading(false);
       }
     },
-    [],
+    [pageSize],
   );
 
   // Debounced server query on search or tab filter change
@@ -64,7 +64,7 @@ export function useAdminAudit(
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentPage, pageSize, activeTab, searchQuery, fetchLogs]);
+  }, [currentPage, activeTab, searchQuery, fetchLogs]);
 
   const handleTabChange = (category: TabCategory) => {
     setActiveTab(category);

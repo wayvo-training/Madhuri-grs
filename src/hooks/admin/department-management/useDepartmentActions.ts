@@ -2,15 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type {
   DepartmentHeadOption,
   SerializedDepartment,
 } from "@/types/admin/departments";
-import { toast } from "sonner";
 
 export function useDepartmentActions(
   setDepartments: React.Dispatch<React.SetStateAction<SerializedDepartment[]>>,
-  departmentHeads: DepartmentHeadOption[] = [],
+  _departmentHeads: DepartmentHeadOption[] = [],
 ) {
   const router = useRouter();
 
@@ -124,7 +124,9 @@ export function useDepartmentActions(
       return;
     }
     if (!selectedHeadId) {
-      toast.error("Department Head is required. Please select a Department Head.");
+      toast.error(
+        "Department Head is required. Please select a Department Head.",
+      );
       return;
     }
     if (!contactEmail.trim()) {
@@ -132,7 +134,9 @@ export function useDepartmentActions(
       return;
     }
     if (!description.trim() || description.trim().length < 20) {
-      toast.error("Department description is mandatory (minimum 20 characters) detailing grievance jurisdiction.");
+      toast.error(
+        "Department description is mandatory (minimum 20 characters) detailing grievance jurisdiction.",
+      );
       return;
     }
 

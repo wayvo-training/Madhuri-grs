@@ -2,18 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { filterDepartments } from "@/lib/admin/department-management/department-filters";
-import type {
-  DepartmentStatusFilter,
-  SerializedDepartment,
-} from "@/types/admin/departments";
+import type { SerializedDepartment } from "@/types/admin/departments";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 export function useDepartments(initialDepartments: SerializedDepartment[]) {
   const [departments, setDepartments] =
     useState<SerializedDepartment[]>(initialDepartments);
-  const [statusFilter, setStatusFilter] =
-    useState<DepartmentStatusFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -34,14 +30,14 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
     setCurrentPage(1);
   };
 
-  const handleStatusFilterChange = (status: DepartmentStatusFilter) => {
-    setStatusFilter(status);
+  const handleStatusFilterChange = (statuses: string[]) => {
+    setStatusFilter(statuses);
     setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
     setSearchQuery("");
-    setStatusFilter("ALL");
+    setStatusFilter([]);
     setCurrentPage(1);
   };
 
