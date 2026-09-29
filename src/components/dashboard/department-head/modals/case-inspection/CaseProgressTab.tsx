@@ -297,7 +297,8 @@ export function CaseProgressTab({
         </div>
 
         {/* Right: Assignment */}
-        {caseProgressData?.departmentsInvolved && caseProgressData.departmentsInvolved.length > 1 ? (
+        {caseProgressData?.departmentsInvolved &&
+        caseProgressData.departmentsInvolved.length > 1 ? (
           <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -324,11 +325,15 @@ export function CaseProgressTab({
                   </div>
                   <div className="flex items-center justify-between text-slate-500">
                     <span>Staff:</span>
-                    <span className="font-medium text-slate-700">{dept.assignedStaff || "Unassigned"}</span>
+                    <span className="font-medium text-slate-700">
+                      {dept.assignedStaff || "Unassigned"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-500">
                     <span>Status:</span>
-                    <span className="font-medium text-slate-700">{dept.status.replace(/_/g, " ")}</span>
+                    <span className="font-medium text-slate-700">
+                      {dept.status.replace(/_/g, " ")}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -378,7 +383,9 @@ export function CaseProgressTab({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Email:</span>
                       {officerEmail.trim().toLowerCase() ===
-                      (currentHodEmail || hodEmail || "").trim().toLowerCase() ? (
+                      (currentHodEmail || hodEmail || "")
+                        .trim()
+                        .toLowerCase() ? (
                         <span
                           className="text-amber-800 font-medium truncate max-w-[65%]"
                           title="This case is currently recorded under your account."

@@ -10,12 +10,12 @@ import {
   UserCheck,
   UserPlus,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
-import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
 import { Pagination } from "@/components/ui/pagination";
-import { useState, useMemo, useEffect } from "react";
+import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -54,7 +54,7 @@ export function SlaGovernanceView({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [escalatedList.length]);
+  }, []);
 
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -175,11 +175,11 @@ export function SlaGovernanceView({
                           </button>
                         </div>
                       </td>
-                      
+
                       <td className="py-3 px-3 align-top text-xs font-medium text-slate-700">
                         {item.category}
                       </td>
-                      
+
                       <td className="py-3 px-3 align-top text-[11px] text-slate-500">
                         {item.subcategory}
                       </td>

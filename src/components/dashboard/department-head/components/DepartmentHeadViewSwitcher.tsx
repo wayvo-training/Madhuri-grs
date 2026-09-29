@@ -60,7 +60,9 @@ export function DepartmentHeadViewSwitcher({
           >
             <LayoutDashboard
               className={`h-4 w-4 transition-colors ${
-                activeView === "overview" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+                activeView === "overview"
+                  ? "text-white"
+                  : "text-slate-400 group-hover:text-teal-600"
               }`}
             />
             <span>Department Overview</span>
@@ -77,7 +79,9 @@ export function DepartmentHeadViewSwitcher({
           >
             <Inbox
               className={`h-4 w-4 transition-colors ${
-                activeView === "queue" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+                activeView === "queue"
+                  ? "text-white"
+                  : "text-slate-400 group-hover:text-teal-600"
               }`}
             />
             <span>Grievance Queue</span>
@@ -105,7 +109,9 @@ export function DepartmentHeadViewSwitcher({
           >
             <Users
               className={`h-4 w-4 transition-colors ${
-                activeView === "staff" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+                activeView === "staff"
+                  ? "text-white"
+                  : "text-slate-400 group-hover:text-teal-600"
               }`}
             />
             <span>Staff Workload</span>
@@ -131,7 +137,9 @@ export function DepartmentHeadViewSwitcher({
           >
             <AlertTriangle
               className={`h-4 w-4 transition-colors ${
-                activeView === "sla" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+                activeView === "sla"
+                  ? "text-white"
+                  : "text-slate-400 group-hover:text-teal-600"
               }`}
             />
             <span>SLA & Escalations</span>

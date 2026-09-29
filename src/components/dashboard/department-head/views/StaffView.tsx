@@ -1,20 +1,19 @@
 "use client";
 
-import { Eye, Inbox, Layers, UserCheck, Users } from "lucide-react";
+import { Inbox, Layers, UserCheck, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AdminMetricCard,
   AdminPanelHeader,
 } from "@/components/dashboard/admin/admin-shared";
-import { PriorityBadge } from "@/components/dashboard/badges";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Pagination } from "@/components/ui/pagination";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
-import { ActionMenu } from "@/components/ui/action-menu";
-import { Pagination } from "@/components/ui/pagination";
-import { useState, useMemo, useEffect } from "react";
 
 export interface StaffViewProps {
   staffList: StaffMember[];
@@ -49,7 +48,7 @@ export function StaffView({
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [staffList.length]);
+  }, []);
 
   const paginatedStaff = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -112,17 +111,24 @@ export function StaffView({
           <table className="w-full text-left text-[11px] border-collapse">
             <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
               <tr>
-                <th className="py-3 pl-4 pr-3 whitespace-nowrap">Staff Member</th>
+                <th className="py-3 pl-4 pr-3 whitespace-nowrap">
+                  Staff Member
+                </th>
                 <th className="py-3 px-3 whitespace-nowrap">Status</th>
                 <th className="py-3 px-3 min-w-48">Active Workload</th>
                 <th className="py-3 px-3 whitespace-nowrap">Assigned Cases</th>
-                <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">Actions</th>
+                <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
               {paginatedStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500 text-xs">
+                  <td
+                    colSpan={5}
+                    className="py-10 text-center text-slate-500 text-xs"
+                  >
                     No staff members found.
                   </td>
                 </tr>
@@ -130,7 +136,9 @@ export function StaffView({
                 paginatedStaff.map((staff) => {
                   const loadPercentage =
                     staff.maxCapacity > 0
-                      ? Math.round((staff.activeTickets / staff.maxCapacity) * 100)
+                      ? Math.round(
+                          (staff.activeTickets / staff.maxCapacity) * 100,
+                        )
                       : 0;
                   const isOverloaded = loadPercentage >= 80;
                   const staffTickets = grievances.filter(
@@ -138,7 +146,10 @@ export function StaffView({
                   );
 
                   return (
-                    <tr key={staff.id} className="hover:bg-slate-50/60 transition">
+                    <tr
+                      key={staff.id}
+                      className="hover:bg-slate-50/60 transition"
+                    >
                       {/* Staff Member Info */}
                       <td className="py-3 pl-4 pr-3 align-top">
                         <div className="flex items-center gap-3">
@@ -186,12 +197,16 @@ export function StaffView({
                           <div className="flex items-center justify-between text-[10px]">
                             <div className="flex items-center gap-1.5 font-semibold text-slate-800">
                               <span>
-                                {staff.activeTickets} / {staff.maxCapacity || 10}
+                                {staff.activeTickets} /{" "}
+                                {staff.maxCapacity || 10}
                               </span>
-                              <span className="text-slate-400 font-normal">•</span>
+                              <span className="text-slate-400 font-normal">
+                                •
+                              </span>
                               <span
                                 className={`text-[10px] ${
-                                  staff.activeTickets >= (staff.maxCapacity || 10)
+                                  staff.activeTickets >=
+                                  (staff.maxCapacity || 10)
                                     ? "text-rose-600 font-bold"
                                     : "text-emerald-700 font-medium"
                                 }`}
@@ -199,7 +214,8 @@ export function StaffView({
                                 Avail:{" "}
                                 {Math.max(
                                   0,
-                                  (staff.maxCapacity || 10) - staff.activeTickets,
+                                  (staff.maxCapacity || 10) -
+                                    staff.activeTickets,
                                 )}
                               </span>
                             </div>
@@ -246,7 +262,10 @@ export function StaffView({
                             widthClass="w-36"
                             items={[
                               {
-                                label: staff.status === "ON_LEAVE" ? "Set Available" : "Set On Leave",
+                                label:
+                                  staff.status === "ON_LEAVE"
+                                    ? "Set Available"
+                                    : "Set On Leave",
                                 icon: <UserCheck className="h-3.5 w-3.5" />,
                                 variant: "default",
                                 onClick: () => onToggleAvailability(staff),

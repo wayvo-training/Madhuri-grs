@@ -7,23 +7,25 @@ import {
   ChevronDown,
   Clock,
   Eye,
-  Filter,
   GitBranch,
   RotateCcw,
-  Search,
   User,
   UserCheck,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import {
+  AdvancedFilterBar,
+  type FilterCondition,
+  type FilterFieldDef,
+} from "@/components/filters/advanced-filter-bar";
 import { ActionMenu } from "@/components/ui/action-menu";
-import { CustomSelect } from "@/components/ui/custom-select";
-import { Popover } from "@/components/ui/popover";
-import { AdvancedFilterBar, FilterCondition, FilterFieldDef } from "@/components/filters/advanced-filter-bar";
 import { Pagination } from "@/components/ui/pagination";
-import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
+import {
+  SortableTh,
+  type SortState,
+} from "@/components/ui/sortable-table-head";
 import type {
   CaseDrawerTab,
   DepartmentHeadTab,
@@ -94,7 +96,10 @@ export function QueueView({
   const [pageSize, setPageSize] = useState(10);
 
   // Sorting state
-  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
 
   const handleSort = (field: string, direction: SortState["direction"]) => {
     setSortState({ field, direction });
@@ -103,18 +108,18 @@ export function QueueView({
   // Reset to page 1 on filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filteredGrievances.length, searchQuery, statusFilter, priorityFilter, staffFilter, departmentFilter]);
+  }, []);
 
   const sortedGrievances = useMemo(() => {
     if (!sortState.field || !sortState.direction) return filteredGrievances;
-    
+
     return [...filteredGrievances].sort((a, b) => {
       let valA: any = a[sortState.field as keyof GrievanceItem] || "";
       let valB: any = b[sortState.field as keyof GrievanceItem] || "";
-      
+
       if (typeof valA === "string") valA = valA.toLowerCase();
       if (typeof valB === "string") valB = valB.toLowerCase();
-      
+
       if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
       return 0;
@@ -169,7 +174,7 @@ export function QueueView({
       id: "department",
       label: "Department",
       type: "searchable-select",
-      options: departmentOptions.filter(o => o.value !== "ALL"),
+      options: departmentOptions.filter((o) => o.value !== "ALL"),
     },
     {
       id: "priority",
@@ -228,16 +233,36 @@ export function QueueView({
 
   const currentFilters: FilterCondition[] = [];
   if (departmentFilter && departmentFilter !== "ALL") {
-    currentFilters.push({ id: "dept", fieldId: "department", operator: "Is", value: departmentFilter });
+    currentFilters.push({
+      id: "dept",
+      fieldId: "department",
+      operator: "Is",
+      value: departmentFilter,
+    });
   }
   if (priorityFilter !== "ALL") {
-    currentFilters.push({ id: "priority", fieldId: "priority", operator: "Is", value: priorityFilter });
+    currentFilters.push({
+      id: "priority",
+      fieldId: "priority",
+      operator: "Is",
+      value: priorityFilter,
+    });
   }
   if (statusFilter && statusFilter !== "ALL") {
-    currentFilters.push({ id: "status", fieldId: "status", operator: "Is", value: statusFilter });
+    currentFilters.push({
+      id: "status",
+      fieldId: "status",
+      operator: "Is",
+      value: statusFilter,
+    });
   }
   if (staffFilter !== "ALL") {
-    currentFilters.push({ id: "staff", fieldId: "staff", operator: "Is", value: staffFilter });
+    currentFilters.push({
+      id: "staff",
+      fieldId: "staff",
+      operator: "Is",
+      value: staffFilter,
+    });
   }
 
   const handleFiltersChange = (newFilters: FilterCondition[]) => {
@@ -394,8 +419,12 @@ export function QueueView({
             Live Grievance Oversight Queue
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Showing {filteredGrievances.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} - {Math.min(currentPage * pageSize, filteredGrievances.length)} of {filteredGrievances.length} records
-            across department queue.
+            Showing{" "}
+            {filteredGrievances.length > 0
+              ? (currentPage - 1) * pageSize + 1
+              : 0}{" "}
+            - {Math.min(currentPage * pageSize, filteredGrievances.length)} of{" "}
+            {filteredGrievances.length} records across department queue.
           </p>
         </div>
 
@@ -493,14 +522,70 @@ export function QueueView({
         <table className="w-full text-left text-[11px] border-collapse">
           <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
             <tr>
-              <SortableTh field="id" currentSort={sortState} onSort={handleSort} className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance ID</SortableTh>
-              <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3 min-w-64">Grievance</SortableTh>
-              <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Category</SortableTh>
-              <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Priority</SortableTh>
-              <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Status</SortableTh>
-              <SortableTh field="slaStatus" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">SLA Status</SortableTh>
-              <SortableTh field="assignedStaffName" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Assigned Staff</SortableTh>
-              <SortableTh field="createdAt" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Submitted</SortableTh>
+              <SortableTh
+                field="id"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 pl-4 pr-3 whitespace-nowrap"
+              >
+                Grievance ID
+              </SortableTh>
+              <SortableTh
+                field="title"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 min-w-64"
+              >
+                Grievance
+              </SortableTh>
+              <SortableTh
+                field="category"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                Category
+              </SortableTh>
+              <SortableTh
+                field="priority"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                Priority
+              </SortableTh>
+              <SortableTh
+                field="status"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                Status
+              </SortableTh>
+              <SortableTh
+                field="slaStatus"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                SLA Status
+              </SortableTh>
+              <SortableTh
+                field="assignedStaffName"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                Assigned Staff
+              </SortableTh>
+              <SortableTh
+                field="createdAt"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3 px-3 whitespace-nowrap"
+              >
+                Submitted
+              </SortableTh>
               <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
                 Actions
               </th>
