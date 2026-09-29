@@ -122,7 +122,7 @@ export function AttentionRequiredPanel({
             return (
               <div
                 key={item.id}
-                className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 transition group min-h-11"
+                className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-11"
               >
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <span className="font-mono text-xs font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70 shrink-0">

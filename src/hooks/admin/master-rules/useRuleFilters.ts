@@ -9,7 +9,7 @@ export interface UseRuleFiltersParams {
 }
 
 export function useRuleFilters({ routingRules }: UseRuleFiltersParams) {
-  const [activeTab, setActiveTab] = useState<MainTab>("matrix");
+  const [activeTab, setActiveTab] = useState<MainTab>("priority");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "ALL" | "ACTIVE" | "INACTIVE"

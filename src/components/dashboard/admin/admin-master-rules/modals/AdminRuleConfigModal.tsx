@@ -22,6 +22,9 @@ export interface RuleCategoryOption {
 interface AdminRuleConfigModalProps {
   open: boolean;
   onClose: () => void;
+  editingRuleId?: string | null;
+  ruleStatus?: "ACTIVE" | "INACTIVE";
+  setRuleStatus?: (val: "ACTIVE" | "INACTIVE") => void;
   modalRuleType: ModalRuleType;
   setModalRuleType: (value: ModalRuleType) => void;
   ruleName: string;
@@ -58,10 +61,9 @@ interface AdminRuleConfigModalProps {
   setMaxReopens: Dispatch<SetStateAction<string>>;
   maxReviews: string;
   setMaxReviews: Dispatch<SetStateAction<string>>;
-  ruleStatus: "ACTIVE" | "INACTIVE";
-  setRuleStatus: Dispatch<SetStateAction<"ACTIVE" | "INACTIVE">>;
+
   isSubmitting: boolean;
-  feedback: RuleFeedback | null;
+
   departments: RuleDepartmentOption[];
   categories: RuleCategoryOption[];
   onSubmit: (event: FormEvent) => void;
@@ -70,6 +72,9 @@ interface AdminRuleConfigModalProps {
 export function AdminRuleConfigModal({
   open,
   onClose,
+  editingRuleId,
+  ruleStatus,
+  setRuleStatus,
   modalRuleType,
   setModalRuleType,
   ruleName,
@@ -106,10 +111,9 @@ export function AdminRuleConfigModal({
   setMaxReopens,
   maxReviews,
   setMaxReviews,
-  ruleStatus,
-  setRuleStatus,
+
   isSubmitting,
-  feedback,
+
   departments,
   categories,
   onSubmit,
@@ -628,62 +632,49 @@ export function AdminRuleConfigModal({
             </div>
           )}
 
-          <div>
-            <span className="block font-semibold text-slate-700 mb-1.5">
-              Initial Status
-            </span>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="ruleStatus"
-                  checked={ruleStatus === "ACTIVE"}
-                  onChange={() => setRuleStatus("ACTIVE")}
-                  className="text-emerald-600 focus:ring-emerald-500"
-                />
-                <span className="text-slate-800 font-medium">Active</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="ruleStatus"
-                  checked={ruleStatus === "INACTIVE"}
-                  onChange={() => setRuleStatus("INACTIVE")}
-                  className="text-slate-600 focus:ring-slate-500"
-                />
-                <span className="text-slate-800 font-medium">Deactivated</span>
-              </label>
-            </div>
-          </div>
 
-          {feedback && (
-            <div
-              className={`rounded-xl p-3 text-xs ${
-                feedback.type === "success"
-                  ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : "border border-rose-200 bg-rose-50 text-rose-800"
-              }`}
-            >
-              {feedback.text}
-            </div>
-          )}
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
+
+
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            {editingRuleId && setRuleStatus && (
+              <button
+                type="button"
+                onClick={() =>
+                  setRuleStatus(ruleStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE")
+                }
+                className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition ${
+                  ruleStatus === "ACTIVE"
+                    ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                }`}
+              >
+                {ruleStatus === "ACTIVE" ? "Deactivate" : "Activate"}
+              </button>
+            )}
+
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                !ruleName.trim() ||
+                (modalRuleType === "priority" && !isDefault && !selectedPriorityCatId) ||
+                (modalRuleType === "routing" && (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId))
+              }
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50"
             >
               {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               <span>Save Policy</span>
             </button>
+            </div>
           </div>
         </form>
       </div>

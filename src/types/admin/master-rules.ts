@@ -1,5 +1,5 @@
 export type ModalRuleType = "routing" | "priority" | "sla" | "reopen";
-export type MainTab = "matrix" | "global";
+export type MainTab = "priority" | "routing" | "sla" | "reopen";
 
 export interface SerializedPriorityRule {
   priority_rule_id: string;

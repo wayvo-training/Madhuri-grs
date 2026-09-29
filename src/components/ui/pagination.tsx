@@ -71,7 +71,7 @@ export function Pagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-200/80 bg-white/50 px-4 py-3 sm:px-5 ${className}`}
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-200/80 bg-white/50 dark:bg-transparent px-4 py-3 sm:px-5 ${className}`}
     >
       {/* Record summary */}
       <div className="text-xs text-slate-500 font-medium">

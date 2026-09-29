@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AdminPagination,
   AdminPanelHeader,
   AdminSearchInput,
 } from "@/components/dashboard/admin/admin-shared";
@@ -23,6 +22,7 @@ export function AdminAuditTrail({
     currentPage,
     setCurrentPage,
     pageSize,
+    setPageSize,
     totalPages,
     isLoading,
     activeTab,
@@ -60,7 +60,6 @@ export function AdminAuditTrail({
           <AuditCategoryTabs activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
-        {/* Logs Table */}
         <AuditLogTable
           logs={logs}
           isLoading={isLoading}
@@ -69,6 +68,12 @@ export function AdminAuditTrail({
           expandedLogId={expandedLogId}
           onResetFilters={handleResetFilters}
           onToggleExpand={toggleExpandLog}
+          totalCount={totalCount}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
 
         {/* Expanded Payload Inspector Drawer */}
@@ -76,16 +81,6 @@ export function AdminAuditTrail({
           expandedLogId={expandedLogId}
           logs={logs}
           onClose={() => setExpandedLogId(null)}
-        />
-
-        {/* Pagination Footer */}
-        <AdminPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          isLoading={isLoading}
         />
       </div>
     </div>

@@ -5,10 +5,10 @@ import type { SerializedPermission } from "@/types/admin/role-manager";
 
 export interface RoleManagerModalsProps {
   isModalOpen: boolean;
-  feedback: { type: "success" | "error"; text: string } | null;
+
   newRoleName: string;
   newRoleDescription: string;
-  newRoleStatus: "ACTIVE" | "INACTIVE";
+
   permissionsList: SerializedPermission[];
   selectedPermissionIds: string[];
   isSubmitting: boolean;
@@ -16,28 +16,28 @@ export interface RoleManagerModalsProps {
   onSubmitCreate: (e: React.FormEvent) => void;
   onSetNewRoleName: (value: string) => void;
   onSetNewRoleDescription: (value: string) => void;
-  onSetNewRoleStatus: (value: "ACTIVE" | "INACTIVE") => void;
+
   onTogglePermission: (permissionId: string) => void;
   isEditModalOpen: boolean;
   editingRoleName: string;
   editDescription: string;
-  editStatus: "ACTIVE" | "INACTIVE";
+
   editPermissionIds: string[];
-  editFeedback: { type: "success" | "error"; text: string } | null;
+
   isEditSubmitting: boolean;
   onCloseEdit: () => void;
   onSubmitEdit: (e: React.FormEvent) => void;
   onSetEditDescription: (value: string) => void;
-  onSetEditStatus: (value: "ACTIVE" | "INACTIVE") => void;
+
   onToggleEditPermission: (permissionId: string) => void;
 }
 
 export function RoleManagerModals({
   isModalOpen,
-  feedback,
+
   newRoleName,
   newRoleDescription,
-  newRoleStatus,
+
   permissionsList,
   selectedPermissionIds,
   isSubmitting,
@@ -45,19 +45,19 @@ export function RoleManagerModals({
   onSubmitCreate,
   onSetNewRoleName,
   onSetNewRoleDescription,
-  onSetNewRoleStatus,
+
   onTogglePermission,
   isEditModalOpen,
   editingRoleName,
   editDescription,
-  editStatus,
+
   editPermissionIds,
-  editFeedback,
+
   isEditSubmitting,
   onCloseEdit,
   onSubmitEdit,
   onSetEditDescription,
-  onSetEditStatus,
+
   onToggleEditPermission,
 }: RoleManagerModalsProps) {
   return (
@@ -83,17 +83,7 @@ export function RoleManagerModals({
               </button>
             </div>
 
-            {feedback && (
-              <div
-                className={`mt-4 rounded-xl border p-3 text-xs ${
-                  feedback.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-rose-200 bg-rose-50 text-rose-800"
-                }`}
-              >
-                {feedback.text}
-              </div>
-            )}
+
 
             <form onSubmit={onSubmitCreate} className="mt-4 space-y-4">
               <div>
@@ -137,50 +127,7 @@ export function RoleManagerModals({
               </div>
 
               <div>
-                <span className="block text-xs font-semibold text-slate-700">
-                  Role Status <span className="text-rose-500">*</span>
-                </span>
-                <p className="text-xs text-slate-500 mb-2">
-                  Configure whether this role is immediately operational for
-                  users.
-                </p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => onSetNewRoleStatus("ACTIVE")}
-                    className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs font-semibold transition ${
-                      newRoleStatus === "ACTIVE"
-                        ? "border-emerald-300 bg-emerald-50/60 text-emerald-800 ring-1 ring-emerald-400"
-                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100/70"
-                    }`}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                    <div>
-                      <p className="font-bold">Active</p>
-                      <p className="text-xs font-normal text-slate-500">
-                        Can be assigned to users
-                      </p>
-                    </div>
-                  </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onSetNewRoleStatus("INACTIVE")}
-                    className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs font-semibold transition ${
-                      newRoleStatus === "INACTIVE"
-                        ? "border-rose-300 bg-rose-50/60 text-rose-800 ring-1 ring-rose-400"
-                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100/70"
-                    }`}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-                    <div>
-                      <p className="font-bold">Inactive</p>
-                      <p className="text-xs font-normal text-slate-500">
-                        Suspended / Unavailable
-                      </p>
-                    </div>
-                  </button>
-                </div>
               </div>
 
               <div>
@@ -280,17 +227,7 @@ export function RoleManagerModals({
               </button>
             </div>
 
-            {editFeedback && (
-              <div
-                className={`mt-4 rounded-xl border p-3 text-xs ${
-                  editFeedback.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-rose-200 bg-rose-50 text-rose-800"
-                }`}
-              >
-                {editFeedback.text}
-              </div>
-            )}
+
 
             <form onSubmit={onSubmitEdit} className="mt-4 space-y-4">
               <div>
@@ -310,61 +247,7 @@ export function RoleManagerModals({
               </div>
 
               <div>
-                <span className="block text-xs font-semibold text-slate-700">
-                  Role Status <span className="text-rose-500">*</span>
-                </span>
-                <p className="text-xs text-slate-500 mb-2">
-                  Toggle whether this role is active in user assignment and
-                  runtime authentication.
-                </p>
 
-                {editingRoleName === "ADMIN" ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-2.5 text-xs text-amber-800">
-                    <Lock className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>
-                      The <strong>ADMIN</strong> system role must always remain{" "}
-                      <strong>ACTIVE</strong> to prevent admin lockout.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => onSetEditStatus("ACTIVE")}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs font-semibold transition ${
-                        editStatus === "ACTIVE"
-                          ? "border-emerald-300 bg-emerald-50/60 text-emerald-800 ring-1 ring-emerald-400"
-                          : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100/70"
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                      <div>
-                        <p className="font-bold">Active</p>
-                        <p className="text-xs font-normal text-slate-500">
-                          Role enabled for users
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onSetEditStatus("INACTIVE")}
-                      className={`flex items-center gap-2 rounded-xl border p-2.5 text-left text-xs font-semibold transition ${
-                        editStatus === "INACTIVE"
-                          ? "border-rose-300 bg-rose-50/60 text-rose-800 ring-1 ring-rose-400"
-                          : "border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100/70"
-                      }`}
-                    >
-                      <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
-                      <div>
-                        <p className="font-bold">Inactive</p>
-                        <p className="text-xs font-normal text-slate-500">
-                          Suspended / Unavailable
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                )}
               </div>
 
               <div>

@@ -107,16 +107,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
               </a>
             )}
 
-            {onRefresh && (
-              <button
-                type="button"
-                onClick={onRefresh}
-                className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition cursor-pointer text-slate-600"
-                title="Refresh metrics"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            )}
+
           </div>
         </div>
 

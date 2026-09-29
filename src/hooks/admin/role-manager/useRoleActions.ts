@@ -6,6 +6,7 @@ import type {
   SerializedPermission,
   SerializedRole,
 } from "@/types/admin/role-manager";
+import { toast } from "sonner";
 
 export function useRoleActions(
   permissionsList: SerializedPermission[],
@@ -24,10 +25,6 @@ export function useRoleActions(
     [],
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -37,10 +34,6 @@ export function useRoleActions(
   const [editStatus, setEditStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [editPermissionIds, setEditPermissionIds] = useState<string[]>([]);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [editFeedback, setEditFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   function togglePermission(permId: string) {
     setSelectedPermissionIds((prev) =>
@@ -64,7 +57,6 @@ export function useRoleActions(
     setEditDescription(role.description || "");
     setEditStatus(role.status);
     setEditPermissionIds(role.permissions.map((p) => p.permission_id));
-    setEditFeedback(null);
     setIsEditModalOpen(true);
   }
 
@@ -72,16 +64,12 @@ export function useRoleActions(
     e.preventDefault();
     if (!newRoleName.trim()) return;
     if (newRoleName.trim().toUpperCase() === "ADMIN") {
-      setFeedback({
-        type: "error",
-        text: "The ADMIN role is a reserved system role and cannot be created.",
-      });
+      toast.error("The ADMIN role is a reserved system role and cannot be created.");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setFeedback(null);
 
       const res = await fetch("/api/admin/roles", {
         method: "POST",
@@ -97,10 +85,7 @@ export function useRoleActions(
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setFeedback({
-          type: "error",
-          text: data.message || "Failed to create role.",
-        });
+        toast.error(data.message || "Failed to create role.");
         setIsSubmitting(false);
         return;
       }
@@ -123,10 +108,7 @@ export function useRoleActions(
       };
 
       setRoles((prev) => [...prev, newlyAddedRole]);
-      setFeedback({
-        type: "success",
-        text: data.message || "Role created successfully.",
-      });
+      toast.success(data.message || "Role created successfully.");
 
       setTimeout(() => {
         setIsModalOpen(false);
@@ -134,15 +116,11 @@ export function useRoleActions(
         setNewRoleDescription("");
         setNewRoleStatus("ACTIVE");
         setSelectedPermissionIds([]);
-        setFeedback(null);
         router.refresh();
       }, 1200);
     } catch (err) {
       console.error("Failed to create role:", err);
-      setFeedback({
-        type: "error",
-        text: "An unexpected error occurred while creating role.",
-      });
+      toast.error("An unexpected error occurred while creating role.");
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +132,6 @@ export function useRoleActions(
 
     try {
       setIsEditSubmitting(true);
-      setEditFeedback(null);
 
       const res = await fetch("/api/admin/roles", {
         method: "PATCH",
@@ -169,10 +146,7 @@ export function useRoleActions(
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setEditFeedback({
-          type: "error",
-          text: data.message || "Failed to update role.",
-        });
+        toast.error(data.message || "Failed to update role.");
         setIsEditSubmitting(false);
         return;
       }
@@ -198,23 +172,14 @@ export function useRoleActions(
         ),
       );
 
-      setEditFeedback({
-        type: "success",
-        text: "Role updated successfully.",
-      });
+      toast.success("Role updated successfully.");
 
-      setTimeout(() => {
-        setIsEditModalOpen(false);
-        setEditingRoleId(null);
-        setEditFeedback(null);
-        router.refresh();
-      }, 1000);
+      setIsEditModalOpen(false);
+      setEditingRoleId(null);
+      router.refresh();
     } catch (err) {
       console.error("Failed to update role:", err);
-      setEditFeedback({
-        type: "error",
-        text: "An unexpected error occurred while updating role.",
-      });
+      toast.error("An unexpected error occurred while updating role.");
     } finally {
       setIsEditSubmitting(false);
     }
@@ -232,8 +197,6 @@ export function useRoleActions(
     selectedPermissionIds,
     togglePermission,
     isSubmitting,
-    feedback,
-    setFeedback,
     handleCreateRole,
     isEditModalOpen,
     setIsEditModalOpen,
@@ -246,8 +209,6 @@ export function useRoleActions(
     editPermissionIds,
     toggleEditPermission,
     isEditSubmitting,
-    editFeedback,
-    setEditFeedback,
     openEditRoleModal,
     handleSaveEditRole,
   };

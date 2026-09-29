@@ -48,20 +48,18 @@ export function AdminGrievanceTable({
       <span id="routing-exceptions" className="absolute -top-24" />
 
       {/* Table Toolbar / Filters */}
-      <div className="border-b border-slate-100 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
-              <span>Live Grievance Oversight Queue</span>
-              {isLoading && (
-                <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
-              )}
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Showing page {currentPage} of {totalPages} ({totalCount} total
-              records across all departments).
-            </p>
-          </div>
+      <div className="border-b border-slate-100 p-5 sm:p-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+        <div>
+          <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            <span>Live Grievance Oversight Queue</span>
+            {isLoading && (
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
+            )}
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Showing page {currentPage} of {totalPages} ({totalCount} total
+            records across all departments).
+          </p>
         </div>
 
         {/* Search and Dropdown Filters */}

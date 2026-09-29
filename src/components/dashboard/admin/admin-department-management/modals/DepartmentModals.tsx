@@ -10,13 +10,13 @@ import type { DepartmentHeadOption } from "@/types/admin/departments";
 
 export interface DepartmentModalsProps {
   isModalOpen: boolean;
-  feedback: { type: "success" | "error"; text: string } | null;
+
   deptName: string;
   deptCode: string;
   selectedHeadId: string;
   description: string;
   contactEmail: string;
-  deptStatus: "ACTIVE" | "INACTIVE";
+
   isSubmitting: boolean;
   departmentHeads: DepartmentHeadOption[];
   onCloseCreate: () => void;
@@ -26,29 +26,31 @@ export interface DepartmentModalsProps {
   onSetSelectedHeadId: (value: string) => void;
   onSetDescription: (value: string) => void;
   onSetContactEmail: (value: string) => void;
-  onSetDeptStatus: (value: "ACTIVE" | "INACTIVE") => void;
+
   isEditModalOpen: boolean;
   editDeptName: string;
   editDescription: string;
-  editStatus: "ACTIVE" | "INACTIVE";
+  editStatus?: "ACTIVE" | "INACTIVE";
+  onSetEditStatus?: (val: "ACTIVE" | "INACTIVE") => void;
+
   isEditSubmitting: boolean;
-  editFeedback: { type: "success" | "error"; text: string } | null;
+
   onCloseEdit: () => void;
   onSubmitEdit: (e: React.FormEvent) => void;
   onSetEditDeptName: (value: string) => void;
   onSetEditDescription: (value: string) => void;
-  onSetEditStatus: (value: "ACTIVE" | "INACTIVE") => void;
+
 }
 
 export function DepartmentModals({
   isModalOpen,
-  feedback,
+
   deptName,
   deptCode,
   selectedHeadId,
   description,
   contactEmail,
-  deptStatus,
+
   isSubmitting,
   departmentHeads,
   onCloseCreate,
@@ -58,18 +60,20 @@ export function DepartmentModals({
   onSetSelectedHeadId,
   onSetDescription,
   onSetContactEmail,
-  onSetDeptStatus,
+
   isEditModalOpen,
   editDeptName,
   editDescription,
   editStatus,
+
   isEditSubmitting,
-  editFeedback,
+
   onCloseEdit,
   onSubmitEdit,
   onSetEditDeptName,
   onSetEditDescription,
   onSetEditStatus,
+
 }: DepartmentModalsProps) {
   return (
     <>
@@ -94,17 +98,7 @@ export function DepartmentModals({
               </button>
             </div>
 
-            {feedback && (
-              <div
-                className={`mt-4 rounded-xl border p-3 text-xs ${
-                  feedback.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-rose-200 bg-rose-50 text-rose-800"
-                }`}
-              >
-                {feedback.text}
-              </div>
-            )}
+
 
             <form onSubmit={onSubmitCreate} className="mt-4 space-y-4">
               <div>
@@ -224,32 +218,7 @@ export function DepartmentModals({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="new-dept-status"
-                  className="block text-xs font-semibold text-slate-700"
-                >
-                  Initial Status
-                </label>
-                <div className="relative mt-1">
-                  <select
-                    id="new-dept-status"
-                    value={deptStatus}
-                    onChange={(e) =>
-                      onSetDeptStatus(e.target.value as "ACTIVE" | "INACTIVE")
-                    }
-                    className="h-9 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-8 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-                  >
-                    <option value="ACTIVE">ACTIVE (Accepts grievances)</option>
-                    <option value="INACTIVE">
-                      INACTIVE (Routing suspended)
-                    </option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-              </div>
+
 
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <button
@@ -261,7 +230,14 @@ export function DepartmentModals({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={
+                    isSubmitting ||
+                    !deptName.trim() ||
+                    !deptCode.trim() ||
+                    !selectedHeadId ||
+                    !contactEmail.trim() ||
+                    description.trim().length < 20
+                  }
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
                 >
                   {isSubmitting ? (
@@ -303,17 +279,7 @@ export function DepartmentModals({
               </button>
             </div>
 
-            {editFeedback && (
-              <div
-                className={`mt-4 rounded-xl border p-3 text-xs ${
-                  editFeedback.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-rose-200 bg-rose-50 text-rose-800"
-                }`}
-              >
-                {editFeedback.text}
-              </div>
-            )}
+
 
             <form onSubmit={onSubmitEdit} className="mt-4 space-y-4">
               <div>
@@ -349,58 +315,53 @@ export function DepartmentModals({
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="edit-dept-status"
-                  className="block text-xs font-semibold text-slate-700"
-                >
-                  Department Status
-                </label>
-                <div className="relative mt-1">
-                  <select
-                    id="edit-dept-status"
-                    value={editStatus}
-                    onChange={(e) =>
-                      onSetEditStatus(e.target.value as "ACTIVE" | "INACTIVE")
-                    }
-                    className="h-9 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-8 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-                  >
-                    <option value="ACTIVE">ACTIVE (Accepts grievances)</option>
-                    <option value="INACTIVE">
-                      INACTIVE (Routing suspended)
-                    </option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </div>
-                </div>
-              </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={onCloseEdit}
-                  className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isEditSubmitting}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
-                >
-                  {isEditSubmitting ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                {onSetEditStatus && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSetEditStatus(
+                        editStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE",
+                      )
+                    }
+                    className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition ${
+                      editStatus === "ACTIVE"
+                        ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                        : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {editStatus === "ACTIVE" ? "Deactivate" : "Activate"}
+                  </button>
+                )}
+
+                <div className="flex items-center gap-2.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={onCloseEdit}
+                    className="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isEditSubmitting || !editDeptName.trim() || editDescription.trim().length < 20}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
+                  >
+                    {isEditSubmitting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Apply Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -1,101 +1,73 @@
 "use client";
 
 import { MoreHorizontal } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface ActionMenuItem {
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
   variant?: "default" | "primary" | "warning" | "danger";
+  disabled?: boolean;
 }
 
 interface ActionMenuProps {
   items: ActionMenuItem[];
-  /** Optional width override, defaults to w-32 (128px) */
+  /** Optional width override, defaults to w-36 (144px) */
   widthClass?: string;
 }
 
 export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen]);
-
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="relative inline-block text-right" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer"
-        aria-expanded={isOpen}
-        aria-haspopup="true"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer focus:outline-none"
         title="More actions"
       >
         <MoreHorizontal className="h-4 w-4" />
-      </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={`rounded-xl p-1 ${widthClass}`}>
+        {items.map((item) => {
+          let variantClass = "text-slate-700 focus:bg-[#F0FDFA] focus:text-[#0F766E]";
+          if (item.variant === "primary")
+            variantClass = "text-[#0F766E] font-semibold focus:bg-[#F0FDFA]";
+          if (item.variant === "warning")
+            variantClass = "text-amber-700 focus:bg-amber-50";
+          if (item.variant === "danger")
+            variantClass = "text-rose-700 focus:bg-rose-50";
 
-      {isOpen && (
-        <div
-          className={`absolute right-0 top-full mt-1 z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 ${widthClass}`}
-        >
-          <div className="p-1">
-            {items.map((item) => {
-              const baseClass =
-                "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition cursor-pointer text-left";
+          const alignmentClass = item.icon ? "text-left" : "justify-center text-center";
 
-              let variantClass =
-                "text-slate-700 hover:bg-[#F0FDFA] hover:text-[#0F766E]";
-              if (item.variant === "primary")
-                variantClass =
-                  "text-[#0F766E] font-semibold hover:bg-[#F0FDFA]";
-              if (item.variant === "warning")
-                variantClass = "text-amber-700 hover:bg-amber-50";
-              if (item.variant === "danger")
-                variantClass = "text-rose-700 hover:bg-rose-50";
+          if (item.disabled) {
+            variantClass = "text-slate-400 opacity-50 cursor-not-allowed";
+          }
 
-              // If no icon is provided, center the text for a cleaner look
-              const alignmentClass = item.icon
-                ? "text-left"
-                : "justify-center text-center";
-
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    setIsOpen(false);
-                    item.onClick();
-                  }}
-                  className={`${baseClass} ${variantClass} ${alignmentClass}`}
-                >
-                  {item.icon && (
-                    <span className="flex-shrink-0">{item.icon}</span>
-                  )}
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+          return (
+            <DropdownMenuItem
+              key={item.label}
+              disabled={item.disabled}
+              onClick={(e) => {
+                if (item.disabled) {
+                  e.preventDefault();
+                  return;
+                }
+                item.onClick();
+              }}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer ${variantClass} ${alignmentClass}`}
+            >
+              {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+              {item.label}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

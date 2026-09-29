@@ -83,7 +83,7 @@ export function RulesFilterPopover({
             )}
           </div>
 
-          {activeTab === "matrix" && (
+          {activeTab === "routing" && (
             <div className="space-y-1">
               <label
                 htmlFor="filter-popover-dept"
@@ -108,7 +108,7 @@ export function RulesFilterPopover({
             </div>
           )}
 
-          {activeTab === "matrix" && (
+          {(activeTab === "routing" || activeTab === "priority") && (
             <div className="space-y-1">
               <label
                 htmlFor="filter-popover-cat"

@@ -34,6 +34,7 @@ export function AdminRolesManager({
     currentPage,
     setCurrentPage,
     pageSize,
+    setPageSize,
     totalPages,
     filteredRoles,
     paginatedRoles,
@@ -44,8 +45,14 @@ export function AdminRolesManager({
     permStatusFilter,
     setPermStatusFilter,
     filteredPermissions,
+    paginatedPermissions,
     activePermsCount,
     inactivePermsCount,
+    permCurrentPage,
+    setPermCurrentPage,
+    permPageSize,
+    setPermPageSize,
+    permTotalPages,
   } = useRoleFilters(roles, permissionsList);
 
   const {
@@ -60,8 +67,6 @@ export function AdminRolesManager({
     selectedPermissionIds,
     togglePermission,
     isSubmitting,
-    feedback,
-    setFeedback,
     handleCreateRole,
     isEditModalOpen,
     setIsEditModalOpen,
@@ -73,8 +78,6 @@ export function AdminRolesManager({
     editPermissionIds,
     toggleEditPermission,
     isEditSubmitting,
-    editFeedback,
-    setEditFeedback,
     openEditRoleModal,
     handleSaveEditRole,
   } = useRoleActions(permissionsList, setRoles);
@@ -108,6 +111,7 @@ export function AdminRolesManager({
           totalPages={totalPages}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
           togglingRoleId={togglingRoleId}
           onEditRole={openEditRoleModal}
           onToggleRoleStatus={handleToggleRoleStatus}
@@ -118,6 +122,7 @@ export function AdminRolesManager({
         <PermissionsTab
           permissionsList={permissionsList}
           filteredPermissions={filteredPermissions}
+          paginatedPermissions={paginatedPermissions}
           activePermsCount={activePermsCount}
           inactivePermsCount={inactivePermsCount}
           permSearch={permSearch}
@@ -126,41 +131,45 @@ export function AdminRolesManager({
           onPermStatusChange={setPermStatusFilter}
           togglingPermId={togglingPermId}
           onTogglePermStatus={handleTogglePermStatus}
+          currentPage={permCurrentPage}
+          totalPages={permTotalPages}
+          pageSize={permPageSize}
+          onPageChange={setPermCurrentPage}
+          onPageSizeChange={setPermPageSize}
         />
       )}
 
       <RoleManagerModals
         isModalOpen={isModalOpen}
-        feedback={feedback}
+
         newRoleName={newRoleName}
         newRoleDescription={newRoleDescription}
-        newRoleStatus={newRoleStatus}
+
         permissionsList={permissionsList}
         selectedPermissionIds={selectedPermissionIds}
         isSubmitting={isSubmitting}
         onCloseCreate={() => {
           setIsModalOpen(false);
-          setFeedback(null);
+
         }}
         onSubmitCreate={handleCreateRole}
         onSetNewRoleName={setNewRoleName}
         onSetNewRoleDescription={setNewRoleDescription}
-        onSetNewRoleStatus={setNewRoleStatus}
+
         onTogglePermission={togglePermission}
         isEditModalOpen={isEditModalOpen}
         editingRoleName={editingRoleName}
         editDescription={editDescription}
-        editStatus={editStatus}
+
         editPermissionIds={editPermissionIds}
-        editFeedback={editFeedback}
         isEditSubmitting={isEditSubmitting}
         onCloseEdit={() => {
           setIsEditModalOpen(false);
-          setEditFeedback(null);
+
         }}
         onSubmitEdit={handleSaveEditRole}
         onSetEditDescription={setEditDescription}
-        onSetEditStatus={setEditStatus}
+
         onToggleEditPermission={toggleEditPermission}
       />
     </div>

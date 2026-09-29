@@ -6,6 +6,7 @@ import type {
   DepartmentHeadOption,
   SerializedDepartment,
 } from "@/types/admin/departments";
+import { toast } from "sonner";
 
 export function useDepartmentActions(
   setDepartments: React.Dispatch<React.SetStateAction<SerializedDepartment[]>>,
@@ -20,12 +21,7 @@ export function useDepartmentActions(
   const [selectedHeadId, setSelectedHeadId] = useState("");
   const [description, setDescription] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-  const [deptStatus, setDeptStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -34,10 +30,6 @@ export function useDepartmentActions(
   const [editDescription, setEditDescription] = useState("");
   const [editStatus, setEditStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
-  const [editFeedback, setEditFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
 
   // Action menu state (3-dot menu)
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
@@ -65,7 +57,6 @@ export function useDepartmentActions(
     setEditDeptName(dept.department_name);
     setEditDescription(dept.description || "");
     setEditStatus((dept.status as "ACTIVE" | "INACTIVE") || "ACTIVE");
-    setEditFeedback(null);
     setIsEditModalOpen(true);
   }
 
@@ -75,7 +66,6 @@ export function useDepartmentActions(
 
     try {
       setIsEditSubmitting(true);
-      setEditFeedback(null);
 
       const res = await fetch("/api/admin/departments", {
         method: "PATCH",
@@ -90,10 +80,7 @@ export function useDepartmentActions(
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setEditFeedback({
-          type: "error",
-          text: data.message || "Failed to update department.",
-        });
+        toast.error(data.message || "Failed to update department.");
         setIsEditSubmitting(false);
         return;
       }
@@ -111,23 +98,16 @@ export function useDepartmentActions(
         ),
       );
 
-      setEditFeedback({
-        type: "success",
-        text: "Department updated successfully.",
-      });
+      toast.success("Department updated successfully.");
 
       setTimeout(() => {
         setIsEditModalOpen(false);
         setEditingDeptId(null);
-        setEditFeedback(null);
         router.refresh();
       }, 900);
     } catch (err) {
       console.error("Failed to update department:", err);
-      setEditFeedback({
-        type: "error",
-        text: "An unexpected error occurred while updating department.",
-      });
+      toast.error("An unexpected error occurred while updating department.");
     } finally {
       setIsEditSubmitting(false);
     }
@@ -136,41 +116,28 @@ export function useDepartmentActions(
   async function handleCreateDepartment(e: React.FormEvent) {
     e.preventDefault();
     if (!deptName.trim()) {
-      setFeedback({ type: "error", text: "Department name is required." });
+      toast.error("Department name is required.");
       return;
     }
     if (!deptCode.trim() || deptCode.trim().length < 2) {
-      setFeedback({
-        type: "error",
-        text: "Department code is required (e.g. HR, FIN, IT, FAC).",
-      });
+      toast.error("Department code is required (e.g. HR, FIN, IT, FAC).");
       return;
     }
     if (!selectedHeadId) {
-      setFeedback({
-        type: "error",
-        text: "Department Head is required. Please select a Department Head.",
-      });
+      toast.error("Department Head is required. Please select a Department Head.");
       return;
     }
     if (!contactEmail.trim()) {
-      setFeedback({
-        type: "error",
-        text: "Department contact email is required.",
-      });
+      toast.error("Department contact email is required.");
       return;
     }
     if (!description.trim() || description.trim().length < 20) {
-      setFeedback({
-        type: "error",
-        text: "Department description is mandatory (minimum 20 characters) detailing grievance jurisdiction.",
-      });
+      toast.error("Department description is mandatory (minimum 20 characters) detailing grievance jurisdiction.");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      setFeedback(null);
 
       const res = await fetch("/api/admin/departments", {
         method: "POST",
@@ -181,17 +148,14 @@ export function useDepartmentActions(
           head_user_id: selectedHeadId,
           description: description.trim(),
           contact_email: contactEmail.trim(),
-          status: deptStatus,
+          status: "ACTIVE",
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setFeedback({
-          type: "error",
-          text: data.message || "Failed to create department.",
-        });
+        toast.error(data.message || "Failed to create department.");
         setIsSubmitting(false);
         return;
       }
@@ -208,10 +172,7 @@ export function useDepartmentActions(
         },
       ]);
 
-      setFeedback({
-        type: "success",
-        text: data.message || "Department created successfully.",
-      });
+      toast.success(data.message || "Department created successfully.");
 
       setTimeout(() => {
         setIsModalOpen(false);
@@ -220,16 +181,11 @@ export function useDepartmentActions(
         setSelectedHeadId("");
         setDescription("");
         setContactEmail("");
-        setDeptStatus("ACTIVE");
-        setFeedback(null);
         router.refresh();
       }, 900);
     } catch (err) {
       console.error("Failed to create department:", err);
-      setFeedback({
-        type: "error",
-        text: "An unexpected error occurred while creating department.",
-      });
+      toast.error("An unexpected error occurred while creating department.");
     } finally {
       setIsSubmitting(false);
     }
@@ -248,11 +204,7 @@ export function useDepartmentActions(
     setDescription,
     contactEmail,
     setContactEmail,
-    deptStatus,
-    setDeptStatus,
     isSubmitting,
-    feedback,
-    setFeedback,
     handleCreateDepartment,
     isEditModalOpen,
     setIsEditModalOpen,
@@ -262,9 +214,8 @@ export function useDepartmentActions(
     setEditDescription,
     editStatus,
     setEditStatus,
+    editingDeptId,
     isEditSubmitting,
-    editFeedback,
-    setEditFeedback,
     openEditModal,
     handleSaveEditDepartment,
     openActionMenuId,

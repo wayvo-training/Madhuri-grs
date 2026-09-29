@@ -14,6 +14,8 @@ import { StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
+import { Pagination } from "@/components/ui/pagination";
+import { useState, useMemo, useEffect } from "react";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -46,6 +48,18 @@ export function SlaGovernanceView({
       (g.submittedResolution && requiresHeadResolutionReview(g))
     );
   });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [escalatedList.length]);
+
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return escalatedList.slice(start, start + pageSize);
+  }, [escalatedList, currentPage, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -114,6 +128,8 @@ export function SlaGovernanceView({
             <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
               <tr>
                 <th className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance</th>
+                <th className="py-3 px-3 whitespace-nowrap">Category</th>
+                <th className="py-3 px-3 whitespace-nowrap">Sub Category</th>
                 <th className="py-3 px-3 whitespace-nowrap">SLA</th>
                 <th className="py-3 px-3 whitespace-nowrap">Escalation</th>
                 <th className="py-3 px-3 whitespace-nowrap">Assigned Staff</th>
@@ -127,14 +143,14 @@ export function SlaGovernanceView({
               {escalatedList.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="py-10 text-center text-slate-500 text-xs"
                   >
                     No active escalations requiring intervention.
                   </td>
                 </tr>
               ) : (
-                escalatedList.map((item) => {
+                paginatedList.map((item) => {
                   const isEscalated = item.status === "ESCALATED";
                   const isUnderIntervention =
                     item.status === "IN_PROGRESS" && item.hodIntervention;
@@ -157,10 +173,15 @@ export function SlaGovernanceView({
                           >
                             {item.title}
                           </button>
-                          <p className="text-[10px] text-slate-500">
-                            {item.category} / {item.subcategory}
-                          </p>
                         </div>
+                      </td>
+                      
+                      <td className="py-3 px-3 align-top text-xs font-medium text-slate-700">
+                        {item.category}
+                      </td>
+                      
+                      <td className="py-3 px-3 align-top text-[11px] text-slate-500">
+                        {item.subcategory}
                       </td>
 
                       <td className="py-3 px-3 align-top">
@@ -187,19 +208,19 @@ export function SlaGovernanceView({
                       <td className="py-3 px-3 align-top">
                         <div className="flex flex-col items-start gap-1">
                           {isEscalated ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 shadow-2xs">
+                            <span className="w-fit inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 shadow-2xs dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30">
                               Escalated
                             </span>
                           ) : isUnderIntervention ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs">
+                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
                               Under Intervention
                             </span>
                           ) : needsReview ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs">
+                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
                               Review Required
                             </span>
                           ) : (
-                            <span className="w-fit inline-flex items-center rounded-full border border-slate-200 bg-slate-100/90 px-2.5 py-0.5 text-[10px] font-medium text-slate-700 shadow-2xs">
+                            <span className="w-fit inline-flex items-center rounded-full border border-slate-200 bg-slate-100/90 px-2.5 py-0.5 text-[10px] font-medium text-slate-700 shadow-2xs dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600">
                               Monitor
                             </span>
                           )}
@@ -289,6 +310,19 @@ export function SlaGovernanceView({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(escalatedList.length / pageSize)}
+            totalCount={escalatedList.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemLabel="escalations"
+          />
         </div>
       </div>
     </div>

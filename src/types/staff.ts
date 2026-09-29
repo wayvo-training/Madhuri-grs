@@ -76,6 +76,15 @@ export interface StaffResolutionData {
   rejectionReason?: string | null;
 }
 
+export interface StaffInvolvedDepartment {
+  id: string;
+  departmentName: string;
+  involvementType: "PRIMARY" | "SUPPORTING" | "EQUAL";
+  status: string;
+  assignedStaff?: string | null;
+  isMyAssignment?: boolean;
+}
+
 export interface StaffGrievanceItem {
   id: string;
   grievanceNumber: string;
@@ -101,6 +110,7 @@ export interface StaffGrievanceItem {
   attachments?: StaffAttachmentItem[];
   internalNotes?: StaffInternalNote[];
   auditTrail?: StaffAuditItem[];
+  departmentsInvolved?: StaffInvolvedDepartment[];
 }
 
 export interface StaffMemberProfile {

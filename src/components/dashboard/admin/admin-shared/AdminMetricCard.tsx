@@ -1,5 +1,6 @@
 import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 
 export interface AdminMetricCardProps {
   title: string;
@@ -85,44 +86,49 @@ export function AdminMetricCard({
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "relative overflow-hidden rounded-2xl border p-5 text-left shadow-xs transition hover:shadow-md cursor-pointer",
-        styles.ring,
-      )}
+      className={cn("w-full text-left transition hover:shadow-md cursor-pointer outline-none")}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-500">{title}</span>
-        <div className={cn("rounded-xl p-2", styles.icon)}>
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className={cn("text-2xl font-bold tracking-tight", styles.value)}>
-          {value}
-        </span>
-        <span className="text-xs font-medium text-slate-400">{helper}</span>
-      </div>
-      {subtext ||
-      title === "Suspended Accounts" ||
-      title === "Active Accounts" ||
-      title === "Total Enrolled Users" ? (
-        <div
-          className={cn(
-            "mt-3 flex items-center gap-1.5 text-xs font-normal",
-            styles.helper,
-          )}
-        >
-          <span
-            className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
-          />
-          {subtext ||
-            (title === "Suspended Accounts"
-              ? "Revoked access"
-              : title === "Active Accounts"
-                ? "Access permitted"
-                : "Active enterprise directory")}
-        </div>
-      ) : null}
+      <Card className={cn("relative overflow-hidden h-full rounded-2xl shadow-xs", styles.ring)}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-3">
+          <CardTitle className="text-sm font-medium text-slate-500">
+            {title}
+          </CardTitle>
+          <div className={cn("rounded-xl p-2", styles.icon)}>
+            <Icon className="h-4 w-4" />
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 pt-0">
+          <div className="flex items-baseline gap-2">
+            <span className={cn("text-2xl font-bold tracking-tight", styles.value)}>
+              {value}
+            </span>
+            <span className="text-xs font-medium text-slate-400">{helper}</span>
+          </div>
+        </CardContent>
+        {subtext ||
+        title === "Suspended Accounts" ||
+        title === "Active Accounts" ||
+        title === "Total Enrolled Users" ? (
+          <CardFooter className="p-5 pt-0">
+            <div
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-normal",
+                styles.helper,
+              )}
+            >
+              <span
+                className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
+              />
+              {subtext ||
+                (title === "Suspended Accounts"
+                  ? "Revoked access"
+                  : title === "Active Accounts"
+                    ? "Access permitted"
+                    : "Active enterprise directory")}
+            </div>
+          </CardFooter>
+        ) : null}
+      </Card>
     </button>
   );
 }

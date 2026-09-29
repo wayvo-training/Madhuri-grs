@@ -33,7 +33,7 @@ export function AdminDashboard({
       />
 
       {/* 3. EXECUTIVE WORKSPACE: Workload Breakdown & Recent Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5 items-start">
         <DepartmentDirectorySummary departments={departments} />
         <RecentGrievancesTable recentGrievances={recentGrievances} />
       </div>

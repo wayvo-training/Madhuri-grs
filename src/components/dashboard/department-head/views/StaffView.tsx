@@ -12,6 +12,9 @@ import type {
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Pagination } from "@/components/ui/pagination";
+import { useState, useMemo, useEffect } from "react";
 
 export interface StaffViewProps {
   staffList: StaffMember[];
@@ -40,6 +43,18 @@ export function StaffView({
           (metrics.totalActiveTickets / metrics.totalStaffCapacity) * 100,
         )
       : 0;
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [staffList.length]);
+
+  const paginatedStaff = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return staffList.slice(start, start + pageSize);
+  }, [staffList, currentPage, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -93,212 +108,172 @@ export function StaffView({
           }
         />
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {staffList.map((staff) => {
-            const loadPercentage =
-              staff.maxCapacity > 0
-                ? Math.round((staff.activeTickets / staff.maxCapacity) * 100)
-                : 0;
-            const isOverloaded = loadPercentage >= 80;
-            const staffTickets = grievances.filter(
-              (g) => g.assignedStaffId === staff.id,
-            );
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left text-[11px] border-collapse">
+            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+              <tr>
+                <th className="py-3 pl-4 pr-3 whitespace-nowrap">Staff Member</th>
+                <th className="py-3 px-3 whitespace-nowrap">Status</th>
+                <th className="py-3 px-3 min-w-48">Active Workload</th>
+                <th className="py-3 px-3 whitespace-nowrap">Assigned Cases</th>
+                <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+              {paginatedStaff.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center text-slate-500 text-xs">
+                    No staff members found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedStaff.map((staff) => {
+                  const loadPercentage =
+                    staff.maxCapacity > 0
+                      ? Math.round((staff.activeTickets / staff.maxCapacity) * 100)
+                      : 0;
+                  const isOverloaded = loadPercentage >= 80;
+                  const staffTickets = grievances.filter(
+                    (g) => g.assignedStaffId === staff.id,
+                  );
 
-            return (
-              <div
-                key={staff.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-slate-50/50 p-5 shadow-2xs hover:border-teal-300 hover:bg-white transition"
-              >
-                <div className="space-y-3.5">
-                  {/* Staff Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80">
-                        {staff.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <h4
-                          className="text-sm font-semibold text-slate-900 truncate max-w-42.5"
-                          title={staff.name}
-                        >
-                          {staff.name}
-                        </h4>
-                        <p
-                          className="text-xs font-normal text-slate-500 truncate max-w-42.5"
-                          title={staff.designation}
-                        >
-                          {staff.designation}
-                        </p>
-                        <p
-                          className="text-[11px] font-normal text-slate-400 truncate max-w-42.5"
-                          title={staff.email}
-                        >
-                          {staff.email}
-                        </p>
-                      </div>
-                    </div>
+                  return (
+                    <tr key={staff.id} className="hover:bg-slate-50/60 transition">
+                      {/* Staff Member Info */}
+                      <td className="py-3 pl-4 pr-3 align-top">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200/80">
+                            {staff.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-semibold text-slate-900">
+                              {staff.name}
+                            </h4>
+                            <p className="text-[10px] text-slate-500">
+                              {staff.designation}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {staff.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
 
-                    {staff.status === "ON_LEAVE" ? (
-                      <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
-                        On Leave
-                      </span>
-                    ) : staff.activeTickets >= (staff.maxCapacity || 10) ? (
-                      <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-800">
-                        At Capacity
-                      </span>
-                    ) : isOverloaded ? (
-                      <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                        High Load
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                        Available
-                      </span>
-                    )}
-                  </div>
+                      {/* Status */}
+                      <td className="py-3 px-3 align-top">
+                        {staff.status === "ON_LEAVE" ? (
+                          <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                            On Leave
+                          </span>
+                        ) : staff.activeTickets >= (staff.maxCapacity || 10) ? (
+                          <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-semibold text-rose-800">
+                            At Capacity
+                          </span>
+                        ) : isOverloaded ? (
+                          <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            High Load
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                            Available
+                          </span>
+                        )}
+                      </td>
 
-                  {/* Workload Progress Bar */}
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-normal text-slate-500">
-                        Active Workload
-                      </span>
-                      <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                        <span>
-                          {staff.activeTickets} / {staff.maxCapacity || 10}
-                        </span>
-                        <span className="text-slate-400 font-normal">•</span>
-                        <span
-                          className={`text-[11px] ${
-                            staff.activeTickets >= (staff.maxCapacity || 10)
-                              ? "text-rose-600 font-bold"
-                              : "text-emerald-700 font-medium"
-                          }`}
-                        >
-                          Avail:{" "}
-                          {Math.max(
-                            0,
-                            (staff.maxCapacity || 10) - staff.activeTickets,
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          staff.status === "ON_LEAVE"
-                            ? "bg-slate-400"
-                            : isOverloaded
-                              ? "bg-amber-500"
-                              : "bg-emerald-600"
-                        }`}
-                        style={{
-                          width: `${Math.min(loadPercentage, 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Assigned Grievances Mini-List */}
-                  <div className="border-t border-slate-200/70 pt-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        Assigned Grievances ({staffTickets.length})
-                      </div>
-                      {staffTickets.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => onFilterStaffInQueue(staff.id)}
-                          className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 transition cursor-pointer"
-                          title="Filter all grievances handled by this staff member in the queue"
-                        >
-                          View in Queue &rarr;
-                        </button>
-                      )}
-                    </div>
-
-                    {staffTickets.length === 0 ? (
-                      <p className="text-xs italic text-slate-400 py-1">
-                        No active grievances assigned.
-                      </p>
-                    ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                        {staffTickets.map((t) => (
-                          <div
-                            key={t.id}
-                            className="flex items-center justify-between rounded-xl bg-white border border-slate-200/80 p-2.5 text-xs hover:border-emerald-300 hover:shadow-2xs transition gap-2"
-                          >
-                            <div className="min-w-0 flex-1 space-y-0.5">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 text-[10px]">
-                                  {t.ticketCode}
-                                </span>
-                                <PriorityBadge priority={t.priority} />
-                                <span className="text-[10px] font-medium text-slate-500">
-                                  {t.slaTimeLeft}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => onInspect(t, "statement")}
-                                className="text-left text-slate-800 font-medium truncate hover:text-emerald-800 transition text-xs block w-full cursor-pointer"
-                                title="Click to inspect full case file"
+                      {/* Workload */}
+                      <td className="py-3 px-3 align-top">
+                        <div className="space-y-1.5 w-full">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                              <span>
+                                {staff.activeTickets} / {staff.maxCapacity || 10}
+                              </span>
+                              <span className="text-slate-400 font-normal">•</span>
+                              <span
+                                className={`text-[10px] ${
+                                  staff.activeTickets >= (staff.maxCapacity || 10)
+                                    ? "text-rose-600 font-bold"
+                                    : "text-emerald-700 font-medium"
+                                }`}
                               >
-                                {t.title}
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => onInspect(t, "progress")}
-                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-white hover:border-emerald-300 transition cursor-pointer"
-                                title="Inspect full case file, statements & attachments"
-                              >
-                                <Eye className="h-3 w-3 text-slate-500" />
-                                <span>Inspect</span>
-                              </button>
-                              {(t.status === "ESCALATED" ||
-                                t.slaStatus === "BREACHED" ||
-                                t.status === "ASSIGNED") && (
-                                <button
-                                  type="button"
-                                  onClick={() => onReassign(t, staff.id)}
-                                  className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 transition cursor-pointer whitespace-nowrap"
-                                  title="Change assignment to another staff member"
-                                >
-                                  <span>Change Assignment</span>
-                                </button>
-                              )}
+                                Avail:{" "}
+                                {Math.max(
+                                  0,
+                                  (staff.maxCapacity || 10) - staff.activeTickets,
+                                )}
+                              </span>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                staff.status === "ON_LEAVE"
+                                  ? "bg-slate-400"
+                                  : isOverloaded
+                                    ? "bg-amber-500"
+                                    : "bg-emerald-600"
+                              }`}
+                              style={{
+                                width: `${Math.min(loadPercentage, 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </td>
 
-                {/* Staff Status Toggle Footer */}
-                <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">
-                    Status:{" "}
-                    <strong className="font-semibold text-slate-700">
-                      {staff.status}
-                    </strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onToggleAvailability(staff)}
-                    className="font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
-                  >
-                    {staff.status === "ON_LEAVE"
-                      ? "Mark as Available"
-                      : "Set as On Leave"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                      {/* Assigned Cases Count & Quick Actions */}
+                      <td className="py-3 px-3 align-top">
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="text-xs font-semibold text-slate-700">
+                            {staffTickets.length} assigned
+                          </span>
+                          {staffTickets.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => onFilterStaffInQueue(staff.id)}
+                              className="text-[10px] font-medium text-emerald-700 hover:text-emerald-900 transition underline cursor-pointer"
+                            >
+                              View in Queue
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 pl-3 pr-4 text-right align-top">
+                        <div className="flex justify-end">
+                          <ActionMenu
+                            widthClass="w-36"
+                            items={[
+                              {
+                                label: staff.status === "ON_LEAVE" ? "Set Available" : "Set On Leave",
+                                icon: <UserCheck className="h-3.5 w-3.5" />,
+                                variant: "default",
+                                onClick: () => onToggleAvailability(staff),
+                              },
+                            ]}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t border-slate-200/80">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(staffList.length / pageSize)}
+            totalCount={staffList.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemLabel="staff members"
+          />
         </div>
       </div>
     </div>

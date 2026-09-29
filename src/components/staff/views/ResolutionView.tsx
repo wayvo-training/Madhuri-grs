@@ -3,7 +3,9 @@
 import { Clock, Eye, FileCheck2, Hourglass, RotateCcw } from "lucide-react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ResolutionViewProps {
@@ -29,17 +31,27 @@ export function ResolutionView({
     (g) => g.reopenCount > 0 && g.status !== "CLOSED",
   );
 
-  const reopenedPagination = usePagination(reopenedCases, {
+  const { sortState: reopenSort, handleSort: handleReopenSort, sortedItems: sortedReopened } = useTableSort(reopenedCases);
+  const { sortState: draftSort, handleSort: handleDraftSort, sortedItems: sortedDrafting } = useTableSort(pendingDrafting);
+  const { sortState: reviewSort, handleSort: handleReviewSort, sortedItems: sortedReview } = useTableSort(pendingReview);
+  const { sortState: compSort, handleSort: handleCompSort, sortedItems: sortedCompleted } = useTableSort(completedCases);
+
+  const reopenedPagination = usePagination(sortedReopened, {
     initialPageSize: 5,
     pageSizeOptions: [5, 10, 20],
   });
 
-  const pendingDraftingPagination = usePagination(pendingDrafting, {
+  const pendingDraftingPagination = usePagination(sortedDrafting, {
     initialPageSize: 10,
     pageSizeOptions: [5, 10, 20],
   });
 
-  const pendingReviewPagination = usePagination(pendingReview, {
+  const pendingReviewPagination = usePagination(sortedReview, {
+    initialPageSize: 5,
+    pageSizeOptions: [5, 10, 20],
+  });
+  
+  const completedPagination = usePagination(sortedCompleted, {
     initialPageSize: 5,
     pageSizeOptions: [5, 10, 20],
   });
@@ -66,38 +78,38 @@ export function ResolutionView({
 
         {/* 4 Stat Boxes */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-[11px] font-semibold text-slate-500 block">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
+            <span className="text-[11px] font-semibold text-slate-500 block dark:text-slate-400">
               Pending Resolution
             </span>
-            <span className="text-lg font-bold text-slate-900">
+            <span className="text-lg font-bold text-slate-900 dark:text-slate-200">
               {pendingDrafting.length}
             </span>
           </div>
 
-          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100">
-            <span className="text-[11px] font-semibold text-blue-700 block">
+          <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 dark:bg-blue-500/20 dark:border-blue-500/30">
+            <span className="text-[11px] font-semibold text-blue-700 block dark:text-blue-400">
               Under HOD Review
             </span>
-            <span className="text-lg font-bold text-blue-900">
+            <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
               {pendingReview.length}
             </span>
           </div>
 
-          <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100">
-            <span className="text-[11px] font-semibold text-purple-700 block">
+          <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 dark:bg-purple-500/20 dark:border-purple-500/30">
+            <span className="text-[11px] font-semibold text-purple-700 block dark:text-purple-400">
               Reopened Cases
             </span>
-            <span className="text-lg font-bold text-purple-900">
+            <span className="text-lg font-bold text-purple-900 dark:text-purple-300">
               {reopenedCases.length}
             </span>
           </div>
 
-          <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
-            <span className="text-[11px] font-semibold text-emerald-700 block">
+          <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 dark:bg-emerald-500/20 dark:border-emerald-500/30">
+            <span className="text-[11px] font-semibold text-emerald-700 block dark:text-emerald-400">
               Completed Redressals
             </span>
-            <span className="text-lg font-bold text-emerald-900">
+            <span className="text-lg font-bold text-emerald-900 dark:text-emerald-300">
               {completedCases.length}
             </span>
           </div>
@@ -119,11 +131,11 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-purple-100 bg-purple-50/60 text-[11px] font-bold uppercase tracking-wider text-purple-800">
-                  <th className="py-3 px-3.5">Grievance</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Priority</th>
-                  <th className="py-3 px-3">Reopened Status</th>
-                  <th className="py-3 px-3">SLA</th>
+                  <SortableTh field="title" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3.5">Grievance</SortableTh>
+                  <SortableTh field="category" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Category</SortableTh>
+                  <SortableTh field="priority" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Priority</SortableTh>
+                  <SortableTh field="status" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Reopened Status</SortableTh>
+                  <SortableTh field="slaStatus" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">SLA</SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
@@ -218,11 +230,11 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3 px-3.5">Grievance</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Priority</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">SLA</th>
+                  <SortableTh field="title" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3.5">Grievance</SortableTh>
+                  <SortableTh field="category" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Category</SortableTh>
+                  <SortableTh field="priority" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Priority</SortableTh>
+                  <SortableTh field="status" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Status</SortableTh>
+                  <SortableTh field="slaStatus" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">SLA</SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
@@ -314,10 +326,10 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-blue-100 bg-blue-50/60 text-[11px] font-bold uppercase tracking-wider text-blue-900">
-                  <th className="py-3 px-3.5">Grievance</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Review Status</th>
-                  <th className="py-3 px-3">Submitted At</th>
+                  <SortableTh field="title" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3.5">Grievance</SortableTh>
+                  <SortableTh field="category" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Category</SortableTh>
+                  <SortableTh field="status" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Review Status</SortableTh>
+                  <SortableTh field="submittedAt" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Submitted At</SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>

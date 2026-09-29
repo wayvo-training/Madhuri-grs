@@ -832,20 +832,12 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Soft deactivation to preserve historical audit records
+    // Hard deletion
     await prisma.$transaction(async (tx) => {
-      await tx.priority_rules.update({
-        where: { priority_rule_id: ruleId },
-        data: {
-          status: "INACTIVE",
-          updated_at: new Date(),
-        },
-      });
-
       await tx.audit_logs.create({
         data: {
           user_id: user.user_id,
-          action: "DEACTIVATE_PRIORITY_RULE",
+          action: "DELETE_PRIORITY_RULE",
           entity_type: "PRIORITY_RULE",
           entity_id: ruleId,
           old_value: {
@@ -858,11 +850,15 @@ export async function DELETE(request: Request) {
             conditions: existing.conditions,
           } as unknown as Prisma.InputJsonValue,
           new_value: {
-            status: "INACTIVE",
-            deactivated_at: new Date().toISOString(),
-            deactivated_by: user.email,
+            status: "DELETED",
+            deleted_at: new Date().toISOString(),
+            deleted_by: user.email,
           } as unknown as Prisma.InputJsonValue,
         },
+      });
+
+      await tx.priority_rules.delete({
+        where: { priority_rule_id: ruleId },
       });
     });
 

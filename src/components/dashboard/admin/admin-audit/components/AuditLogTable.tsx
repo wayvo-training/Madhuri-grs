@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { ROLE_BADGE_STYLES } from "@/lib/admin/audit/audit-constants";
 import type { SerializedAuditLog } from "@/types/admin/audit";
+import { Pagination } from "@/components/ui/pagination";
+import { useState, useMemo } from "react";
 
 interface AuditLogTableProps {
   logs: SerializedAuditLog[];
@@ -19,6 +21,12 @@ interface AuditLogTableProps {
   expandedLogId: string | null;
   onResetFilters: () => void;
   onToggleExpand: (id: string) => void;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 export function AuditLogTable({
@@ -29,9 +37,15 @@ export function AuditLogTable({
   expandedLogId,
   onResetFilters,
   onToggleExpand,
+  totalCount,
+  currentPage,
+  pageSize,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
 }: AuditLogTableProps) {
   return (
-    <div className="overflow-x-auto relative">
+    <div className="overflow-x-auto relative rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-left text-xs">
         <thead className="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
           <tr>
@@ -164,13 +178,9 @@ export function AuditLogTable({
                           <span className="font-bold text-slate-900">
                             {log.user_name}
                           </span>
-                          {log.role_name && (
-                            <span
-                              className={`rounded px-1.5 py-0.2 text-[9px] font-bold border ${rolePill}`}
-                            >
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase">
                               {log.role_name}
                             </span>
-                          )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-slate-400">
                           {log.employee_code && (
@@ -186,10 +196,8 @@ export function AuditLogTable({
 
                   <td className="whitespace-nowrap px-3 py-3.5">
                     <span
-                      className={`inline-block rounded-md border px-2 py-0.5 font-mono text-xs font-bold ${
-                        isError
-                          ? "bg-rose-50 text-rose-700 border-rose-200"
-                          : "bg-slate-100 text-slate-800 border-slate-200"
+                      className={`font-mono text-xs font-bold ${
+                        isError ? "text-rose-600" : "text-slate-700"
                       }`}
                     >
                       {log.action}
@@ -197,7 +205,7 @@ export function AuditLogTable({
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-3.5">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    <span className="text-xs font-semibold text-slate-600">
                       {log.entity_type}
                     </span>
                     {log.entity_id && (
@@ -238,6 +246,18 @@ export function AuditLogTable({
           )}
         </tbody>
       </table>
+      <div className="border-t border-slate-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="logs"
+        />
+      </div>
     </div>
   );
 }

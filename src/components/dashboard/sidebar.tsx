@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, PanelLeftClose, X } from "lucide-react";
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -8,16 +8,26 @@ import {
   ROLE_NAVIGATION,
   type UserRole,
 } from "@/components/dashboard/navigation";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuBadge,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 interface DashboardSidebarProps {
   userRole: UserRole;
   userName: string;
   userEmail?: string;
   permissions?: string[];
-  isOpen?: boolean;
-  onClose?: () => void;
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
 const roleDisplayLabels: Record<UserRole, string> = {
@@ -32,15 +42,12 @@ export function DashboardSidebar({
   userName,
   userEmail,
   permissions = [],
-  isOpen = false,
-  onClose,
-  isCollapsed = false,
-  onToggleCollapse,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [currentHash, setCurrentHash] = useState<string>("");
+  const { isMobile, setOpenMobile } = useSidebar();
 
   useEffect(() => {
     const updateHash = () => {
@@ -63,7 +70,9 @@ export function DashboardSidebar({
     e: React.MouseEvent<HTMLAnchorElement>,
     itemHref: string,
   ) => {
-    if (onClose) onClose();
+    if (isMobile) {
+      setOpenMobile(false);
+    }
 
     if (itemHref.includes("#")) {
       const [itemPath, itemHash] = itemHref.split("#");
@@ -125,276 +134,103 @@ export function DashboardSidebar({
   const navGroups = ROLE_NAVIGATION[userRole] || [];
 
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {isOpen && (
-        <div
-          onClick={onClose}
-          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden"
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar Container: Fixed Full Height with Internal Scroll & Pinned Bottom Profile */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out lg:sticky lg:top-0 lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        } ${isCollapsed ? "w-72 lg:w-20" : "w-72"}`}
-      >
-        {/* Brand Header (Fixed at top - ChatGPT style) */}
-        <div
-          className={`flex h-18 shrink-0 items-center border-b border-slate-100 ${
-            isCollapsed ? "justify-center px-2" : "justify-between px-5"
-          }`}
-        >
-          {isCollapsed ? (
-            <div className="relative group flex items-center justify-center">
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25 hover:scale-105 hover:bg-[#115E59] transition-all cursor-pointer"
-                title="Open sidebar"
-                aria-label="Open sidebar"
-              >
-                G
-              </button>
-              {/* ChatGPT-style floating dark pill tooltip */}
-              <div className="pointer-events-none absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-xl whitespace-nowrap z-50 animate-in fade-in duration-150">
-                Open sidebar
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" render={<Link href="/" />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-700 text-sidebar-primary-foreground shadow-sm">
+                <span className="text-lg font-bold text-white">G</span>
               </div>
-            </div>
-          ) : (
-            <>
-              <Link href="/" className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25">
-                  G
-                </div>
-                <div>
-                  <p className="text-base font-bold tracking-tight text-slate-900 leading-tight">
-                    GRS
-                  </p>
-                  <p className="text-2.75 font-medium uppercase tracking-[-0.01em] text-slate-500">
-                    Resolution Portal
-                  </p>
-                </div>
-              </Link>
-
-              <div className="flex items-center gap-1">
-                {/* Desktop Collapse Toggle (ChatGPT style) */}
-                {onToggleCollapse && (
-                  <div className="relative group hidden lg:flex items-center">
-                    <button
-                      type="button"
-                      onClick={onToggleCollapse}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-                      aria-label="Close sidebar"
-                    >
-                      <PanelLeftClose className="h-5 w-5" />
-                    </button>
-                    {/* ChatGPT-style dark pill tooltip */}
-                    <div className="pointer-events-none absolute right-0 top-full mt-2 hidden group-hover:flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white shadow-xl whitespace-nowrap z-50 animate-in fade-in duration-150">
-                      Close sidebar
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile close button */}
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 lg:hidden"
-                  aria-label="Close sidebar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+              <div className="flex flex-col gap-0.5 leading-none">
+                <span className="font-semibold text-base">GRS</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Resolution Portal
+                </span>
               </div>
-            </>
-          )}
-        </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
 
-        {/* Navigation Items (Internal Scrolling) */}
-        <div
-          className={`flex-1 min-h-0 overflow-y-auto overscroll-contain py-5 space-y-6 custom-scrollbar ${
-            isCollapsed ? "px-2" : "px-4"
-          }`}
-        >
-          {navGroups.map((group) => {
-            // Filter items based on required permissions
-            const visibleItems = group.items.filter((item) => {
-              if (!item.requiredPermission) return true;
-              return permissions.includes(item.requiredPermission);
-            });
+      <SidebarContent>
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter((item) => {
+            if (!item.requiredPermission) return true;
+            return permissions.includes(item.requiredPermission);
+          });
 
-            if (visibleItems.length === 0) return null;
+          if (visibleItems.length === 0) return null;
 
-            return (
-              <div key={group.label}>
-                {isCollapsed ? (
-                  <div className="my-2 mx-2 h-px bg-slate-100" />
-                ) : (
-                  <p className="px-3.5 text-xs font-medium uppercase tracking-[-0.01em] text-slate-400">
-                    {group.label}
-                  </p>
-                )}
-                <div
-                  className={`mt-2.5 ${
-                    isCollapsed
-                      ? "space-y-2 flex flex-col items-center"
-                      : "space-y-1.5"
-                  }`}
-                >
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = isItemActive(item.href);
 
-                    if (isCollapsed) {
-                      return (
-                        <div
-                          key={item.title}
-                          className="relative group w-full flex justify-center"
-                        >
-                          <Link
-                            href={item.href}
-                            onClick={(e) => handleItemClick(e, item.href)}
-                            className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150 ${
-                              isActive
-                                ? "bg-[#0F766E] text-white shadow-sm shadow-teal-950/20"
-                                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                            }`}
-                            aria-label={item.title}
-                          >
-                            <Icon className="h-5 w-5 shrink-0" />
-                          </Link>
-
-                          {/* Floating Tooltip for Collapsed Sidebar */}
-                          <div className="pointer-events-none absolute left-full ml-3.5 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-xl z-50 whitespace-nowrap">
-                            <span className="tracking-[-0.01em]">
-                              {item.title}
-                            </span>
-                            {item.badge && (
-                              <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-2.5 font-bold text-amber-300">
-                                {item.badge}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    }
-
                     return (
-                      <Link
-                        key={item.title}
-                        href={item.href}
-                        onClick={(e) => handleItemClick(e, item.href)}
-                        className={`group flex items-center justify-between rounded-xl px-3.5 py-2.5 text-3.75 font-medium tracking-[-0.01em] transition-all duration-150 ${
-                          isActive
-                            ? "bg-[#0F766E] text-white shadow-sm shadow-teal-950/20"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon
-                            className={`h-4.5 w-4.5 shrink-0 transition-colors ${
-                              isActive
-                                ? "text-white"
-                                : "text-slate-400 group-hover:text-slate-700"
-                            }`}
-                          />
-                          <span className="tracking-[-0.01em]">
-                            {item.title}
-                          </span>
-                        </div>
-
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          tooltip={item.title}
+                          render={
+                            <Link
+                              href={item.href}
+                              onClick={(e) => handleItemClick(e, item.href)}
+                            />
+                          }
+                        >
+                          <Icon />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
                         {item.badge && (
-                          <span
-                            className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                              isActive
-                                ? "bg-white/20 text-white"
-                                : "bg-amber-100 text-amber-800"
-                            }`}
-                          >
-                            {item.badge}
-                          </span>
+                          <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
                         )}
-                      </Link>
+                      </SidebarMenuItem>
                     );
                   })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
+      </SidebarContent>
 
-        {/* User Footer Profile & Logout (Permanently Fixed at Bottom) */}
-        <div className="shrink-0 border-t border-slate-100 bg-white p-3.5 mt-auto">
-          {isCollapsed ? (
-            <div className="flex flex-col items-center gap-3 py-1">
-              {/* User Avatar with Hover Tooltip */}
-              <div className="relative group">
-                <div
-                  title={`${userName} (${roleDisplayLabels[userRole]})`}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80 cursor-pointer shadow-2xs hover:ring-2 hover:ring-teal-600/30 transition"
-                >
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="pointer-events-none absolute left-full ml-3.5 bottom-0 hidden group-hover:flex flex-col gap-0.5 rounded-xl bg-slate-900 px-3 py-2 text-xs text-white shadow-xl z-50 whitespace-nowrap">
-                  <p className="font-bold">{userName}</p>
-                  {userEmail && (
-                    <p className="text-2.75 text-slate-300">{userEmail}</p>
-                  )}
-                  <p className="text-2.75 text-slate-300">
-                    {roleDisplayLabels[userRole]}
-                  </p>
-                </div>
-              </div>
-
-              {/* Logout Button in Collapsed Mode */}
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                title="Sign out"
-                aria-label="Sign out"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition disabled:opacity-50"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" render={<div />} className="w-full justify-between hover:bg-transparent cursor-default">
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-base font-bold text-[#0F766E] border border-teal-200/80">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold">
                   {userName.charAt(0).toUpperCase()}
                 </div>
-                <div className="overflow-hidden">
-                  <p className="truncate text-sm font-medium tracking-[-0.01em] text-foreground">
-                    {userName}
-                  </p>
-                  {userEmail && (
-                    <p className="truncate text-xs font-normal tracking-[-0.01em] text-muted-foreground">
-                      {userEmail}
-                    </p>
-                  )}
-                  <p className="truncate text-xs font-normal tracking-[-0.01em] text-muted-foreground">
-                    {roleDisplayLabels[userRole]}
-                  </p>
+                <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
+                  <span className="font-semibold text-sm truncate">{userName}</span>
+                  <div className="flex flex-col">
+                    {userEmail && (
+                      <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground truncate">{roleDisplayLabels[userRole]}</span>
+                  </div>
                 </div>
               </div>
-
               <button
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
                 title="Sign out"
                 aria-label="Sign out"
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white hover:text-rose-600 hover:shadow-xs disabled:opacity-50"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
               >
                 <LogOut className="h-4 w-4" />
               </button>
-            </div>
-          )}
-        </div>
-      </aside>
-    </>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

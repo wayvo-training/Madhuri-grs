@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SerializedAuditLog, TabCategory } from "@/types/admin/audit";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 export function useAdminAudit(
   initialLogs: SerializedAuditLog[],
@@ -14,13 +14,14 @@ export function useAdminAudit(
     initialTotalCount ?? initialLogs.length,
   );
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabCategory>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const isFirstMount = useRef(true);
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
   // Fetch paginated logs from server
   const fetchLogs = useCallback(
@@ -29,7 +30,7 @@ export function useAdminAudit(
         setIsLoading(true);
         const params = new URLSearchParams({
           page: page.toString(),
-          limit: PAGE_SIZE.toString(),
+          limit: pageSize.toString(),
         });
         if (category !== "ALL") params.set("category", category);
         if (search.trim()) params.set("search", search.trim());
@@ -63,7 +64,7 @@ export function useAdminAudit(
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [currentPage, activeTab, searchQuery, fetchLogs]);
+  }, [currentPage, pageSize, activeTab, searchQuery, fetchLogs]);
 
   const handleTabChange = (category: TabCategory) => {
     setActiveTab(category);
@@ -90,7 +91,8 @@ export function useAdminAudit(
     totalCount,
     currentPage,
     setCurrentPage,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize,
     totalPages,
     isLoading,
     activeTab,

@@ -96,30 +96,37 @@ export function AdminMetricCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-5 text-left shadow-xs transition hover:shadow-md cursor-pointer",
+        "relative overflow-hidden rounded-xl border p-4 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between h-[115px] sm:h-[120px]",
         styles.ring,
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-slate-500">{title}</span>
-        <div className={cn("rounded-xl p-2", styles.icon)}>
-          <Icon className="h-4 w-4" />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
+          {title}
+        </span>
+        <div
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            styles.icon,
+          )}
+        >
+          <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <div className="mt-3 flex items-baseline gap-2">
-        <span className={cn("text-2xl font-bold tracking-tight", styles.value)}>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className={cn("text-xl font-bold tracking-tight leading-none", styles.value)}>
           {value}
         </span>
-        <span className="text-xs font-medium text-slate-400">{helper}</span>
+        <span className="text-[11px] font-medium text-slate-400 truncate">{helper}</span>
       </div>
       <div
         className={cn(
-          "mt-3 flex items-center gap-1.5 text-xs font-normal",
+          "mt-auto pt-1 flex items-center gap-1.5 text-[11px] font-normal",
           styles.helper,
         )}
       >
         <span
-          className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
+          className={cn("inline-block h-1 w-1 rounded-full", styles.dot)}
         />
         {title === "Suspended Accounts"
           ? "Revoked access"

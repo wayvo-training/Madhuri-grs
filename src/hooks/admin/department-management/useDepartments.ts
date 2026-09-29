@@ -7,7 +7,7 @@ import type {
   SerializedDepartment,
 } from "@/types/admin/departments";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 export function useDepartments(initialDepartments: SerializedDepartment[]) {
   const [departments, setDepartments] =
@@ -16,17 +16,18 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
     useState<DepartmentStatusFilter>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filteredDepartments = useMemo(() => {
     return filterDepartments(departments, searchQuery, statusFilter);
   }, [departments, statusFilter, searchQuery]);
 
-  const totalPages = Math.ceil(filteredDepartments.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(filteredDepartments.length / pageSize) || 1;
 
   const paginatedDepartments = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredDepartments.slice(start, start + PAGE_SIZE);
-  }, [filteredDepartments, currentPage]);
+    const start = (currentPage - 1) * pageSize;
+    return filteredDepartments.slice(start, start + pageSize);
+  }, [filteredDepartments, currentPage, pageSize]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -84,7 +85,8 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
     handleResetFilters,
     currentPage,
     setCurrentPage,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize,
     totalPages,
     filteredDepartments,
     paginatedDepartments,

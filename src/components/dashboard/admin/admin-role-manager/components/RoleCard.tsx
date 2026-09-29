@@ -121,32 +121,7 @@ export function RoleCard({
           <span>Edit</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onToggleStatus(role)}
-          disabled={isToggling}
-          title={
-            isAdmin
-              ? "System Administrator role cannot be deactivated"
-              : role.status === "ACTIVE"
-                ? "Deactivate this role"
-                : "Activate this role"
-          }
-          className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
-            isAdmin && role.status === "ACTIVE"
-              ? "border-amber-200 bg-amber-50/70 text-amber-800 hover:bg-amber-100/80 shadow-2xs"
-              : role.status === "ACTIVE"
-                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 shadow-2xs"
-                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-2xs"
-          }`}
-        >
-          {isToggling ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Power className="h-3 w-3" />
-          )}
-          <span>{role.status === "ACTIVE" ? "Deactivate" : "Activate"}</span>
-        </button>
+
       </div>
     </div>
   );

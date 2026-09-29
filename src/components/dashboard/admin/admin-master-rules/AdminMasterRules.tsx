@@ -4,10 +4,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   RotateCcw,
-  Workflow,
+  ShieldAlert,
+  Route,
+  Timer,
+  RefreshCcw,
   X,
 } from "lucide-react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   AdminFilterToolbar,
@@ -17,17 +20,20 @@ import {
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
 import { useRuleActions } from "@/hooks/admin/master-rules/useRuleActions";
 import { useRuleFilters } from "@/hooks/admin/master-rules/useRuleFilters";
-import { buildPolicyMatrixTree } from "@/lib/admin/master-rules/policy-matrix";
 import type {
   AdminMasterRulesProps,
+  SerializedPriorityRule,
+  SerializedRoutingRule,
+  SerializedSlaPolicy,
   SerializedReopenPolicy,
 } from "@/types/admin/master-rules";
 
-import { GlobalDefaultsPanel } from "./GlobalDefaults";
-import { GlobalPolicies } from "./GlobalPolicies";
 import { AdminRuleConfigModal, ConfirmRuleDeleteModal } from "./modals";
-import { PolicyMatrix } from "./PolicyMatrix";
-import { CreatePolicyMenu, RulesFilterPopover } from "./panels";
+import { RulesFilterPopover } from "./panels";
+import { PriorityRulesView } from "./views/PriorityRulesView";
+import { RoutingRulesView } from "./views/RoutingRulesView";
+import { SlaPoliciesView } from "./views/SlaPoliciesView";
+import { ReopenPoliciesView } from "./views/ReopenPoliciesView";
 
 export function AdminMasterRules({
   priorityRules: initialPriorityRules,
@@ -75,8 +81,7 @@ export function AdminMasterRules({
 
   // 3. Rule Actions & Modals State
   const {
-    tableFeedback,
-    setTableFeedback,
+
     actionNotice,
     setActionNotice,
     deleteModal,
@@ -89,7 +94,7 @@ export function AdminMasterRules({
     modalRuleType,
     setModalRuleType,
     isSubmitting,
-    feedback,
+
     ruleName,
     setRuleName,
     priorityLevel,
@@ -124,11 +129,15 @@ export function AdminMasterRules({
     setMaxReopens,
     maxReviews,
     setMaxReviews,
+
+    editingRuleId,
+    setEditingRuleId,
     ruleStatus,
     setRuleStatus,
+
     resetForm,
-    openConfigureRow,
     handleCreateRule,
+    setKeywords,
   } = useRuleActions({
     departments,
     categories,
@@ -152,108 +161,16 @@ export function AdminMasterRules({
     return () => document.removeEventListener("mousedown", handleGlobalClick);
   }, []);
 
-  // 5. Accordion Expand/Collapse States
-  const [expandedMatrixDepts, setExpandedMatrixDepts] = useState<Set<string>>(
-    () => new Set(["Finance", "Human Resources"]),
-  );
-  const [expandedMatrixCats, setExpandedMatrixCats] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [expandedRoutingViews, setExpandedRoutingViews] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [isDefaultsPanelOpen, setIsDefaultsPanelOpen] = useState(false);
-
-  // 6. Policy Matrix Tree Computation (Memoized pure business logic)
-  const isSearching = Boolean(searchQuery.trim());
-
-  const matrixTree = useMemo(() => {
-    return buildPolicyMatrixTree({
-      routingRules,
-      activePriorityRules,
-      defaultPriorityRule,
-      slaPolicies,
-      searchQuery,
-      deptFilter,
-      catFilter,
-      statusFilter,
-    });
-  }, [
-    routingRules,
-    activePriorityRules,
-    defaultPriorityRule,
-    slaPolicies,
-    searchQuery,
-    deptFilter,
-    catFilter,
-    statusFilter,
-  ]);
-
-  const totalMatrixGrievanceTypes = useMemo(() => {
-    return matrixTree.reduce((acc, d) => acc + d.count, 0);
-  }, [matrixTree]);
-
-  // 7. Global Policies Filtering (Reopen Policies)
-  const filteredReopenPolicies = useMemo(() => {
-    return reopenPolicies.filter((p) => {
-      if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        p.policy_name.toLowerCase().includes(q) ||
-        (p.reopen_window_hours
-          ? `${p.reopen_window_hours} hours`
-          : "unlimited"
-        ).includes(q)
-      );
-    });
-  }, [reopenPolicies, statusFilter, searchQuery]);
-
-  // 8. Toggle and Expand/Collapse Handlers
-  const toggleMatrixDept = (dept: string) => {
-    setExpandedMatrixDepts((prev) => {
-      const next = new Set(prev);
-      if (next.has(dept)) next.delete(dept);
-      else next.add(dept);
-      return next;
-    });
-  };
-
-  const toggleMatrixCat = (key: string) => {
-    setExpandedMatrixCats((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleRoutingView = (key: string) => {
-    setExpandedRoutingViews((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const handleExpandAll = () => {
-    const allDepts = new Set<string>();
-    const allCats = new Set<string>();
-    for (const d of matrixTree) {
-      allDepts.add(d.departmentName);
-      for (const c of d.categories) {
-        allCats.add(`${d.departmentName}::${c.categoryName}`);
-      }
+  const getTabStyle = (tabId: string) => {
+    if (activeTab === tabId) {
+      return "bg-[#0F766E] text-white shadow-sm ring-1 ring-[#0F766E]";
     }
-    setExpandedMatrixDepts(allDepts);
-    setExpandedMatrixCats(allCats);
+    return "bg-white text-slate-600 border border-slate-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-2xs";
   };
 
-  const handleCollapseAll = () => {
-    setExpandedMatrixDepts(new Set());
-    setExpandedMatrixCats(new Set());
-    setExpandedRoutingViews(new Set());
+  const getTabIconColor = (tabId: string) => {
+    if (activeTab === tabId) return "text-white";
+    return "text-slate-400 group-hover:text-teal-600";
   };
 
   return (
@@ -261,56 +178,117 @@ export function AdminMasterRules({
       id="master-configuration"
       className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
     >
-      {/* Header & Tabs */}
+      {/* Header */}
       <div className="border-b border-slate-100 p-5 sm:p-6">
         <AdminPanelHeader
-          title="Master Governance & Rules Engine"
-          description="Unified administrative engine controlling grievance triage, departmental routing, SLA timers, and global policies."
+          title="Master Governance & Rules"
+          description="Configure and manage the rules that govern grievance priority, department routing, SLA policies and reopen handling."
           action={
             <div className="flex items-center gap-3 shrink-0 flex-nowrap">
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold shrink-0">
+              {activeTab === "priority" && (
                 <button
                   type="button"
-                  onClick={() => setActiveTab("matrix")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
-                    activeTab === "matrix"
-                      ? "bg-white text-[#0F766E] shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
+                  onClick={() => {
+                    resetForm();
+                    setModalRuleType("priority");
+                    setRuleModalOpen(true);
+                  }}
+                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
                 >
-                  <Workflow className="h-3.5 w-3.5" />
-                  <span>Policy Matrix ({totalMatrixGrievanceTypes})</span>
+                  + Create Priority Rule
                 </button>
-
+              )}
+              {activeTab === "routing" && (
                 <button
                   type="button"
-                  onClick={() => setActiveTab("global")}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition whitespace-nowrap ${
-                    activeTab === "global"
-                      ? "bg-white text-[#0F766E] shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
+                  onClick={() => {
+                    resetForm();
+                    setModalRuleType("routing");
+                    setRuleModalOpen(true);
+                  }}
+                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Global Policies ({reopenPolicies.length})</span>
+                  + Create Routing Rule
                 </button>
-              </div>
-
-              <CreatePolicyMenu
-                activeDropdown={activeDropdown}
-                setActiveDropdown={setActiveDropdown}
-                onSelectType={(type) => {
-                  resetForm();
-                  setModalRuleType(type);
-                  setRuleModalOpen(true);
-                }}
-              />
+              )}
+              {activeTab === "sla" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setModalRuleType("sla");
+                    setRuleModalOpen(true);
+                  }}
+                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                >
+                  + Configure SLA Policy
+                </button>
+              )}
+              {activeTab === "reopen" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setModalRuleType("reopen");
+                    setRuleModalOpen(true);
+                  }}
+                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                >
+                  Configure Reopen Policy
+                </button>
+              )}
             </div>
           }
         />
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("priority");
+              handleResetFilters();
+            }}
+            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("priority")}`}
+          >
+            <ShieldAlert className={`h-4 w-4 transition-colors ${getTabIconColor("priority")}`} />
+            <span>Priority Rules {priorityRules.length > 0 && `(${priorityRules.length})`}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("routing");
+              handleResetFilters();
+            }}
+            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("routing")}`}
+          >
+            <Route className={`h-4 w-4 transition-colors ${getTabIconColor("routing")}`} />
+            <span>Routing Rules {routingRules.length > 0 && `(${routingRules.length})`}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("sla");
+              handleResetFilters();
+            }}
+            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("sla")}`}
+          >
+            <Timer className={`h-4 w-4 transition-colors ${getTabIconColor("sla")}`} />
+            <span>SLA Policies {slaPolicies.length > 0 && `(${slaPolicies.length})`}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("reopen");
+              handleResetFilters();
+            }}
+            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("reopen")}`}
+          >
+            <RefreshCcw className={`h-4 w-4 transition-colors ${getTabIconColor("reopen")}`} />
+            <span>Reopen Policy {reopenPolicies.length > 0 && `(${reopenPolicies.length})`}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Global Action Banner (Msg Box) */}
+      {/* Global Action Banner */}
       {actionNotice && (
         <div
           className={`mx-5 sm:mx-6 mt-4 flex items-center justify-between gap-2 rounded-xl border p-3 text-xs animate-in fade-in duration-150 ${
@@ -331,7 +309,6 @@ export function AdminMasterRules({
             type="button"
             onClick={() => setActionNotice(null)}
             className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-0.5"
-            title="Dismiss message"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -344,11 +321,7 @@ export function AdminMasterRules({
           <AdminSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder={
-              activeTab === "matrix"
-                ? "Search grievance types, routes, SLAs..."
-                : "Search global reopen policies..."
-            }
+            placeholder="Search rules..."
           />
 
           <RulesFilterPopover
@@ -367,7 +340,6 @@ export function AdminMasterRules({
             setStatusFilter={setStatusFilter}
           />
 
-          {/* Clear Filters Button (When filtered) */}
           {isFiltered && (
             <button
               type="button"
@@ -378,107 +350,125 @@ export function AdminMasterRules({
               <span>Reset</span>
             </button>
           )}
-
-          {/* Expand/Collapse All (Matrix Tab) */}
-          {activeTab === "matrix" && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleExpandAll}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 transition"
-              >
-                Expand All
-              </button>
-              <button
-                type="button"
-                onClick={handleCollapseAll}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-2xs hover:bg-slate-50 transition"
-              >
-                Collapse All
-              </button>
-            </div>
-          )}
         </AdminFilterToolbar>
       </div>
 
       {/* Main Tab Content */}
       <div className="p-5 sm:p-6">
-        {/* Toast / Feedback Notice */}
-        {tableFeedback && (
-          <div
-            className={`mb-5 flex items-center justify-between gap-2 rounded-xl p-3 text-xs transition-all ${
-              tableFeedback.type === "success"
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border border-rose-200 bg-rose-50 text-rose-800"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              {tableFeedback.type === "success" ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
-              )}
-              <span className="font-medium">{tableFeedback.text}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setTableFeedback(null)}
-              className="rounded p-0.5 hover:bg-black/5"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
 
-        {/* TAB 1: Policy Matrix */}
-        {activeTab === "matrix" && (
-          <>
-            <PolicyMatrix
-              matrixTree={matrixTree}
-              totalMatrixGrievanceTypes={totalMatrixGrievanceTypes}
-              isSearching={isSearching}
-              expandedMatrixDepts={expandedMatrixDepts}
-              expandedMatrixCats={expandedMatrixCats}
-              expandedRoutingViews={expandedRoutingViews}
-              onToggleDept={toggleMatrixDept}
-              onToggleCat={toggleMatrixCat}
-              onToggleRoutingView={toggleRoutingView}
-              onResetFilters={handleResetFilters}
-              onOpenConfigureRow={openConfigureRow}
-              onToggleStatus={handleToggleStatus}
-              onConfirmDelete={confirmDelete}
-            />
 
-            <GlobalDefaultsPanel
-              isDefaultsPanelOpen={isDefaultsPanelOpen}
-              onToggleDefaultsPanel={() =>
-                setIsDefaultsPanelOpen((prev) => !prev)
-              }
-              defaultPriorityRule={defaultPriorityRule}
-              slaPolicies={slaPolicies}
-              onToggleStatus={handleToggleStatus}
-            />
-          </>
-        )}
-
-        {/* TAB 2: Global Policies */}
-        {activeTab === "global" && (
-          <GlobalPolicies
-            reopenPolicies={reopenPolicies}
-            filteredReopenPolicies={filteredReopenPolicies}
-            onToggleStatus={handleToggleStatus}
-            onOpenConfigure={(policy: SerializedReopenPolicy) => {
+        {activeTab === "priority" && (
+          <PriorityRulesView
+            rules={priorityRules}
+            defaultRule={defaultPriorityRule}
+            searchQuery={searchQuery}
+            catFilter={catFilter}
+            statusFilter={statusFilter}
+            onToggleStatus={(r) => handleToggleStatus("priority", r.priority_rule_id, r.status)}
+            onDelete={(r) => confirmDelete("priority", r.priority_rule_id, r.rule_name)}
+            onEdit={(r) => {
               resetForm();
-              setModalRuleType("reopen");
-              setRuleName(policy.policy_name);
-              setReopenWindowHours(
-                policy.reopen_window_hours?.toString() || "168",
-              );
-              setMaxReopens(policy.max_reopen_count.toString());
-              setMaxReviews(policy.max_manual_review_count.toString());
+              setEditingRuleId(r.priority_rule_id);
+              setRuleStatus(r.status as "ACTIVE" | "INACTIVE");
+              setModalRuleType("priority");
+              setRuleName(r.rule_name);
+              setPriorityLevel(r.priority_level);
+              setRuleOrder(r.rule_order.toString());
+              setIsDefault(r.is_default);
+
+              try {
+                const cond = r.conditions as any;
+                if (cond?.category_id) setSelectedPriorityCatId(cond.category_id);
+                if (cond?.subcategory_id) setSelectedPrioritySubcatId(cond.subcategory_id);
+                if (cond?.keywords) setKeywords(cond.keywords.join(", "));
+              } catch(e) {}
               setRuleModalOpen(true);
             }}
-            onConfirmDelete={confirmDelete}
+          />
+        )}
+
+        {activeTab === "routing" && (
+          <RoutingRulesView
+            rules={routingRules}
+            searchQuery={searchQuery}
+            catFilter={catFilter}
+            deptFilter={deptFilter}
+            statusFilter={statusFilter}
+            onToggleStatus={(r) => handleToggleStatus("routing", r.routing_rule_id, r.status)}
+            onDelete={(r) => confirmDelete("routing", r.routing_rule_id, r.rule_name)}
+            onEdit={(r) => {
+              resetForm();
+              setEditingRuleId(r.routing_rule_id);
+              setRuleStatus(r.status as "ACTIVE" | "INACTIVE");
+              setModalRuleType("routing");
+              setRuleName(r.rule_name);
+              setRuleOrder(r.rule_order.toString());
+              setInvolvementType(r.involvement_type);
+
+              
+              const matchedDept = departments.find(d => d.department_name === r.department_name);
+              if (matchedDept) setSelectedDeptId(matchedDept.department_id);
+
+              const matchedCat = categories.find(c => c.category_name === r.category_name);
+              if (matchedCat) {
+                setSelectedCatId(matchedCat.category_id);
+                const matchedSub = matchedCat.subcategories?.find(s => s.subcategory_name === r.subcategory_name);
+                if (matchedSub) setSelectedRoutingSubcatId(matchedSub.subcategory_id);
+              }
+
+              if (r.supporting_departments) {
+                const matchingSupports = departments
+                  .filter(d => r.supporting_departments!.includes(d.department_name))
+                  .map(d => d.department_id);
+                setSelectedSupportingDepts(matchingSupports);
+              }
+              setRuleModalOpen(true);
+            }}
+          />
+        )}
+
+        {activeTab === "sla" && (
+          <SlaPoliciesView
+            policies={slaPolicies}
+            searchQuery={searchQuery}
+            statusFilter={statusFilter}
+            onToggleStatus={(p) => handleToggleStatus("sla", p.sla_policy_id, p.status)}
+            onDelete={(p) => confirmDelete("sla", p.sla_policy_id, p.policy_name)}
+            onEdit={(p) => {
+              resetForm();
+              setEditingRuleId(p.sla_policy_id);
+              setRuleStatus(p.status as "ACTIVE" | "INACTIVE");
+              setModalRuleType("sla");
+              setRuleName(p.policy_name);
+              setPriorityLevel(p.priority_level || "HIGH");
+              setDurationHours((p.target_duration_minutes / 60).toString());
+              setWarningPercent(p.warning_threshold_percent.toString());
+              setEscalationPercent(p.escalation_threshold_percent.toString());
+
+              setRuleModalOpen(true);
+            }}
+          />
+        )}
+
+        {activeTab === "reopen" && (
+          <ReopenPoliciesView
+            policies={reopenPolicies}
+            searchQuery={searchQuery}
+            statusFilter={statusFilter}
+            onToggleStatus={(p) => handleToggleStatus("reopen", p.reopen_policy_id, p.status)}
+            onDelete={(p) => confirmDelete("reopen", p.reopen_policy_id, p.policy_name)}
+            onEdit={(p) => {
+              resetForm();
+              setEditingRuleId(p.reopen_policy_id);
+              setRuleStatus(p.status as "ACTIVE" | "INACTIVE");
+              setModalRuleType("reopen");
+              setRuleName(p.policy_name);
+              setReopenWindowHours(p.reopen_window_hours?.toString() || "168");
+              setMaxReopens(p.max_reopen_count.toString());
+              setMaxReviews(p.max_manual_review_count.toString());
+
+              setRuleModalOpen(true);
+            }}
           />
         )}
       </div>
@@ -487,6 +477,9 @@ export function AdminMasterRules({
       <AdminRuleConfigModal
         open={ruleModalOpen}
         onClose={() => setRuleModalOpen(false)}
+        editingRuleId={editingRuleId}
+        ruleStatus={ruleStatus}
+        setRuleStatus={setRuleStatus}
         modalRuleType={modalRuleType}
         setModalRuleType={setModalRuleType}
         ruleName={ruleName}
@@ -523,10 +516,9 @@ export function AdminMasterRules({
         setMaxReopens={setMaxReopens}
         maxReviews={maxReviews}
         setMaxReviews={setMaxReviews}
-        ruleStatus={ruleStatus}
-        setRuleStatus={setRuleStatus}
+
         isSubmitting={isSubmitting}
-        feedback={feedback}
+
         departments={departments}
         categories={categories}
         onSubmit={handleCreateRule}

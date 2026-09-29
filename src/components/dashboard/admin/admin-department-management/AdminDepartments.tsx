@@ -24,6 +24,7 @@ export function AdminDepartments({
     currentPage,
     setCurrentPage,
     pageSize,
+    setPageSize,
     totalPages,
     filteredDepartments,
     paginatedDepartments,
@@ -43,11 +44,7 @@ export function AdminDepartments({
     setDescription,
     contactEmail,
     setContactEmail,
-    deptStatus,
-    setDeptStatus,
     isSubmitting,
-    feedback,
-    setFeedback,
     handleCreateDepartment,
     isEditModalOpen,
     setIsEditModalOpen,
@@ -58,8 +55,6 @@ export function AdminDepartments({
     editStatus,
     setEditStatus,
     isEditSubmitting,
-    editFeedback,
-    setEditFeedback,
     openEditModal,
     handleSaveEditDepartment,
     openActionMenuId,
@@ -89,6 +84,7 @@ export function AdminDepartments({
         pageSize={pageSize}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
         openActionMenuId={openActionMenuId}
         onToggleActionMenu={(id) =>
           setOpenActionMenuId(openActionMenuId === id ? null : id)
@@ -102,18 +98,15 @@ export function AdminDepartments({
 
       <DepartmentModals
         isModalOpen={isModalOpen}
-        feedback={feedback}
         deptName={deptName}
         deptCode={deptCode}
         selectedHeadId={selectedHeadId}
         description={description}
         contactEmail={contactEmail}
-        deptStatus={deptStatus}
         isSubmitting={isSubmitting}
         departmentHeads={departmentHeads}
         onCloseCreate={() => {
           setIsModalOpen(false);
-          setFeedback(null);
         }}
         onSubmitCreate={handleCreateDepartment}
         onSetDeptName={setDeptName}
@@ -121,16 +114,13 @@ export function AdminDepartments({
         onSetSelectedHeadId={setSelectedHeadId}
         onSetDescription={setDescription}
         onSetContactEmail={setContactEmail}
-        onSetDeptStatus={setDeptStatus}
         isEditModalOpen={isEditModalOpen}
+        editStatus={editStatus}
         editDeptName={editDeptName}
         editDescription={editDescription}
-        editStatus={editStatus}
         isEditSubmitting={isEditSubmitting}
-        editFeedback={editFeedback}
         onCloseEdit={() => {
           setIsEditModalOpen(false);
-          setEditFeedback(null);
         }}
         onSubmitEdit={handleSaveEditDepartment}
         onSetEditDeptName={setEditDeptName}

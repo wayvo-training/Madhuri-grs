@@ -1,7 +1,11 @@
+"use client";
+
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import type { DashboardRecentGrievance } from "@/types/admin/dashboard";
+import { Pagination } from "@/components/ui/pagination";
+import { useState, useMemo } from "react";
 
 export interface RecentGrievancesTableProps {
   recentGrievances: DashboardRecentGrievance[];
@@ -10,6 +14,14 @@ export interface RecentGrievancesTableProps {
 export function RecentGrievancesTable({
   recentGrievances,
 }: RecentGrievancesTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+
+  const paginatedGrievances = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return recentGrievances.slice(start, start + pageSize);
+  }, [recentGrievances, currentPage, pageSize]);
+
   return (
     <div className="lg:col-span-3 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs flex flex-col">
       <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -51,7 +63,7 @@ export function RecentGrievancesTable({
                 </td>
               </tr>
             ) : (
-              recentGrievances.map((g) => (
+              paginatedGrievances.map((g) => (
                 <tr
                   key={g.grievance_id}
                   className="hover:bg-slate-50/70 transition"
@@ -73,6 +85,18 @@ export function RecentGrievancesTable({
             )}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4 border-t border-slate-100 pt-4">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(recentGrievances.length / pageSize) || 1}
+          totalCount={recentGrievances.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20]}
+          itemLabel="grievances"
+        />
       </div>
     </div>
   );

@@ -15,6 +15,8 @@ import type {
   PermStatusFilter,
   SerializedPermission,
 } from "@/types/admin/role-manager";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Pagination } from "@/components/ui/pagination";
 
 interface PermissionsTabProps {
   permissionsList: SerializedPermission[];
@@ -27,6 +29,12 @@ interface PermissionsTabProps {
   onPermStatusChange: (status: PermStatusFilter) => void;
   togglingPermId: string | null;
   onTogglePermStatus: (perm: SerializedPermission) => void;
+  paginatedPermissions: SerializedPermission[];
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 export function PermissionsTab({
@@ -40,6 +48,12 @@ export function PermissionsTab({
   onPermStatusChange,
   togglingPermId,
   onTogglePermStatus,
+  paginatedPermissions,
+  currentPage,
+  totalPages,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
 }: PermissionsTabProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -207,7 +221,7 @@ export function PermissionsTab({
                 </td>
               </tr>
             ) : (
-              filteredPermissions.map((perm) => {
+              paginatedPermissions.map((perm) => {
                 const isToggling = togglingPermId === perm.permission_id;
 
                 return (
@@ -216,10 +230,7 @@ export function PermissionsTab({
                     className="hover:bg-slate-50/70 transition"
                   >
                     <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                      <span className="inline-flex items-center gap-1.5">
-                        <KeyRound className="h-3 w-3 text-emerald-700" />
-                        {perm.permission_code}
-                      </span>
+                      {perm.permission_code}
                     </td>
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {perm.permission_name}
@@ -246,25 +257,11 @@ export function PermissionsTab({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onTogglePermStatus(perm)}
-                        disabled={isToggling}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
-                          perm.status === "ACTIVE"
-                            ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 shadow-2xs"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-2xs"
-                        }`}
-                      >
-                        {isToggling ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Power className="h-3 w-3" />
-                        )}
-                        <span>
-                          {perm.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                        </span>
-                      </button>
+                      <ActionMenu
+                        widthClass="w-36"
+                        items={[
+                        ]}
+                      />
                     </td>
                   </tr>
                 );
@@ -272,6 +269,19 @@ export function PermissionsTab({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-6">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={filteredPermissions.length}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="permissions"
+        />
       </div>
     </div>
   );

@@ -21,6 +21,9 @@ import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { Popover } from "@/components/ui/popover";
+import { AdvancedFilterBar, FilterCondition, FilterFieldDef } from "@/components/filters/advanced-filter-bar";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
 import type {
   CaseDrawerTab,
   DepartmentHeadTab,
@@ -82,16 +85,46 @@ export function QueueView({
   onIntervene,
   onReviewResolution,
 }: QueueViewProps) {
-  // Popover internal state
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [pendingDept, setPendingDept] = useState<string>("ALL");
-  const [pendingPriority, setPendingPriority] = useState<string>("ALL");
-  const [pendingStatus, setPendingStatus] = useState<string>("ALL");
-  const [pendingStaff, setPendingStaff] = useState<string>("ALL");
-
   // View DropdownMenu state
   const [isViewOpen, setIsViewOpen] = useState(false);
   const viewMenuRef = useRef<HTMLDivElement>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Sorting state
+  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
+
+  const handleSort = (field: string, direction: SortState["direction"]) => {
+    setSortState({ field, direction });
+  };
+
+  // Reset to page 1 on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredGrievances.length, searchQuery, statusFilter, priorityFilter, staffFilter, departmentFilter]);
+
+  const sortedGrievances = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return filteredGrievances;
+    
+    return [...filteredGrievances].sort((a, b) => {
+      let valA: any = a[sortState.field as keyof GrievanceItem] || "";
+      let valB: any = b[sortState.field as keyof GrievanceItem] || "";
+      
+      if (typeof valA === "string") valA = valA.toLowerCase();
+      if (typeof valB === "string") valB = valB.toLowerCase();
+      
+      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredGrievances, sortState]);
+
+  const paginatedGrievances = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedGrievances.slice(start, start + pageSize);
+  }, [sortedGrievances, currentPage, pageSize]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -131,48 +164,110 @@ export function QueueView({
     ];
   }, [availableDepartments, grievances]);
 
-  useEffect(() => {
-    if (isFiltersOpen) {
-      setPendingDept(departmentFilter || "ALL");
-      setPendingPriority(priorityFilter);
-      setPendingStatus(statusFilter || "ALL");
-      setPendingStaff(staffFilter);
-    }
-  }, [
-    isFiltersOpen,
-    departmentFilter,
-    priorityFilter,
-    statusFilter,
-    staffFilter,
-  ]);
+  const filterFields: FilterFieldDef[] = [
+    {
+      id: "department",
+      label: "Department",
+      type: "searchable-select",
+      options: departmentOptions.filter(o => o.value !== "ALL"),
+    },
+    {
+      id: "priority",
+      label: "Priority",
+      type: "select",
+      options: [
+        { label: "Critical", value: "CRITICAL" },
+        { label: "High", value: "HIGH" },
+        { label: "Medium", value: "MEDIUM" },
+        { label: "Low", value: "LOW" },
+      ],
+    },
+    {
+      id: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { label: "Submitted", value: "SUBMITTED" },
+        { label: "Routed", value: "ROUTED" },
+        { label: "Assigned", value: "ASSIGNED" },
+        { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Under Review", value: "UNDER_REVIEW" },
+        { label: "Resolved", value: "RESOLVED" },
+        { label: "Closed", value: "CLOSED" },
+        { label: "Reopened", value: "REOPENED" },
+        { label: "Escalated", value: "ESCALATED" },
+      ],
+    },
+    {
+      id: "sla",
+      label: "SLA Status",
+      type: "select",
+      options: [
+        { label: "SLA Critical", value: "SLA_CRITICAL" },
+        { label: "SLA Risk", value: "SLA_RISK" },
+        { label: "On Track", value: "ON_TRACK" },
+      ],
+    },
+    ...(staffList.length > 0
+      ? [
+          {
+            id: "staff",
+            label: "Assigned Staff",
+            type: "searchable-select" as const,
+            options: [
+              { label: "Unassigned Only", value: "UNASSIGNED" },
+              ...staffList.map((s) => ({
+                label: `${s.name} (${s.activeTickets} active)`,
+                value: s.id,
+              })),
+            ],
+          },
+        ]
+      : []),
+  ];
 
-  const activeFiltersCount =
-    (departmentFilter && departmentFilter !== "ALL" ? 1 : 0) +
-    (priorityFilter !== "ALL" ? 1 : 0) +
-    (statusFilter && statusFilter !== "ALL" ? 1 : 0) +
-    (staffFilter !== "ALL" ? 1 : 0);
+  const currentFilters: FilterCondition[] = [];
+  if (departmentFilter && departmentFilter !== "ALL") {
+    currentFilters.push({ id: "dept", fieldId: "department", operator: "Is", value: departmentFilter });
+  }
+  if (priorityFilter !== "ALL") {
+    currentFilters.push({ id: "priority", fieldId: "priority", operator: "Is", value: priorityFilter });
+  }
+  if (statusFilter && statusFilter !== "ALL") {
+    currentFilters.push({ id: "status", fieldId: "status", operator: "Is", value: statusFilter });
+  }
+  if (staffFilter !== "ALL") {
+    currentFilters.push({ id: "staff", fieldId: "staff", operator: "Is", value: staffFilter });
+  }
 
-  const handleApply = () => {
-    if (setDepartmentFilter) setDepartmentFilter(pendingDept);
-    if (onDepartmentChange && pendingDept !== "ALL") {
+  const handleFiltersChange = (newFilters: FilterCondition[]) => {
+    let dept = "ALL";
+    let prio = "ALL";
+    let status = "ALL";
+    let staff = "ALL";
+    newFilters.forEach((f) => {
+      if (f.fieldId === "department") dept = f.value;
+      if (f.fieldId === "priority") prio = f.value;
+      if (f.fieldId === "status") status = f.value;
+      if (f.fieldId === "staff") staff = f.value;
+    });
+
+    if (setDepartmentFilter) setDepartmentFilter(dept);
+    if (onDepartmentChange && dept !== "ALL") {
       const matchDept = availableDepartments.find(
-        (d) => d.name === pendingDept || d.id === pendingDept,
+        (d) => d.name === dept || d.id === dept,
       );
       if (matchDept && matchDept.id !== selectedDeptId) {
         onDepartmentChange(matchDept.id);
       }
     }
-    setPriorityFilter(pendingPriority);
-    if (setStatusFilter) setStatusFilter(pendingStatus);
-    setStaffFilter(pendingStaff);
-    setIsFiltersOpen(false);
+    setPriorityFilter(prio);
+    if (setStatusFilter) setStatusFilter(status);
+    setStaffFilter(staff);
+    setCurrentPage(1);
   };
 
   const handleClear = () => {
-    setPendingDept("ALL");
-    setPendingPriority("ALL");
-    setPendingStatus("ALL");
-    setPendingStaff("ALL");
     if (setDepartmentFilter) setDepartmentFilter("ALL");
     setPriorityFilter("ALL");
     if (setStatusFilter) setStatusFilter("ALL");
@@ -180,7 +275,7 @@ export function QueueView({
     setSelectedTab("ALL");
     setSearchQuery("");
     resetFilters();
-    setIsFiltersOpen(false);
+    setCurrentPage(1);
   };
 
   // Metric counts for views
@@ -292,50 +387,41 @@ export function QueueView({
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
-      <div className="p-3.5 sm:p-5 space-y-4 bg-white border-b border-slate-200/80">
+      <div className="p-3.5 sm:p-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white border-b border-slate-200/80">
         {/* Title Header */}
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Live Grievance Oversight Queue
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Showing page 1 of 1 ({filteredGrievances.length} total records
-            across department queue).
+            Showing {filteredGrievances.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} - {Math.min(currentPage * pageSize, filteredGrievances.length)} of {filteredGrievances.length} records
+            across department queue.
           </p>
         </div>
 
-        {/* Single Line Controls Bar: Search on Left, View & Filter on Right */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Search by ID, keyword, or submitter... */}
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
+        {/* Controls Bar: View & Filter */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end lg:w-3/5">
+          {/* Advanced Filter Builder (Search & Filter Tags) */}
+          <div className="flex-1 w-full">
+            <AdvancedFilterBar
+              fields={filterFields}
+              filters={currentFilters}
+              onFiltersChange={handleFiltersChange}
+              search={searchQuery}
+              onSearchChange={setSearchQuery}
               placeholder="Search by ID, keyword, or submitter..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
             />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
           </div>
 
-          {/* Controls: Reset + [ View ▼ ] DropdownMenu + [ Filter View ] Popover */}
+          {/* Controls: Reset + [ View ▼ ] DropdownMenu */}
           <div className="flex items-center gap-2">
-            {(activeFiltersCount > 0 ||
+            {(currentFilters.length > 0 ||
               selectedTab !== "ALL" ||
               searchQuery) && (
               <button
                 type="button"
                 onClick={handleClear}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
+                className="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
               >
                 <RotateCcw className="h-3 w-3" />
                 <span>Reset</span>
@@ -347,7 +433,7 @@ export function QueueView({
               <button
                 type="button"
                 onClick={() => setIsViewOpen(!isViewOpen)}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
+                className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
                   selectedTab !== "ALL"
                     ? "border-emerald-600 bg-emerald-50 text-emerald-800"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -398,141 +484,6 @@ export function QueueView({
                 </div>
               )}
             </div>
-
-            {/* [ Filter View ] Popover */}
-            <Popover
-              isOpen={isFiltersOpen}
-              onOpenChange={setIsFiltersOpen}
-              widthClass="w-80"
-              trigger={
-                <button
-                  type="button"
-                  onClick={() => setIsFiltersOpen((prev) => !prev)}
-                  className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
-                    activeFiltersCount > 0
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <Filter className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Filter View</span>
-                  {activeFiltersCount > 0 && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
-                      {activeFiltersCount}
-                    </span>
-                  )}
-                </button>
-              }
-            >
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Filter Grievances
-                  </span>
-                  {activeFiltersCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleClear}
-                      className="text-xs font-medium text-emerald-800 hover:underline"
-                    >
-                      Reset all
-                    </button>
-                  )}
-                </div>
-
-                {/* 1. Department */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Department
-                  </span>
-                  <CustomSelect
-                    value={pendingDept}
-                    onChange={setPendingDept}
-                    options={departmentOptions}
-                  />
-                </div>
-
-                {/* 2. Priority */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Priority
-                  </span>
-                  <CustomSelect
-                    value={pendingPriority}
-                    onChange={setPendingPriority}
-                    options={[
-                      { value: "ALL", label: "All Priorities" },
-                      { value: "CRITICAL", label: "Critical" },
-                      { value: "HIGH", label: "High" },
-                      { value: "MEDIUM", label: "Medium" },
-                      { value: "LOW", label: "Low" },
-                    ]}
-                  />
-                </div>
-
-                {/* 3. Status */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-slate-700">
-                    Status
-                  </span>
-                  <CustomSelect
-                    value={pendingStatus}
-                    onChange={setPendingStatus}
-                    options={[
-                      { value: "ALL", label: "All Statuses" },
-                      { value: "SUBMITTED", label: "Submitted" },
-                      { value: "ROUTED", label: "Routed" },
-                      { value: "ASSIGNED", label: "Assigned" },
-                      { value: "IN_PROGRESS", label: "In Progress" },
-                      { value: "UNDER_REVIEW", label: "Under Review" },
-                      { value: "RESOLVED", label: "Resolved" },
-                      { value: "CLOSED", label: "Closed" },
-                      { value: "REOPENED", label: "Reopened" },
-                      { value: "ESCALATED", label: "Escalated" },
-                    ]}
-                  />
-                </div>
-
-                {/* 4. Assigned Staff */}
-                {staffList.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-700">
-                      Assigned Staff
-                    </span>
-                    <CustomSelect
-                      value={pendingStaff}
-                      onChange={setPendingStaff}
-                      options={[
-                        { value: "ALL", label: "All Assigned Staff" },
-                        { value: "UNASSIGNED", label: "Unassigned Only" },
-                        ...staffList.map((s) => ({
-                          value: s.id,
-                          label: `${s.name} (${s.activeTickets} active)`,
-                        })),
-                      ]}
-                    />
-                  </div>
-                )}
-
-                {/* Actions: [Clear] [Apply] */}
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={handleClear}
-                    className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 transition"
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApply}
-                    className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition"
-                  >
-                    Apply
-                  </button>
-                </div>
-              </div>
-            </Popover>
           </div>
         </div>
       </div>
@@ -542,13 +493,14 @@ export function QueueView({
         <table className="w-full text-left text-[11px] border-collapse">
           <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
             <tr>
-              <th className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance ID</th>
-              <th className="py-3 px-3 min-w-64">Grievance & Category</th>
-              <th className="py-3 px-3 whitespace-nowrap">Priority</th>
-              <th className="py-3 px-3 whitespace-nowrap">Status</th>
-              <th className="py-3 px-3 whitespace-nowrap">SLA Status</th>
-              <th className="py-3 px-3 whitespace-nowrap">Assigned Staff</th>
-              <th className="py-3 px-3 whitespace-nowrap">Submitted</th>
+              <SortableTh field="id" currentSort={sortState} onSort={handleSort} className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance ID</SortableTh>
+              <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3 min-w-64">Grievance</SortableTh>
+              <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Category</SortableTh>
+              <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Priority</SortableTh>
+              <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Status</SortableTh>
+              <SortableTh field="slaStatus" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">SLA Status</SortableTh>
+              <SortableTh field="assignedStaffName" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Assigned Staff</SortableTh>
+              <SortableTh field="createdAt" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Submitted</SortableTh>
               <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
                 Actions
               </th>
@@ -578,7 +530,7 @@ export function QueueView({
                 </td>
               </tr>
             ) : (
-              filteredGrievances.map((item) => {
+              paginatedGrievances.map((item) => {
                 const isEscalated = item.status === "ESCALATED";
                 const isBreached = item.slaStatus === "BREACHED";
                 const highlightSla = !isEscalated && isBreached;
@@ -595,7 +547,7 @@ export function QueueView({
                       </span>
                     </td>
 
-                    {/* 2. Title & Category & Badges */}
+                    {/* 2. Title & Badges */}
                     <td className="py-3 px-3 align-top">
                       <div className="space-y-1">
                         <button
@@ -605,11 +557,6 @@ export function QueueView({
                         >
                           {item.title}
                         </button>
-                        <p className="text-xs text-slate-500 font-normal">
-                          {item.category}{" "}
-                          <span className="text-slate-300">&rsaquo;</span>{" "}
-                          {item.subcategory}
-                        </p>
 
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                           {item.isReopened && (
@@ -644,6 +591,16 @@ export function QueueView({
                       </div>
                     </td>
 
+                    {/* 2b. Category */}
+                    <td className="py-3 px-3 align-top">
+                      <p className="text-xs text-slate-600 font-medium">
+                        {item.category}
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {item.subcategory}
+                      </p>
+                    </td>
+
                     {/* 3. Priority */}
                     <td className="py-3 px-3 whitespace-nowrap align-top">
                       <PriorityBadge priority={item.priority} />
@@ -660,21 +617,21 @@ export function QueueView({
                         <span
                           className={`text-xs px-2.5 py-0.5 rounded font-medium whitespace-nowrap ${
                             highlightSla
-                              ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold"
+                              ? "text-amber-900 bg-amber-50 border border-amber-200 font-semibold dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
                               : item.slaStatus === "AT_RISK"
-                                ? "text-amber-800 bg-amber-50/60 border border-amber-200 font-medium"
-                                : "text-slate-600 bg-slate-100/80 border border-slate-200/80"
+                                ? "text-amber-800 bg-amber-50/60 border border-amber-200 font-medium dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30"
+                                : "text-slate-600 bg-slate-100/80 border border-slate-200/80 dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600"
                           }`}
                         >
                           {item.slaTimeLeft}
                         </span>
                         {item.slaStatus === "BREACHED" && (
-                          <span className="text-xs font-semibold text-amber-800">
+                          <span className="text-xs font-semibold text-amber-800 dark:text-amber-500">
                             SLA Breached
                           </span>
                         )}
                         {item.slaStatus === "AT_RISK" && (
-                          <span className="text-xs font-medium text-amber-700">
+                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
                             SLA At Risk
                           </span>
                         )}
@@ -776,6 +733,19 @@ export function QueueView({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="border-t border-slate-200/80">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredGrievances.length / pageSize)}
+          totalCount={filteredGrievances.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="grievances"
+        />
       </div>
     </div>
   );

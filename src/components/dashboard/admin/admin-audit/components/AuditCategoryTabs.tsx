@@ -21,13 +21,13 @@ export function AuditCategoryTabs({
             key={tab.id}
             type="button"
             onClick={() => onTabChange(tab.id)}
-            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${
               isActive
-                ? "bg-[#0F766E] text-white shadow-xs"
-                : "bg-slate-100/80 text-slate-600 hover:bg-slate-200/70"
+                ? "bg-[#0F766E] text-white shadow-sm ring-1 ring-[#0F766E]"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-2xs"
             }`}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className={`h-4 w-4 transition-colors ${isActive ? "text-white" : "text-slate-400 group-hover:text-teal-600"}`} />
             <span>{tab.label}</span>
           </button>
         );

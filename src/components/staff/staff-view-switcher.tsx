@@ -102,15 +102,15 @@ export function StaffViewSwitcher({
               key={tab.id}
               type="button"
               onClick={() => switchView(tab.id)}
-              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
+              className={`group inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 ${
                 isActive
-                  ? "bg-[#0F766E] text-white shadow-xs"
-                  : "bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 hover:text-slate-900 shadow-2xs"
+                  ? "bg-[#0F766E] text-white shadow-sm ring-1 ring-[#0F766E]"
+                  : "bg-white text-slate-600 border border-slate-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-2xs"
               }`}
             >
               <Icon
-                className={`h-3.5 w-3.5 ${
-                  isActive ? "text-white" : "text-slate-500"
+                className={`h-4 w-4 transition-colors ${
+                  isActive ? "text-white" : "text-slate-400 group-hover:text-teal-600"
                 }`}
               />
               <span>{tab.label}</span>
@@ -136,22 +136,7 @@ export function StaffViewSwitcher({
         })}
       </div>
 
-      {/* Right Controls: Sync button */}
-      {onRefresh && (
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
-        >
-          <RefreshCw
-            className={`h-3.5 w-3.5 text-slate-500 ${
-              isRefreshing ? "animate-spin" : ""
-            }`}
-          />
-          <span>{isRefreshing ? "Syncing..." : "Refresh Queue"}</span>
-        </button>
-      )}
+
     </div>
   );
 }

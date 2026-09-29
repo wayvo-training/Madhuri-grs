@@ -13,7 +13,7 @@ import type {
   SerializedRole,
 } from "@/types/admin/role-manager";
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 export function useRoleFilters(
   roles: SerializedRole[],
@@ -27,21 +27,25 @@ export function useRoleFilters(
     useState<RoleStatusFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [rolePageSize, setRolePageSize] = useState(DEFAULT_PAGE_SIZE);
+
   // Filter & Search states for Permissions
   const [permSearch, setPermSearch] = useState("");
   const [permStatusFilter, setPermStatusFilter] =
     useState<PermStatusFilter>("ALL");
+  const [permCurrentPage, setPermCurrentPage] = useState(1);
+  const [permPageSize, setPermPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filteredRoles = useMemo(() => {
     return filterRoles(roles, roleSearch, roleStatusFilter);
   }, [roles, roleSearch, roleStatusFilter]);
 
-  const totalPages = Math.ceil(filteredRoles.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(filteredRoles.length / rolePageSize) || 1;
 
   const paginatedRoles = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredRoles.slice(start, start + PAGE_SIZE);
-  }, [filteredRoles, currentPage]);
+    const start = (currentPage - 1) * rolePageSize;
+    return filteredRoles.slice(start, start + rolePageSize);
+  }, [filteredRoles, currentPage, rolePageSize]);
 
   const activeRolesCount = useMemo(
     () => roles.filter((r) => r.status === "ACTIVE").length,
@@ -56,6 +60,13 @@ export function useRoleFilters(
   const filteredPermissions = useMemo(() => {
     return filterPermissions(permissionsList, permSearch, permStatusFilter);
   }, [permissionsList, permSearch, permStatusFilter]);
+
+  const permTotalPages = Math.ceil(filteredPermissions.length / permPageSize) || 1;
+
+  const paginatedPermissions = useMemo(() => {
+    const start = (permCurrentPage - 1) * permPageSize;
+    return filteredPermissions.slice(start, start + permPageSize);
+  }, [filteredPermissions, permCurrentPage, permPageSize]);
 
   const activePermsCount = useMemo(
     () => permissionsList.filter((p) => p.status === "ACTIVE").length,
@@ -77,6 +88,16 @@ export function useRoleFilters(
     setCurrentPage(1);
   };
 
+  const handlePermSearchChange = (value: string) => {
+    setPermSearch(value);
+    setPermCurrentPage(1);
+  };
+
+  const handlePermStatusChange = (status: PermStatusFilter) => {
+    setPermStatusFilter(status);
+    setPermCurrentPage(1);
+  };
+
   return {
     activeTab,
     setActiveTab,
@@ -86,18 +107,25 @@ export function useRoleFilters(
     setRoleStatusFilter: handleRoleStatusChange,
     currentPage,
     setCurrentPage,
-    pageSize: PAGE_SIZE,
+    pageSize: rolePageSize,
+    setPageSize: setRolePageSize,
     totalPages,
     filteredRoles,
     paginatedRoles,
     activeRolesCount,
     inactiveRolesCount,
     permSearch,
-    setPermSearch,
+    setPermSearch: handlePermSearchChange,
     permStatusFilter,
-    setPermStatusFilter,
+    setPermStatusFilter: handlePermStatusChange,
     filteredPermissions,
+    paginatedPermissions,
     activePermsCount,
     inactivePermsCount,
+    permCurrentPage,
+    setPermCurrentPage,
+    permPageSize,
+    setPermPageSize,
+    permTotalPages,
   };
 }

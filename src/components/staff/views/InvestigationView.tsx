@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
+import { useTableSort } from "@/hooks/useTableSort";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface InvestigationViewProps {
@@ -28,10 +30,11 @@ export function InvestigationView({
   onExamine,
   onResolve,
 }: InvestigationViewProps) {
-  // Focus on active assigned grievances that are actively being investigated
   const activeCases = grievances.filter((g) => g.status !== "CLOSED");
 
-  const pagination = usePagination(activeCases, {
+  const { sortState, handleSort, sortedItems: sortedActiveCases } = useTableSort(activeCases);
+
+  const pagination = usePagination(sortedActiveCases, {
     initialPageSize: 10,
     pageSizeOptions: [5, 10, 20],
   });
@@ -59,7 +62,7 @@ export function InvestigationView({
         {/* Quick Protocol Guidelines */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ECFEFF] text-[11px] font-bold text-[#0E7490]">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ECFEFF] text-[11px] font-bold text-[#0E7490] dark:bg-cyan-500/20 dark:text-cyan-400">
               1
             </span>
             <span>
@@ -67,7 +70,7 @@ export function InvestigationView({
             </span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-800">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
               2
             </span>
             <span>
@@ -75,7 +78,7 @@ export function InvestigationView({
             </span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-[11px] font-bold text-purple-800">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-[11px] font-bold text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">
               3
             </span>
             <span>
@@ -114,11 +117,11 @@ export function InvestigationView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3 px-3.5">Grievance</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Priority</th>
-                  <th className="py-3 px-3">Investigation Status</th>
-                  <th className="py-3 px-3">SLA</th>
+                  <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Grievance</SortableTh>
+                  <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Category</SortableTh>
+                  <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Priority</SortableTh>
+                  <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Investigation Status</SortableTh>
+                  <SortableTh field="slaStatus" currentSort={sortState} onSort={handleSort} className="py-3 px-3">SLA</SortableTh>
                   <th className="py-3 px-3">Last Activity</th>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>

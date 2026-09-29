@@ -64,11 +64,7 @@ export async function GET(
             roles: true,
           },
         },
-        grievance_departments: {
-          include: {
-            departments: true,
-          },
-        },
+
         assignments: {
           where: { assignment_status: "ASSIGNED" },
           include: {
@@ -123,10 +119,34 @@ export async function GET(
       );
     }
 
+    // Fetch involved departments dynamically
+    const rawDepartments = await prisma.grievance_departments.findMany({
+      where: { grievance_id: grievanceId },
+      include: {
+        departments: true,
+        assignments: {
+          include: {
+            users_assignments_staff_idTousers: {
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+                status: true,
+                roles: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { involvement_type: "asc" },
+    });
+
     // Security check: belongs to head's department unless admin preview
     if (!isAdmin && departmentId) {
-      const belongs =
-        grievance.grievance_departments?.department_id === departmentId;
+      const belongs = rawDepartments.some(
+        (d) => d.department_id === departmentId,
+      );
       if (!belongs) {
         return NextResponse.json(
           { success: false, message: "Grievance not in department scope" },
@@ -134,6 +154,23 @@ export async function GET(
         );
       }
     }
+
+    const departmentsInvolved = rawDepartments.map((rawD) => {
+      const d = rawD as any;
+      const activeAssignment = d.assignments;
+      const staffUser = activeAssignment?.users_assignments_staff_idTousers;
+      const assignedStaff = staffUser
+        ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+        : null;
+
+      return {
+        id: d.grievance_department_id.toString(),
+        departmentName: d.departments?.department_name || "Unknown Department",
+        involvementType: d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL",
+        status: d.status,
+        assignedStaff,
+      };
+    });
 
     // 1. Assignment details
     const primaryAssignment = grievance.assignments?.[0];
@@ -538,6 +575,7 @@ export async function GET(
         latestActivity,
         timeline,
         internalNotes,
+        departmentsInvolved,
       },
     });
   } catch (error) {

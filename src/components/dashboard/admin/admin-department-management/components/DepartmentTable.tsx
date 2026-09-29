@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
-  AdminPagination,
   AdminPanelHeader,
   AdminToolbarAction,
 } from "@/components/dashboard/admin/admin-shared";
+import { Pagination } from "@/components/ui/pagination";
 import type {
   DepartmentStatusFilter,
   SerializedDepartment,
@@ -37,6 +37,7 @@ interface DepartmentTableProps {
   pageSize: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   openActionMenuId: string | null;
   onToggleActionMenu: (deptId: string) => void;
   actionMenuRef: React.RefObject<HTMLDivElement | null>;
@@ -59,6 +60,7 @@ export function DepartmentTable({
   pageSize,
   totalPages,
   onPageChange,
+  onPageSizeChange,
   openActionMenuId,
   onToggleActionMenu,
   actionMenuRef,
@@ -310,15 +312,6 @@ export function DepartmentTable({
                     {/* Department Name */}
                     <td className="whitespace-nowrap px-4 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div
-                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                            isDeptActive
-                              ? "bg-emerald-100/80 text-emerald-800"
-                              : "bg-slate-200 text-slate-500"
-                          }`}
-                        >
-                          <Building2 className="h-3.5 w-3.5" />
-                        </div>
                         <span className="text-sm font-semibold text-slate-900">
                           {dept.department_name}
                         </span>
@@ -393,17 +386,7 @@ export function DepartmentTable({
                               <Pencil className="h-3 w-3" />
                               Edit
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                onCloseActionMenu();
-                                onToggleStatus(dept);
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-emerald-800"
-                            >
-                              <Power className="h-3 w-3" />
-                              {isDeptActive ? "Deactivate" : "Activate"}
-                            </button>
+
                           </div>
                         )}
                       </div>
@@ -416,13 +399,16 @@ export function DepartmentTable({
         </table>
       </div>
 
-      {/* Persistent Pagination Footer */}
-      <AdminPagination
+      {/* Pagination Footer */}
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalCount={filteredDepartments.length}
         pageSize={pageSize}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[5, 10, 20, 50]}
+        itemLabel="departments"
       />
     </div>
   );

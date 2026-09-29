@@ -140,35 +140,35 @@
 .dark {
   --background: #0B1120;
   --foreground: #F8FAFC;
-  --card: #0F172A;
+  --card: #111C2E;
   --card-foreground: #F8FAFC;
-  --popover: #0F172A;
+  --popover: #111C2E;
   --popover-foreground: #F8FAFC;
-  --primary: #06B6D4;
-  --primary-foreground: #042F2E;
-  --secondary: #1E293B;
+  --primary: #0F766E;
+  --primary-foreground: #F8FAFC;
+  --secondary: #162338;
   --secondary-foreground: #F8FAFC;
-  --muted: #1E293B;
+  --muted: #111C2E;
   --muted-foreground: #94A3B8;
-  --accent: #164E63;
-  --accent-foreground: #ECFEFF;
+  --accent: #162338;
+  --accent-foreground: #14B8A6;
   --destructive: #F87171;
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.16);
-  --ring: #06B6D4;
-  --chart-1: #06B6D4;
-  --chart-2: #0E7490;
-  --chart-3: #22D3EE;
+  --border: #243449;
+  --input: #243449;
+  --ring: #14B8A6;
+  --chart-1: #0F766E;
+  --chart-2: #115E59;
+  --chart-3: #14B8A6;
   --chart-4: #F59E0B;
   --chart-5: #94A3B8;
-  --sidebar: #0C1E2C;
+  --sidebar: #0F1B2D;
   --sidebar-foreground: #F8FAFC;
-  --sidebar-primary: #06B6D4;
-  --sidebar-primary-foreground: #042F2E;
-  --sidebar-accent: #155E75;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #06B6D4;
+  --sidebar-primary: #0F766E;
+  --sidebar-primary-foreground: #F8FAFC;
+  --sidebar-accent: #162338;
+  --sidebar-accent-foreground: #14B8A6;
+  --sidebar-border: #243449;
+  --sidebar-ring: #14B8A6;
 }
 
 @layer base {
@@ -381,13 +381,14 @@
   .dark .bg-slate-50\/50,
   .dark .bg-slate-50\/60,
   .dark .bg-slate-50\/70,
+  .dark .bg-slate-50\/80,
   .dark .bg-\[\#F8FAFC\],
   .dark [class*="bg-[#F8FAFC]"] {
     background-color: #0B1120 !important;
   }
 
   .dark .bg-slate-100 {
-    background-color: #1E293B !important;
+    background-color: #111C2E !important;
   }
 
   /* General Cards, Modals, Drawers & Panels */
@@ -395,7 +396,7 @@
   .dark .bg-white\/90,
   .dark .bg-white\/95 {
     background-color: #111C2E !important;
-    color: #F1F5F9 !important;
+    color: #F8FAFC !important;
   }
 
   /* General Universal Borders & Dividers */
@@ -405,12 +406,12 @@
   .dark .border-slate-100,
   .dark .border-slate-300,
   .dark .border-slate-300\/80 {
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: #243449 !important;
   }
 
   .dark .divide-slate-100 > * + *,
   .dark .divide-slate-200 > * + * {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: #243449 !important;
   }
 
   /* General Typography Contrast */
@@ -434,62 +435,98 @@
   .dark .hover\:bg-slate-50:hover,
   .dark .hover\:bg-slate-50\/50:hover,
   .dark .hover\:bg-slate-100:hover {
-    background-color: #1E293B !important;
+    background-color: #162338 !important;
+  }
+  
+  .dark .hover\:bg-slate-200\/60:hover {
+    background-color: #243449 !important;
   }
 
   /* General Form Inputs & Controls */
   .dark input:not([type="checkbox"]):not([type="radio"]),
   .dark textarea,
   .dark select {
-    background-color: #0B1120 !important;
+    background-color: #111C2E !important;
     color: #F8FAFC !important;
-    border-color: rgba(255, 255, 255, 0.16) !important;
+    border-color: #243449 !important;
   }
 
   .dark input::placeholder,
   .dark textarea::placeholder {
-    color: #64748B !important;
+    color: #94A3B8 !important;
   }
 
   .dark input:focus,
   .dark textarea:focus,
   .dark select:focus {
-    border-color: #06B6D4 !important;
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    border-color: #0F766E !important;
+    box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25) !important;
   }
 
   /* General Table Elements */
   .dark th {
-    background-color: #0C1828 !important;
-    color: #94A3B8 !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background-color: #111C2E !important;
+    color: #CBD5E1 !important;
+    border-color: #243449 !important;
+  }
+  
+  .dark td {
+    border-color: #243449 !important;
   }
 
+  .dark tbody tr:hover,
   .dark tbody tr:hover td {
-    background-color: rgba(255, 255, 255, 0.03) !important;
+    background-color: #162338 !important;
+  }
+
+  /* Selected table rows */
+  .dark tbody tr.selected,
+  .dark tbody tr.active,
+  .dark tbody tr[data-state="selected"] {
+    background-color: rgba(15, 118, 110, 0.15) !important;
+  }
+  
+  .dark tbody tr.selected:hover,
+  .dark tbody tr.active:hover,
+  .dark tbody tr[data-state="selected"]:hover {
+    background-color: rgba(15, 118, 110, 0.25) !important;
   }
 
   /* General Badges & Chips */
   .dark .bg-\[\#ECFEFF\],
   .dark [class*="bg-[#ECFEFF]"],
+  .dark .bg-\[\#F0FDFA\],
+  .dark [class*="bg-[#F0FDFA]"],
   .dark .bg-cyan-50,
   .dark .bg-teal-light {
-    background-color: rgba(6, 182, 212, 0.15) !important;
-    color: #22D3EE !important;
+    background-color: rgba(20, 184, 166, 0.15) !important;
+    color: #14B8A6 !important;
   }
 
   .dark .border-\[\#A5F3FC\],
   .dark [class*="border-[#A5F3FC]"],
   .dark .border-cyan-200 {
-    border-color: rgba(6, 182, 212, 0.3) !important;
+    border-color: rgba(20, 184, 166, 0.3) !important;
   }
 
   .dark .text-\[\#0E7490\],
   .dark [class*="text-[#0E7490]"],
+  .dark .text-\[\#0F766E\],
+  .dark [class*="text-[#0F766E]"],
   .dark .text-teal-primary {
-    color: #22D3EE !important;
+    color: #14B8A6 !important;
   }
-
+  
+  /* Make sure buttons that are meant to be Teal map to our new Teal in dark mode */
+  .dark .bg-\[\#0F766E\] {
+    background-color: #0F766E !important;
+    color: #F8FAFC !important;
+  }
+  
+  .dark .hover\:bg-\[\#115E59\]:hover {
+    background-color: #115E59 !important;
+  }
+  
   /* Status Badges */
   .dark .bg-rose-50,
   .dark .bg-rose-100 {
@@ -523,35 +560,60 @@
     background-color: rgba(59, 130, 246, 0.15) !important;
     color: #93C5FD !important;
   }
+  .dark .border-blue-200 {
+    border-color: rgba(59, 130, 246, 0.3) !important;
+  }
 
   .dark .bg-purple-50,
   .dark .bg-purple-100 {
     background-color: rgba(168, 85, 247, 0.15) !important;
     color: #D8B4FE !important;
   }
+  .dark .border-purple-200 {
+    border-color: rgba(168, 85, 247, 0.3) !important;
+  }
 
   /* Component-Specific Nested Rules (Higher Specificity) */
   .dark aside,
   .dark aside .bg-white {
-    background-color: #0C1E2C !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background-color: #0F1B2D !important;
+    border-color: #243449 !important;
   }
 
   .dark aside .text-slate-600 {
+    color: #CBD5E1 !important;
+  }
+  
+  .dark aside .text-slate-500 {
     color: #94A3B8 !important;
   }
 
   .dark aside .border-slate-100,
-  .dark aside .border-slate-200 {
-    border-color: rgba(255, 255, 255, 0.08) !important;
+  .dark aside .border-slate-200,
+  .dark .border-teal-200,
+  .dark [class*="border-teal-200"] {
+    border-color: #243449 !important;
   }
 
-  .dark aside .hover\:bg-slate-100:hover {
-    background-color: rgba(255, 255, 255, 0.08) !important;
+  .dark aside .hover\:bg-slate-100:hover,
+  .dark aside .hover\:bg-teal-50:hover {
+    background-color: #162338 !important;
   }
 
-  .dark aside .hover\:text-slate-900:hover {
-    color: #FFFFFF !important;
+  .dark aside .hover\:text-slate-900:hover,
+  .dark aside .hover\:text-teal-700:hover {
+    color: #F8FAFC !important;
+  }
+  
+  /* Tabs */
+  .dark .border-b-2.border-\[\#0F766E\] {
+    border-color: #14B8A6 !important;
+    color: #14B8A6 !important;
+  }
+  
+  /* Fix hardcoded hover borders */
+  .dark .hover\:border-teal-200:hover {
+    border-color: #134E4A !important;
   }
 
   /* Landing Page Section Badges (ID Specificity) */
@@ -559,21 +621,21 @@
   #how-it-works .border-emerald-200,
   #faq .border-emerald-200,
   .faq-badge {
-    border-color: #A5F3FC !important;
-    background-color: #ECFEFF !important;
-    color: #0E7490 !important;
+    border-color: #134E4A !important;
+    background-color: #111C2E !important;
+    color: #14B8A6 !important;
   }
 
   #track .bg-emerald-600,
   #how-it-works .bg-emerald-600,
   #faq .bg-emerald-600 {
-    background-color: #0891B2 !important;
+    background-color: #0F766E !important;
   }
 
   .dark .custom-scrollbar {
-    scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+    scrollbar-color: #243449 transparent;
   }
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.25);
+    background: #243449;
   }
 }

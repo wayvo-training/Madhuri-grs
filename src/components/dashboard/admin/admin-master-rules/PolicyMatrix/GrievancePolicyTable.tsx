@@ -1,8 +1,11 @@
+"use client";
+
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { PriorityBadge } from "@/components/dashboard/badges";
 import type { MatrixRow } from "@/types/admin/master-rules";
 import { RoutingRulesPanel } from "./RoutingRulesPanel";
+import { Pagination } from "@/components/ui/pagination";
 
 export interface GrievancePolicyTableProps {
   subcategories: MatrixRow[];
@@ -30,6 +33,14 @@ export function GrievancePolicyTable({
   onToggleStatus,
   onConfirmDelete,
 }: GrievancePolicyTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const paginatedSubcategories = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return subcategories.slice(start, start + pageSize);
+  }, [subcategories, currentPage, pageSize]);
+
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-left text-xs">
@@ -44,7 +55,7 @@ export function GrievancePolicyTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-          {subcategories.map((row) => {
+          {paginatedSubcategories.map((row) => {
             const rowKey = `${row.departmentName}::${row.categoryName}::${row.subcategoryName}`;
             const isRoutingExpanded = expandedRoutingViews.has(rowKey);
 
@@ -159,6 +170,18 @@ export function GrievancePolicyTable({
           })}
         </tbody>
       </table>
+      <div className="border-t border-slate-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(subcategories.length / pageSize) || 1}
+          totalCount={subcategories.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="policies"
+        />
+      </div>
     </div>
   );
 }

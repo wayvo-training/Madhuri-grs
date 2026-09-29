@@ -297,91 +297,130 @@ export function CaseProgressTab({
         </div>
 
         {/* Right: Assignment */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-emerald-800" />
-              Assignment
-            </span>
-            <span className="text-xs text-slate-500">
-              Status:{" "}
-              <strong className="font-semibold text-slate-800">
-                {assignmentStatus}
-              </strong>
-            </span>
-          </div>
-
-          {officerName ? (
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
-                  {officerName.charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 text-xs truncate">
-                    {officerName}
-                  </div>
-                  <div className="text-[11px] text-slate-500 truncate">
-                    {officerDesignation}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1 pt-1 border-t border-slate-100">
-                {assignedTimestamp && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Assigned:</span>
-                    <span className="font-medium text-slate-700">
-                      {assignedTimestamp}
+        {caseProgressData?.departmentsInvolved && caseProgressData.departmentsInvolved.length > 1 ? (
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-emerald-800" />
+                Departments Involved
+              </span>
+            </div>
+            <div className="space-y-3">
+              {caseProgressData.departmentsInvolved.map((dept) => (
+                <div key={dept.id} className="text-xs space-y-1">
+                  <div className="flex items-center justify-between font-semibold text-slate-900">
+                    <span>{dept.departmentName}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase ${
+                        dept.involvementType === "PRIMARY"
+                          ? "bg-teal-100 text-teal-800"
+                          : dept.involvementType === "EQUAL"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {dept.involvementType}
                     </span>
                   </div>
-                )}
-                {officerEmail && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Email:</span>
-                    {officerEmail.trim().toLowerCase() ===
-                    (currentHodEmail || hodEmail || "").trim().toLowerCase() ? (
-                      <span
-                        className="text-amber-800 font-medium truncate max-w-[65%]"
-                        title="This case is currently recorded under your account."
-                      >
-                        {officerEmail} (You — HOD)
-                      </span>
-                    ) : (
-                      <a
-                        href={buildGmailComposeUrl({
-                          to: officerEmail,
-                          authuser: currentHodEmail || hodEmail || undefined,
-                          subject: `Regarding Case ${currentGrievance.ticketCode}: ${currentGrievance.title}`,
-                        })}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 hover:underline font-medium truncate max-w-[65%]"
-                        title={`Email officer via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
-                      >
-                        {officerEmail}
-                      </a>
-                    )}
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Staff:</span>
+                    <span className="font-medium text-slate-700">{dept.assignedStaff || "Unassigned"}</span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Status:</span>
+                    <span className="font-medium text-slate-700">{dept.status.replace(/_/g, " ")}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-emerald-800" />
+                Assignment
+              </span>
+              <span className="text-xs text-slate-500">
+                Status:{" "}
+                <strong className="font-semibold text-slate-800">
+                  {assignmentStatus}
+                </strong>
+              </span>
+            </div>
+
+            {officerName ? (
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
+                    {officerName.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-900 text-xs truncate">
+                      {officerName}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {officerDesignation}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-1 border-t border-slate-100">
+                  {assignedTimestamp && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Assigned:</span>
+                      <span className="font-medium text-slate-700">
+                        {assignedTimestamp}
+                      </span>
+                    </div>
+                  )}
+                  {officerEmail && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      {officerEmail.trim().toLowerCase() ===
+                      (currentHodEmail || hodEmail || "").trim().toLowerCase() ? (
+                        <span
+                          className="text-amber-800 font-medium truncate max-w-[65%]"
+                          title="This case is currently recorded under your account."
+                        >
+                          {officerEmail} (You — HOD)
+                        </span>
+                      ) : (
+                        <a
+                          href={buildGmailComposeUrl({
+                            to: officerEmail,
+                            authuser: currentHodEmail || hodEmail || undefined,
+                            subject: `Regarding Case ${currentGrievance.ticketCode}: ${currentGrievance.title}`,
+                          })}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:underline font-medium truncate max-w-[65%]"
+                          title={`Email officer via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
+                        >
+                          {officerEmail}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-3 text-center space-y-2">
-              <p className="text-xs text-slate-500">
-                No officer currently assigned to this ticket.
-              </p>
-              <button
-                type="button"
-                onClick={() => onAssignClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>Assign Officer Now</span>
-              </button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-3 text-center space-y-2">
+                <p className="text-xs text-slate-500">
+                  No officer currently assigned to this ticket.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onAssignClick(currentGrievance)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>Assign Officer Now</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Activity Timeline */}

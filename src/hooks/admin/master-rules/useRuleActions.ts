@@ -10,6 +10,7 @@ import type {
   SerializedRoutingRule,
   SerializedSlaPolicy,
 } from "@/types/admin/master-rules";
+import { toast } from "sonner";
 
 export interface UseRuleActionsParams {
   departments: DepartmentOption[];
@@ -35,9 +36,6 @@ export function useRuleActions({
   setReopenPolicies,
 }: UseRuleActionsParams) {
   const router = useRouter();
-
-  // Status & Table Feedback
-  const [tableFeedback, setTableFeedback] = useState<RuleFeedback | null>(null);
 
   // In-Page Action Notice (Msg Box banner)
   const [actionNotice, setActionNotice] = useState<RuleFeedback | null>(null);
@@ -78,18 +76,10 @@ export function useRuleActions({
     let endpoint = "";
     if (ruleType === "priority") {
       endpoint = `/api/admin/rules/priority?id=${id}`;
-      setPriorityRules((prev) =>
-        prev.map((r) =>
-          r.priority_rule_id === id ? { ...r, status: "INACTIVE" } : r,
-        ),
-      );
+      setPriorityRules((prev) => prev.filter((r) => r.priority_rule_id !== id));
     } else if (ruleType === "routing") {
       endpoint = `/api/admin/rules/routing?id=${id}`;
-      setRoutingRules((prev) =>
-        prev.map((r) =>
-          r.routing_rule_id === id ? { ...r, status: "INACTIVE" } : r,
-        ),
-      );
+      setRoutingRules((prev) => prev.filter((r) => r.routing_rule_id !== id));
     } else if (ruleType === "sla") {
       endpoint = `/api/admin/rules/sla?id=${id}`;
       setSlaPolicies((prev) => prev.filter((s) => s.sla_policy_id !== id));
@@ -195,17 +185,10 @@ export function useRuleActions({
             ),
           );
         }
-        setTableFeedback({
-          type: "error",
-          text: data.message || "Failed to update rule status.",
-        });
-        showNotice("error", data.message || "Failed to update rule status.");
+        toast.error(data.message || "Failed to update rule status.");
         return;
       }
-      setTableFeedback({
-        type: "success",
-        text: data.message || "Rule status updated successfully.",
-      });
+      toast.success(data.message || "Rule status updated successfully.");
       showNotice(
         "success",
         `Rule status changed to ${nextStatus.toLowerCase()}.`,
@@ -238,10 +221,7 @@ export function useRuleActions({
           ),
         );
       }
-      setTableFeedback({
-        type: "error",
-        text: "Network error updating rule status. Please try again.",
-      });
+      toast.error("Network error updating rule status. Please try again.");
     }
   }
 
@@ -249,7 +229,7 @@ export function useRuleActions({
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [modalRuleType, setModalRuleType] = useState<ModalRuleType>("routing");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [feedback, setFeedback] = useState<RuleFeedback | null>(null);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
   // Common Form Fields
   const [ruleName, setRuleName] = useState("");
@@ -288,14 +268,14 @@ export function useRuleActions({
     setRuleOrder("10");
     setIsDefault(false);
     setKeywords("");
+    setEditingRuleId(null);
+    setRuleStatus("ACTIVE");
     setSelectedDeptId("");
     setSelectedCatId("");
     setSelectedRoutingSubcatId("");
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
     setSelectedSupportingDepts([]);
-    setRuleStatus("ACTIVE");
-    setFeedback(null);
   }
 
   const openConfigureRow = (
@@ -338,17 +318,13 @@ export function useRuleActions({
 
     try {
       setIsSubmitting(true);
-      setFeedback(null);
 
       let endpoint = "";
       let payload: Record<string, unknown> = {};
 
       if (modalRuleType === "priority") {
         if (!isDefault && !selectedPriorityCatId) {
-          setFeedback({
-            type: "error",
-            text: "Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).",
-          });
+          toast.error("Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).");
           setIsSubmitting(false);
           return;
         }
@@ -389,10 +365,7 @@ export function useRuleActions({
         };
       } else if (modalRuleType === "routing") {
         if (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId) {
-          setFeedback({
-            type: "error",
-            text: "Primary Department, Category, and Subcategory are strictly required.",
-          });
+          toast.error("Primary Department, Category, and Subcategory are strictly required.");
           setIsSubmitting(false);
           return;
         }
@@ -454,10 +427,7 @@ export function useRuleActions({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setFeedback({
-          type: "error",
-          text: data.message || "Failed to create policy rule.",
-        });
+        toast.error(data.message || "Failed to create policy rule.");
         showNotice("error", data.message || "Failed to create policy rule.");
         setIsSubmitting(false);
         return;
@@ -473,10 +443,7 @@ export function useRuleActions({
         setReopenPolicies((prev) => [...prev, data.policy]);
       }
 
-      setFeedback({
-        type: "success",
-        text: data.message || "Rule saved successfully.",
-      });
+      toast.success(data.message || "Rule saved successfully.");
       showNotice(
         "success",
         data.message || `Policy '${ruleName}' has been configured and saved.`,
@@ -489,18 +456,13 @@ export function useRuleActions({
       }, 1000);
     } catch (err) {
       console.error("Rule creation failed:", err);
-      setFeedback({
-        type: "error",
-        text: "Network error occurred while saving rule.",
-      });
+      toast.error("Network error occurred while saving rule.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return {
-    tableFeedback,
-    setTableFeedback,
     actionNotice,
     setActionNotice,
     showNotice,
@@ -513,9 +475,11 @@ export function useRuleActions({
     setRuleModalOpen,
     modalRuleType,
     setModalRuleType,
+    editingRuleId,
+    setEditingRuleId,
+    ruleStatus,
+    setRuleStatus,
     isSubmitting,
-    feedback,
-    setFeedback,
     ruleName,
     setRuleName,
     priorityLevel,
@@ -526,8 +490,7 @@ export function useRuleActions({
     setIsDefault,
     keywords,
     setKeywords,
-    ruleStatus,
-    setRuleStatus,
+
     selectedDeptId,
     setSelectedDeptId,
     selectedCatId,

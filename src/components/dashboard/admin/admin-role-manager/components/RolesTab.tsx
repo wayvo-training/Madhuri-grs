@@ -3,6 +3,7 @@
 import {
   Check,
   ChevronDown,
+  Power,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -11,8 +12,9 @@ import {
 import { useEffect, useRef, useState } from "react";
 import {
   AdminEmptyState,
-  AdminPagination,
 } from "@/components/dashboard/admin/admin-shared";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Pagination } from "@/components/ui/pagination";
 import type {
   RoleStatusFilter,
   SerializedRole,
@@ -33,6 +35,7 @@ interface RolesTabProps {
   totalPages: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   togglingRoleId: string | null;
   onEditRole: (role: SerializedRole) => void;
   onToggleRoleStatus: (role: SerializedRole) => void;
@@ -52,6 +55,7 @@ export function RolesTab({
   totalPages,
   pageSize,
   onPageChange,
+  onPageSizeChange,
   togglingRoleId,
   onEditRole,
   onToggleRoleStatus,
@@ -199,7 +203,7 @@ export function RolesTab({
         </div>
       </div>
 
-      {/* Role Cards Grid */}
+      {/* Roles Table */}
       {paginatedRoles.length === 0 ? (
         <AdminEmptyState
           icon={ShieldCheck}
@@ -207,26 +211,78 @@ export function RolesTab({
           description="Try adjusting your search query or status filter."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {paginatedRoles.map((role) => (
-            <RoleCard
-              key={role.role_id}
-              role={role}
-              isToggling={togglingRoleId === role.role_id}
-              onEdit={onEditRole}
-              onToggleStatus={onToggleRoleStatus}
-            />
-          ))}
+        <div className="overflow-x-auto rounded-xl border border-slate-200 mb-6">
+          <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+            <thead className="bg-slate-50/80 text-slate-700 font-semibold">
+              <tr>
+                <th className="px-4 py-3">Role Name</th>
+                <th className="px-4 py-3">Description</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Permissions</th>
+                <th className="px-4 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {paginatedRoles.map((role) => (
+                <tr key={role.role_id} className="hover:bg-slate-50/70 transition">
+                  <td className="px-4 py-3 font-semibold text-slate-900">
+                    {role.role_name}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">
+                    {role.description || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                        role.status === "ACTIVE"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-600 border border-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          role.status === "ACTIVE"
+                            ? "bg-emerald-500"
+                            : "bg-slate-400"
+                        }`}
+                      />
+                      {role.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {role.permissions.length} permissions
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end">
+                      <ActionMenu
+                        widthClass="w-36"
+                        items={[
+                          {
+                            label: "Edit",
+                            icon: <ShieldCheck className="h-3.5 w-3.5" />,
+                            onClick: () => onEditRole(role),
+                          },
+                        ]}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Persistent Pagination Footer */}
-      <AdminPagination
+      {/* Pagination Footer */}
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalCount={filteredRolesCount}
         pageSize={pageSize}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[5, 10, 20, 50]}
+        itemLabel="roles"
       />
     </div>
   );

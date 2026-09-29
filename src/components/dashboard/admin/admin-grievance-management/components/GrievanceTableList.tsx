@@ -1,13 +1,20 @@
 "use client";
 
 import { AlertTriangle, Building2, FileText } from "lucide-react";
-import {
-  PriorityBadge,
-  SlaBadge,
-  StatusBadge,
-} from "@/components/dashboard/badges";
+import { StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import type { SerializedGrievance } from "@/types/admin/grievances";
+import { Pagination } from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { SortableTableHead, type SortState } from "@/components/ui/sortable-table-head";
+import { useState, useMemo } from "react";
 
 interface GrievanceTableListProps {
   grievancesList: SerializedGrievance[];
@@ -20,128 +27,155 @@ export function GrievanceTableList({
   isLoading,
   onOpenModal,
 }: GrievanceTableListProps) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs">
-        <thead className="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          <tr>
-            <th className="py-2.5 pl-4 pr-2">Grievance ID</th>
-            <th className="px-2 py-2.5">Subject</th>
-            <th className="px-2 py-2.5">Category</th>
-            <th className="px-2 py-2.5">Department</th>
-            <th className="px-2 py-2.5">Submitter Name</th>
-            <th className="px-2 py-2.5">Submitter Email</th>
-            <th className="px-2 py-2.5">Priority</th>
-            <th className="px-2 py-2.5">Status</th>
-            <th className="px-2 py-2.5">SLA Health</th>
-            <th className="py-2.5 pl-2 pr-4 text-right">Actions</th>
-          </tr>
-        </thead>
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
 
-        <tbody
-          className={`divide-y divide-slate-100 font-medium text-slate-700 transition-opacity duration-150 ${
+  const handleSort = (field: string, direction: SortState["direction"]) => {
+    setSortState({ field, direction });
+  };
+
+  const sortedList = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return grievancesList;
+    
+    return [...grievancesList].sort((a, b) => {
+      let valA: any = a[sortState.field as keyof SerializedGrievance] || "";
+      let valB: any = b[sortState.field as keyof SerializedGrievance] || "";
+      
+      if (typeof valA === "string") valA = valA.toLowerCase();
+      if (typeof valB === "string") valB = valB.toLowerCase();
+      
+      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [grievancesList, sortState]);
+
+  const paginatedList = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedList.slice(start, start + pageSize);
+  }, [sortedList, currentPage, pageSize]);
+
+  return (
+    <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
+      <Table className="w-full text-left text-xs">
+        <TableHeader className="bg-slate-50/50">
+          <TableRow className="hover:bg-transparent">
+            <SortableTableHead field="grievance_number" currentSort={sortState} onSort={handleSort} className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500">Grievance ID</SortableTableHead>
+            <SortableTableHead field="title" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Subject</SortableTableHead>
+            <SortableTableHead field="category_name" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Category</SortableTableHead>
+            <SortableTableHead field="department_name" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Department</SortableTableHead>
+            <SortableTableHead field="submitted_by_name" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Submitter Name</SortableTableHead>
+            <SortableTableHead field="submitted_by_email" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Submitter Email</SortableTableHead>
+            <SortableTableHead field="priority" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Priority</SortableTableHead>
+            <SortableTableHead field="status" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Status</SortableTableHead>
+            <SortableTableHead field="sla_status" currentSort={sortState} onSort={handleSort} className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">SLA Health</SortableTableHead>
+            <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+
+        <TableBody
+          className={`font-medium text-slate-700 transition-opacity duration-150 ${
             isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
           }`}
         >
           {grievancesList.length === 0 ? (
-            <tr>
-              <td
+            <TableRow>
+              <TableCell
                 colSpan={10}
                 className="py-12 text-center text-slate-400 font-normal"
               >
                 <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                 No grievances match the selected filters.
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ) : (
-            grievancesList.map((g) => {
+            paginatedList.map((g) => {
               const isException =
                 g.status === "SUBMITTED" || !g.department_name;
 
               return (
-                <tr
+                <TableRow
                   key={g.grievance_id}
                   className="transition-colors hover:bg-slate-50/80"
                 >
                   {/* ID */}
-                  <td className="whitespace-nowrap py-2.5 pl-4 pr-2 font-mono font-bold text-slate-900">
+                  <TableCell className="whitespace-nowrap py-2.5 pl-4 pr-2 font-mono font-bold text-slate-900">
                     {g.grievance_number}
-                  </td>
+                  </TableCell>
 
                   {/* Subject */}
-                  <td className="max-w-xs px-2 py-2.5">
+                  <TableCell className="max-w-xs px-2 py-2.5">
                     <p className="truncate font-semibold text-slate-900">
                       {g.title}
                     </p>
-                  </td>
+                  </TableCell>
 
                   {/* Category */}
-                  <td className="max-w-xs px-2 py-2.5">
+                  <TableCell className="max-w-xs px-2 py-2.5">
                     <p className="text-xs font-medium text-slate-700">
                       {g.category_name}
                     </p>
                     <p className="text-xs text-slate-400">
                       {g.subcategory_name}
                     </p>
-                  </td>
+                  </TableCell>
 
                   {/* Department */}
-                  <td className="whitespace-nowrap px-2 py-2.5">
+                  <TableCell className="whitespace-nowrap px-2 py-2.5">
                     {g.department_name ? (
                       <div className="flex flex-col items-start gap-1">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                          <Building2 className="h-3 w-3 text-slate-400" />
+                        <span className="text-xs text-slate-700">
                           {g.department_name}
                         </span>
                         {g.supporting_departments &&
                           g.supporting_departments.length > 0 && (
                             <span
                               title={`Supporting: ${g.supporting_departments.map((d) => d.department_name).join(", ")}`}
-                              className="inline-flex items-center gap-1 rounded bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500 border border-slate-200/80 cursor-help"
+                              className="text-xs font-medium text-slate-500 cursor-help"
                             >
                               +{g.supporting_departments.length} supporting
                             </span>
                           )}
                       </div>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                        <AlertTriangle className="h-3 w-3" />
+                      <span className="text-xs font-semibold text-amber-800">
                         Unrouted Exception
                       </span>
                     )}
-                  </td>
+                  </TableCell>
 
                   {/* Submitter Name */}
-                  <td className="whitespace-nowrap px-2 py-2.5 text-slate-600">
+                  <TableCell className="whitespace-nowrap px-2 py-2.5 text-slate-600">
                     <p className="font-medium text-slate-900">
                       {g.submitted_by_name}
                     </p>
-                  </td>
+                  </TableCell>
 
                   {/* Submitter Email */}
-                  <td className="whitespace-nowrap px-2 py-2.5 text-slate-600">
+                  <TableCell className="whitespace-nowrap px-2 py-2.5 text-slate-600">
                     <p className="text-xs text-slate-500">
                       {g.submitted_by_email}
                     </p>
-                  </td>
+                  </TableCell>
 
                   {/* Priority */}
-                  <td className="whitespace-nowrap px-2 py-2.5">
-                    <PriorityBadge priority={g.priority} />
-                  </td>
+                  <TableCell className="whitespace-nowrap px-2 py-2.5">
+                    {g.priority}
+                  </TableCell>
 
                   {/* Status */}
-                  <td className="whitespace-nowrap px-2 py-2.5">
+                  <TableCell className="whitespace-nowrap px-2 py-2.5">
                     <StatusBadge status={g.status} />
-                  </td>
+                  </TableCell>
 
                   {/* SLA Health */}
-                  <td className="whitespace-nowrap px-2 py-2.5">
-                    <SlaBadge status={g.sla_status} />
-                  </td>
+                  <TableCell className="whitespace-nowrap px-2 py-2.5">
+                    {g.sla_status || "N/A"}
+                  </TableCell>
 
                   {/* Actions */}
-                  <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right">
+                  <TableCell className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right">
                     <ActionMenu
                       widthClass="w-24"
                       items={[
@@ -161,13 +195,25 @@ export function GrievanceTableList({
                           : []),
                       ]}
                     />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
+      <div className="border-t border-slate-100">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(grievancesList.length / pageSize) || 1}
+          totalCount={grievancesList.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="grievances"
+        />
+      </div>
     </div>
   );
 }

@@ -223,6 +223,42 @@ export async function GET(
       },
     );
 
+    // Fetch involved departments dynamically directly from grievance_departments since schema treats grievance_departments relation as 1-1
+    const rawDepartments = await prisma.grievance_departments.findMany({
+      where: { grievance_id: grievanceId },
+      include: {
+        departments: true,
+        assignments: {
+          include: {
+            users_assignments_staff_idTousers: {
+              select: { first_name: true, last_name: true },
+            },
+          },
+        },
+      },
+      orderBy: { involvement_type: "asc" },
+    });
+
+    const departmentsInvolved = rawDepartments.map((rawD) => {
+      const d = rawD as any;
+      const activeAssignment = d.assignments;
+      const staffUser = activeAssignment?.users_assignments_staff_idTousers;
+      const assignedStaff = staffUser
+        ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+        : null;
+
+      const isMyAssignment = activeAssignment?.staff_id === staffId;
+
+      return {
+        id: d.grievance_department_id.toString(),
+        departmentName: d.departments?.department_name || "Unknown Department",
+        involvementType: d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL",
+        status: d.status,
+        assignedStaff,
+        isMyAssignment,
+      };
+    });
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -251,6 +287,7 @@ export async function GET(
       attachments,
       internalNotes,
       auditTrail,
+      departmentsInvolved,
     };
 
     return NextResponse.json({

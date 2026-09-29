@@ -203,6 +203,13 @@ export interface CaseProgressData {
     description: string;
     actor: string;
   }[];
+  departmentsInvolved?: {
+    id: string;
+    departmentName: string;
+    involvementType: string;
+    status: string;
+    assignedStaff?: string | null;
+  }[];
 }
 
 export interface DepartmentMetricsSummary {
