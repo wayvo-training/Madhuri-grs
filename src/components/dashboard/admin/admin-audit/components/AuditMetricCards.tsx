@@ -49,8 +49,12 @@ function MetricCard({
   return (
     <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 flex flex-col justify-between h-[115px] sm:h-[120px] shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">{title}</span>
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${styles[accent].chip}`}>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
+          {title}
+        </span>
+        <div
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${styles[accent].chip}`}
+        >
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
@@ -60,7 +64,9 @@ function MetricCard({
         >
           {value}
         </span>
-        <span className="text-[11px] font-medium text-slate-400 truncate">{helper}</span>
+        <span className="text-[11px] font-medium text-slate-400 truncate">
+          {helper}
+        </span>
       </div>
       <div
         className={`mt-auto pt-1 flex items-center gap-1.5 text-[11px] font-normal ${styles[accent].accent}`}

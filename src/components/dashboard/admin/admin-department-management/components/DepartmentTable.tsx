@@ -2,34 +2,32 @@
 
 import {
   Building2,
-  Check,
-  ChevronDown,
   EllipsisVertical,
   Pencil,
   Plus,
-  Power,
   RotateCcw,
-  Search,
   Users,
-  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   AdminPanelHeader,
   AdminToolbarAction,
 } from "@/components/dashboard/admin/admin-shared";
+import {
+  AdvancedFilterBar,
+  type FilterCondition,
+} from "@/components/filters/advanced-filter-bar";
 import { Pagination } from "@/components/ui/pagination";
-import type {
-  DepartmentStatusFilter,
-  SerializedDepartment,
-} from "@/types/admin/departments";
+import { SortableTh } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
+import type { SerializedDepartment } from "@/types/admin/departments";
 
 interface DepartmentTableProps {
   departments: SerializedDepartment[];
   filteredDepartments: SerializedDepartment[];
   paginatedDepartments: SerializedDepartment[];
-  statusFilter: DepartmentStatusFilter;
-  onStatusFilterChange: (status: DepartmentStatusFilter) => void;
+  statusFilter: string[];
+  onStatusFilterChange: (statuses: string[]) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   onResetFilters: () => void;
@@ -69,25 +67,10 @@ export function DepartmentTable({
   onToggleStatus,
   onCloseActionMenu,
 }: DepartmentTableProps) {
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        statusDropdownRef.current &&
-        !statusDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsStatusDropdownOpen(false);
-      }
-    }
-    if (isStatusDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isStatusDropdownOpen]);
+  const { sortState, handleSort, sortedItems } = useTableSort(
+    paginatedDepartments,
+    { field: "department_name", direction: "asc" },
+  );
 
   const activeCount = departments.filter(
     (d) => (d.status || "ACTIVE") === "ACTIVE",
@@ -96,39 +79,40 @@ export function DepartmentTable({
     (d) => d.status === "INACTIVE",
   ).length;
 
-  const statusOptions: {
-    key: DepartmentStatusFilter;
-    label: string;
-    count: number;
-    dotColor?: string;
-  }[] = [
-    { key: "ALL", label: "All Status", count: departments.length },
+  // Build filter fields for the AdvancedFilterBar
+  const filterFields = [
     {
-      key: "ACTIVE",
-      label: "Active",
-      count: activeCount,
-      dotColor: "bg-emerald-500",
-    },
-    {
-      key: "INACTIVE",
-      label: "Inactive",
-      count: inactiveCount,
-      dotColor: "bg-rose-500",
+      id: "status",
+      label: "Status",
+      type: "select" as const,
+      options: [
+        { label: `Active (${activeCount})`, value: "ACTIVE" },
+        { label: `Inactive (${inactiveCount})`, value: "INACTIVE" },
+      ],
     },
   ];
 
-  const activeOption = statusOptions.find((o) => o.key === statusFilter);
-  const activeLabel =
-    statusFilter !== "ALL" && activeOption
-      ? `View: ${activeOption.label}`
-      : "View";
+  // Sync AdvancedFilterBar conditions → statusFilter prop (multi-select)
+  const currentFilters: FilterCondition[] = statusFilter.map((s) => ({
+    id: `status-${s}`,
+    fieldId: "status",
+    operator: "Is" as const,
+    value: s,
+  }));
+
+  const handleFiltersChange = (newFilters: FilterCondition[]) => {
+    const selected = newFilters
+      .filter((f) => f.fieldId === "status")
+      .map((f) => f.value);
+    onStatusFilterChange(selected);
+  };
 
   return (
     <div
       id="departments"
-      className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs"
+      className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs"
     >
-      <div className="border-b border-slate-100 pb-5">
+      <div className="border-b border-slate-100 dark:border-slate-800 pb-5">
         <AdminPanelHeader
           title="Department Workload & Governance"
           description="Enterprise divisions configured for automated routing, status governance, and workload resolution."
@@ -141,123 +125,66 @@ export function DepartmentTable({
         />
       </div>
 
-      {/* Controls Bar: Search on Left, View / Status Dropdown on Right */}
-      <div className="mt-5 mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Search Input on the Left */}
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search department..."
-            value={searchQuery}
-            onChange={(e) => onSearchQueryChange(e.target.value)}
-            className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchQueryChange("")}
-              className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* View / Status Dropdown Menu on the Right */}
-        <div className="flex items-center gap-2">
-          {(statusFilter !== "ALL" || searchQuery) && (
-            <button
-              type="button"
-              onClick={onResetFilters}
-              className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
-            >
-              <RotateCcw className="h-3 w-3" />
-              <span>Reset</span>
-            </button>
-          )}
-
-          <div className="relative inline-block" ref={statusDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-              className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer ${
-                statusFilter !== "ALL"
-                  ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              <span>{activeLabel}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-            </button>
-
-            {isStatusDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-48 rounded-2xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  View ▾
-                </div>
-                <div className="border-t border-slate-100 my-1" />
-                {statusOptions.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => {
-                      onStatusFilterChange(item.key);
-                      setIsStatusDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-3.5 py-2 text-xs text-left transition cursor-pointer ${
-                      statusFilter === item.key
-                        ? "bg-emerald-50 font-semibold text-emerald-900"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {item.dotColor && (
-                        <span
-                          className={`h-2 w-2 rounded-full ${item.dotColor}`}
-                        />
-                      )}
-                      <span>{item.label}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                        {item.count}
-                      </span>
-                      {statusFilter === item.key && (
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Controls Bar: Search + Filter Icon */}
+      <div className="mt-5 mb-5">
+        <AdvancedFilterBar
+          fields={filterFields}
+          filters={currentFilters}
+          onFiltersChange={handleFiltersChange}
+          search={searchQuery}
+          onSearchChange={onSearchQueryChange}
+          placeholder="Search department..."
+        />
       </div>
 
       {/* Departments Table */}
       <div className="mt-5 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/80">
+            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
               <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 S.No
               </th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <SortableTh
+                field="department_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
                 Department
-              </th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              </SortableTh>
+              <SortableTh
+                field="description"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
                 Description
-              </th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              </SortableTh>
+              <SortableTh
+                field="status"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
                 Status
-              </th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              </SortableTh>
+              <SortableTh
+                field="user_count"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
                 Staff
-              </th>
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              </SortableTh>
+              <SortableTh
+                field="grievance_count"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
                 Cases
-              </th>
+              </SortableTh>
               <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Action
               </th>
@@ -278,7 +205,7 @@ export function DepartmentTable({
                       No departments match your current status filter or search
                       query.
                     </p>
-                    {(searchQuery || statusFilter !== "ALL") && (
+                    {(searchQuery || statusFilter.length > 0) && (
                       <button
                         type="button"
                         onClick={onResetFilters}
@@ -292,16 +219,16 @@ export function DepartmentTable({
                 </td>
               </tr>
             ) : (
-              paginatedDepartments.map((dept, index) => {
+              sortedItems.map((dept, index) => {
                 const isDeptActive = (dept.status || "ACTIVE") === "ACTIVE";
 
                 return (
                   <tr
                     key={dept.department_id}
-                    className={`border-b border-slate-100 transition ${
+                    className={`border-b border-slate-100 dark:border-slate-800 transition ${
                       isDeptActive
-                        ? "bg-white hover:bg-slate-50/60"
-                        : "bg-slate-50/40 opacity-80"
+                        ? "bg-white dark:bg-slate-900 hover:bg-slate-50/60 dark:hover:bg-slate-800/50"
+                        : "bg-slate-50/40 dark:bg-slate-800/40 opacity-80"
                     }`}
                   >
                     {/* S.No */}
@@ -386,7 +313,6 @@ export function DepartmentTable({
                               <Pencil className="h-3 w-3" />
                               Edit
                             </button>
-
                           </div>
                         )}
                       </div>

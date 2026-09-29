@@ -1,11 +1,4 @@
-import {
-  Building2,
-  CheckCircle2,
-  ChevronDown,
-  Loader2,
-  Pencil,
-  X,
-} from "lucide-react";
+import { Building2, CheckCircle2, Loader2, Pencil, X } from "lucide-react";
 import type { DepartmentHeadOption } from "@/types/admin/departments";
 
 export interface DepartmentModalsProps {
@@ -39,7 +32,6 @@ export interface DepartmentModalsProps {
   onSubmitEdit: (e: React.FormEvent) => void;
   onSetEditDeptName: (value: string) => void;
   onSetEditDescription: (value: string) => void;
-
 }
 
 export function DepartmentModals({
@@ -73,7 +65,6 @@ export function DepartmentModals({
   onSetEditDeptName,
   onSetEditDescription,
   onSetEditStatus,
-
 }: DepartmentModalsProps) {
   return (
     <>
@@ -97,8 +88,6 @@ export function DepartmentModals({
                 <X className="h-4 w-4" />
               </button>
             </div>
-
-
 
             <form onSubmit={onSubmitCreate} className="mt-4 space-y-4">
               <div>
@@ -218,8 +207,6 @@ export function DepartmentModals({
                 />
               </div>
 
-
-
               <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                 <button
                   type="button"
@@ -279,8 +266,6 @@ export function DepartmentModals({
               </button>
             </div>
 
-
-
             <form onSubmit={onSubmitEdit} className="mt-4 space-y-4">
               <div>
                 <label
@@ -315,8 +300,6 @@ export function DepartmentModals({
                 />
               </div>
 
-
-
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                 {onSetEditStatus && (
                   <button
@@ -346,7 +329,11 @@ export function DepartmentModals({
                   </button>
                   <button
                     type="submit"
-                    disabled={isEditSubmitting || !editDeptName.trim() || editDescription.trim().length < 20}
+                    disabled={
+                      isEditSubmitting ||
+                      !editDeptName.trim() ||
+                      editDescription.trim().length < 20
+                    }
                     className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition"
                   >
                     {isEditSubmitting ? (

@@ -1,37 +1,73 @@
+"use client";
+
+import {
+  AdvancedFilterBar,
+  type FilterCondition,
+} from "@/components/filters/advanced-filter-bar";
 import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
 import type { TabCategory } from "@/types/admin/audit";
 
 interface AuditCategoryTabsProps {
   activeTab: TabCategory;
   onTabChange: (tab: TabCategory) => void;
+  searchQuery: string;
+  onSearchChange: (val: string) => void;
 }
 
 export function AuditCategoryTabs({
   activeTab,
   onTabChange,
+  searchQuery,
+  onSearchChange,
 }: AuditCategoryTabsProps) {
-  return (
-    <div className="mt-5 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-4">
-      {CATEGORY_TABS.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
+  // Exclude "ALL" from options — empty filter = all
+  const filterFields = [
+    {
+      id: "category",
+      label: "Activity Type",
+      type: "select" as const,
+      options: CATEGORY_TABS.filter((t) => t.id !== "ALL").map((tab) => ({
+        label: tab.label,
+        value: tab.id,
+      })),
+    },
+  ];
 
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onTabChange(tab.id)}
-            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${
-              isActive
-                ? "bg-[#0F766E] text-white shadow-sm ring-1 ring-[#0F766E]"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-2xs"
-            }`}
-          >
-            <Icon className={`h-4 w-4 transition-colors ${isActive ? "text-white" : "text-slate-400 group-hover:text-teal-600"}`} />
-            <span>{tab.label}</span>
-          </button>
-        );
-      })}
+  const currentFilters: FilterCondition[] =
+    activeTab !== "ALL"
+      ? [
+          {
+            id: `cat-${activeTab}`,
+            fieldId: "category",
+            operator: "Is" as const,
+            value: activeTab,
+          },
+        ]
+      : [];
+
+  const handleFiltersChange = (newFilters: FilterCondition[]) => {
+    // Audit API supports a single category param — take the latest selection
+    // If the user deselects all, revert to "ALL"
+    const catConds = newFilters.filter((f) => f.fieldId === "category");
+    if (catConds.length === 0) {
+      onTabChange("ALL");
+    } else {
+      // Keep only the most recently added (last) selection
+      const latest = catConds[catConds.length - 1];
+      onTabChange(latest.value as TabCategory);
+    }
+  };
+
+  return (
+    <div className="mt-5 border-t border-slate-100 pt-4">
+      <AdvancedFilterBar
+        fields={filterFields}
+        filters={currentFilters}
+        onFiltersChange={handleFiltersChange}
+        search={searchQuery}
+        onSearchChange={onSearchChange}
+        placeholder="Search actor, email, IP, action..."
+      />
     </div>
   );
 }

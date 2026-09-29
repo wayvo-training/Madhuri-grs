@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  AdminPanelHeader,
-  AdminSearchInput,
-} from "@/components/dashboard/admin/admin-shared";
+import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
 import { useAdminAudit } from "@/hooks/admin/audit/useAdminAudit";
 import type { AdminAuditTrailProps } from "@/types/admin/audit";
 import { AuditCategoryTabs } from "./components/AuditCategoryTabs";
@@ -41,23 +38,22 @@ export function AdminAuditTrail({
 
       <div
         id="audit-logs"
-        className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
+        className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
       >
         {/* Header */}
-        <div className="border-b border-slate-100 p-5 sm:p-6">
+        <div className="border-b border-slate-100 dark:border-slate-800 p-5 sm:p-6">
           <AdminPanelHeader
             title="Observability & Audit Trail"
             description="Complete record of sessions, API requests, route navigation, errors, and administrative governance."
-            action={
-              <AdminSearchInput
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search actor, email, IP, action..."
-              />
-            }
           />
 
-          <AuditCategoryTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          {/* Search + Category Filter (combined via AdvancedFilterBar) */}
+          <AuditCategoryTabs
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
         </div>
 
         <AuditLogTable

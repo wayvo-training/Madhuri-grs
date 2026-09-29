@@ -1,11 +1,11 @@
 "use client";
 
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { PriorityBadge } from "@/components/dashboard/badges";
+import { Pagination } from "@/components/ui/pagination";
 import type { MatrixRow } from "@/types/admin/master-rules";
 import { RoutingRulesPanel } from "./RoutingRulesPanel";
-import { Pagination } from "@/components/ui/pagination";
 
 export interface GrievancePolicyTableProps {
   subcategories: MatrixRow[];

@@ -4,9 +4,15 @@ import { CACHE_TAGS, serverCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import {
+  validateBigIntId,
+  validateConditions,
+  validateRuleName,
+  validateRuleOrder,
+  validateStatus,
+} from "@/lib/validations/rules";
 
 const ALLOWED_INVOLVEMENT_TYPES = ["PRIMARY", "SUPPORTING"] as const;
-const ALLOWED_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 
 /**
  * Normalizes and validates supporting departments against existing active departments.
@@ -87,43 +93,6 @@ async function validateAndNormalizeSupportingDepartments(
   return { departments: normalized };
 }
 
-/**
- * Validates and sanitizes rule conditions object.
- */
-function validateConditions(rawConditions: unknown): {
-  error?: string;
-  conditions?: Record<string, unknown>;
-} {
-  if (
-    rawConditions === undefined ||
-    rawConditions === null ||
-    rawConditions === ""
-  ) {
-    return { conditions: {} };
-  }
-
-  if (typeof rawConditions !== "object" || Array.isArray(rawConditions)) {
-    return { error: "conditions must be a valid JSON object." };
-  }
-
-  const serialized = JSON.stringify(rawConditions);
-  if (serialized.length > 5000) {
-    return { error: "conditions payload exceeds maximum allowed size (5KB)." };
-  }
-
-  const obj = rawConditions as Record<string, unknown>;
-  const forbidden = ["__proto__", "constructor", "prototype"];
-  for (const key of Object.keys(obj)) {
-    if (forbidden.includes(key)) {
-      return {
-        error: `Invalid property key "${key}" detected in conditions object.`,
-      };
-    }
-  }
-
-  return { conditions: obj };
-}
-
 export async function POST(request: Request) {
   const startTime = Date.now();
   const auth = await authorizeApi({ role: "ADMIN" });
@@ -145,14 +114,15 @@ export async function POST(request: Request) {
     } = body;
 
     // 1. Validate rule_name
-    if (!rule_name || typeof rule_name !== "string" || !rule_name.trim()) {
+    const validatedRuleName = validateRuleName(rule_name);
+    if (!validatedRuleName) {
       return NextResponse.json(
         { success: false, message: "Rule name is required." },
         { status: 400 },
       );
     }
 
-    const trimmedName = rule_name.trim();
+    const trimmedName = validatedRuleName;
 
     // 1b. Check duplicate rule name (case-insensitive)
     const nameConflict = await prisma.routing_rules.findFirst({
@@ -183,10 +153,8 @@ export async function POST(request: Request) {
       );
     }
 
-    let catId: bigint;
-    try {
-      catId = BigInt(category_id);
-    } catch {
+    const catId = validateBigIntId(category_id);
+    if (!catId) {
       return NextResponse.json(
         {
           success: false,
@@ -222,10 +190,8 @@ export async function POST(request: Request) {
       );
     }
 
-    let subcatId: bigint;
-    try {
-      subcatId = BigInt(subcategory_id);
-    } catch {
+    const subcatId = validateBigIntId(subcategory_id);
+    if (!subcatId) {
       return NextResponse.json(
         {
           success: false,
@@ -270,10 +236,8 @@ export async function POST(request: Request) {
       );
     }
 
-    let deptId: bigint;
-    try {
-      deptId = BigInt(department_id);
-    } catch {
+    const deptId = validateBigIntId(department_id);
+    if (!deptId) {
       return NextResponse.json(
         {
           success: false,
@@ -317,24 +281,20 @@ export async function POST(request: Request) {
     }
 
     // 6. Validate status
-    const ruleStatus = (status || "ACTIVE").toString().toUpperCase().trim();
-    if (
-      !ALLOWED_STATUSES.includes(
-        ruleStatus as (typeof ALLOWED_STATUSES)[number],
-      )
-    ) {
+    const ruleStatus = validateStatus(status);
+    if (!ruleStatus) {
       return NextResponse.json(
         {
           success: false,
-          message: `Invalid status "${ruleStatus}". Allowed values are: ${ALLOWED_STATUSES.join(", ")}.`,
+          message: `Invalid status "${status}".`,
         },
         { status: 400 },
       );
     }
 
     // 7. Validate rule_order
-    const orderNum = Number(rule_order ?? 10);
-    if (!Number.isInteger(orderNum) || orderNum < 1 || orderNum > 100000) {
+    const orderNum = validateRuleOrder(rule_order);
+    if (orderNum === null) {
       return NextResponse.json(
         {
           success: false,
@@ -429,7 +389,7 @@ export async function POST(request: Request) {
     const rule = await prisma.$transaction(async (tx) => {
       const created = await tx.routing_rules.create({
         data: {
-          rule_name: rule_name.trim(),
+          rule_name: trimmedName,
           category_id: catId,
           subcategory_id: subcatId,
           department_id: deptId,
@@ -539,10 +499,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    let ruleId: bigint;
-    try {
-      ruleId = BigInt(routing_rule_id);
-    } catch {
+    const ruleId = validateBigIntId(routing_rule_id);
+    if (!ruleId) {
       return NextResponse.json(
         {
           success: false,
@@ -575,16 +533,12 @@ export async function PATCH(request: Request) {
     // 3. Validate status if provided
     let newStatus = existingRule.status;
     if (status !== undefined) {
-      const validatedStatus = status.toString().toUpperCase().trim();
-      if (
-        !ALLOWED_STATUSES.includes(
-          validatedStatus as (typeof ALLOWED_STATUSES)[number],
-        )
-      ) {
+      const validatedStatus = validateStatus(status);
+      if (!validatedStatus) {
         return NextResponse.json(
           {
             success: false,
-            message: `Invalid status "${status}". Allowed values are: ${ALLOWED_STATUSES.join(", ")}.`,
+            message: `Invalid status "${status}".`,
           },
           { status: 400 },
         );
@@ -595,12 +549,8 @@ export async function PATCH(request: Request) {
     // 4. Validate rule_order if provided
     let newOrder = existingRule.rule_order;
     if (rule_order !== undefined) {
-      const parsedOrder = Number(rule_order);
-      if (
-        !Number.isInteger(parsedOrder) ||
-        parsedOrder < 1 ||
-        parsedOrder > 100000
-      ) {
+      const parsedOrder = validateRuleOrder(rule_order);
+      if (parsedOrder === null) {
         return NextResponse.json(
           {
             success: false,
@@ -644,12 +594,8 @@ export async function PATCH(request: Request) {
       }
     }
 
-    const newName =
-      rule_name !== undefined &&
-      typeof rule_name === "string" &&
-      rule_name.trim()
-        ? rule_name.trim()
-        : existingRule.rule_name;
+    const validatedNewName = validateRuleName(rule_name);
+    const newName = validatedNewName || existingRule.rule_name;
 
     // 6. Execute update with full audit snapshot
     const updated = await prisma.$transaction(async (tx) => {
@@ -769,10 +715,8 @@ export async function DELETE(request: Request) {
       );
     }
 
-    let ruleId: bigint;
-    try {
-      ruleId = BigInt(id);
-    } catch {
+    const ruleId = validateBigIntId(id);
+    if (!ruleId) {
       return NextResponse.json(
         {
           success: false,
@@ -860,10 +804,14 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     console.error("Failed to deactivate routing rule:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error deactivating routing rule.";
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error deactivating routing rule.",
+        message,
       },
       { status: 500 },
     );

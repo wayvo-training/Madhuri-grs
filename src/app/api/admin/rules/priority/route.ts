@@ -4,47 +4,16 @@ import { CACHE_TAGS, serverCache } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import {
+  ALLOWED_STATUSES,
+  validateBigIntId,
+  validateConditions,
+  validateRuleName,
+  validateRuleOrder,
+  validateStatus,
+} from "@/lib/validations/rules";
 
 const ALLOWED_PRIORITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
-const ALLOWED_STATUSES = ["ACTIVE", "INACTIVE"] as const;
-
-/**
- * Validates and sanitizes rule conditions object.
- */
-function validateConditions(rawConditions: unknown): {
-  error?: string;
-  conditions?: Record<string, unknown>;
-} {
-  if (
-    rawConditions === undefined ||
-    rawConditions === null ||
-    rawConditions === ""
-  ) {
-    return { conditions: {} };
-  }
-
-  if (typeof rawConditions !== "object" || Array.isArray(rawConditions)) {
-    return { error: "conditions must be a valid JSON object." };
-  }
-
-  const serialized = JSON.stringify(rawConditions);
-  if (serialized.length > 5000) {
-    return { error: "conditions payload exceeds maximum allowed size (5KB)." };
-  }
-
-  const obj = rawConditions as Record<string, unknown>;
-  const forbidden = ["__proto__", "constructor", "prototype"];
-  for (const key of Object.keys(obj)) {
-    if (forbidden.includes(key)) {
-      return {
-        error: `Invalid property key "${key}" detected in conditions object.`,
-      };
-    }
-  }
-
-  return { conditions: obj };
-}
-
 export async function POST(request: Request) {
   const startTime = Date.now();
   const auth = await authorizeApi({ role: "ADMIN" });
@@ -63,7 +32,8 @@ export async function POST(request: Request) {
     } = body;
 
     // 1. Validate rule_name
-    if (!rule_name || typeof rule_name !== "string" || !rule_name.trim()) {
+    const validatedRuleName = validateRuleName(rule_name);
+    if (!validatedRuleName) {
       return NextResponse.json(
         { success: false, message: "Rule name is required." },
         { status: 400 },
@@ -87,12 +57,8 @@ export async function POST(request: Request) {
     }
 
     // 3. Validate status
-    const ruleStatus = (status || "ACTIVE").toString().toUpperCase().trim();
-    if (
-      !ALLOWED_STATUSES.includes(
-        ruleStatus as (typeof ALLOWED_STATUSES)[number],
-      )
-    ) {
+    const ruleStatus = validateStatus(status);
+    if (!ruleStatus) {
       return NextResponse.json(
         {
           success: false,
@@ -103,8 +69,8 @@ export async function POST(request: Request) {
     }
 
     // 4. Validate rule_order
-    const orderNum = Number(rule_order ?? 10);
-    if (!Number.isInteger(orderNum) || orderNum < 1 || orderNum > 100000) {
+    const orderNum = validateRuleOrder(rule_order);
+    if (orderNum === null) {
       return NextResponse.json(
         {
           success: false,
@@ -160,10 +126,8 @@ export async function POST(request: Request) {
       }
 
       if (rawCatId) {
-        let parsedCatId: bigint;
-        try {
-          parsedCatId = BigInt(rawCatId);
-        } catch {
+        const parsedCatId = validateBigIntId(rawCatId);
+        if (!parsedCatId) {
           return NextResponse.json(
             {
               success: false,
@@ -192,10 +156,8 @@ export async function POST(request: Request) {
       }
 
       if (rawSubcatId) {
-        let parsedSubcatId: bigint;
-        try {
-          parsedSubcatId = BigInt(rawSubcatId);
-        } catch {
+        const parsedSubcatId = validateBigIntId(rawSubcatId);
+        if (!parsedSubcatId) {
           return NextResponse.json(
             {
               success: false,
@@ -247,7 +209,7 @@ export async function POST(request: Request) {
       // A. Check duplicate rule name
       const nameConflict = activeRules.find(
         (r) =>
-          r.rule_name.trim().toLowerCase() === rule_name.trim().toLowerCase(),
+          r.rule_name.trim().toLowerCase() === validatedRuleName.toLowerCase(),
       );
       if (nameConflict) {
         return NextResponse.json(
@@ -377,7 +339,7 @@ export async function POST(request: Request) {
     const created = await prisma.$transaction(async (tx) => {
       const rule = await tx.priority_rules.create({
         data: {
-          rule_name: rule_name.trim(),
+          rule_name: validatedRuleName,
           conditions: sanitizedConditions as unknown as Prisma.InputJsonValue,
           priority_level: prioLevel,
           rule_order: orderNum,
@@ -470,10 +432,8 @@ export async function PATCH(request: Request) {
       );
     }
 
-    let ruleId: bigint;
-    try {
-      ruleId = BigInt(priority_rule_id);
-    } catch {
+    const ruleId = validateBigIntId(priority_rule_id);
+    if (!ruleId) {
       return NextResponse.json(
         {
           success: false,
@@ -501,12 +461,8 @@ export async function PATCH(request: Request) {
     // 3. Validate status if provided
     let newStatus = existingRule.status;
     if (status !== undefined) {
-      const validatedStatus = status.toString().toUpperCase().trim();
-      if (
-        !ALLOWED_STATUSES.includes(
-          validatedStatus as (typeof ALLOWED_STATUSES)[number],
-        )
-      ) {
+      const validatedStatus = validateStatus(status);
+      if (!validatedStatus) {
         return NextResponse.json(
           {
             success: false,
@@ -521,12 +477,8 @@ export async function PATCH(request: Request) {
     // 4. Validate rule_order if provided
     let newOrder = existingRule.rule_order;
     if (rule_order !== undefined) {
-      const parsedOrder = Number(rule_order);
-      if (
-        !Number.isInteger(parsedOrder) ||
-        parsedOrder < 1 ||
-        parsedOrder > 100000
-      ) {
+      const parsedOrder = validateRuleOrder(rule_order);
+      if (parsedOrder === null) {
         return NextResponse.json(
           {
             success: false,
@@ -559,12 +511,8 @@ export async function PATCH(request: Request) {
       newPrioLevel = parsedPrio;
     }
 
-    const newName =
-      rule_name !== undefined &&
-      typeof rule_name === "string" &&
-      rule_name.trim()
-        ? rule_name.trim()
-        : existingRule.rule_name;
+    const validatedNewName = validateRuleName(rule_name);
+    const newName = validatedNewName || existingRule.rule_name;
 
     // 6. Conflict check when activating an inactive rule or changing rule name
     if (
@@ -804,10 +752,8 @@ export async function DELETE(request: Request) {
       );
     }
 
-    let ruleId: bigint;
-    try {
-      ruleId = BigInt(id);
-    } catch {
+    const ruleId = validateBigIntId(id);
+    if (!ruleId) {
       return NextResponse.json(
         {
           success: false,
@@ -884,10 +830,14 @@ export async function DELETE(request: Request) {
     });
   } catch (error) {
     console.error("Failed to deactivate priority rule:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error deactivating priority rule.";
     return NextResponse.json(
       {
         success: false,
-        message: "Internal server error deactivating priority rule.",
+        message,
       },
       { status: 500 },
     );

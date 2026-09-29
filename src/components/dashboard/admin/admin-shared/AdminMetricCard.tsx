@@ -1,6 +1,12 @@
 import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export interface AdminMetricCardProps {
   title: string;
@@ -86,9 +92,16 @@ export function AdminMetricCard({
     <button
       type="button"
       onClick={onClick}
-      className={cn("w-full text-left transition hover:shadow-md cursor-pointer outline-none")}
+      className={cn(
+        "w-full text-left transition hover:shadow-md cursor-pointer outline-none",
+      )}
     >
-      <Card className={cn("relative overflow-hidden h-full rounded-2xl shadow-xs", styles.ring)}>
+      <Card
+        className={cn(
+          "relative overflow-hidden h-full rounded-2xl shadow-xs",
+          styles.ring,
+        )}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-3">
           <CardTitle className="text-sm font-medium text-slate-500">
             {title}
@@ -99,7 +112,9 @@ export function AdminMetricCard({
         </CardHeader>
         <CardContent className="p-5 pt-0">
           <div className="flex items-baseline gap-2">
-            <span className={cn("text-2xl font-bold tracking-tight", styles.value)}>
+            <span
+              className={cn("text-2xl font-bold tracking-tight", styles.value)}
+            >
               {value}
             </span>
             <span className="text-xs font-medium text-slate-400">{helper}</span>
@@ -117,7 +132,10 @@ export function AdminMetricCard({
               )}
             >
               <span
-                className={cn("inline-block h-1.5 w-1.5 rounded-full", styles.dot)}
+                className={cn(
+                  "inline-block h-1.5 w-1.5 rounded-full",
+                  styles.dot,
+                )}
               />
               {subtext ||
                 (title === "Suspended Accounts"

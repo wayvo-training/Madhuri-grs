@@ -114,10 +114,17 @@ export function AdminMetricCard({
         </div>
       </div>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className={cn("text-xl font-bold tracking-tight leading-none", styles.value)}>
+        <span
+          className={cn(
+            "text-xl font-bold tracking-tight leading-none",
+            styles.value,
+          )}
+        >
           {value}
         </span>
-        <span className="text-[11px] font-medium text-slate-400 truncate">{helper}</span>
+        <span className="text-[11px] font-medium text-slate-400 truncate">
+          {helper}
+        </span>
       </div>
       <div
         className={cn(
@@ -125,9 +132,7 @@ export function AdminMetricCard({
           styles.helper,
         )}
       >
-        <span
-          className={cn("inline-block h-1 w-1 rounded-full", styles.dot)}
-        />
+        <span className={cn("inline-block h-1 w-1 rounded-full", styles.dot)} />
         {title === "Suspended Accounts"
           ? "Revoked access"
           : title === "Active Accounts"

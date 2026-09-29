@@ -34,7 +34,7 @@ export function RoleManagerHeader({
   actionNotice,
 }: RoleManagerHeaderProps) {
   return (
-    <div className="border-b border-slate-100 p-5 sm:p-6">
+    <div className="border-b border-slate-100 dark:border-slate-800 p-5 sm:p-6">
       <AdminPanelHeader
         title="Roles & Permission Matrix Governance"
         description="Administer system authorization profiles, toggle active/inactive status, adjust capability sets, or create custom roles."
@@ -79,7 +79,9 @@ export function RoleManagerHeader({
         >
           <ShieldCheck
             className={`h-4 w-4 transition-colors ${
-              activeTab === "roles" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+              activeTab === "roles"
+                ? "text-white"
+                : "text-slate-400 group-hover:text-teal-600"
             }`}
           />
           <span>Roles Matrix</span>
@@ -105,7 +107,9 @@ export function RoleManagerHeader({
         >
           <KeyRound
             className={`h-4 w-4 transition-colors ${
-              activeTab === "permissions" ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+              activeTab === "permissions"
+                ? "text-white"
+                : "text-slate-400 group-hover:text-teal-600"
             }`}
           />
           <span>Security Permissions</span>

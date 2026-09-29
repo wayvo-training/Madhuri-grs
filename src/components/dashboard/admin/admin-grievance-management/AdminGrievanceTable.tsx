@@ -31,6 +31,8 @@ export function AdminGrievanceTable({
     setSelectedStatus,
     selectedDept,
     setSelectedDept,
+    selectedSla,
+    setSelectedSla,
     activeTab,
     setActiveTab,
     activeModalGrievance,
@@ -76,6 +78,8 @@ export function AdminGrievanceTable({
           setSelectedPriority={setSelectedPriority}
           selectedStatus={selectedStatus}
           setSelectedStatus={setSelectedStatus}
+          selectedSla={selectedSla}
+          setSelectedSla={setSelectedSla}
           setCurrentPage={setCurrentPage}
         />
       </div>

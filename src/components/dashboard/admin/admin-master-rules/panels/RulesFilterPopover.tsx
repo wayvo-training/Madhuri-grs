@@ -13,8 +13,6 @@ export interface RulesFilterPopoverProps {
   setDeptFilter: (value: string) => void;
   catFilter: string;
   setCatFilter: (value: string) => void;
-  statusFilter: "ALL" | "ACTIVE" | "INACTIVE";
-  setStatusFilter: (value: "ALL" | "ACTIVE" | "INACTIVE") => void;
 }
 
 export function RulesFilterPopover({
@@ -29,8 +27,6 @@ export function RulesFilterPopover({
   setDeptFilter,
   catFilter,
   setCatFilter,
-  statusFilter,
-  setStatusFilter,
 }: RulesFilterPopoverProps) {
   return (
     <div className="relative shrink-0" data-dropdown-container>
@@ -51,9 +47,7 @@ export function RulesFilterPopover({
         <span>Filters</span>
         {isFiltered && (
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-[#0F766E] px-1 text-2xs font-bold text-white">
-            {(deptFilter !== "ALL" ? 1 : 0) +
-              (catFilter !== "ALL" ? 1 : 0) +
-              (statusFilter !== "ALL" ? 1 : 0)}
+            {(deptFilter !== "ALL" ? 1 : 0) + (catFilter !== "ALL" ? 1 : 0)}
           </span>
         )}
         <ChevronDown
@@ -132,28 +126,6 @@ export function RulesFilterPopover({
               </select>
             </div>
           )}
-
-          <div className="space-y-1">
-            <label
-              htmlFor="filter-popover-status"
-              className="text-2xs font-bold uppercase tracking-wider text-slate-400"
-            >
-              Status
-            </label>
-            <select
-              id="filter-popover-status"
-              aria-label="Filter by status"
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")
-              }
-              className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Deactivated</option>
-            </select>
-          </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
             <span className="text-2xs text-slate-400">

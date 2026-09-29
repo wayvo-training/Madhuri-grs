@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Loader2, Lock, Pencil, X } from "lucide-react";
+import { KeyRound, Loader2, Pencil, X } from "lucide-react";
 import type { SerializedPermission } from "@/types/admin/role-manager";
 
 export interface RoleManagerModalsProps {
@@ -83,8 +83,6 @@ export function RoleManagerModals({
               </button>
             </div>
 
-
-
             <form onSubmit={onSubmitCreate} className="mt-4 space-y-4">
               <div>
                 <label
@@ -126,9 +124,7 @@ export function RoleManagerModals({
                 />
               </div>
 
-              <div>
-
-              </div>
+              <div></div>
 
               <div>
                 <span className="block text-xs font-semibold text-slate-700">
@@ -227,8 +223,6 @@ export function RoleManagerModals({
               </button>
             </div>
 
-
-
             <form onSubmit={onSubmitEdit} className="mt-4 space-y-4">
               <div>
                 <label
@@ -246,9 +240,7 @@ export function RoleManagerModals({
                 />
               </div>
 
-              <div>
-
-              </div>
+              <div></div>
 
               <div>
                 <span className="block text-xs font-semibold text-slate-700">

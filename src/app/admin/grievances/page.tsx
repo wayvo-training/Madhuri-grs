@@ -137,7 +137,11 @@ export default async function AdminGrievancesPage() {
       submitted_by_email: g.users.email,
       department_name:
         primaryLink?.departments?.department_name ||
-        g.grievance_departments?.departments?.department_name ||
+        (
+          g.grievance_departments as unknown as
+            | { departments: { department_name: string } }[]
+            | undefined
+        )?.[0]?.departments?.department_name ||
         null,
       supporting_departments: supportingLinks.map((s) => ({
         department_id: s.department_id.toString(),

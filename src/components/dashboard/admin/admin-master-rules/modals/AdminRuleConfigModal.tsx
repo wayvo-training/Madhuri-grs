@@ -1,7 +1,7 @@
-import { AlertTriangle, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
-import type { ModalRuleType, RuleFeedback } from "@/types/admin/master-rules";
+import type { ModalRuleType } from "@/types/admin/master-rules";
 
 export interface RuleDepartmentOption {
   department_id: string;
@@ -632,10 +632,6 @@ export function AdminRuleConfigModal({
             </div>
           )}
 
-
-
-
-
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             {editingRuleId && setRuleStatus && (
               <button
@@ -662,18 +658,25 @@ export function AdminRuleConfigModal({
                 Cancel
               </button>
               <button
-              type="submit"
-              disabled={
-                isSubmitting ||
-                !ruleName.trim() ||
-                (modalRuleType === "priority" && !isDefault && !selectedPriorityCatId) ||
-                (modalRuleType === "routing" && (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId))
-              }
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50"
-            >
-              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              <span>Save Policy</span>
-            </button>
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  !ruleName.trim() ||
+                  (modalRuleType === "priority" &&
+                    !isDefault &&
+                    !selectedPriorityCatId) ||
+                  (modalRuleType === "routing" &&
+                    (!selectedDeptId ||
+                      !selectedCatId ||
+                      !selectedRoutingSubcatId))
+                }
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50"
+              >
+                {isSubmitting && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                )}
+                <span>Save Policy</span>
+              </button>
             </div>
           </div>
         </form>

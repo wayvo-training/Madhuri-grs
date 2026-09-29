@@ -8,10 +8,11 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 import { ROLE_BADGE_STYLES } from "@/lib/admin/audit/audit-constants";
 import type { SerializedAuditLog } from "@/types/admin/audit";
-import { Pagination } from "@/components/ui/pagination";
-import { useState, useMemo } from "react";
 
 interface AuditLogTableProps {
   logs: SerializedAuditLog[];
@@ -44,20 +45,60 @@ export function AuditLogTable({
   onPageChange,
   onPageSizeChange,
 }: AuditLogTableProps) {
+  const { sortState, handleSort, sortedItems } = useTableSort(logs, {
+    field: "created_at",
+    direction: "desc",
+  });
+
   return (
-    <div className="overflow-x-auto relative rounded-xl border border-slate-200 bg-white">
+    <div className="overflow-x-auto relative bg-transparent">
       <table className="w-full text-left text-xs">
-        <thead className="border-b border-slate-100 bg-slate-50/50 text-xs font-semibold uppercase tracking-wider text-slate-500">
+        <thead className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           <tr>
-            <th className="py-3.5 pl-6 pr-3">Timestamp</th>
-            <th className="px-3 py-3.5">Who (Actor & Identity)</th>
-            <th className="px-3 py-3.5">Action / Event</th>
-            <th className="px-3 py-3.5">Category & Entity</th>
-            <th className="px-3 py-3.5">Source IP / Device</th>
+            <SortableTh
+              field="created_at"
+              currentSort={sortState}
+              onSort={handleSort}
+              className="py-3.5 pl-6 pr-3"
+            >
+              Timestamp
+            </SortableTh>
+            <SortableTh
+              field="user_name"
+              currentSort={sortState}
+              onSort={handleSort}
+              className="px-3 py-3.5"
+            >
+              Who (Actor & Identity)
+            </SortableTh>
+            <SortableTh
+              field="action"
+              currentSort={sortState}
+              onSort={handleSort}
+              className="px-3 py-3.5"
+            >
+              Action / Event
+            </SortableTh>
+            <SortableTh
+              field="entity_type"
+              currentSort={sortState}
+              onSort={handleSort}
+              className="px-3 py-3.5"
+            >
+              Category & Entity
+            </SortableTh>
+            <SortableTh
+              field="ip_address"
+              currentSort={sortState}
+              onSort={handleSort}
+              className="px-3 py-3.5"
+            >
+              Source IP / Device
+            </SortableTh>
             <th className="py-3.5 pl-3 pr-6 text-right">Payload</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <tr
@@ -124,20 +165,20 @@ export function AuditLogTable({
               </td>
             </tr>
           ) : (
-            logs.map((log) => {
+            sortedItems.map((log) => {
               const isError =
                 log.action.includes("ERROR") ||
                 log.action.includes("FAILED") ||
                 log.entity_type === "ERROR";
               const isExpanded = expandedLogId === log.audit_log_id;
-              const rolePill =
+              const _rolePill =
                 ROLE_BADGE_STYLES[log.role_name || ""] ||
                 "bg-slate-100 text-slate-600 border-slate-200";
 
               return (
                 <tr
                   key={log.audit_log_id}
-                  className="transition-colors hover:bg-slate-50/80"
+                  className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50"
                 >
                   <td className="whitespace-nowrap py-3.5 pl-6 pr-3">
                     <div className="flex items-center gap-1.5 text-slate-500">
@@ -175,12 +216,12 @@ export function AuditLogTable({
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
                             {log.user_name}
                           </span>
-                            <span className="text-[10px] font-semibold text-slate-500 uppercase">
-                              {log.role_name}
-                            </span>
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase">
+                            {log.role_name}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1 text-xs text-slate-400">
                           {log.employee_code && (
@@ -197,7 +238,9 @@ export function AuditLogTable({
                   <td className="whitespace-nowrap px-3 py-3.5">
                     <span
                       className={`font-mono text-xs font-bold ${
-                        isError ? "text-rose-600" : "text-slate-700"
+                        isError
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-slate-700 dark:text-slate-300"
                       }`}
                     >
                       {log.action}
@@ -228,7 +271,7 @@ export function AuditLogTable({
                         <button
                           type="button"
                           onClick={() => onToggleExpand(log.audit_log_id)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
                         >
                           <FileCode2 className="h-3 w-3 text-emerald-700" />
                           <span>{isExpanded ? "Hide Data" : "Inspect"}</span>
@@ -246,7 +289,7 @@ export function AuditLogTable({
           )}
         </tbody>
       </table>
-      <div className="border-t border-slate-100">
+      <div className="border-t border-slate-100 dark:border-slate-800">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

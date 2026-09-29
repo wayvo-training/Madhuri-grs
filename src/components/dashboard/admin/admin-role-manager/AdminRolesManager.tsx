@@ -85,7 +85,7 @@ export function AdminRolesManager({
   return (
     <div
       id="roles-permissions"
-      className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
+      className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
     >
       <RoleManagerHeader
         activeTab={activeTab}
@@ -141,35 +141,28 @@ export function AdminRolesManager({
 
       <RoleManagerModals
         isModalOpen={isModalOpen}
-
         newRoleName={newRoleName}
         newRoleDescription={newRoleDescription}
-
         permissionsList={permissionsList}
         selectedPermissionIds={selectedPermissionIds}
         isSubmitting={isSubmitting}
         onCloseCreate={() => {
           setIsModalOpen(false);
-
         }}
         onSubmitCreate={handleCreateRole}
         onSetNewRoleName={setNewRoleName}
         onSetNewRoleDescription={setNewRoleDescription}
-
         onTogglePermission={togglePermission}
         isEditModalOpen={isEditModalOpen}
         editingRoleName={editingRoleName}
         editDescription={editDescription}
-
         editPermissionIds={editPermissionIds}
         isEditSubmitting={isEditSubmitting}
         onCloseEdit={() => {
           setIsEditModalOpen(false);
-
         }}
         onSubmitEdit={handleSaveEditRole}
         onSetEditDescription={setEditDescription}
-
         onToggleEditPermission={toggleEditPermission}
       />
     </div>

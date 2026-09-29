@@ -1,7 +1,8 @@
-import { AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, FileText } from "lucide-react";
 import { useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
   Table,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/dashboard/badges";
+import { useTableSort } from "@/hooks/useTableSort";
 import type { SerializedPriorityRule } from "@/types/admin/master-rules";
 
 interface PriorityRulesViewProps {
@@ -18,7 +19,7 @@ interface PriorityRulesViewProps {
   defaultRule?: SerializedPriorityRule | null;
   searchQuery: string;
   catFilter: string;
-  statusFilter: string;
+  statusFilter: string[];
   onEdit: (rule: SerializedPriorityRule) => void;
   onToggleStatus: (rule: SerializedPriorityRule) => void;
   onDelete: (rule: SerializedPriorityRule) => void;
@@ -35,18 +36,22 @@ export function PriorityRulesView({
   onDelete,
 }: PriorityRulesViewProps) {
   const filtered = rules.filter((r) => {
-    if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
-    
+    if (statusFilter.length > 0 && !statusFilter.includes(r.status))
+      return false;
+
     // Parse conditions to get category (safely)
     let ruleCat = "All";
     let ruleSubcat = "—";
     try {
       if (r.conditions && typeof r.conditions === "object") {
-        const cond = r.conditions as any;
+        const cond = r.conditions as {
+          category_name?: string;
+          subcategory_name?: string;
+        };
         ruleCat = cond.category_name || "All";
         ruleSubcat = cond.subcategory_name || "—";
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     if (catFilter !== "ALL" && ruleCat !== catFilter) return false;
 
@@ -62,98 +67,160 @@ export function PriorityRulesView({
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
-  const totalCount = filtered.length;
+
+  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
+    field: "rule_order",
+    direction: "asc",
+  });
+
+  const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);
-  
-  const paginated = filtered
-    .sort((a, b) => a.rule_order - b.rule_order)
-    .slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const paginated = sortedItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   return (
     <div className="flex flex-col gap-4">
       <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
         <Table className="w-full text-left text-xs">
-        <TableHeader className="bg-slate-50/50">
-          <TableRow className="hover:bg-transparent whitespace-nowrap">
-            <TableHead className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500">Rule Name</TableHead>
-            <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Category</TableHead>
-            <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Subcategory</TableHead>
-            <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Priority</TableHead>
-            <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Order</TableHead>
-            <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">Status</TableHead>
-            <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody className="font-medium text-slate-700">
-          {filtered.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="py-12 text-center text-slate-400 font-normal">
-                <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                No Priority Rules found.
-              </TableCell>
+          <TableHeader className="bg-slate-50/50">
+            <TableRow className="hover:bg-transparent whitespace-nowrap">
+              <SortableTableHead
+                field="rule_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500"
+              >
+                Rule Name
+              </SortableTableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                Category
+              </TableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                Subcategory
+              </TableHead>
+              <SortableTableHead
+                field="priority_level"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
+                Priority
+              </SortableTableHead>
+              <SortableTableHead
+                field="rule_order"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
+                Order
+              </SortableTableHead>
+              <SortableTableHead
+                field="status"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
+                Status
+              </SortableTableHead>
+              <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500">
+                Actions
+              </TableHead>
             </TableRow>
-          ) : (
-            paginated.map((r) => {
-              let ruleCat = "All";
-              let ruleSubcat = "—";
-              try {
-                if (r.conditions && typeof r.conditions === "object") {
-                  const cond = r.conditions as any;
-                  ruleCat = cond.category_name || "All";
-                  ruleSubcat = cond.subcategory_name || "—";
-                }
-              } catch (e) {}
+          </TableHeader>
 
-              const isDefault = r.is_default;
+          <TableBody className="font-medium text-slate-700">
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="py-12 text-center text-slate-400 font-normal"
+                >
+                  <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                  No Priority Rules found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginated.map((r) => {
+                let ruleCat = "All";
+                let ruleSubcat = "—";
+                try {
+                  if (r.conditions && typeof r.conditions === "object") {
+                    const cond = r.conditions as {
+                      category_name?: string;
+                      subcategory_name?: string;
+                    };
+                    ruleCat = cond.category_name || "All";
+                    ruleSubcat = cond.subcategory_name || "—";
+                  }
+                } catch (_e) {}
 
-              return (
-                <TableRow key={r.priority_rule_id} className="transition-colors hover:bg-slate-50/80 whitespace-nowrap">
-                  <TableCell className="py-2.5 pl-4 pr-2">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-semibold text-slate-900">
-                        {r.rule_name}
-                        {isDefault && " (Default Fallback)"}
+                const isDefault = r.is_default;
+
+                return (
+                  <TableRow
+                    key={r.priority_rule_id}
+                    className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
+                  >
+                    <TableCell className="py-2.5 pl-4 pr-2">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-semibold text-slate-900">
+                          {r.rule_name}
+                          {isDefault && " (Default Fallback)"}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell
+                      className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]"
+                      title={ruleCat}
+                    >
+                      {ruleCat}
+                    </TableCell>
+                    <TableCell
+                      className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]"
+                      title={ruleSubcat}
+                    >
+                      {ruleSubcat}
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      {r.priority_level}
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      {isDefault ? "99" : r.rule_order}
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5 whitespace-nowrap">
+                      <span
+                        className={`font-medium ${r.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                      >
+                        {r.status === "ACTIVE" ? "Active" : "Inactive"}
                       </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]" title={ruleCat}>{ruleCat}</TableCell>
-                  <TableCell className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]" title={ruleSubcat}>{ruleSubcat}</TableCell>
-                  <TableCell className="px-2 py-2.5">
-                    {r.priority_level}
-                  </TableCell>
-                  <TableCell className="px-2 py-2.5">
-                    {isDefault ? "99" : r.rule_order}
-                  </TableCell>
-                  <TableCell className="px-2 py-2.5 whitespace-nowrap">
-                    <span className={`font-medium ${r.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}>
-                      {r.status === "ACTIVE" ? "Active" : "Inactive"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="py-2.5 pl-2 pr-4 text-right">
-                    <ActionMenu
-                      widthClass="w-36"
-                      items={[
-                        { label: "Configure", onClick: () => onEdit(r) },
+                    </TableCell>
+                    <TableCell className="py-2.5 pl-2 pr-4 text-right">
+                      <ActionMenu
+                        widthClass="w-36"
+                        items={[
+                          { label: "Configure", onClick: () => onEdit(r) },
 
-                        {
-                          label: "Delete Rule",
-                          variant: "danger" as const,
-                          icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                          onClick: () => onDelete(r),
-                        },
-                      ]}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-    </div>
-    
-    {totalCount > pageSize && (
+                          {
+                            label: "Delete Rule",
+                            variant: "danger" as const,
+                            icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                            onClick: () => onDelete(r),
+                          },
+                        ]}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {totalCount > pageSize && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const department = searchParams.get("department") || "ALL";
     const priority = searchParams.get("priority") || "ALL";
     const status = searchParams.get("status") || "ALL";
+    const slaStatus = searchParams.get("sla_status") || "ALL";
 
     const conditions: Prisma.grievancesWhereInput[] = [];
 
@@ -84,10 +85,11 @@ export async function GET(request: Request) {
 
     // 3. Department filter
     if (department !== "ALL") {
+      const depts = department.split(",");
       conditions.push({
         grievance_departments: {
           departments: {
-            department_name: department,
+            department_name: { in: depts },
           },
         },
       });
@@ -95,12 +97,20 @@ export async function GET(request: Request) {
 
     // 4. Priority filter
     if (priority !== "ALL") {
-      conditions.push({ priority });
+      const prios = priority.split(",");
+      conditions.push({ priority: { in: prios } });
     }
 
     // 5. Status filter
     if (status !== "ALL") {
-      conditions.push({ status });
+      const stats = status.split(",");
+      conditions.push({ status: { in: stats } });
+    }
+
+    // 6. SLA Status filter
+    if (slaStatus !== "ALL") {
+      const slas = slaStatus.split(",");
+      conditions.push({ sla_status: { in: slas } });
     }
 
     const where: Prisma.grievancesWhereInput =

@@ -3,37 +3,34 @@
 import {
   AlertTriangle,
   CheckCircle2,
-  RotateCcw,
-  ShieldAlert,
-  Route,
-  Timer,
   RefreshCcw,
+  RotateCcw,
+  Route,
+  ShieldAlert,
+  Timer,
   X,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   AdminFilterToolbar,
   AdminPanelHeader,
-  AdminSearchInput,
 } from "@/components/dashboard/admin/admin-shared";
+import {
+  AdvancedFilterBar,
+  type FilterCondition,
+} from "@/components/filters/advanced-filter-bar";
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
 import { useRuleActions } from "@/hooks/admin/master-rules/useRuleActions";
 import { useRuleFilters } from "@/hooks/admin/master-rules/useRuleFilters";
-import type {
-  AdminMasterRulesProps,
-  SerializedPriorityRule,
-  SerializedRoutingRule,
-  SerializedSlaPolicy,
-  SerializedReopenPolicy,
-} from "@/types/admin/master-rules";
+import type { AdminMasterRulesProps } from "@/types/admin/master-rules";
 
 import { AdminRuleConfigModal, ConfirmRuleDeleteModal } from "./modals";
 import { RulesFilterPopover } from "./panels";
 import { PriorityRulesView } from "./views/PriorityRulesView";
+import { ReopenPoliciesView } from "./views/ReopenPoliciesView";
 import { RoutingRulesView } from "./views/RoutingRulesView";
 import { SlaPoliciesView } from "./views/SlaPoliciesView";
-import { ReopenPoliciesView } from "./views/ReopenPoliciesView";
 
 export function AdminMasterRules({
   priorityRules: initialPriorityRules,
@@ -81,7 +78,6 @@ export function AdminMasterRules({
 
   // 3. Rule Actions & Modals State
   const {
-
     actionNotice,
     setActionNotice,
     deleteModal,
@@ -249,8 +245,13 @@ export function AdminMasterRules({
             }}
             className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("priority")}`}
           >
-            <ShieldAlert className={`h-4 w-4 transition-colors ${getTabIconColor("priority")}`} />
-            <span>Priority Rules {priorityRules.length > 0 && `(${priorityRules.length})`}</span>
+            <ShieldAlert
+              className={`h-4 w-4 transition-colors ${getTabIconColor("priority")}`}
+            />
+            <span>
+              Priority Rules{" "}
+              {priorityRules.length > 0 && `(${priorityRules.length})`}
+            </span>
           </button>
           <button
             type="button"
@@ -260,8 +261,13 @@ export function AdminMasterRules({
             }}
             className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("routing")}`}
           >
-            <Route className={`h-4 w-4 transition-colors ${getTabIconColor("routing")}`} />
-            <span>Routing Rules {routingRules.length > 0 && `(${routingRules.length})`}</span>
+            <Route
+              className={`h-4 w-4 transition-colors ${getTabIconColor("routing")}`}
+            />
+            <span>
+              Routing Rules{" "}
+              {routingRules.length > 0 && `(${routingRules.length})`}
+            </span>
           </button>
           <button
             type="button"
@@ -271,8 +277,12 @@ export function AdminMasterRules({
             }}
             className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("sla")}`}
           >
-            <Timer className={`h-4 w-4 transition-colors ${getTabIconColor("sla")}`} />
-            <span>SLA Policies {slaPolicies.length > 0 && `(${slaPolicies.length})`}</span>
+            <Timer
+              className={`h-4 w-4 transition-colors ${getTabIconColor("sla")}`}
+            />
+            <span>
+              SLA Policies {slaPolicies.length > 0 && `(${slaPolicies.length})`}
+            </span>
           </button>
           <button
             type="button"
@@ -282,8 +292,13 @@ export function AdminMasterRules({
             }}
             className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("reopen")}`}
           >
-            <RefreshCcw className={`h-4 w-4 transition-colors ${getTabIconColor("reopen")}`} />
-            <span>Reopen Policy {reopenPolicies.length > 0 && `(${reopenPolicies.length})`}</span>
+            <RefreshCcw
+              className={`h-4 w-4 transition-colors ${getTabIconColor("reopen")}`}
+            />
+            <span>
+              Reopen Policy{" "}
+              {reopenPolicies.length > 0 && `(${reopenPolicies.length})`}
+            </span>
           </button>
         </div>
       </div>
@@ -318,9 +333,32 @@ export function AdminMasterRules({
       {/* Filter Toolbar */}
       <div className="border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
         <AdminFilterToolbar>
-          <AdminSearchInput
-            value={searchQuery}
-            onChange={setSearchQuery}
+          <AdvancedFilterBar
+            fields={[
+              {
+                id: "status",
+                label: "Status",
+                type: "select",
+                options: [
+                  { label: "Active", value: "ACTIVE" },
+                  { label: "Inactive", value: "INACTIVE" },
+                ],
+              },
+            ]}
+            filters={statusFilter.map((s) => ({
+              id: `status-${s}`,
+              fieldId: "status",
+              operator: "Is" as const,
+              value: s,
+            }))}
+            onFiltersChange={(newFilters: FilterCondition[]) => {
+              const selected = newFilters
+                .filter((f) => f.fieldId === "status")
+                .map((f) => f.value);
+              setStatusFilter(selected);
+            }}
+            search={searchQuery}
+            onSearchChange={setSearchQuery}
             placeholder="Search rules..."
           />
 
@@ -336,8 +374,6 @@ export function AdminMasterRules({
             setDeptFilter={setDeptFilter}
             catFilter={catFilter}
             setCatFilter={setCatFilter}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
           />
 
           {isFiltered && (
@@ -355,8 +391,6 @@ export function AdminMasterRules({
 
       {/* Main Tab Content */}
       <div className="p-5 sm:p-6">
-
-
         {activeTab === "priority" && (
           <PriorityRulesView
             rules={priorityRules}
@@ -364,8 +398,12 @@ export function AdminMasterRules({
             searchQuery={searchQuery}
             catFilter={catFilter}
             statusFilter={statusFilter}
-            onToggleStatus={(r) => handleToggleStatus("priority", r.priority_rule_id, r.status)}
-            onDelete={(r) => confirmDelete("priority", r.priority_rule_id, r.rule_name)}
+            onToggleStatus={(r) =>
+              handleToggleStatus("priority", r.priority_rule_id, r.status)
+            }
+            onDelete={(r) =>
+              confirmDelete("priority", r.priority_rule_id, r.rule_name)
+            }
             onEdit={(r) => {
               resetForm();
               setEditingRuleId(r.priority_rule_id);
@@ -377,11 +415,18 @@ export function AdminMasterRules({
               setIsDefault(r.is_default);
 
               try {
-                const cond = r.conditions as any;
-                if (cond?.category_id) setSelectedPriorityCatId(cond.category_id);
-                if (cond?.subcategory_id) setSelectedPrioritySubcatId(cond.subcategory_id);
+                const cond = r.conditions as {
+                  category_id?: string;
+                  subcategory_id?: string;
+                  department_ids?: string[];
+                  keywords?: string[];
+                };
+                if (cond?.category_id)
+                  setSelectedPriorityCatId(cond.category_id);
+                if (cond?.subcategory_id)
+                  setSelectedPrioritySubcatId(cond.subcategory_id);
                 if (cond?.keywords) setKeywords(cond.keywords.join(", "));
-              } catch(e) {}
+              } catch (_e) {}
               setRuleModalOpen(true);
             }}
           />
@@ -394,8 +439,12 @@ export function AdminMasterRules({
             catFilter={catFilter}
             deptFilter={deptFilter}
             statusFilter={statusFilter}
-            onToggleStatus={(r) => handleToggleStatus("routing", r.routing_rule_id, r.status)}
-            onDelete={(r) => confirmDelete("routing", r.routing_rule_id, r.rule_name)}
+            onToggleStatus={(r) =>
+              handleToggleStatus("routing", r.routing_rule_id, r.status)
+            }
+            onDelete={(r) =>
+              confirmDelete("routing", r.routing_rule_id, r.rule_name)
+            }
             onEdit={(r) => {
               resetForm();
               setEditingRuleId(r.routing_rule_id);
@@ -405,21 +454,29 @@ export function AdminMasterRules({
               setRuleOrder(r.rule_order.toString());
               setInvolvementType(r.involvement_type);
 
-              
-              const matchedDept = departments.find(d => d.department_name === r.department_name);
+              const matchedDept = departments.find(
+                (d) => d.department_name === r.department_name,
+              );
               if (matchedDept) setSelectedDeptId(matchedDept.department_id);
 
-              const matchedCat = categories.find(c => c.category_name === r.category_name);
+              const matchedCat = categories.find(
+                (c) => c.category_name === r.category_name,
+              );
               if (matchedCat) {
                 setSelectedCatId(matchedCat.category_id);
-                const matchedSub = matchedCat.subcategories?.find(s => s.subcategory_name === r.subcategory_name);
-                if (matchedSub) setSelectedRoutingSubcatId(matchedSub.subcategory_id);
+                const matchedSub = matchedCat.subcategories?.find(
+                  (s) => s.subcategory_name === r.subcategory_name,
+                );
+                if (matchedSub)
+                  setSelectedRoutingSubcatId(matchedSub.subcategory_id);
               }
 
               if (r.supporting_departments) {
                 const matchingSupports = departments
-                  .filter(d => r.supporting_departments!.includes(d.department_name))
-                  .map(d => d.department_id);
+                  .filter((d) =>
+                    r.supporting_departments?.includes(d.department_name),
+                  )
+                  .map((d) => d.department_id);
                 setSelectedSupportingDepts(matchingSupports);
               }
               setRuleModalOpen(true);
@@ -432,8 +489,12 @@ export function AdminMasterRules({
             policies={slaPolicies}
             searchQuery={searchQuery}
             statusFilter={statusFilter}
-            onToggleStatus={(p) => handleToggleStatus("sla", p.sla_policy_id, p.status)}
-            onDelete={(p) => confirmDelete("sla", p.sla_policy_id, p.policy_name)}
+            onToggleStatus={(p) =>
+              handleToggleStatus("sla", p.sla_policy_id, p.status)
+            }
+            onDelete={(p) =>
+              confirmDelete("sla", p.sla_policy_id, p.policy_name)
+            }
             onEdit={(p) => {
               resetForm();
               setEditingRuleId(p.sla_policy_id);
@@ -455,8 +516,12 @@ export function AdminMasterRules({
             policies={reopenPolicies}
             searchQuery={searchQuery}
             statusFilter={statusFilter}
-            onToggleStatus={(p) => handleToggleStatus("reopen", p.reopen_policy_id, p.status)}
-            onDelete={(p) => confirmDelete("reopen", p.reopen_policy_id, p.policy_name)}
+            onToggleStatus={(p) =>
+              handleToggleStatus("reopen", p.reopen_policy_id, p.status)
+            }
+            onDelete={(p) =>
+              confirmDelete("reopen", p.reopen_policy_id, p.policy_name)
+            }
             onEdit={(p) => {
               resetForm();
               setEditingRuleId(p.reopen_policy_id);
@@ -516,9 +581,7 @@ export function AdminMasterRules({
         setMaxReopens={setMaxReopens}
         maxReviews={maxReviews}
         setMaxReviews={setMaxReviews}
-
         isSubmitting={isSubmitting}
-
         departments={departments}
         categories={categories}
         onSubmit={handleCreateRule}

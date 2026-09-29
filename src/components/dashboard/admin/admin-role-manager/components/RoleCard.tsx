@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound, Loader2, Lock, Pencil, Power, Users } from "lucide-react";
+import { KeyRound, Lock, Pencil, Users } from "lucide-react";
 import type { SerializedRole } from "@/types/admin/role-manager";
 
 interface RoleCardProps {
@@ -120,8 +120,6 @@ export function RoleCard({
           <Pencil className="h-3 w-3 text-emerald-700" />
           <span>Edit</span>
         </button>
-
-
       </div>
     </div>
   );
