@@ -252,7 +252,10 @@ export async function GET(
       return {
         id: d.grievance_department_id.toString(),
         departmentName: d.departments?.department_name || "Unknown Department",
-        involvementType: d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL",
+        involvementType: d.involvement_type as
+          | "PRIMARY"
+          | "SUPPORTING"
+          | "EQUAL",
         status: d.status,
         assignedStaff,
         isMyAssignment,

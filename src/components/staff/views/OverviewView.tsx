@@ -56,7 +56,11 @@ export function OverviewView({
   const assignedGrievances = data?.assignedGrievances || [];
   const activeCases = assignedGrievances.filter((g) => g.status !== "CLOSED");
 
-  const { sortState, handleSort, sortedItems: sortedActiveCases } = useTableSort(activeCases);
+  const {
+    sortState,
+    handleSort,
+    sortedItems: sortedActiveCases,
+  } = useTableSort(activeCases);
 
   const activeCasesPagination = usePagination(sortedActiveCases, {
     initialPageSize: 5,
@@ -261,12 +265,54 @@ export function OverviewView({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Grievance</SortableTh>
-                    <SortableTh field="categoryName" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Category</SortableTh>
-                    <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Priority</SortableTh>
-                    <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Status</SortableTh>
-                    <SortableTh field="slaStatus" currentSort={sortState} onSort={handleSort} className="py-3 px-3">SLA</SortableTh>
-                    <SortableTh field="updatedAt" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Last Updated</SortableTh>
+                    <SortableTh
+                      field="title"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3.5"
+                    >
+                      Grievance
+                    </SortableTh>
+                    <SortableTh
+                      field="categoryName"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3"
+                    >
+                      Category
+                    </SortableTh>
+                    <SortableTh
+                      field="priority"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3"
+                    >
+                      Priority
+                    </SortableTh>
+                    <SortableTh
+                      field="status"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3"
+                    >
+                      Status
+                    </SortableTh>
+                    <SortableTh
+                      field="slaStatus"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3"
+                    >
+                      SLA
+                    </SortableTh>
+                    <SortableTh
+                      field="updatedAt"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3"
+                    >
+                      Last Updated
+                    </SortableTh>
                     <th className="py-3 px-3.5 text-right">Action</th>
                   </tr>
                 </thead>

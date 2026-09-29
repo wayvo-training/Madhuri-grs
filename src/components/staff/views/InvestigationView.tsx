@@ -32,7 +32,11 @@ export function InvestigationView({
 }: InvestigationViewProps) {
   const activeCases = grievances.filter((g) => g.status !== "CLOSED");
 
-  const { sortState, handleSort, sortedItems: sortedActiveCases } = useTableSort(activeCases);
+  const {
+    sortState,
+    handleSort,
+    sortedItems: sortedActiveCases,
+  } = useTableSort(activeCases);
 
   const pagination = usePagination(sortedActiveCases, {
     initialPageSize: 10,
@@ -117,11 +121,46 @@ export function InvestigationView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Grievance</SortableTh>
-                  <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Category</SortableTh>
-                  <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Priority</SortableTh>
-                  <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Investigation Status</SortableTh>
-                  <SortableTh field="slaStatus" currentSort={sortState} onSort={handleSort} className="py-3 px-3">SLA</SortableTh>
+                  <SortableTh
+                    field="title"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance
+                  </SortableTh>
+                  <SortableTh
+                    field="category"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3"
+                  >
+                    Category
+                  </SortableTh>
+                  <SortableTh
+                    field="priority"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3"
+                  >
+                    Priority
+                  </SortableTh>
+                  <SortableTh
+                    field="status"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3"
+                  >
+                    Investigation Status
+                  </SortableTh>
+                  <SortableTh
+                    field="slaStatus"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3"
+                  >
+                    SLA
+                  </SortableTh>
                   <th className="py-3 px-3">Last Activity</th>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>

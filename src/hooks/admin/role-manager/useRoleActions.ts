@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import type {
   SerializedPermission,
   SerializedRole,
 } from "@/types/admin/role-manager";
-import { toast } from "sonner";
 
 export function useRoleActions(
   permissionsList: SerializedPermission[],
@@ -64,7 +64,9 @@ export function useRoleActions(
     e.preventDefault();
     if (!newRoleName.trim()) return;
     if (newRoleName.trim().toUpperCase() === "ADMIN") {
-      toast.error("The ADMIN role is a reserved system role and cannot be created.");
+      toast.error(
+        "The ADMIN role is a reserved system role and cannot be created.",
+      );
       return;
     }
 

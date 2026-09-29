@@ -17,7 +17,7 @@ export interface BuildMatrixTreeParams {
   searchQuery: string;
   deptFilter: string;
   catFilter: string;
-  statusFilter: "ALL" | "ACTIVE" | "INACTIVE";
+  statusFilter: string[];
 }
 
 /**
@@ -78,10 +78,14 @@ export function buildPolicyMatrixTree({
       const subcategoriesList: MatrixRow[] = [];
 
       for (const [subcat, rules] of subcatMap.entries()) {
-        // Status filtering: check if subcategory has active or inactive rules
+        // Status filtering: multi-select — include row if it matches any selected status
         const hasActive = rules.some((r) => r.status === "ACTIVE");
-        if (statusFilter === "ACTIVE" && !hasActive) continue;
-        if (statusFilter === "INACTIVE" && hasActive) continue;
+        if (statusFilter.length > 0) {
+          const wantActive = statusFilter.includes("ACTIVE");
+          const wantInactive = statusFilter.includes("INACTIVE");
+          if (wantActive && !wantInactive && !hasActive) continue;
+          if (wantInactive && !wantActive && hasActive) continue;
+        }
 
         // Effective Priority
         const {

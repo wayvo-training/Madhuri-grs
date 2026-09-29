@@ -1,6 +1,4 @@
 import type {
-  PermStatusFilter,
-  RoleStatusFilter,
   SerializedPermission,
   SerializedRole,
 } from "@/types/admin/role-manager";
@@ -8,7 +6,7 @@ import type {
 export function filterRoles(
   roles: SerializedRole[],
   search: string,
-  statusFilter: RoleStatusFilter,
+  statusFilter: string[],
 ): SerializedRole[] {
   const query = search.trim().toLowerCase();
 
@@ -19,7 +17,7 @@ export function filterRoles(
       Boolean(role.description?.toLowerCase().includes(query));
 
     const matchesStatus =
-      statusFilter === "ALL" || role.status === statusFilter;
+      statusFilter.length === 0 || statusFilter.includes(role.status);
 
     return matchesSearch && matchesStatus;
   });
@@ -28,7 +26,7 @@ export function filterRoles(
 export function filterPermissions(
   permissions: SerializedPermission[],
   search: string,
-  statusFilter: PermStatusFilter,
+  statusFilter: string[],
 ): SerializedPermission[] {
   const query = search.trim().toLowerCase();
 
@@ -40,7 +38,7 @@ export function filterPermissions(
       Boolean(perm.description?.toLowerCase().includes(query));
 
     const matchesStatus =
-      statusFilter === "ALL" || perm.status === statusFilter;
+      statusFilter.length === 0 || statusFilter.includes(perm.status);
 
     return matchesSearch && matchesStatus;
   });

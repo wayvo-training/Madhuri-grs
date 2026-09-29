@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   FileText,
   LayoutDashboard,
-  RefreshCw,
   Search,
   User,
 } from "lucide-react";
@@ -110,7 +109,9 @@ export function StaffViewSwitcher({
             >
               <Icon
                 className={`h-4 w-4 transition-colors ${
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-teal-600"
+                  isActive
+                    ? "text-white"
+                    : "text-slate-400 group-hover:text-teal-600"
                 }`}
               />
               <span>{tab.label}</span>
@@ -135,8 +136,6 @@ export function StaffViewSwitcher({
           );
         })}
       </div>
-
-
     </div>
   );
 }

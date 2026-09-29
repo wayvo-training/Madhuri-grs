@@ -1,6 +1,5 @@
-import { formatRelativeTime } from "@/lib/staff/utils";
+import { CheckCircle2, Clock, MessagesSquare, Users } from "lucide-react";
 import type { StaffGrievanceItem } from "@/types/staff";
-import { Users, MessagesSquare, CheckCircle2, Clock } from "lucide-react";
 
 interface CollaborationTabProps {
   grievance: StaffGrievanceItem;
@@ -57,7 +56,9 @@ export function CollaborationTab({ grievance }: CollaborationTabProps) {
                   <div className="flex items-center justify-between">
                     <span>Status:</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-900">
-                      {dept.status === "COMPLETED" || dept.status === "RESOLVED" || dept.status === "CLOSED" ? (
+                      {dept.status === "COMPLETED" ||
+                      dept.status === "RESOLVED" ||
+                      dept.status === "CLOSED" ? (
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                       ) : (
                         <Clock className="w-3 h-3 text-amber-500" />

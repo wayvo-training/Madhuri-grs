@@ -1,6 +1,16 @@
 "use client";
 
-import { AlertCircle, Bell, CheckCircle2, Clock, FileQuestion, Mail, MessageSquare, Play, Send } from "lucide-react";
+import {
+  AlertCircle,
+  Bell,
+  CheckCircle2,
+  Clock,
+  FileQuestion,
+  Mail,
+  MessageSquare,
+  Play,
+  Send,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import type { StaffGrievanceItem } from "@/types/staff";
@@ -161,7 +171,8 @@ export function InvestigationTab({
                 </div>
                 <p className="text-[11px] text-amber-800 mt-0.5">
                   Additional information or documents requested from{" "}
-                  <strong>{grievance.submitterName}</strong>. Investigation is paused.
+                  <strong>{grievance.submitterName}</strong>. Investigation is
+                  paused.
                 </p>
               </div>
             </div>
@@ -185,10 +196,11 @@ export function InvestigationTab({
               <span>Two-Way Inquiry Active:</span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              The complainant has been notified via In-App Notification and Email. Once{" "}
-              {grievance.submitterName} submits their response or uploads the requested
-              documents, the status will automatically update to <strong>In Progress</strong>{" "}
-              and you will receive a notification.
+              The complainant has been notified via In-App Notification and
+              Email. Once {grievance.submitterName} submits their response or
+              uploads the requested documents, the status will automatically
+              update to <strong>In Progress</strong> and you will receive a
+              notification.
             </p>
           </div>
         </div>
@@ -207,8 +219,8 @@ export function InvestigationTab({
                   Need Additional Information or Documents from Complainant?
                 </h4>
                 <p className="text-[11px] text-blue-800 mt-0.5">
-                  Request clarification or documents via In-App Notification and Email. Sets
-                  status to <strong>Waiting on User</strong>.
+                  Request clarification or documents via In-App Notification and
+                  Email. Sets status to <strong>Waiting on User</strong>.
                 </p>
               </div>
             </div>
@@ -219,7 +231,9 @@ export function InvestigationTab({
             >
               <Send className="h-3 w-3" />
               <span>
-                {isRequestInfoOpen ? "Close Request Form" : "Request Additional Info"}
+                {isRequestInfoOpen
+                  ? "Close Request Form"
+                  : "Request Additional Info"}
               </span>
             </button>
           </div>
@@ -261,7 +275,8 @@ export function InvestigationTab({
                     />
                     <span className="flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5 text-emerald-600" />
-                      <strong>Official Email / Mail</strong> ({grievance.submitterEmail})
+                      <strong>Official Email / Mail</strong> (
+                      {grievance.submitterEmail})
                     </span>
                   </label>
                 </div>
@@ -329,12 +344,16 @@ export function InvestigationTab({
                           if (e.target.checked) {
                             setSelectedDocs([...selectedDocs, doc]);
                           } else {
-                            setSelectedDocs(selectedDocs.filter((d) => d !== doc));
+                            setSelectedDocs(
+                              selectedDocs.filter((d) => d !== doc),
+                            );
                           }
                         }}
                         className="rounded border-slate-300 text-blue-600 h-3.5 w-3.5 cursor-pointer"
                       />
-                      <span className="text-[11px] text-slate-700 font-medium">{doc}</span>
+                      <span className="text-[11px] text-slate-700 font-medium">
+                        {doc}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -356,7 +375,8 @@ export function InvestigationTab({
                 <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Grievance status will change from <strong>In Progress</strong> to{" "}
+                    Grievance status will change from{" "}
+                    <strong>In Progress</strong> to{" "}
                     <strong>Waiting on User</strong>.
                   </span>
                 </span>
@@ -397,7 +417,9 @@ export function InvestigationTab({
             <MessageSquare className="h-3.5 w-3.5 text-[#0F766E]" />
             Investigation Notes / Internal Communication
           </span>
-          <span className="text-[11px] text-[#0F766E]">Visible to Department Head</span>
+          <span className="text-[11px] text-[#0F766E]">
+            Visible to Department Head
+          </span>
         </div>
         <textarea
           rows={3}
@@ -458,7 +480,9 @@ export function InvestigationTab({
                         {isHead ? "Internal Note" : "Investigation Note"}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-400">{n.timestamp}</span>
+                    <span className="text-[11px] text-slate-400">
+                      {n.timestamp}
+                    </span>
                   </div>
                   <p className="font-normal text-slate-800 pt-1 leading-relaxed whitespace-pre-wrap">
                     {n.note}
@@ -510,7 +534,9 @@ export function InvestigationTab({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-400 italic">No activity logs recorded yet.</p>
+          <p className="text-xs text-slate-400 italic">
+            No activity logs recorded yet.
+          </p>
         )}
       </div>
     </div>

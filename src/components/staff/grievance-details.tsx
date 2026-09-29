@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  FileCheck2,
-  Play,
-  RotateCcw,
-  X,
-} from "lucide-react";
-import type React from "react";
+import { ArrowLeft, FileCheck2, Play, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   PriorityBadge,
@@ -20,10 +13,10 @@ import {
   buildStaffHodEscalationEmail,
 } from "@/lib/email";
 import type { StaffGrievanceItem } from "@/types/staff";
-import { StatementTab } from "./details/StatementTab";
+import { CollaborationTab } from "./details/CollaborationTab";
 import { InvestigationTab } from "./details/InvestigationTab";
 import { ResolutionTab } from "./details/ResolutionTab";
-import { CollaborationTab } from "./details/CollaborationTab";
+import { StatementTab } from "./details/StatementTab";
 
 interface GrievanceDetailsProps {
   grievance: StaffGrievanceItem;
@@ -221,19 +214,20 @@ export function GrievanceDetails({
               {grievance.auditTrail?.length || 0}
             </span>
           </button>
-          {grievance.departmentsInvolved && grievance.departmentsInvolved.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("collaboration")}
-              className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
-                activeTab === "collaboration"
-                  ? "border-[#0F766E] text-[#0F766E]"
-                  : "border-transparent text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              <span>Collaboration</span>
-            </button>
-          )}
+          {grievance.departmentsInvolved &&
+            grievance.departmentsInvolved.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("collaboration")}
+                className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === "collaboration"
+                    ? "border-[#0F766E] text-[#0F766E]"
+                    : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                <span>Collaboration</span>
+              </button>
+            )}
           {grievance.hasResolution && (
             <button
               type="button"

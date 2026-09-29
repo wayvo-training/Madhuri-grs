@@ -5,7 +5,6 @@ import {
   ExternalLink,
   Info,
   Mail,
-  RefreshCw,
   Shield,
   User,
   Users,
@@ -106,8 +105,6 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
                 <ExternalLink className="h-3 w-3 opacity-70" />
               </a>
             )}
-
-
           </div>
         </div>
 

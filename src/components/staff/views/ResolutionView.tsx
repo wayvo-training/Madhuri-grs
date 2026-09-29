@@ -31,10 +31,26 @@ export function ResolutionView({
     (g) => g.reopenCount > 0 && g.status !== "CLOSED",
   );
 
-  const { sortState: reopenSort, handleSort: handleReopenSort, sortedItems: sortedReopened } = useTableSort(reopenedCases);
-  const { sortState: draftSort, handleSort: handleDraftSort, sortedItems: sortedDrafting } = useTableSort(pendingDrafting);
-  const { sortState: reviewSort, handleSort: handleReviewSort, sortedItems: sortedReview } = useTableSort(pendingReview);
-  const { sortState: compSort, handleSort: handleCompSort, sortedItems: sortedCompleted } = useTableSort(completedCases);
+  const {
+    sortState: reopenSort,
+    handleSort: handleReopenSort,
+    sortedItems: sortedReopened,
+  } = useTableSort(reopenedCases);
+  const {
+    sortState: draftSort,
+    handleSort: handleDraftSort,
+    sortedItems: sortedDrafting,
+  } = useTableSort(pendingDrafting);
+  const {
+    sortState: reviewSort,
+    handleSort: handleReviewSort,
+    sortedItems: sortedReview,
+  } = useTableSort(pendingReview);
+  const {
+    sortState: compSort,
+    handleSort: handleCompSort,
+    sortedItems: sortedCompleted,
+  } = useTableSort(completedCases);
 
   const reopenedPagination = usePagination(sortedReopened, {
     initialPageSize: 5,
@@ -50,8 +66,8 @@ export function ResolutionView({
     initialPageSize: 5,
     pageSizeOptions: [5, 10, 20],
   });
-  
-  const completedPagination = usePagination(sortedCompleted, {
+
+  const _completedPagination = usePagination(sortedCompleted, {
     initialPageSize: 5,
     pageSizeOptions: [5, 10, 20],
   });
@@ -131,11 +147,46 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-purple-100 bg-purple-50/60 text-[11px] font-bold uppercase tracking-wider text-purple-800">
-                  <SortableTh field="title" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3.5">Grievance</SortableTh>
-                  <SortableTh field="category" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Category</SortableTh>
-                  <SortableTh field="priority" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Priority</SortableTh>
-                  <SortableTh field="status" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">Reopened Status</SortableTh>
-                  <SortableTh field="slaStatus" currentSort={reopenSort} onSort={handleReopenSort} className="py-3 px-3">SLA</SortableTh>
+                  <SortableTh
+                    field="title"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance
+                  </SortableTh>
+                  <SortableTh
+                    field="category"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3"
+                  >
+                    Category
+                  </SortableTh>
+                  <SortableTh
+                    field="priority"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3"
+                  >
+                    Priority
+                  </SortableTh>
+                  <SortableTh
+                    field="status"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3"
+                  >
+                    Reopened Status
+                  </SortableTh>
+                  <SortableTh
+                    field="slaStatus"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3"
+                  >
+                    SLA
+                  </SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
@@ -230,11 +281,46 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <SortableTh field="title" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3.5">Grievance</SortableTh>
-                  <SortableTh field="category" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Category</SortableTh>
-                  <SortableTh field="priority" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Priority</SortableTh>
-                  <SortableTh field="status" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">Status</SortableTh>
-                  <SortableTh field="slaStatus" currentSort={draftSort} onSort={handleDraftSort} className="py-3 px-3">SLA</SortableTh>
+                  <SortableTh
+                    field="title"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance
+                  </SortableTh>
+                  <SortableTh
+                    field="category"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3"
+                  >
+                    Category
+                  </SortableTh>
+                  <SortableTh
+                    field="priority"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3"
+                  >
+                    Priority
+                  </SortableTh>
+                  <SortableTh
+                    field="status"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3"
+                  >
+                    Status
+                  </SortableTh>
+                  <SortableTh
+                    field="slaStatus"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3"
+                  >
+                    SLA
+                  </SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
@@ -326,10 +412,38 @@ export function ResolutionView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-blue-100 bg-blue-50/60 text-[11px] font-bold uppercase tracking-wider text-blue-900">
-                  <SortableTh field="title" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3.5">Grievance</SortableTh>
-                  <SortableTh field="category" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Category</SortableTh>
-                  <SortableTh field="status" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Review Status</SortableTh>
-                  <SortableTh field="submittedAt" currentSort={reviewSort} onSort={handleReviewSort} className="py-3 px-3">Submitted At</SortableTh>
+                  <SortableTh
+                    field="title"
+                    currentSort={reviewSort}
+                    onSort={handleReviewSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance
+                  </SortableTh>
+                  <SortableTh
+                    field="category"
+                    currentSort={reviewSort}
+                    onSort={handleReviewSort}
+                    className="py-3 px-3"
+                  >
+                    Category
+                  </SortableTh>
+                  <SortableTh
+                    field="status"
+                    currentSort={reviewSort}
+                    onSort={handleReviewSort}
+                    className="py-3 px-3"
+                  >
+                    Review Status
+                  </SortableTh>
+                  <SortableTh
+                    field="submittedAt"
+                    currentSort={reviewSort}
+                    onSort={handleReviewSort}
+                    className="py-3 px-3"
+                  >
+                    Submitted At
+                  </SortableTh>
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>

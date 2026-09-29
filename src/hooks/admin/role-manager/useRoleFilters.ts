@@ -6,9 +6,7 @@ import {
   filterRoles,
 } from "@/lib/admin/role-manager/role-filters";
 import type {
-  PermStatusFilter,
   RoleManagerTab,
-  RoleStatusFilter,
   SerializedPermission,
   SerializedRole,
 } from "@/types/admin/role-manager";
@@ -23,16 +21,14 @@ export function useRoleFilters(
 
   // Filter & Search states for Roles
   const [roleSearch, setRoleSearch] = useState("");
-  const [roleStatusFilter, setRoleStatusFilter] =
-    useState<RoleStatusFilter>("ALL");
+  const [roleStatusFilter, setRoleStatusFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
   const [rolePageSize, setRolePageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Filter & Search states for Permissions
   const [permSearch, setPermSearch] = useState("");
-  const [permStatusFilter, setPermStatusFilter] =
-    useState<PermStatusFilter>("ALL");
+  const [permStatusFilter, setPermStatusFilter] = useState<string[]>([]);
   const [permCurrentPage, setPermCurrentPage] = useState(1);
   const [permPageSize, setPermPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -61,7 +57,8 @@ export function useRoleFilters(
     return filterPermissions(permissionsList, permSearch, permStatusFilter);
   }, [permissionsList, permSearch, permStatusFilter]);
 
-  const permTotalPages = Math.ceil(filteredPermissions.length / permPageSize) || 1;
+  const permTotalPages =
+    Math.ceil(filteredPermissions.length / permPageSize) || 1;
 
   const paginatedPermissions = useMemo(() => {
     const start = (permCurrentPage - 1) * permPageSize;
@@ -83,8 +80,8 @@ export function useRoleFilters(
     setCurrentPage(1);
   };
 
-  const handleRoleStatusChange = (status: RoleStatusFilter) => {
-    setRoleStatusFilter(status);
+  const handleRoleStatusChange = (statuses: string[]) => {
+    setRoleStatusFilter(statuses);
     setCurrentPage(1);
   };
 
@@ -93,8 +90,8 @@ export function useRoleFilters(
     setPermCurrentPage(1);
   };
 
-  const handlePermStatusChange = (status: PermStatusFilter) => {
-    setPermStatusFilter(status);
+  const handlePermStatusChange = (statuses: string[]) => {
+    setPermStatusFilter(statuses);
     setPermCurrentPage(1);
   };
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { Eye, FileSpreadsheet, FileText, Image as ImageIcon, Mail, Shield } from "lucide-react";
+import {
+  Eye,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  Mail,
+  Shield,
+} from "lucide-react";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface StatementTabProps {
@@ -37,9 +44,7 @@ export function StatementTab({
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Complainant Profile
           </span>
-          <span className="text-2.75 text-slate-400">
-            Registered Submitter
-          </span>
+          <span className="text-2.75 text-slate-400">Registered Submitter</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="flex items-center gap-2.5">
@@ -86,90 +91,102 @@ export function StatementTab({
       </div>
 
       {/* Departments Involved (Multi-department only) */}
-      {grievance.departmentsInvolved && grievance.departmentsInvolved.length > 1 && (
-        <div className="space-y-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-            Departments Involved
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {grievance.departmentsInvolved.map((dept) => (
-              <div
-                key={dept.id}
-                className={`rounded-xl border p-4 shadow-2xs ${
-                  dept.involvementType === "PRIMARY"
-                    ? "border-teal-200 bg-teal-50/50"
-                    : "border-slate-200 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="font-semibold text-slate-900 text-sm">
-                    {dept.departmentName}
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      dept.involvementType === "PRIMARY"
-                        ? "bg-teal-100 text-teal-800"
-                        : dept.involvementType === "EQUAL"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    {dept.involvementType}
-                  </span>
-                </div>
-                <div className="space-y-1.5 text-xs text-slate-600">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Assigned Staff:</span>
-                    <span className="font-medium text-slate-900">
-                      {dept.assignedStaff || "Unassigned"}
+      {grievance.departmentsInvolved &&
+        grievance.departmentsInvolved.length > 1 && (
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Departments Involved
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {grievance.departmentsInvolved.map((dept) => (
+                <div
+                  key={dept.id}
+                  className={`rounded-xl border p-4 shadow-2xs ${
+                    dept.involvementType === "PRIMARY"
+                      ? "border-teal-200 bg-teal-50/50"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="font-semibold text-slate-900 text-sm">
+                      {dept.departmentName}
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                        dept.involvementType === "PRIMARY"
+                          ? "bg-teal-100 text-teal-800"
+                          : dept.involvementType === "EQUAL"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {dept.involvementType}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Status:</span>
-                    <span className="font-medium text-slate-900">
-                      {dept.status.replace(/_/g, " ")}
-                    </span>
+                  <div className="space-y-1.5 text-xs text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Assigned Staff:</span>
+                      <span className="font-medium text-slate-900">
+                        {dept.assignedStaff || "Unassigned"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Status:</span>
+                      <span className="font-medium text-slate-900">
+                        {dept.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* MY ASSIGNMENT (Multi-department only) */}
-      {grievance.departmentsInvolved && grievance.departmentsInvolved.length > 1 && (
-        <div className="space-y-2 mt-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-            My Assignment
-          </h4>
-          {grievance.departmentsInvolved.filter((d) => d.isMyAssignment).map((myDept) => (
-            <div
-              key={`my-${myDept.id}`}
-              className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-2xs"
-            >
-              <div className="space-y-1.5 text-xs text-slate-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Department:</span>
-                  <span className="font-semibold text-slate-900">{myDept.departmentName}</span>
+      {grievance.departmentsInvolved &&
+        grievance.departmentsInvolved.length > 1 && (
+          <div className="space-y-2 mt-4">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              My Assignment
+            </h4>
+            {grievance.departmentsInvolved
+              .filter((d) => d.isMyAssignment)
+              .map((myDept) => (
+                <div
+                  key={`my-${myDept.id}`}
+                  className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-2xs"
+                >
+                  <div className="space-y-1.5 text-xs text-slate-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Department:</span>
+                      <span className="font-semibold text-slate-900">
+                        {myDept.departmentName}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Role:</span>
+                      <span className="font-semibold text-slate-900 capitalize">
+                        {myDept.involvementType.toLowerCase()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Staff:</span>
+                      <span className="font-semibold text-slate-900">
+                        {myDept.assignedStaff}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Status:</span>
+                      <span className="font-semibold text-slate-900">
+                        {myDept.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Role:</span>
-                  <span className="font-semibold text-slate-900 capitalize">{myDept.involvementType.toLowerCase()}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Staff:</span>
-                  <span className="font-semibold text-slate-900">{myDept.assignedStaff}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">Status:</span>
-                  <span className="font-semibold text-slate-900">{myDept.status.replace(/_/g, " ")}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              ))}
+          </div>
+        )}
 
       {/* Written Grievance Statement */}
       <div className="space-y-2">
@@ -184,8 +201,7 @@ export function StatementTab({
       {/* Attached Documents / Proofs */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-          Attached Proofs & Documentation (
-          {grievance.attachments?.length || 0})
+          Attached Proofs & Documentation ({grievance.attachments?.length || 0})
         </h4>
         {grievance.attachments && grievance.attachments.length > 0 ? (
           <div className="space-y-2">

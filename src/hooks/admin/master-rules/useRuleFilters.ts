@@ -11,9 +11,7 @@ export interface UseRuleFiltersParams {
 export function useRuleFilters({ routingRules }: UseRuleFiltersParams) {
   const [activeTab, setActiveTab] = useState<MainTab>("priority");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "ALL" | "ACTIVE" | "INACTIVE"
-  >("ALL");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [deptFilter, setDeptFilter] = useState("ALL");
   const [catFilter, setCatFilter] = useState("ALL");
 
@@ -43,13 +41,13 @@ export function useRuleFilters({ routingRules }: UseRuleFiltersParams) {
 
   const isFiltered =
     Boolean(searchQuery.trim()) ||
-    statusFilter !== "ALL" ||
+    statusFilter.length > 0 ||
     deptFilter !== "ALL" ||
     catFilter !== "ALL";
 
   const handleResetFilters = () => {
     setSearchQuery("");
-    setStatusFilter("ALL");
+    setStatusFilter([]);
     setDeptFilter("ALL");
     setCatFilter("ALL");
     if (typeof window !== "undefined") {
