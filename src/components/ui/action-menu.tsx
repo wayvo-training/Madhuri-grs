@@ -33,9 +33,13 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
       >
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={`rounded-xl p-1 ${widthClass}`}>
+      <DropdownMenuContent
+        align="end"
+        className={`rounded-xl p-1 ${widthClass}`}
+      >
         {items.map((item) => {
-          let variantClass = "text-slate-700 focus:bg-[#F0FDFA] focus:text-[#0F766E]";
+          let variantClass =
+            "text-slate-700 focus:bg-[#F0FDFA] focus:text-[#0F766E]";
           if (item.variant === "primary")
             variantClass = "text-[#0F766E] font-semibold focus:bg-[#F0FDFA]";
           if (item.variant === "warning")
@@ -43,7 +47,9 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
           if (item.variant === "danger")
             variantClass = "text-rose-700 focus:bg-rose-50";
 
-          const alignmentClass = item.icon ? "text-left" : "justify-center text-center";
+          const alignmentClass = item.icon
+            ? "text-left"
+            : "justify-center text-center";
 
           if (item.disabled) {
             variantClass = "text-slate-400 opacity-50 cursor-not-allowed";

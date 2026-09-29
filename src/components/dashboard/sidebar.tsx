@@ -17,9 +17,9 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -202,18 +202,28 @@ export function DashboardSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<div />} className="w-full justify-between hover:bg-transparent cursor-default">
+            <SidebarMenuButton
+              size="lg"
+              render={<div />}
+              className="w-full justify-between hover:bg-transparent cursor-default"
+            >
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold">
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
-                  <span className="font-semibold text-sm truncate">{userName}</span>
+                  <span className="font-semibold text-sm truncate">
+                    {userName}
+                  </span>
                   <div className="flex flex-col">
                     {userEmail && (
-                      <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {userEmail}
+                      </span>
                     )}
-                    <span className="text-xs text-muted-foreground truncate">{roleDisplayLabels[userRole]}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {roleDisplayLabels[userRole]}
+                    </span>
                   </div>
                 </div>
               </div>

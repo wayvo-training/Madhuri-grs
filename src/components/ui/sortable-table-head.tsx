@@ -1,5 +1,5 @@
-import React from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import type React from "react";
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,8 @@ export interface SortState {
   direction: SortDirection;
 }
 
-interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
+interface SortableTableHeadProps
+  extends React.ThHTMLAttributes<HTMLTableCellElement> {
   field: string;
   currentSort: SortState;
   onSort: (field: string, direction: SortDirection) => void;
@@ -41,8 +42,8 @@ export function SortableTableHead({
   return (
     <TableHead
       className={cn(
-        "cursor-pointer select-none hover:bg-slate-100/70 transition-colors group",
-        className
+        "cursor-pointer select-none bg-transparent hover:bg-slate-100/70 transition-colors group",
+        className,
       )}
       onClick={handleToggle}
       {...props}
@@ -87,8 +88,8 @@ export function SortableTh({
   return (
     <th
       className={cn(
-        "cursor-pointer select-none hover:bg-slate-100/70 transition-colors group",
-        className
+        "cursor-pointer select-none bg-transparent hover:bg-slate-100/70 transition-colors group",
+        className,
       )}
       onClick={handleToggle}
       {...props}

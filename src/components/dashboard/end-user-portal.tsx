@@ -4,14 +4,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Eye,
-  FileCheck2,
-  FileSpreadsheet,
   FileText,
-  Image as ImageIcon,
-  MessageSquare,
   Paperclip,
-  RefreshCw,
   Send,
   UploadCloud,
   X,
@@ -56,7 +50,6 @@ interface EndUserPortalProps {
 
 export function EndUserPortal({
   initialGrievances,
-  userFullName,
   userEmail,
 }: EndUserPortalProps) {
   const [grievances, setGrievances] =

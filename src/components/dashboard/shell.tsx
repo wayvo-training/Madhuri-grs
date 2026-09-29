@@ -1,10 +1,10 @@
 "use client";
 
-import { type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 interface DashboardShellProps {
   userRole: UserRole;

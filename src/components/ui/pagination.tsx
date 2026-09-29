@@ -6,7 +6,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import React from "react";
 
 export interface PaginationProps {
   currentPage: number;

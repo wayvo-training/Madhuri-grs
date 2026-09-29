@@ -15,10 +15,7 @@ interface DashboardHeaderProps {
   searchPlaceholder?: string;
 }
 
-export function DashboardHeader({
-  title,
-  subtitle,
-}: DashboardHeaderProps) {
+export function DashboardHeader({ title, subtitle }: DashboardHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 sm:h-15 shrink-0 w-full items-center justify-between border-b border-border bg-background/95 px-4 sm:px-6 backdrop-blur-md">
       {/* Left: Mobile Toggle & Page Title */}
