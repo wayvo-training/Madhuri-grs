@@ -212,16 +212,16 @@ export function DashboardSidebar({
                   {userName.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
-                  <span className="font-semibold text-sm truncate">
+                  <span className="font-semibold text-sm truncate text-green-500">
                     {userName}
                   </span>
                   <div className="flex flex-col">
                     {userEmail && (
-                      <span className="text-xs text-muted-foreground truncate">
+                      <span className="text-xs text-green-500 truncate">
                         {userEmail}
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground truncate">
+                    <span className="text-xs text-green-500 truncate">
                       {roleDisplayLabels[userRole]}
                     </span>
                   </div>

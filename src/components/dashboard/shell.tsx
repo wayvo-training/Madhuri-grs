@@ -50,7 +50,7 @@ export function DashboardShell({
             onSearchChange={onSearchChange}
             searchPlaceholder={searchPlaceholder}
           />
-          <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 max-w-400 w-full mx-auto custom-scrollbar">
+          <main className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col">
             {children}
           </main>
         </SidebarInset>

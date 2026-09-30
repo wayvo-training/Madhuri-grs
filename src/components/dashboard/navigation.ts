@@ -9,6 +9,7 @@ import {
   Sliders,
   User,
   Users,
+  Activity,
 } from "lucide-react";
 import type { ElementType } from "react";
 import type { PermissionCode } from "@/lib/permissions";
@@ -113,6 +114,11 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           href: "/department-head/dashboard#sla",
           icon: AlertTriangle,
         },
+        {
+          title: "Activity",
+          href: "/department-head/dashboard#activity",
+          icon: Activity,
+        },
       ],
     },
   ],
@@ -137,14 +143,9 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       label: "Processing",
       items: [
         {
-          title: "Investigation",
-          href: "/staff/dashboard#investigation",
-          icon: Search,
-        },
-        {
-          title: "Resolution",
-          href: "/staff/dashboard#resolutions",
-          icon: CheckCircle2,
+          title: "Activity",
+          href: "/staff/dashboard#activity",
+          icon: Activity,
         },
       ],
     },

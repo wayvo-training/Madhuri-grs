@@ -13,6 +13,8 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import { EndUserPieCharts } from "./EndUserPieCharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface UserGrievanceItem {
   id: string;
@@ -211,6 +213,11 @@ export function EndUserPortal({
         </div>
       </div>
 
+      {/* End User Compact Pie Charts */}
+      {grievances.length > 0 && (
+        <EndUserPieCharts grievances={grievances} />
+      )}
+
       {/* Global Success Feedback Banner */}
       {submitSuccess && (
         <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in shadow-2xs">
@@ -329,57 +336,55 @@ export function EndUserPortal({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <th className="py-3 px-4">Grievance Code &amp; Title</th>
-                  <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Priority</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">Submitted</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-150">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="py-3 px-4">Grievance Code &amp; Title</TableHead>
+                  <TableHead className="py-3 px-3">Category</TableHead>
+                  <TableHead className="py-3 px-3">Priority</TableHead>
+                  <TableHead className="py-3 px-3">Status</TableHead>
+                  <TableHead className="py-3 px-3">Submitted</TableHead>
+                  <TableHead className="py-3 px-4 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {grievances.map((item) => {
                   const isWaiting = item.status === "WAITING_ON_USER";
                   return (
-                    <tr
+                    <TableRow
                       key={item.id}
-                      className={`hover:bg-slate-50/80 transition ${
-                        isWaiting ? "bg-amber-50/30" : ""
-                      }`}
+                      className={isWaiting ? "bg-amber-50/30" : ""}
                     >
-                      <td className="py-3.5 px-4 max-w-[280px]">
+                      <TableCell className="py-3.5 px-4 max-w-[280px]">
                         <span className="font-mono text-xs font-bold text-[#0F766E] block">
                           {item.grievanceNumber}
                         </span>
                         <span className="font-semibold text-slate-900 line-clamp-1 mt-0.5">
                           {item.title}
                         </span>
-                      </td>
+                      </TableCell>
 
-                      <td className="py-3.5 px-3 text-slate-600 truncate max-w-[140px]">
+                      <TableCell className="py-3.5 px-3 text-slate-600 truncate max-w-[140px]">
                         {item.category}
-                      </td>
+                      </TableCell>
 
-                      <td className="py-3.5 px-3">
+                      <TableCell className="py-3.5 px-3">
                         <PriorityBadge priority={item.priority} />
-                      </td>
+                      </TableCell>
 
-                      <td className="py-3.5 px-3">
+                      <TableCell className="py-3.5 px-3">
                         <StatusBadge status={item.status} />
-                      </td>
+                      </TableCell>
 
-                      <td className="py-3.5 px-3 text-slate-500 whitespace-nowrap text-[11px]">
+                      <TableCell className="py-3.5 px-3 text-slate-500 whitespace-nowrap text-[11px]">
                         {new Date(item.createdAt).toLocaleDateString("en-IN", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
                         })}
-                      </td>
+                      </TableCell>
 
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <TableCell className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2 justify-end">
                           {isWaiting ? (
                             <button
@@ -404,12 +409,12 @@ export function EndUserPortal({
                             </button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
