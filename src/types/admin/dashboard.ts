@@ -19,13 +19,15 @@ export interface DashboardRecentGrievance {
 }
 
 export interface AdminDashboardProps {
-  totalGrievances: number;
-  activeGrievances: number;
-  escalatedCount: number;
-  closedCount: number;
-  atRiskSlaCount: number;
   routingExceptionsCount: number;
-  resolutionRate: string;
   departments: DashboardDepartmentSummary[];
   recentGrievances: DashboardRecentGrievance[];
+  pieCharts: {
+    statusData: { name: string; value: number; fill: string; description: string }[];
+    priorityData: { name: string; value: number; fill: string; description: string }[];
+    slaData: { name: string; value: number; fill: string; description: string }[];
+    totalActive: number;
+    totalPriority: number;
+    totalSla: number;
+  };
 }

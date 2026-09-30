@@ -97,8 +97,8 @@ export function PermissionsTab({
 
       {/* Permissions Table */}
       <div className="overflow-x-auto bg-transparent">
-        <table className="min-w-full text-left text-xs">
-          <thead className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <table className="min-w-full text-left text-sm">
+          <thead className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <tr>
               <SortableTh
                 field="permission_code"
@@ -140,7 +140,7 @@ export function PermissionsTab({
               <tr>
                 <td
                   colSpan={5}
-                  className="p-6 text-center text-xs text-slate-400 italic"
+                  className="p-6 text-center text-sm text-slate-400 italic"
                 >
                   No permissions match the selected filter criteria.
                 </td>
@@ -165,7 +165,7 @@ export function PermissionsTab({
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold ${
+                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-sm font-semibold ${
                           perm.status === "ACTIVE"
                             ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-rose-50 text-rose-700 border border-rose-200"

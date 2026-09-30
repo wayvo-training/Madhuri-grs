@@ -126,21 +126,6 @@ export function AdminMetricCard({
           {helper}
         </span>
       </div>
-      <div
-        className={cn(
-          "mt-auto pt-1 flex items-center gap-1.5 text-[11px] font-normal",
-          styles.helper,
-        )}
-      >
-        <span className={cn("inline-block h-1 w-1 rounded-full", styles.dot)} />
-        {title === "Suspended Accounts"
-          ? "Revoked access"
-          : title === "Active Accounts"
-            ? "Access permitted"
-            : title === "Total Enrolled Users"
-              ? "Active enterprise directory"
-              : "Resolution staff"}
-      </div>
     </button>
   );
 }

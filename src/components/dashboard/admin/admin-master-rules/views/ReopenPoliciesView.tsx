@@ -62,7 +62,7 @@ export function ReopenPoliciesView({
   return (
     <div className="flex flex-col gap-4">
       <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
-        <Table className="w-full text-left text-xs">
+        <Table className="w-full text-left text-sm">
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
@@ -175,7 +175,7 @@ export function ReopenPoliciesView({
         </Table>
       </div>
 
-      {totalCount > pageSize && (
+      {policies.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

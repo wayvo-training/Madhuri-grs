@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Pagination } from "@/components/ui/pagination";
-import { SortableTh } from "@/components/ui/sortable-table-head";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { useTableSort } from "@/hooks/useTableSort";
 import type { DashboardRecentGrievance } from "@/types/admin/dashboard";
 
@@ -50,76 +52,75 @@ export function RecentGrievancesTable({
       </div>
 
       <div className="mt-4 overflow-x-auto flex-1">
-        <table className="w-full text-left text-xs">
-          <thead className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-2.75 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            <tr>
-              <SortableTh
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <SortableTableHead
                 field="grievance_number"
                 currentSort={sortState}
                 onSort={handleSort}
                 className="py-2.5 pl-3 pr-2"
               >
                 Ticket ID
-              </SortableTh>
-              <SortableTh
+              </SortableTableHead>
+              <SortableTableHead
                 field="category_name"
                 currentSort={sortState}
                 onSort={handleSort}
                 className="px-2.5 py-2.5"
               >
                 Category
-              </SortableTh>
-              <SortableTh
+              </SortableTableHead>
+              <SortableTableHead
                 field="priority"
                 currentSort={sortState}
                 onSort={handleSort}
                 className="px-2.5 py-2.5"
               >
                 Priority
-              </SortableTh>
-              <SortableTh
+              </SortableTableHead>
+              <SortableTableHead
                 field="status"
                 currentSort={sortState}
                 onSort={handleSort}
-                className="py-2.5 pl-2 pr-3 text-right"
+                className="px-2.5 py-2.5"
               >
                 Status
-              </SortableTh>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-normal text-slate-700 dark:text-slate-300">
+              </SortableTableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {recentGrievances.length === 0 ? (
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={4}
-                  className="py-8 text-center text-xs text-slate-400 font-normal"
+                  className="py-8 text-center text-slate-400"
                 >
                   No grievances registered yet.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               paginatedGrievances.map((g) => (
-                <tr
+                <TableRow
                   key={g.grievance_id}
-                  className="hover:bg-slate-50/70 transition"
                 >
-                  <td className="whitespace-nowrap py-3 pl-3 pr-2 font-mono font-medium text-slate-900 text-xs">
+                  <TableCell className="pl-3 pr-2 font-mono font-medium text-slate-900">
                     {g.grievance_number}
-                  </td>
-                  <td className="whitespace-nowrap px-2.5 py-3 font-normal text-slate-700 text-xs">
+                  </TableCell>
+                  <TableCell className="px-2.5 text-slate-700">
                     {g.category_name || "General"}
-                  </td>
-                  <td className="whitespace-nowrap px-2.5 py-3">
+                  </TableCell>
+                  <TableCell className="px-2.5">
                     <PriorityBadge priority={g.priority} />
-                  </td>
-                  <td className="whitespace-nowrap py-3 pl-2 pr-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-2.5">
                     <StatusBadge status={g.status} />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
       <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
         <Pagination
