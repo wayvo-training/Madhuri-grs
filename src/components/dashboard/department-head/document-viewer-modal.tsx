@@ -3,6 +3,7 @@
 import {
   CheckCircle2,
   Download,
+  FileQuestion,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
@@ -28,12 +29,14 @@ interface DocumentViewerModalProps {
   document: DocumentPreviewData | null;
   onClose: () => void;
   onDownload: (doc: DocumentPreviewData) => void;
+  onRequestAdditionalDocs?: () => void;
 }
 
 export function DocumentViewerModal({
   document,
   onClose,
   onDownload,
+  onRequestAdditionalDocs,
 }: DocumentViewerModalProps) {
   if (!document) return null;
 
@@ -121,6 +124,20 @@ export function DocumentViewerModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {onRequestAdditionalDocs && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onRequestAdditionalDocs();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition shadow-2xs cursor-pointer"
+                title="Request Additional Documents from Employee"
+              >
+                <FileQuestion className="h-3.5 w-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Request Additional Documents</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onDownload(document)}

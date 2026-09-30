@@ -9,13 +9,7 @@ export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
   if (item.status === "CLOSED" || item.status === "RESOLVED") {
     return false;
   }
-  if (item.status === "UNDER_REVIEW") return true;
-  if (item.hodIntervention) return true;
-  if (item.status === "ESCALATED") return true;
-  if ((item.reopenCount ?? 0) >= 3) return true;
-  if (item.slaStatus === "BREACHED") return true;
-  if (!item.submittedResolution) return false;
-  return false;
+  return (item.reopenCount ?? 0) >= 3;
 }
 
 export function computeDepartmentMetrics(

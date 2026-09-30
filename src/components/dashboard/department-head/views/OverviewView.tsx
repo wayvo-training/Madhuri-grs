@@ -7,25 +7,19 @@ import type {
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
-import {
-  AttentionRequiredPanel,
-  OverviewMetricsSection,
-  RecentActivityPanel,
-  TeamCapacityPanel,
-} from "./overview-panels";
+import { AttentionRequiredPanel } from "./overview-panels";
+import { GrievancePieCharts } from "./GrievancePieCharts";
 
 export interface OverviewViewProps {
   currentDepartmentName: string;
   currentHodName: string;
   currentHodEmail: string;
   currentEmployeeCode: string;
-  totalGrievanceCount: number;
   metrics: DepartmentMetricsSummary;
   attentionRequiredList: GrievanceItem[];
+  grievances: GrievanceItem[];
   staffList: StaffMember[];
   governanceAuditFeed: EscalationAuditRecord[];
-  isRefreshing: boolean;
-  onRefresh: () => void;
   onViewQueue: () => void;
   onViewStaff: () => void;
   onViewActivity: () => void;
@@ -40,13 +34,11 @@ export function OverviewView({
   currentHodName,
   currentHodEmail,
   currentEmployeeCode,
-  totalGrievanceCount,
   metrics,
   attentionRequiredList,
+  grievances,
   staffList,
   governanceAuditFeed,
-  isRefreshing,
-  onRefresh,
   onViewQueue,
   onViewStaff,
   onViewActivity,
@@ -82,42 +74,16 @@ export function OverviewView({
               </p>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onViewQueue}
-              className="rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition"
-            >
-              Manage Full Queue ({totalGrievanceCount}) &rarr;
-            </button>
-          </div>
         </div>
       </div>
 
-      <OverviewMetricsSection
-        unassignedCount={metrics.unassignedCount}
-        inProgressCount={metrics.inProgressCount}
-        slaAtRiskCount={metrics.slaAtRiskCount}
-        escalatedCount={metrics.escalatedCount}
-      />
+      <GrievancePieCharts grievances={grievances} />
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}
         onInspect={onInspectGrievance}
         onViewFullQueue={onViewQueue}
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-start">
-        <TeamCapacityPanel
-          staffList={staffList}
-          onViewFullRoster={onViewStaff}
-        />
-        <RecentActivityPanel
-          governanceAuditFeed={governanceAuditFeed}
-          onViewFullActivity={onViewActivity}
-        />
-      </div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ import {
 } from "./modals";
 import {
   ActivityView,
+  KnowledgeView,
   OverviewView,
   QueueView,
   SlaGovernanceView,
@@ -50,7 +51,6 @@ export function DepartmentHeadOverviewInner({
     setStaffList,
     governanceAuditFeed,
     setGovernanceAuditFeed,
-    isRefreshing,
     selectedDeptId,
     setSelectedDeptId,
     availableDepartments,
@@ -209,6 +209,14 @@ export function DepartmentHeadOverviewInner({
   const handleEscalationFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!escalationModalGrievance) return;
+    
+    if (escalationInterventionType === "REASSIGN") {
+      const g = escalationModalGrievance;
+      setEscalationModalGrievance(null);
+      handleOpenAssignModal(g);
+      return;
+    }
+
     await executeEscalationSubmit({
       grievance: escalationModalGrievance,
       bottleneck: escalationBottleneck,
@@ -261,14 +269,9 @@ export function DepartmentHeadOverviewInner({
         availableDepartments={availableDepartments}
         selectedDeptId={selectedDeptId}
         currentDepartmentName={currentDepartmentName}
-        isRefreshing={isRefreshing}
         onDepartmentChange={(deptId) => {
           setSelectedDeptId(deptId);
           loadData(deptId);
-        }}
-        onRefresh={() => {
-          loadData(selectedDeptId, true);
-          showSuccess("Refreshed live queue from PostgreSQL database.", 3000);
         }}
         actionSuccessMessage={actionSuccessMessage}
         onClearSuccessMessage={() => setActionSuccessMessage(null)}
@@ -281,16 +284,11 @@ export function DepartmentHeadOverviewInner({
           currentHodName={currentHodName}
           currentHodEmail={currentHodEmail}
           currentEmployeeCode={currentEmployeeCode}
-          totalGrievanceCount={grievances.length}
           metrics={metrics}
           attentionRequiredList={attentionRequiredList}
+          grievances={grievances}
           staffList={staffList}
           governanceAuditFeed={governanceAuditFeed}
-          isRefreshing={isRefreshing}
-          onRefresh={() => {
-            loadData(selectedDeptId, true);
-            showSuccess("Refreshed live queue from PostgreSQL database.", 3000);
-          }}
           onViewQueue={() => switchView("queue")}
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
@@ -347,10 +345,7 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "activity" && (
-        <ActivityView
-          governanceAuditFeed={governanceAuditFeed}
-          onBackToOverview={() => switchView("overview")}
-        />
+        <ActivityView governanceAuditFeed={governanceAuditFeed} />
       )}
 
       {activeView === "sla" && (
@@ -363,6 +358,8 @@ export function DepartmentHeadOverviewInner({
           onAssign={handleOpenAssignModal}
         />
       )}
+
+      {activeView === "knowledge" && <KnowledgeView />}
 
       {/* Modals & Dialogs */}
       {assignModalGrievance && (

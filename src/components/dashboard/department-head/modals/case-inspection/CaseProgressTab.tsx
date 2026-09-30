@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Clock, User, UserPlus } from "lucide-react";
+import { useState } from "react";
+import { ArrowDownUp, Check, Clock, User, UserPlus } from "lucide-react";
 import {
   formatAuditActionTitle,
   formatAuditLogContent,
@@ -29,6 +30,8 @@ export function CaseProgressTab({
   hodEmail,
   onAssignClick,
 }: CaseProgressTabProps) {
+  const [timelineSort, setTimelineSort] = useState<"desc" | "asc">("desc");
+
   const st = currentGrievance.status;
   const isAssigned =
     !!currentGrievance.assignedStaffName ||
@@ -94,7 +97,7 @@ export function CaseProgressTab({
     },
     {
       key: "RESOLUTION",
-      label: st === "CLOSED" ? "Grievance Closed" : "Resolution Review",
+      label: st === "CLOSED" ? "Grievance Closed" : "Resolution",
       isComplete: stageNumber >= 4,
       isCurrent: stageNumber === 4,
     },
@@ -153,8 +156,8 @@ export function CaseProgressTab({
     caseProgressData?.assignment?.status ||
     (currentGrievance.assignedStaffName ? "In Progress" : "Pending");
 
-  const timelineEvents =
-    caseProgressData?.timeline && caseProgressData.timeline.length > 0
+  let timelineEvents = [
+    ...(caseProgressData?.timeline && caseProgressData.timeline.length > 0
       ? caseProgressData.timeline
       : (currentGrievance.auditTrail || []).map((log, idx) => ({
           id: log.id || String(idx),
@@ -163,12 +166,17 @@ export function CaseProgressTab({
           title: formatAuditActionTitle(log.action),
           description: formatAuditLogContent(log.action, log.details),
           actor: log.actor,
-        }));
+        }))),
+  ];
+
+  if (timelineSort === "desc") {
+    timelineEvents.reverse();
+  }
 
   return (
     <>
       {/* Current Progress Stepper */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-4 sm:p-5 space-y-3.5 shadow-2xs overflow-hidden">
+      <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
             Current Progress
@@ -178,8 +186,8 @@ export function CaseProgressTab({
           </span>
         </div>
 
-        <div className="relative flex items-center justify-between pt-2 px-3 sm:px-6">
-          <div className="absolute left-7 sm:left-10 right-7 sm:right-10 top-5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
+        <div className="relative flex items-start justify-between pt-2 pb-10 px-3 sm:px-6">
+          <div className="absolute left-[26px] sm:left-[38px] right-[26px] sm:right-[38px] top-5.5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
               style={{
@@ -194,7 +202,7 @@ export function CaseProgressTab({
             return (
               <div
                 key={step.key}
-                className="relative z-10 flex flex-col items-center"
+                className="relative z-10 flex flex-col items-center w-7"
               >
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-bold transition ${
@@ -209,15 +217,17 @@ export function CaseProgressTab({
                     <span>{idx + 1}</span>
                   )}
                 </div>
-                <span
-                  className={`mt-1.5 text-xs text-center max-w-18.75 sm:max-w-23.75 line-clamp-2 leading-tight ${
-                    isPastOrCurrent
-                      ? "font-semibold text-slate-900"
-                      : "font-medium text-slate-400"
-                  }`}
-                >
-                  {step.label}
-                </span>
+                <div className="absolute top-full mt-1.5 w-[90px] sm:w-[110px] left-1/2 -translate-x-1/2 flex justify-center">
+                  <span
+                    className={`text-[11px] sm:text-xs text-center line-clamp-2 leading-tight ${
+                      isPastOrCurrent
+                        ? "font-semibold text-slate-900"
+                        : "font-medium text-slate-400"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -240,21 +250,13 @@ export function CaseProgressTab({
       {/* Two-Column SLA & Assignment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Left: SLA Status */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
+        <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-emerald-800" />
               SLA Status
             </span>
-            <span
-              className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                slaState === "BREACHED"
-                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                  : slaState === "SLA_AT_RISK"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              }`}
-            >
+            <span className="text-xs font-bold text-slate-900 uppercase">
               {slaStateLabel}
             </span>
           </div>
@@ -299,7 +301,7 @@ export function CaseProgressTab({
         {/* Right: Assignment */}
         {caseProgressData?.departmentsInvolved &&
         caseProgressData.departmentsInvolved.length > 1 ? (
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-emerald-800" />
@@ -340,7 +342,7 @@ export function CaseProgressTab({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs">
+          <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-emerald-800" />
@@ -430,53 +432,6 @@ export function CaseProgressTab({
         )}
       </div>
 
-      {/* Activity Timeline */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-4 sm:p-5 space-y-3.5 shadow-2xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Activity Timeline
-          </span>
-          <span className="text-xs text-slate-400">
-            Chronological Governance Trail
-          </span>
-        </div>
-
-        {timelineEvents.length === 0 ? (
-          <p className="text-xs text-slate-400 italic py-2">
-            No activity records logged for this case.
-          </p>
-        ) : (
-          <div className="relative pl-6 space-y-4 before:absolute before:left-2.75 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-            {timelineEvents.map((ev, idx) => (
-              <div key={ev.id || idx} className="relative group">
-                <div
-                  className={`absolute -left-6 top-1 h-3 w-3 rounded-full border-2 border-white shadow-2xs ${
-                    idx === 0
-                      ? "bg-emerald-600 ring-2 ring-emerald-100"
-                      : "bg-slate-400"
-                  }`}
-                />
-                <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5">
-                  <span className="text-xs font-semibold text-slate-900 leading-tight">
-                    {ev.title}
-                  </span>
-                  <span className="text-[11px] text-slate-400 shrink-0 font-medium">
-                    {ev.relativeTime || ev.timestamp}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
-                  {ev.description}
-                </p>
-                {ev.actor && (
-                  <span className="inline-block mt-1 text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                    By: {ev.actor}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </>
   );
 }

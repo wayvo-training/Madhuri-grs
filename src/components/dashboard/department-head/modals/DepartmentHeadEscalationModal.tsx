@@ -176,7 +176,7 @@ export function DepartmentHeadEscalationModal({
                   ],
                   [
                     "REASSIGN",
-                    "🔄 Reassign to Available Staff",
+                    "🔄 Change Assignment",
                     "Transfer grievance to an active staff member with spare capacity",
                   ],
                 ].map(([value, label, description]) => (
@@ -203,49 +203,7 @@ export function DepartmentHeadEscalationModal({
               </div>
             </div>
 
-            {interventionType === "REASSIGN" && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <label
-                  htmlFor="escalation-target-staff"
-                  className="block text-xs font-semibold text-slate-900 mb-1"
-                >
-                  Select Target Staff Member{" "}
-                  <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="escalation-target-staff"
-                  required
-                  value={targetStaffId}
-                  onChange={(e) => onTargetStaffIdChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
-                >
-                  <option value="">
-                    -- Choose an Available Staff Member --
-                  </option>
-                  {staffList.map((s) => {
-                    const capacity = s.maxCapacity || 10;
-                    const isAtCapacity = s.activeTickets >= capacity;
-                    const availCap = Math.max(0, capacity - s.activeTickets);
-                    return (
-                      <option
-                        key={s.id}
-                        value={s.id}
-                        disabled={s.status === "ON_LEAVE" || isAtCapacity}
-                      >
-                        {s.name} ({s.designation}) &bull; Active Workload:{" "}
-                        {s.activeTickets}/{capacity} (Available Capacity:{" "}
-                        {availCap}){" "}
-                        {s.status === "ON_LEAVE"
-                          ? "[ON LEAVE]"
-                          : isAtCapacity
-                            ? "[AT CAPACITY]"
-                            : "[AVAILABLE]"}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
+            {/* REASSIGN target staff selection removed - delegates to main assignment logic */}
 
             {interventionType === "CROSS_DEPT" && (
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -311,7 +269,6 @@ export function DepartmentHeadEscalationModal({
               </button>
               <button
                 type="submit"
-                disabled={interventionType === "REASSIGN" && !targetStaffId}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />

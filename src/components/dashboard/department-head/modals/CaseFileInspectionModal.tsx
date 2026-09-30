@@ -14,6 +14,7 @@ import {
   CaseNotesTab,
   CaseProgressTab,
   CaseStatementTab,
+  CaseActivityTab,
 } from "./case-inspection";
 
 export interface CaseFileInspectionModalProps {
@@ -137,6 +138,7 @@ export function CaseFileInspectionModal({
           subcategory={currentGrievance.subcategory}
           priority={currentGrievance.priority}
           slaState={slaState}
+          hodIntervention={currentGrievance.hodIntervention}
           onClose={onClose}
         />
 
@@ -181,6 +183,17 @@ export function CaseFileInspectionModal({
               {currentGrievance.internalNotes?.length || 0}
             </span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("activity")}
+            className={`py-3 border-b-2 transition cursor-pointer ${
+              activeTab === "activity"
+                ? "border-[#0F766E] text-[#0F766E]"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            Activity
+          </button>
         </div>
 
         {/* Drawer Body */}
@@ -212,6 +225,13 @@ export function CaseFileInspectionModal({
               currentGrievance={currentGrievance}
               onAddInternalNote={onAddInternalNote}
               onGrievanceUpdated={setCurrentGrievance}
+            />
+          )}
+
+          {activeTab === "activity" && (
+            <CaseActivityTab
+              currentGrievance={currentGrievance}
+              caseProgressData={caseProgressData}
             />
           )}
         </div>

@@ -132,6 +132,22 @@ export async function POST(
         },
       });
 
+      // Insert active assignment notification for target staff member
+      await tx.notifications.create({
+        data: {
+          user_id: targetStaffId,
+          grievance_id: grievanceId,
+          notification_type: "ASSIGNMENT",
+          channel: "IN_APP",
+          title: `New Case Assigned: ${grievance.grievance_number}`,
+          message: note
+            ? `You have been assigned Grievance ${grievance.grievance_number} (${grievance.title}). Note: "${note}"`
+            : `You have been assigned Grievance ${grievance.grievance_number} (${grievance.title}) by Department Head.`,
+          status: "PENDING",
+          created_at: new Date(),
+        },
+      });
+
       // Update grievance_departments status
       await tx.grievance_departments.update({
         where: {

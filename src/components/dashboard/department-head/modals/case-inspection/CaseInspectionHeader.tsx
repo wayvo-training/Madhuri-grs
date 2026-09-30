@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 
 interface CaseInspectionHeaderProps {
   ticketCode: string;
@@ -9,6 +9,7 @@ interface CaseInspectionHeaderProps {
   subcategory: string;
   priority: string;
   slaState: "BREACHED" | "SLA_AT_RISK" | "AT_RISK" | "ON_TRACK" | string;
+  hodIntervention?: any;
   onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export function CaseInspectionHeader({
   subcategory,
   priority,
   slaState,
+  hodIntervention,
   onClose,
 }: CaseInspectionHeaderProps) {
   const isBreached = slaState === "BREACHED";
@@ -36,7 +38,7 @@ export function CaseInspectionHeader({
           <span>Back to SLA Monitoring</span>
         </button>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold text-[#0F766E] bg-[#F0FDFA] px-2.5 py-1 rounded-md border border-teal-200/80">
+          <span className="font-mono text-xs font-bold text-[#0F766E]">
             {ticketCode}
           </span>
           <button
@@ -60,34 +62,38 @@ export function CaseInspectionHeader({
             <span className="text-slate-300">•</span>
             <span>{subcategory}</span>
             <span className="text-slate-300">•</span>
-            <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-2.75 font-semibold ${
-                priority === "CRITICAL"
-                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                  : priority === "HIGH"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-slate-100 text-slate-700 border border-slate-200"
-              }`}
-            >
+            <span className="text-slate-900 font-semibold">
               {priority} Priority
             </span>
           </div>
+          {hodIntervention && (
+            <div className="pt-2">
+              <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>Current Head Intervention &ndash; {hodIntervention.actionLabel}</span>
+                </div>
+                {(hodIntervention.note || hodIntervention.actionType === "MONITOR") && (
+                  <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
+                    {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
           {isBreached ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-700 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+            <span className="text-sm font-bold text-slate-900 uppercase">
               SLA BREACHED
             </span>
           ) : isAtRisk ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-700 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-sm font-bold text-slate-900 uppercase">
               SLA AT RISK
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800 shadow-2xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="text-sm font-bold text-slate-900 uppercase">
               ON TRACK
             </span>
           )}

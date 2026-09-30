@@ -94,7 +94,7 @@ export function DepartmentHeadLeaveReassignmentModal({
                 >
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-semibold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded border border-emerald-200 text-2.75">
+                      <span className="font-mono font-semibold text-emerald-800 text-2.75">
                         {item.ticketCode}
                       </span>
                       <PriorityBadge priority={item.priority} />

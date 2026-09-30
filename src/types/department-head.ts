@@ -139,9 +139,10 @@ export type DepartmentHeadView =
   | "queue"
   | "staff"
   | "sla"
-  | "activity";
+  | "activity"
+  | "knowledge";
 
-export type CaseDrawerTab = "progress" | "statement" | "notes";
+export type CaseDrawerTab = "progress" | "statement" | "notes" | "activity";
 
 export interface DepartmentHeadOverviewProps {
   departmentName?: string;

@@ -4,3 +4,4 @@ export * from "./overview-panels";
 export * from "./QueueView";
 export * from "./SlaGovernanceView";
 export * from "./StaffView";
+export * from "./KnowledgeView";

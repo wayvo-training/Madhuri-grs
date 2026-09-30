@@ -1,18 +1,32 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { ArrowDownUp } from "lucide-react";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
 import type { EscalationAuditRecord } from "@/types/department-head";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/hooks/useTableSort";
 
 export interface ActivityViewProps {
   governanceAuditFeed: EscalationAuditRecord[];
-  onBackToOverview: () => void;
 }
 
 export function ActivityView({
   governanceAuditFeed,
-  onBackToOverview,
 }: ActivityViewProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const {
+    sortState,
+    handleSort,
+    sortedItems: sortedFeed,
+  } = useTableSort(governanceAuditFeed, { field: "timestamp", direction: "desc" });
+
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedFeed = sortedFeed.slice(startIndex, startIndex + pageSize);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
@@ -21,44 +35,71 @@ export function ActivityView({
             <h3 className="text-base font-semibold text-slate-900">
               Department Head Activity / Audit
             </h3>
-            <p className="text-xs font-normal text-slate-500">
+            <p className="text-sm font-normal text-slate-500">
               Historical governance events, staff actions, interventions, and
               SLA-related changes across this department.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onBackToOverview}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 transition"
-          >
-            <ArrowLeft className="h-3 w-3" />
-            <span>Back to Overview</span>
-          </button>
-        </div>
+          </div>
 
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-[11px] border-collapse">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+          <table className="w-full text-left text-[13px] border-collapse">
+            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[13px] font-semibold text-slate-600">
               <tr>
-                <th className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance</th>
-                <th className="py-3 px-3 whitespace-nowrap">Activity</th>
-                <th className="py-3 px-3 whitespace-nowrap">Performed By</th>
-                <th className="py-3 px-3 whitespace-nowrap">Role</th>
-                <th className="py-3 px-3 whitespace-nowrap">When</th>
+                <SortableTh
+                  field="action"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 pl-4 pr-3 whitespace-nowrap"
+                >
+                  Grievance
+                </SortableTh>
+                <SortableTh
+                  field="action"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Activity
+                </SortableTh>
+                <SortableTh
+                  field="actor"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Performed By
+                </SortableTh>
+                <SortableTh
+                  field="actor"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Role
+                </SortableTh>
+                <SortableTh
+                  field="timestamp"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  When
+                </SortableTh>
               </tr>
             </thead>
-            <tbody>
-              {governanceAuditFeed.length === 0 ? (
+            <tbody className="divide-y divide-slate-100">
+              {paginatedFeed.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
-                    className="py-8 text-center text-xs text-slate-400"
+                    className="py-8 text-center text-sm text-slate-400"
                   >
                     No activity records are available for this department yet.
                   </td>
                 </tr>
               ) : (
-                governanceAuditFeed.map((feed) => {
+                paginatedFeed.map((feed) => {
                   const feedGrievanceRef = feed.action.includes(":")
                     ? feed.action.split(":")[0].trim()
                     : "N/A";
@@ -66,34 +107,36 @@ export function ActivityView({
                   return (
                     <tr
                       key={feed.id}
-                      className="border-b border-slate-100 last:border-0 align-top"
+                      className="align-top hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <td className="py-3 pl-4 pr-3 whitespace-nowrap">
-                        <span className="inline-block rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-950">
+                        <span className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-200 block">
                           {feedGrievanceRef}
                         </span>
                       </td>
                       <td className="py-3 px-3">
                         <div className="space-y-1">
-                          <div className="font-semibold text-slate-800 text-[11px]">
+                          <div className="font-semibold text-slate-800 text-[13px]">
                             {feed.action}
                           </div>
-                          <div className="text-[10px] leading-relaxed text-slate-500">
+                          <div className="text-[13px] leading-relaxed text-slate-500">
                             {formatAuditFeedDetails(feed.details)}
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[11px] font-medium text-slate-700">
+                      <td className="py-3 px-3 whitespace-nowrap text-[13px] font-medium text-slate-700">
                         {feed.actor}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
+                      <td className="py-3 px-3 whitespace-nowrap text-[13px] text-slate-500">
                         {feed.actor.includes("DEPARTMENT_HEAD")
                           ? "Department Head"
-                          : feed.actor.includes("SLA")
-                            ? "System"
-                            : "Staff"}
+                          : feed.actor.includes("END_USER")
+                            ? "End User"
+                            : feed.actor.includes("SLA") || feed.actor.includes("SYSTEM")
+                              ? "System"
+                              : "Staff"}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[11px] text-slate-500">
+                      <td className="py-3 px-3 whitespace-nowrap text-[13px] text-slate-500">
                         {feed.timestamp}
                       </td>
                     </tr>
@@ -102,6 +145,19 @@ export function ActivityView({
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="border-t border-slate-200/80">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(sortedFeed.length / pageSize)}
+            totalCount={sortedFeed.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemLabel="activities"
+          />
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
 import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
@@ -51,15 +52,36 @@ export function SlaGovernanceView({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
 
   useEffect(() => {
     setCurrentPage(1);
   }, []);
 
+  const handleSort = (field: string, direction: "asc" | "desc" | null) => {
+    setSortState({ field, direction });
+  };
+
+  const sortedList = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return escalatedList;
+
+    return [...escalatedList].sort((a, b) => {
+      let valA: any = a[sortState.field as keyof GrievanceItem] || "";
+      let valB: any = b[sortState.field as keyof GrievanceItem] || "";
+
+      if (typeof valA === "string") valA = valA.toLowerCase();
+      if (typeof valB === "string") valB = valB.toLowerCase();
+
+      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [escalatedList, sortState]);
+
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return escalatedList.slice(start, start + pageSize);
-  }, [escalatedList, currentPage, pageSize]);
+    return sortedList.slice(start, start + pageSize);
+  }, [sortedList, currentPage, pageSize]);
 
   return (
     <div className="space-y-6">
@@ -104,13 +126,13 @@ export function SlaGovernanceView({
               <h3 className="text-base font-semibold text-slate-900">
                 Escalation & SLA Governance
               </h3>
-              <p className="text-xs font-normal text-slate-500">
+              <p className="text-sm font-normal text-slate-500">
                 Review escalated grievances, monitor SLA breaches, and take
                 corrective intervention when required.
               </p>
             </div>
           </div>
-          <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+          <span className="text-sm font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
             {
               grievances.filter(
                 (g) =>
@@ -124,27 +146,28 @@ export function SlaGovernanceView({
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-[11px] border-collapse">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-semibold text-slate-600">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-sm font-semibold text-slate-600 dark:text-slate-400">
               <tr>
-                <th className="py-3 pl-4 pr-3 whitespace-nowrap">Grievance</th>
-                <th className="py-3 px-3 whitespace-nowrap">Category</th>
-                <th className="py-3 px-3 whitespace-nowrap">Sub Category</th>
-                <th className="py-3 px-3 whitespace-nowrap">SLA</th>
-                <th className="py-3 px-3 whitespace-nowrap">Escalation</th>
-                <th className="py-3 px-3 whitespace-nowrap">Assigned Staff</th>
-                <th className="py-3 px-3 whitespace-nowrap">Status</th>
-                <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
+                <SortableTh field="ticketCode" currentSort={sortState} onSort={handleSort} className="py-2 pl-4 pr-3 whitespace-nowrap">Grievance ID</SortableTh>
+                <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Summary</SortableTh>
+                <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Category</SortableTh>
+                <SortableTh field="subcategory" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Sub Category</SortableTh>
+                <SortableTh field="slaTimeLeft" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">SLA</SortableTh>
+                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Escalation</SortableTh>
+                <SortableTh field="assignedStaffName" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Assigned Staff</SortableTh>
+                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Status</SortableTh>
+                <th className="py-2 pl-3 pr-4 text-right whitespace-nowrap">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
               {escalatedList.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
-                    className="py-10 text-center text-slate-500 text-xs"
+                    colSpan={9}
+                    className="py-10 text-center text-slate-500 text-sm"
                   >
                     No active escalations requiring intervention.
                   </td>
@@ -161,88 +184,87 @@ export function SlaGovernanceView({
                       key={item.id}
                       className="hover:bg-slate-50/60 transition"
                     >
-                      <td className="py-3 pl-4 pr-3 align-top">
-                        <div className="space-y-1">
-                          <span className="inline-block font-mono text-[11px] font-semibold text-emerald-950 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/70">
-                            {item.ticketCode}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onInspect(item, "statement")}
-                            className="block text-left text-xs font-semibold text-slate-900 hover:text-emerald-900 transition"
-                          >
-                            {item.title}
-                          </button>
-                        </div>
+                      <td className="py-2 pl-4 pr-3 align-top whitespace-nowrap">
+                        <span className="inline-block font-mono text-sm font-semibold text-slate-900 dark:text-slate-200">
+                          {item.ticketCode}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 align-top">
+                        <button
+                          type="button"
+                          onClick={() => onInspect(item, "statement")}
+                          className="block text-left text-sm font-semibold text-slate-900 hover:text-emerald-900 transition"
+                        >
+                          {item.title}
+                        </button>
                       </td>
 
-                      <td className="py-3 px-3 align-top text-xs font-medium text-slate-700">
+                      <td className="py-2 px-3 align-top text-sm font-medium text-slate-700">
                         {item.category}
                       </td>
 
-                      <td className="py-3 px-3 align-top text-[11px] text-slate-500">
+                      <td className="py-2 px-3 align-top text-sm text-slate-500">
                         {item.subcategory}
                       </td>
 
-                      <td className="py-3 px-3 align-top">
+                      <td className="py-2 px-3 align-top">
                         <div className="flex flex-col items-start gap-1">
                           <span
-                            className={`inline-flex rounded px-2 py-0.5 text-[10px] font-medium border ${
+                            className={`inline-flex text-[13px] font-medium ${
                               item.slaStatus === "BREACHED"
-                                ? "border-amber-200 bg-amber-50 text-amber-900"
+                                ? "text-slate-900 font-bold"
                                 : item.slaStatus === "AT_RISK"
-                                  ? "border-amber-200 bg-amber-50 text-amber-800"
-                                  : "border-slate-200 bg-slate-100 text-slate-600"
+                                  ? "text-amber-800"
+                                  : "text-slate-600"
                             }`}
                           >
                             {item.slaTimeLeft}
                           </span>
-                          {item.slaStatus === "BREACHED" && (
-                            <span className="text-[10px] font-semibold text-amber-800">
-                              Breached
-                            </span>
-                          )}
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 align-top">
+                      <td className="py-2 px-3 align-top">
                         <div className="flex flex-col items-start gap-1">
-                          {isEscalated ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-800 shadow-2xs dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30">
-                              Escalated
-                            </span>
-                          ) : isUnderIntervention ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
-                              Under Intervention
-                            </span>
-                          ) : needsReview ? (
-                            <span className="w-fit inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30">
-                              Review Required
-                            </span>
+                          {item.hodIntervention ? (
+                            <details className="group">
+                              <summary className={`list-none cursor-pointer w-fit inline-flex items-center text-[13px] group-hover:opacity-80 transition-opacity ${
+                                isEscalated 
+                                  ? "font-semibold text-slate-900 dark:text-slate-200"
+                                  : isUnderIntervention || needsReview
+                                    ? "font-semibold text-slate-900 dark:text-slate-200"
+                                    : "font-medium text-slate-700 dark:text-slate-300"
+                              }`}>
+                                {isEscalated ? "Escalated" : isUnderIntervention ? "Under Intervention" : needsReview ? "Resolution Required" : "Monitor"}
+                              </summary>
+                              <div className="text-[13px] text-slate-500 max-w-[210px] leading-tight mt-1 animate-in fade-in">
+                                {item.hodIntervention.actionLabel}
+                              </div>
+                            </details>
                           ) : (
-                            <span className="w-fit inline-flex items-center rounded-full border border-slate-200 bg-slate-100/90 px-2.5 py-0.5 text-[10px] font-medium text-slate-700 shadow-2xs dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600">
-                              Monitor
-                            </span>
-                          )}
-                          {item.hodIntervention && (
-                            <span className="text-[10px] text-slate-500 max-w-[210px] leading-tight">
-                              {item.hodIntervention.actionLabel}
+                            <span className={`w-fit inline-flex items-center text-[13px] ${
+                              isEscalated
+                                ? "font-semibold text-slate-900 dark:text-slate-200"
+                                : needsReview
+                                  ? "font-semibold text-slate-900 dark:text-slate-200"
+                                  : "font-medium text-slate-700 dark:text-slate-300"
+                            }`}>
+                              {isEscalated ? "Escalated" : needsReview ? "Resolution Required" : "Monitor"}
                             </span>
                           )}
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 align-top">
-                        <span className="text-xs text-slate-700">
+                      <td className="py-2 px-3 align-top">
+                        <span className="text-sm text-slate-700">
                           {item.assignedStaffName || "Unassigned"}
                         </span>
                       </td>
 
-                      <td className="py-3 px-3 align-top">
+                      <td className="py-2 px-3 align-top">
                         <StatusBadge status={item.status} />
                       </td>
 
-                      <td className="py-3 pl-3 pr-4 text-right align-top">
+                      <td className="py-2 pl-3 pr-4 text-right align-top">
                         <ActionMenu
                           widthClass="w-40"
                           items={[
@@ -251,10 +273,10 @@ export function SlaGovernanceView({
                               icon: <Eye className="h-3.5 w-3.5" />,
                               onClick: () => onInspect(item, "progress"),
                             },
-                            ...(needsReview && item.submittedResolution
+                            ...(needsReview
                               ? [
                                   {
-                                    label: "Review",
+                                    label: "Submit Resolution",
                                     icon: <FileCheck className="h-3.5 w-3.5" />,
                                     variant: "default" as const,
                                     onClick: () => onReviewResolution(item),

@@ -93,18 +93,8 @@ export function CaseInspectionFooter({
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* If assigned to the HOD themselves, prompt to reassign instead of self-emailing */}
-          {isSelfAssigned ? (
-            <button
-              type="button"
-              onClick={() => onAssignClick(currentGrievance)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 shadow-2xs hover:bg-amber-100 transition cursor-pointer"
-              title="You are currently recorded as the officer on this ticket. Reassign to an investigating staff officer."
-            >
-              <UserCheck className="h-3.5 w-3.5 text-amber-700" />
-              <span>Reassign to Staff Officer</span>
-            </button>
-          ) : staffEmail ? (
+          {/* If assigned to staff, show contact button */}
+          {staffEmail && !isSelfAssigned ? (
             <button
               type="button"
               onClick={() => setIsDirectiveModalOpen(true)}
@@ -138,15 +128,14 @@ export function CaseInspectionFooter({
             </button>
           )}
 
-          {requiresHeadResolutionReview(currentGrievance) &&
-            currentGrievance.submittedResolution && (
+          {requiresHeadResolutionReview(currentGrievance) && (
               <button
                 type="button"
                 onClick={() => onReviewResolutionClick(currentGrievance)}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Review Resolution</span>
+                <span>Submit Resolution</span>
               </button>
             )}
 

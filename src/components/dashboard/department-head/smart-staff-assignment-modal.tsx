@@ -119,41 +119,10 @@ export function SmartStaffAssignmentModal({
   }, [staffList]);
 
   useEffect(() => {
-    let isMounted = true;
     setLoading(true);
     setErrorMsg(null);
-
-    fetch(`/api/department-head/grievances/${grievance.id}/recommendations`)
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error("Failed to load staff recommendations");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (!isMounted) return;
-        if (data.success && Array.isArray(data.recommendations)) {
-          setRecommendations(data.recommendations);
-        } else {
-          fallbackFromStaffList();
-        }
-      })
-      .catch((err) => {
-        console.warn(
-          "Could not load smart recommendations, using staff list:",
-          err,
-        );
-        if (isMounted) {
-          fallbackFromStaffList();
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    fallbackFromStaffList();
+    setLoading(false);
   }, [fallbackFromStaffList, grievance.id]);
 
   if (shouldHideModal) {
@@ -168,10 +137,10 @@ export function SmartStaffAssignmentModal({
     .filter((candidate) => candidate.availabilityStatus !== "ON_LEAVE")
     .sort((a, b) => b.score - a.score);
 
-  const availableCandidates = [...recommendedCandidates].filter(
-    (candidate) =>
-      !candidate.isTopRecommendation &&
-      candidate.availabilityStatus !== "ON_LEAVE",
+  const topCandidate = recommendedCandidates[0];
+
+  const manualCandidates = staffList.filter(
+    (s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE"
   );
 
   // Find currently assigned staff info for reassignment view
@@ -349,7 +318,7 @@ export function SmartStaffAssignmentModal({
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="font-semibold text-amber-950 text-xs">
                   Currently Assigned:{" "}
-                  <span className="underline decoration-amber-300">
+                  <span className="font-semibold text-amber-950">
                     {grievance.assignedStaffName || "Assigned Staff Member"}
                   </span>
                 </div>
@@ -561,13 +530,13 @@ export function SmartStaffAssignmentModal({
                     );
                   })()}
 
-                {availableCandidates.length > 0 && (
+                {manualCandidates.length > 0 && (
                   <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
                     <label
                       htmlFor="available-staff-select"
                       className="mb-1 block text-[11px] font-semibold text-slate-700"
                     >
-                      Available Staff
+                      Manual Selection (Other Available Staff)
                     </label>
                     <select
                       id="available-staff-select"
@@ -576,25 +545,25 @@ export function SmartStaffAssignmentModal({
                       className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
                     >
                       <option value="">Select another available staff</option>
-                      {availableCandidates.map((candidate) => {
-                        const isAtCap = candidate.activeWorkload >= 10;
+                      {manualCandidates.map((candidate) => {
+                        const isAtCap = candidate.activeTickets >= (candidate.maxCapacity || 10);
                         const availCap = Math.max(
                           0,
-                          10 - candidate.activeWorkload,
+                          (candidate.maxCapacity || 10) - candidate.activeTickets,
                         );
                         return (
                           <option
-                            key={candidate.staffId}
-                            value={candidate.staffId}
+                            key={candidate.id}
+                            value={candidate.id}
                             disabled={
-                              candidate.availabilityStatus === "ON_LEAVE" ||
+                              candidate.status === "ON_LEAVE" ||
                               isAtCap
                             }
                           >
                             {candidate.name} — Active Workload:{" "}
-                            {candidate.activeWorkload} / 10{" "}
+                            {candidate.activeTickets} / {candidate.maxCapacity || 10}{" "}
                             {isAtCap
-                              ? "(At Capacity - 10/10)"
+                              ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
                               : `(Available Capacity: ${availCap})`}
                           </option>
                         );

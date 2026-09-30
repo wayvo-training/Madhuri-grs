@@ -209,6 +209,20 @@ export async function POST(
           },
         });
 
+        // Insert in-app notification for target officer
+        await tx.notifications.create({
+          data: {
+            user_id: toStaffId,
+            grievance_id: assign.grievance_id,
+            notification_type: "REASSIGNMENT",
+            channel: "IN_APP",
+            title: `Case Reassigned: ${assign.grievances.grievance_number}`,
+            message: `You have been reassigned Grievance ${assign.grievances.grievance_number} (${note || `Coverage for ${fromName} on leave`}).`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+
         // Record audit log for each grievance
         await tx.audit_logs.create({
           data: {
