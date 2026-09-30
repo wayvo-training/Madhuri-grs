@@ -9,13 +9,12 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
-import { StaffViewSwitcher } from "@/components/staff/staff-view-switcher";
+
+import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import {
-  InvestigationView,
   OverviewView,
   ProfileView,
   QueueView,
-  ResolutionView,
 } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
 import type {
@@ -403,20 +402,7 @@ export function StaffDashboard({
   ).length;
 
   return (
-    <div className="space-y-6">
-      {/* Top Navigation Switcher Bar */}
-      <StaffViewSwitcher
-        activeView={activeView}
-        switchView={switchView}
-        stats={stats}
-        activeWorkload={profile.activeWorkload}
-        maxCapacity={profile.maxCapacity || 10}
-        investigationCount={investigationCount}
-        resolutionCount={resolutionCount}
-        isRefreshing={isRefreshing}
-        onRefresh={() => fetchDashboardData(true)}
-      />
-
+    <div className="flex-1 flex flex-col space-y-4">
       {/* Render Active View */}
       {activeView === "overview" && (
         <OverviewView
@@ -440,28 +426,16 @@ export function StaffDashboard({
         />
       )}
 
-      {activeView === "investigation" && (
-        <InvestigationView
-          grievances={assignedItems}
-          onExamine={handleExamineGrievance}
-          onResolve={setResolvingGrievance}
-        />
-      )}
-
-      {activeView === "resolutions" && (
-        <ResolutionView
-          grievances={assignedItems}
-          onExamine={handleExamineGrievance}
-          onResolve={setResolvingGrievance}
-        />
-      )}
-
       {activeView === "profile" && (
         <ProfileView
           profile={profile}
           stats={stats}
           onRefresh={() => fetchDashboardData(true)}
         />
+      )}
+
+      {activeView === "activity" && (
+        <FullActivityView staffName={staffName} />
       )}
 
       {/* Grievance Details Modal */}
@@ -501,6 +475,13 @@ export function StaffDashboard({
         document={previewDocument}
         onClose={() => setPreviewDocument(null)}
         onDownload={handleDownloadDocument}
+        onRequestAdditionalDocs={
+          selectedGrievance
+            ? () => {
+                setSelectedInitialTab("investigation");
+              }
+            : undefined
+        }
       />
     </div>
   );

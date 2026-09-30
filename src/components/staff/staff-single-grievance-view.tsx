@@ -94,6 +94,31 @@ export function StaffSingleGrievanceView({
     await fetchGrievance();
   };
 
+  const handleRequestAdditionalInfo = async (
+    id: string,
+    payload: {
+      channels: ("IN_APP" | "EMAIL")[];
+      subject: string;
+      message: string;
+      requestedDocs: string[];
+    },
+  ) => {
+    const res = await fetch(`/api/staff/grievances/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "REQUEST_ADDITIONAL_INFO", ...payload }),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(
+        errJson.message ||
+          errJson.error ||
+          "Failed to request additional information",
+      );
+    }
+    await fetchGrievance();
+  };
+
   const handleSubmitResolution = async (
     id: string,
     resolution: StaffResolutionData,
@@ -167,6 +192,7 @@ export function StaffSingleGrievanceView({
         onClose={() => {}}
         onAddNote={handleAddNote}
         onStartInvestigation={handleStartInvestigation}
+        onRequestAdditionalInfo={handleRequestAdditionalInfo}
         onOpenDocumentPreview={setPreviewDocument}
         onOpenResolveModal={() => setIsResolving(true)}
       />
@@ -185,6 +211,9 @@ export function StaffSingleGrievanceView({
         document={previewDocument}
         onClose={() => setPreviewDocument(null)}
         onDownload={handleDownloadDocument}
+        onRequestAdditionalDocs={() => {
+          // Switch to investigation tab and trigger request info
+        }}
       />
     </div>
   );

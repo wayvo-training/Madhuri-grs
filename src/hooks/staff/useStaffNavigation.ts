@@ -13,9 +13,8 @@ export function useStaffNavigation(defaultView: StaffView = "overview") {
       if (hash === "queue" || hash === "assigned") {
         setActiveView("queue");
       } else if (
-        hash === "investigation" ||
-        hash === "resolutions" ||
-        hash === "profile"
+        hash === "profile" ||
+        hash === "activity"
       ) {
         setActiveView(hash as StaffView);
       } else {

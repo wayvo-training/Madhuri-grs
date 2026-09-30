@@ -16,6 +16,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { usePagination } from "@/hooks/usePagination";
+import { useTableSort } from "@/hooks/useTableSort";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import type { StaffAuditItem } from "@/types/staff";
 
 interface StaffActivityViewProps {
@@ -61,8 +63,13 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
     return Array.from(actions);
   }, [activities]);
 
+  const { sortState, handleSort, sortedItems } = useTableSort(activities, {
+    field: "timestamp",
+    direction: "desc",
+  });
+
   const filteredActivities = useMemo(() => {
-    return activities.filter((item) => {
+    return sortedItems.filter((item) => {
       if (selectedAction !== "ALL" && item.action !== selectedAction) {
         return false;
       }
@@ -78,17 +85,17 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
       }
       return true;
     });
-  }, [activities, selectedAction, searchQuery]);
+  }, [sortedItems, selectedAction, searchQuery]);
 
   const pagination = usePagination(filteredActivities, {
     initialPageSize: 10,
-    pageSizeOptions: [10, 20, 50],
+    pageSizeOptions: [5, 10, 20, 50],
   });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset to page 1 on query/action filter changes
   useEffect(() => {
     pagination.resetPage();
-  }, [searchQuery, selectedAction, pagination.resetPage]);
+  }, [searchQuery, selectedAction, sortState, pagination.resetPage]);
 
   const getActionIcon = (action: string) => {
     const lower = action.toLowerCase();
@@ -137,18 +144,6 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
             Complete event timeline for grievances assigned to {staffName}.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => fetchActivities(true)}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 rounded-xl transition shadow-2xs self-start sm:self-center cursor-pointer"
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 text-slate-500 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-          <span>{isRefreshing ? "Refreshing..." : "Refresh Logs"}</span>
-        </button>
       </div>
 
       {/* Filter Toolbar */}
@@ -164,25 +159,27 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
           />
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
-            value={selectedAction}
-            onChange={(e) => setSelectedAction(e.target.value)}
-            className="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-slate-700 font-medium"
-          >
-            <option value="ALL">All Event Types</option>
-            {uniqueActions.map((act) => (
-              <option key={act} value={act}>
-                {act}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={selectedAction}
+              onChange={(e) => setSelectedAction(e.target.value)}
+              className="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-slate-700 font-medium"
+            >
+              <option value="ALL">All Event Types</option>
+              {uniqueActions.map((act) => (
+                <option key={act} value={act}>
+                  {act}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Activity Timeline List */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs divide-y divide-slate-100 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center space-y-3">
             <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
@@ -204,47 +201,89 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
           </div>
         ) : (
           <>
-            {pagination.paginatedItems.map((item) => (
-              <div
-                key={item.id}
-                className="p-4 sm:p-5 hover:bg-slate-50/80 transition flex items-start gap-4"
-              >
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 shrink-0 mt-0.5">
-                  {getActionIcon(item.action)}
-                </div>
-
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">
-                      {item.action}
-                    </span>
-
-                    {item.grievanceNumber && (
-                      <span className="font-mono text-[11px] font-bold text-[#0F766E] bg-[#F0FDFA] border border-teal-200 px-2 py-0.5 rounded">
-                        {item.grievanceNumber}
-                      </span>
-                    )}
-
-                    <span className="text-xs text-slate-400">•</span>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" />
-                      {item.relativeTime ||
-                        new Date(item.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    {item.details}
-                  </p>
-
-                  {item.actor && (
-                    <p className="text-[11px] text-slate-400 font-medium">
-                      By {item.actor}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 dark:border-slate-800/60">
+                    <SortableTh
+                      field="action"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                    >
+                      Action
+                    </SortableTh>
+                    <SortableTh
+                      field="grievanceNumber"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                    >
+                      Grievance ID
+                    </SortableTh>
+                    <SortableTh
+                      field="details"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="p-4 text-xs font-semibold text-slate-600"
+                    >
+                      Details
+                    </SortableTh>
+                    <SortableTh
+                      field="actor"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                    >
+                      Actor
+                    </SortableTh>
+                    <SortableTh
+                      field="timestamp"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                    >
+                      Time
+                    </SortableTh>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {pagination.paginatedItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                      <td className="p-4 align-top whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 shrink-0">
+                            {getActionIcon(item.action)}
+                          </div>
+                          <span className="text-xs font-bold text-slate-900">{item.action}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 align-top whitespace-nowrap">
+                        {item.grievanceNumber ? (
+                          <span className="font-mono text-[13px] font-medium text-slate-900 dark:text-slate-200">
+                            {item.grievanceNumber}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 align-top">
+                        <p className="text-xs text-slate-700 leading-relaxed max-w-md">{item.details}</p>
+                      </td>
+                      <td className="p-4 align-top whitespace-nowrap">
+                        <span className="text-xs text-slate-700 font-medium">{item.actor || "-"}</span>
+                      </td>
+                      <td className="p-4 align-top whitespace-nowrap">
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                          {item.relativeTime || new Date(item.timestamp).toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <Pagination
               currentPage={pagination.currentPage}

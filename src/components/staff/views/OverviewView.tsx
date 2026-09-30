@@ -1,25 +1,8 @@
-"use client";
-
-import {
-  Activity,
-  AlertOctagon,
-  AlertTriangle,
-  ArrowRight,
-  Clock,
-  Eye,
-  FileCheck2,
-  FileSearch,
-  Inbox,
-  RotateCcw,
-} from "lucide-react";
-import Link from "next/link";
+import { useState } from "react";
+import { StaffPieCharts } from "./StaffPieCharts";
+import { AlertOctagon, AlertTriangle, ArrowRight, FileCheck2, Inbox, Clock, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { StaffWorkloadCard } from "@/components/staff/staff-workload-card";
 import { ActionMenu } from "@/components/ui/action-menu";
-import { Pagination } from "@/components/ui/pagination";
-import { SortableTh } from "@/components/ui/sortable-table-head";
-import { usePagination } from "@/hooks/usePagination";
-import { useTableSort } from "@/hooks/useTableSort";
 import type {
   StaffAuditItem,
   StaffDashboardData,
@@ -27,6 +10,16 @@ import type {
   StaffMemberProfile,
   StaffView,
 } from "@/types/staff";
+
+type SortKey =
+  | "grievanceNumber"
+  | "title"
+  | "reopenCount"
+  | "category"
+  | "priority"
+  | "status"
+  | "slaStatus"
+  | "lastUpdated";
 
 interface OverviewViewProps {
   data: StaffDashboardData | null;
@@ -43,6 +36,9 @@ export function OverviewView({
   onSwitchView,
   onRefresh,
 }: OverviewViewProps) {
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
   const stats = data?.stats || {
     activeGrievances: 0,
     slaAtRisk: 0,
@@ -54,36 +50,107 @@ export function OverviewView({
 
   const attentionItems = data?.attentionGrievances || [];
   const assignedGrievances = data?.assignedGrievances || [];
-  const activeCases = assignedGrievances.filter((g) => g.status !== "CLOSED");
 
-  const {
-    sortState,
-    handleSort,
-    sortedItems: sortedActiveCases,
-  } = useTableSort(activeCases);
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortKey(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
 
-  const activeCasesPagination = usePagination(sortedActiveCases, {
-    initialPageSize: 5,
-    pageSizeOptions: [5, 10, 20],
+  const priorityWeight: Record<string, number> = {
+    CRITICAL: 4,
+    HIGH: 3,
+    MEDIUM: 2,
+    LOW: 1,
+  };
+
+  const slaWeight: Record<string, number> = {
+    BREACHED: 3,
+    AT_RISK: 2,
+    ON_TRACK: 1,
+  };
+
+  const statusWeight: Record<string, number> = {
+    WAITING_ON_USER: 4,
+    IN_PROGRESS: 3,
+    ASSIGNED: 2,
+    UNDER_REVIEW: 1,
+  };
+
+  const sortedAttentionItems = [...attentionItems].sort((a, b) => {
+    if (!sortKey) return 0;
+    let comp = 0;
+    switch (sortKey) {
+      case "grievanceNumber":
+        comp = a.grievanceNumber.localeCompare(b.grievanceNumber);
+        break;
+      case "title":
+        comp = a.title.localeCompare(b.title);
+        break;
+      case "reopenCount":
+        comp = a.reopenCount - b.reopenCount;
+        break;
+      case "category":
+        comp = a.category.localeCompare(b.category);
+        break;
+      case "priority":
+        comp = (priorityWeight[a.priority] || 0) - (priorityWeight[b.priority] || 0);
+        break;
+      case "status":
+        comp = (statusWeight[a.status] || 0) - (statusWeight[b.status] || 0);
+        break;
+      case "slaStatus":
+        comp = (slaWeight[a.slaStatus] || 0) - (slaWeight[b.slaStatus] || 0);
+        break;
+      case "lastUpdated":
+        comp = new Date(a.assignedAt || a.submittedAt).getTime() - new Date(b.assignedAt || b.submittedAt).getTime();
+        break;
+    }
+    return sortDirection === "asc" ? comp : -comp;
   });
 
-  const attentionPagination = usePagination(attentionItems, {
-    initialPageSize: 3,
-    pageSizeOptions: [3, 5, 10],
-  });
-
+  const renderSortHeader = (label: string, key: SortKey) => {
+    const isActive = sortKey === key;
+    return (
+      <th
+        className="py-3 px-3.5 whitespace-nowrap cursor-pointer select-none hover:text-black transition text-slate-900 font-bold"
+        onClick={() => handleSort(key)}
+      >
+        <div className="inline-flex items-center gap-1">
+          <span>{label}</span>
+          {isActive ? (
+            sortDirection === "asc" ? (
+              <ArrowUp className="w-3.5 h-3.5 text-black" />
+            ) : (
+              <ArrowDown className="w-3.5 h-3.5 text-black" />
+            )
+          ) : (
+            <ArrowUpDown className="w-3 h-3 text-slate-400 hover:text-black" />
+          )}
+        </div>
+      </th>
+    );
+  };
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col space-y-4">
       {/* 3. Welcome & Role Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold text-slate-900">
+            <h1 className="text-sm sm:text-base font-bold text-slate-900">
               Staff Workspace
             </h1>
             <span className="text-xs text-slate-400">•</span>
-            <span className="text-xs font-semibold text-slate-600">
-              Investigation &amp; Resolution Desk • {profile.departmentName}
+            <span className="text-xs sm:text-sm font-semibold text-slate-600">
+              Staff Operations Workspace • {profile.departmentName}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -95,439 +162,162 @@ export function OverviewView({
         </div>
       </div>
 
-      {/* 4. KPI Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="My Active Grievances"
-          value={stats.activeGrievances}
-          icon={Inbox}
-          accentColor="blue"
-          description="Currently assigned and active"
-        />
+      {/* Staff Pie Charts (Workload & SLA Overview) */}
+      <StaffPieCharts grievances={assignedGrievances} layout="horizontal" />
 
-        <StatCard
-          label="SLA At Risk"
-          value={stats.slaAtRisk}
-          icon={AlertTriangle}
-          accentColor="amber"
-          description="Approaching SLA deadline"
-        />
 
-        <StatCard
-          label="SLA Breached"
-          value={stats.slaBreached}
-          icon={AlertOctagon}
-          accentColor="rose"
-          description="Requires immediate attention"
-        />
-
-        <StatCard
-          label="Resolutions Submitted"
-          value={stats.completedCount}
-          icon={FileCheck2}
-          accentColor="emerald"
-          description="Submitted or completed redressals"
-        />
-      </div>
-
-      {/* 5. Staff Workload & Capacity Card */}
-      <StaffWorkloadCard
-        profile={profile}
-        onRefresh={onRefresh}
-        variant="banner"
-      />
 
       {/* 1. Grievances Requiring Immediate Attention (Compact Alert Section) */}
       {attentionItems.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <h3 className="text-xs sm:text-sm font-bold text-amber-900">
-                Grievances Requiring Immediate Attention (
-                {attentionItems.length})
+        <div className="flex-1 flex flex-col rounded-2xl border border-amber-200 bg-amber-50/50 p-3 sm:p-3.5 space-y-2 min-h-0">
+          <div className="flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+              <h3 className="text-xs font-bold text-amber-900">
+                Grievances Requiring Immediate Attention
               </h3>
             </div>
-            <span className="text-[11px] font-semibold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full">
-              {attentionItems.length === 1
-                ? "1 grievance requires action"
-                : `${attentionItems.length} grievances require action`}
-            </span>
-          </div>
-
-          {/* Compact summary rows without redundant card duplication */}
-          <div className="divide-y divide-amber-200/60 rounded-xl bg-white border border-amber-200/90 shadow-2xs overflow-hidden">
-            {attentionPagination.paginatedItems.map((item) => {
-              const isBreached = item.slaStatus === "BREACHED";
-              const isAtRisk = item.slaStatus === "AT_RISK";
-              const isCritical = item.priority === "CRITICAL";
-              const isReopened =
-                item.reopenCount > 0 || item.status === "REOPENED";
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 hover:bg-amber-50/30 transition gap-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-[#0F766E]">
-                        {item.grievanceNumber}
-                      </span>
-                      <span className="text-slate-300">—</span>
-                      <span className="text-xs font-semibold text-slate-900 truncate">
-                        {item.title}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px]">
-                      {isCritical && (
-                        <span className="font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                          Critical Priority
-                        </span>
-                      )}
-                      {isBreached && (
-                        <span className="font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                          SLA Breached
-                        </span>
-                      )}
-                      {isAtRisk && !isBreached && (
-                        <span className="font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                          SLA At Risk ({item.slaTimeLeft})
-                        </span>
-                      )}
-                      {isReopened && (
-                        <span className="font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
-                          Reopened
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onExamine(item)}
-                    className="shrink-0 self-start sm:self-center px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300/80 rounded-lg transition cursor-pointer"
-                  >
-                    Examine
-                  </button>
-                </div>
-              );
-            })}
-
-            {attentionPagination.totalCount > attentionPagination.pageSize && (
-              <Pagination
-                currentPage={attentionPagination.currentPage}
-                totalPages={attentionPagination.totalPages}
-                totalCount={attentionPagination.totalCount}
-                pageSize={attentionPagination.pageSize}
-                onPageChange={attentionPagination.onPageChange}
-                compact
-                itemLabel="attention cases"
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 8. 2-Column Split (~65% / ~35%): items-start prevents vertical stretch */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* 2. Left Column (~65%): My Active Grievances as a compact TABLE */}
-        <div className="lg:col-span-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Inbox className="w-4 h-4 text-blue-600" />
-              My Active Grievances
-            </h3>
             <button
               type="button"
               onClick={() => onSwitchView("queue")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-[#0F766E] hover:text-[#115E59] transition cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition cursor-pointer"
             >
-              <span>View All Grievances ({activeCases.length})</span>
+              <span>View All Grievances</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {activeCases.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center space-y-2">
-              <Inbox className="w-8 h-8 text-slate-300 mx-auto" />
-              <p className="text-xs font-medium text-slate-600">
-                No active grievances currently in your queue.
-              </p>
-              <p className="text-[11px] text-slate-400">
-                New grievances assigned by your Department Head will appear
-                here.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    <SortableTh
-                      field="title"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3.5"
-                    >
-                      Grievance
-                    </SortableTh>
-                    <SortableTh
-                      field="categoryName"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3"
-                    >
-                      Category
-                    </SortableTh>
-                    <SortableTh
-                      field="priority"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3"
-                    >
-                      Priority
-                    </SortableTh>
-                    <SortableTh
-                      field="status"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3"
-                    >
-                      Status
-                    </SortableTh>
-                    <SortableTh
-                      field="slaStatus"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3"
-                    >
-                      SLA
-                    </SortableTh>
-                    <SortableTh
-                      field="updatedAt"
-                      currentSort={sortState}
-                      onSort={handleSort}
-                      className="py-3 px-3"
-                    >
-                      Last Updated
-                    </SortableTh>
-                    <th className="py-3 px-3.5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-150">
-                  {activeCasesPagination.paginatedItems.map((grievance) => {
-                    const isBreached = grievance.slaStatus === "BREACHED";
-                    const isAtRisk = grievance.slaStatus === "AT_RISK";
-                    const isReopened =
-                      grievance.reopenCount > 0 ||
-                      grievance.status === "REOPENED";
-                    const isAssigned = grievance.status === "ASSIGNED";
-                    const isInProgress = grievance.status === "IN_PROGRESS";
+          <div className="flex-1 overflow-auto rounded-xl bg-white border border-amber-200/90 shadow-2xs">
+            <table className="w-full text-left text-xs border-collapse relative">
+              <thead className="sticky top-0 z-10 bg-amber-50/50">
+                <tr className="border-b border-amber-200/60 text-[11px] font-bold uppercase tracking-wider text-slate-900 shadow-sm">
+                  {renderSortHeader("Grievance ID", "grievanceNumber")}
+                  {renderSortHeader("Summary", "title")}
+                  {renderSortHeader("Reopened Status", "reopenCount")}
+                  {renderSortHeader("Category", "category")}
+                  {renderSortHeader("Priority", "priority")}
+                  {renderSortHeader("Status", "status")}
+                  {renderSortHeader("SLA", "slaStatus")}
+                  {renderSortHeader("Last Updated", "lastUpdated")}
+                  <th className="py-2 px-3 whitespace-nowrap text-right text-slate-900 font-bold">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-200/60">
+                {sortedAttentionItems.map((item) => {
+                  const isBreached = item.slaStatus === "BREACHED";
+                  const isAtRisk = item.slaStatus === "AT_RISK";
+                  const isReopened =
+                    item.reopenCount > 0 || item.status === "REOPENED";
 
-                    return (
-                      <tr
-                        key={grievance.id}
-                        className="hover:bg-slate-50/70 transition"
-                      >
-                        {/* Grievance Number + Subject */}
-                        <td className="py-3 px-3.5 max-w-[220px]">
-                          <span className="font-mono text-xs font-bold text-[#0F766E] block">
-                            {grievance.grievanceNumber}
-                          </span>
-                          <span
-                            className="font-medium text-slate-900 line-clamp-1 mt-0.5"
-                            title={grievance.title}
-                          >
-                            {grievance.title}
-                          </span>
-                          {isReopened && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-purple-700 mt-0.5">
-                              <RotateCcw className="w-2.5 h-2.5" /> Reopened
-                            </span>
-                          )}
-                        </td>
-
-                        {/* Category */}
-                        <td className="py-3 px-3 text-slate-600 truncate max-w-[130px]">
-                          {grievance.category}
-                        </td>
-
-                        {/* Priority */}
-                        <td className="py-3 px-3">
-                          <span
-                            className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              grievance.priority === "CRITICAL"
-                                ? "bg-rose-100 text-rose-800"
-                                : grievance.priority === "HIGH"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {grievance.priority}
-                          </span>
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3 px-3">
-                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
-                            {isInProgress
-                              ? "In Progress"
-                              : isAssigned
-                                ? "Assigned"
-                                : grievance.status}
-                          </span>
-                        </td>
-
-                        {/* SLA */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isBreached
-                                ? "bg-rose-100 text-rose-700"
-                                : isAtRisk
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            <Clock className="w-2.5 h-2.5" />
-                            {isBreached
-                              ? "SLA Breached"
-                              : isAtRisk
-                                ? "SLA At Risk"
-                                : "Within SLA"}
-                          </span>
-                        </td>
-
-                        {/* Last Updated */}
-                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap text-[11px]">
-                          {grievance.assignedAt || grievance.submittedAt}
-                        </td>
-
-                        {/* Action Buttons */}
-                        <td className="py-3 px-3.5 text-right whitespace-nowrap">
-                          <ActionMenu
-                            widthClass="w-44"
-                            items={[
-                              {
-                                label: "Examine",
-                                icon: (
-                                  <Eye className="h-3.5 w-3.5 text-slate-500" />
-                                ),
-                                onClick: () => onExamine(grievance),
-                              },
-                              ...(isAssigned
-                                ? [
-                                    {
-                                      label: "Investigate",
-                                      icon: (
-                                        <FileSearch className="h-3.5 w-3.5 text-[#0F766E]" />
-                                      ),
-                                      variant: "primary" as const,
-                                      onClick: () =>
-                                        onSwitchView("investigation"),
-                                    },
-                                  ]
-                                : []),
-                              ...(isInProgress
-                                ? [
-                                    {
-                                      label: "Continue Investigation",
-                                      icon: (
-                                        <FileSearch className="h-3.5 w-3.5 text-[#0F766E]" />
-                                      ),
-                                      variant: "primary" as const,
-                                      onClick: () =>
-                                        onSwitchView("investigation"),
-                                    },
-                                  ]
-                                : []),
-                            ]}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              <Pagination
-                currentPage={activeCasesPagination.currentPage}
-                totalPages={activeCasesPagination.totalPages}
-                totalCount={activeCasesPagination.totalCount}
-                pageSize={activeCasesPagination.pageSize}
-                onPageChange={activeCasesPagination.onPageChange}
-                onPageSizeChange={activeCasesPagination.onPageSizeChange}
-                pageSizeOptions={activeCasesPagination.pageSizeOptions}
-                itemLabel="active grievances"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* 5. Right Column (~35%): Compact + Scrollable Activity Stream */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-600" />
-              Activity Stream
-            </h3>
-            <span className="text-[11px] font-medium text-slate-400">
-              Latest Activity
-            </span>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-3">
-            {!data?.recentActivity || data.recentActivity.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-6">
-                No recent activity recorded for your assigned cases.
-              </p>
-            ) : (
-              /* Internal scrollable container with max-height ~360px */
-              <div className="max-h-[360px] overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
-                {data.recentActivity.slice(0, 3).map((log: StaffAuditItem) => (
-                  <div
-                    key={log.id}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1 text-xs"
-                  >
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-slate-800">
-                        {log.action}
-                      </span>
-                      <span className="text-slate-400 text-[10px]">
-                        {log.relativeTime || log.timestamp}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 line-clamp-2">
-                      {log.details}
-                    </p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      {log.actor ? <span>By {log.actor}</span> : <span />}
-                      {log.grievanceNumber && (
-                        <span className="font-mono font-medium text-slate-500">
-                          {log.grievanceNumber}
+                  return (
+                    <tr key={item.id} className="hover:bg-amber-50/30 transition">
+                      {/* Grievance Number */}
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <span className="font-mono text-xs font-bold text-slate-900">
+                          {item.grievanceNumber}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      </td>
 
-            {/* 6. Link to dedicated /staff/activity page */}
-            <div className="pt-2 border-t border-slate-100 text-right">
-              <Link
-                href="/staff/activity"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:text-[#115E59] transition cursor-pointer"
-              >
-                <span>View All Activity</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+                      {/* Summary */}
+                      <td className="py-2 px-3 max-w-[180px]">
+                        <span
+                          className="font-medium text-slate-900 line-clamp-1"
+                          title={item.title}
+                        >
+                          {item.title}
+                        </span>
+                      </td>
+
+                      {/* Reopened Status */}
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        {isReopened ? (
+                          <span className="inline-flex items-center gap-0.5 text-xs font-bold text-slate-900">
+                            Reopened {item.reopenCount > 0 ? `(${item.reopenCount})` : ""}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* Category */}
+                      <td className="py-2 px-3 text-slate-900 truncate max-w-[130px]">
+                        {item.category}
+                      </td>
+
+                      {/* Priority */}
+                      <td className="py-2 px-3">
+                        <span className="text-xs font-medium text-slate-900">
+                          {item.priority === "CRITICAL"
+                            ? "Critical"
+                            : item.priority === "HIGH"
+                              ? "High"
+                              : item.priority === "MEDIUM"
+                                ? "Medium"
+                                : "Low"}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-2 px-3">
+                        {item.status === "WAITING_ON_USER" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Waiting on User
+                          </span>
+                        ) : (
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                            {item.status === "IN_PROGRESS"
+                              ? "In Progress"
+                              : item.status === "ASSIGNED"
+                                ? "Assigned"
+                                : item.status === "UNDER_REVIEW"
+                                  ? "Under Review"
+                                  : item.status}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* SLA */}
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-900">
+                          <Clock className="w-3 h-3 text-slate-900" />
+                          {isBreached
+                            ? "SLA Breached"
+                            : isAtRisk
+                              ? "SLA At Risk"
+                              : "Within SLA"}
+                        </span>
+                      </td>
+
+                      {/* Last Updated */}
+                      <td className="py-2 px-3 text-slate-900 whitespace-nowrap text-xs">
+                        {item.assignedAt || item.submittedAt}
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                        <ActionMenu
+                          widthClass="w-36"
+                          items={[
+                            {
+                              label: "Examine",
+                              icon: (
+                                <Eye className="h-3.5 w-3.5 text-slate-500" />
+                              ),
+                              onClick: () => onExamine(item),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
+      )}
+
     </div>
   );
 }

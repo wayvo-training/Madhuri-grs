@@ -84,7 +84,7 @@ export function ResolutionView({
             <h2 className="text-base font-bold text-slate-900">
               Resolution Desk
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-500">
               Formulate formal findings, record corrective actions, submit
               resolution reports for Department Head approval, and manage
               completed redressals.
@@ -95,7 +95,7 @@ export function ResolutionView({
         {/* 4 Stat Boxes */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700">
-            <span className="text-[11px] font-semibold text-slate-500 block dark:text-slate-400">
+            <span className="text-[13px] font-semibold text-slate-500 block dark:text-slate-400">
               Pending Resolution
             </span>
             <span className="text-lg font-bold text-slate-900 dark:text-slate-200">
@@ -104,7 +104,7 @@ export function ResolutionView({
           </div>
 
           <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 dark:bg-blue-500/20 dark:border-blue-500/30">
-            <span className="text-[11px] font-semibold text-blue-700 block dark:text-blue-400">
+            <span className="text-[13px] font-semibold text-blue-700 block dark:text-blue-400">
               Under HOD Review
             </span>
             <span className="text-lg font-bold text-blue-900 dark:text-blue-300">
@@ -113,7 +113,7 @@ export function ResolutionView({
           </div>
 
           <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100 dark:bg-purple-500/20 dark:border-purple-500/30">
-            <span className="text-[11px] font-semibold text-purple-700 block dark:text-purple-400">
+            <span className="text-[13px] font-semibold text-purple-700 block dark:text-purple-400">
               Reopened Cases
             </span>
             <span className="text-lg font-bold text-purple-900 dark:text-purple-300">
@@ -122,7 +122,7 @@ export function ResolutionView({
           </div>
 
           <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 dark:bg-emerald-500/20 dark:border-emerald-500/30">
-            <span className="text-[11px] font-semibold text-emerald-700 block dark:text-emerald-400">
+            <span className="text-[13px] font-semibold text-emerald-700 block dark:text-emerald-400">
               Completed Redressals
             </span>
             <span className="text-lg font-bold text-emerald-900 dark:text-emerald-300">
@@ -136,7 +136,6 @@ export function ResolutionView({
       {reopenedCases.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-purple-700" />
             <h3 className="text-sm font-bold text-purple-900">
               Reopened Grievances Requiring Revised Resolution (
               {reopenedCases.length})
@@ -144,16 +143,24 @@ export function ResolutionView({
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-purple-200 bg-white shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-purple-100 bg-purple-50/60 text-[11px] font-bold uppercase tracking-wider text-purple-800">
+                <tr className="border-b border-purple-100 dark:border-slate-800/60 bg-purple-50/60 text-[13px] font-bold uppercase tracking-wider text-slate-900">
+                  <SortableTh
+                    field="grievanceNumber"
+                    currentSort={reopenSort}
+                    onSort={handleReopenSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance ID
+                  </SortableTh>
                   <SortableTh
                     field="title"
                     currentSort={reopenSort}
                     onSort={handleReopenSort}
                     className="py-3 px-3.5"
                   >
-                    Grievance
+                    Summary
                   </SortableTh>
                   <SortableTh
                     field="category"
@@ -190,37 +197,44 @@ export function ResolutionView({
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-100">
+              <tbody className="divide-y divide-purple-100 dark:divide-slate-800/60">
                 {reopenedPagination.paginatedItems.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-purple-50/30 transition"
                   >
-                    <td className="py-3 px-3.5 max-w-[240px]">
-                      <span className="font-mono text-xs font-bold text-[#0F766E] block">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="font-mono text-sm font-bold text-slate-900">
                         {item.grievanceNumber}
                       </span>
-                      <span className="font-medium text-slate-900 line-clamp-1 mt-0.5">
+                    </td>
+                    <td className="py-3 px-3.5 max-w-[200px]">
+                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-600 truncate max-w-[140px]">
+                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
                       {item.category}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                        {item.priority}
+                      <span className="text-[13px] font-medium text-slate-900">
+                        {item.priority === "CRITICAL"
+                          ? "Critical"
+                          : item.priority === "HIGH"
+                            ? "High"
+                            : item.priority === "MEDIUM"
+                              ? "Medium"
+                              : "Low"}
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                        <RotateCcw className="w-2.5 h-2.5" /> Reopened (
-                        {item.reopenCount})
+                      <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
+                        Reopened ({item.reopenCount})
                       </span>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700">
-                        <Clock className="w-2.5 h-2.5 text-slate-400" />
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
+                        <Clock className="w-3.5 h-3.5 text-slate-900" />
                         {item.slaTimeLeft}
                       </span>
                     </td>
@@ -273,21 +287,29 @@ export function ResolutionView({
         </h3>
 
         {pendingDrafting.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-500">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
             No grievances currently awaiting resolution formulation.
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/80 text-[13px] font-bold uppercase tracking-wider text-slate-500">
+                  <SortableTh
+                    field="grievanceNumber"
+                    currentSort={draftSort}
+                    onSort={handleDraftSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance ID
+                  </SortableTh>
                   <SortableTh
                     field="title"
                     currentSort={draftSort}
                     onSort={handleDraftSort}
                     className="py-3 px-3.5"
                   >
-                    Grievance
+                    Summary
                   </SortableTh>
                   <SortableTh
                     field="category"
@@ -324,27 +346,35 @@ export function ResolutionView({
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150">
+              <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">
                 {pendingDraftingPagination.paginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-3.5 max-w-[240px]">
-                      <span className="font-mono text-xs font-bold text-[#0F766E] block">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="font-mono text-sm font-bold text-slate-900">
                         {item.grievanceNumber}
                       </span>
-                      <span className="font-medium text-slate-900 line-clamp-1 mt-0.5">
+                    </td>
+                    <td className="py-3 px-3.5 max-w-[200px]">
+                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-600 truncate max-w-[140px]">
+                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
                       {item.category}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                        {item.priority}
+                      <span className="text-[13px] font-medium text-slate-900">
+                        {item.priority === "CRITICAL"
+                          ? "Critical"
+                          : item.priority === "HIGH"
+                            ? "High"
+                            : item.priority === "MEDIUM"
+                              ? "Medium"
+                              : "Low"}
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                      <span className="text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
                         {item.status === "IN_PROGRESS"
                           ? "In Progress"
                           : item.status === "ASSIGNED"
@@ -353,8 +383,8 @@ export function ResolutionView({
                       </span>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-700">
-                        <Clock className="w-2.5 h-2.5 text-slate-400" />
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
+                        <Clock className="w-3.5 h-3.5 text-slate-900" />
                         {item.slaTimeLeft}
                       </span>
                     </td>
@@ -409,16 +439,24 @@ export function ResolutionView({
           </h3>
 
           <div className="overflow-x-auto rounded-xl border border-blue-200 bg-white shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-blue-100 bg-blue-50/60 text-[11px] font-bold uppercase tracking-wider text-blue-900">
+                <tr className="border-b border-blue-100 dark:border-slate-800/60 bg-blue-50/60 text-[13px] font-bold uppercase tracking-wider text-blue-900">
+                  <SortableTh
+                    field="grievanceNumber"
+                    currentSort={reviewSort}
+                    onSort={handleReviewSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance ID
+                  </SortableTh>
                   <SortableTh
                     field="title"
                     currentSort={reviewSort}
                     onSort={handleReviewSort}
                     className="py-3 px-3.5"
                   >
-                    Grievance
+                    Summary
                   </SortableTh>
                   <SortableTh
                     field="category"
@@ -447,26 +485,28 @@ export function ResolutionView({
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-blue-100">
+              <tbody className="divide-y divide-blue-100 dark:divide-slate-800/60">
                 {pendingReviewPagination.paginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-blue-50/30 transition">
-                    <td className="py-3 px-3.5 max-w-[240px]">
-                      <span className="font-mono text-xs font-bold text-[#0F766E] block">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="font-mono text-sm font-bold text-slate-900">
                         {item.grievanceNumber}
                       </span>
-                      <span className="font-medium text-slate-900 line-clamp-1 mt-0.5">
+                    </td>
+                    <td className="py-3 px-3.5 max-w-[200px]">
+                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-600 truncate max-w-[140px]">
+                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
                       {item.category}
                     </td>
                     <td className="py-3 px-3">
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full border border-blue-200">
+                      <span className="text-[13px] font-bold text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full border border-blue-200">
                         Under Review
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-500 whitespace-nowrap text-[11px]">
+                    <td className="py-3 px-3 text-slate-900 whitespace-nowrap text-[13px]">
                       {item.submittedResolution?.submittedAt
                         ? new Date(
                             item.submittedResolution.submittedAt,

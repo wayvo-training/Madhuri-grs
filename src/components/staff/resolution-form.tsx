@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, FileCheck2, Send, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileCheck2, FileText, Paperclip, Send, X } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
@@ -30,13 +30,13 @@ export function ResolutionForm({
   const [actionTaken, setActionTaken] = useState("");
   const [outcome, setOutcome] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitForm = async (isDraft: boolean) => {
     if (
       !problemSummary.trim() ||
       !findings.trim() ||
@@ -44,7 +44,7 @@ export function ResolutionForm({
       !outcome.trim()
     ) {
       setErrorMsg(
-        "Please complete all required fields before submitting the resolution.",
+        "Please complete all required fields before submitting.",
       );
       return;
     }
@@ -52,7 +52,17 @@ export function ResolutionForm({
     setIsSubmitting(true);
     setErrorMsg(null);
 
+    const attachmentPayloads = supportingFiles.map((f) => ({
+      id: String(Date.now() + Math.random()),
+      name: f.name,
+      size: `${(f.size / 1024).toFixed(1)} KB`,
+      type: f.type || "Document",
+      path: `/uploads/${f.name}`,
+      uploadedAt: new Date().toISOString(),
+    }));
+
     try {
+      let resId: string | undefined = undefined;
       if (onSubmit) {
         await onSubmit(grievance.id, {
           problemSummary: problemSummary.trim(),
@@ -60,6 +70,8 @@ export function ResolutionForm({
           actionTaken: actionTaken.trim(),
           outcome: outcome.trim(),
           evidence: evidence.trim() || null,
+          attachments: attachmentPayloads,
+          isDraft,
         });
       } else {
         const res = await fetch("/api/staff/resolutions", {
@@ -72,6 +84,13 @@ export function ResolutionForm({
             actionTaken: actionTaken.trim(),
             outcome: outcome.trim(),
             evidence: evidence.trim() || undefined,
+            attachments: attachmentPayloads.map((att) => ({
+              fileName: att.name,
+              fileType: att.type,
+              fileSize: Number.parseFloat(att.size) * 1024,
+              filePath: att.path,
+            })),
+            isDraft,
           }),
         });
 
@@ -79,6 +98,7 @@ export function ResolutionForm({
         if (!res.ok || !data.success) {
           throw new Error(data.message || "Failed to submit resolution");
         }
+        resId = data.resolutionId;
       }
 
       onResolutionSuccess?.(grievance.id);
@@ -95,10 +115,10 @@ export function ResolutionForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150 space-y-4 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
           <div className="flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
               <FileCheck2 className="h-5 w-5" />
@@ -115,20 +135,21 @@ export function ResolutionForm({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {errorMsg && (
-          <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+          {errorMsg && (
+            <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* Problem Summary */}
           <div className="space-y-1">
             <label
@@ -224,40 +245,119 @@ export function ResolutionForm({
             />
           </div>
 
+          {/* Supporting Documents (Optional) */}
+          <div className="space-y-1.5">
+            <label className="font-semibold text-slate-700 flex items-center justify-between">
+              <span>Supporting Documents (Optional)</span>
+              <span className="text-[11px] font-normal text-slate-500">PDF, Images, Sheets, Docs</span>
+            </label>
+
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer">
+                <Paperclip className="h-3.5 w-3.5 text-[#0F766E]" />
+                <span>Attach Document</span>
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const newFiles = Array.from(e.target.files);
+                      setSupportingFiles((prev) => [...prev, ...newFiles]);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <span className="text-[11px] text-slate-500">
+                {supportingFiles.length === 0
+                  ? "No documents attached"
+                  : `${supportingFiles.length} file(s) attached`}
+              </span>
+            </div>
+
+            {supportingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {supportingFiles.map((file, idx) => (
+                  <span
+                    key={`${file.name}-${idx}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/70 px-2.5 py-1 text-[11px] font-medium text-teal-900 shadow-2xs"
+                  >
+                    <FileText className="h-3 w-3 text-[#0F766E]" />
+                    <span className="max-w-[180px] truncate" title={file.name}>
+                      {file.name}
+                    </span>
+                    <span className="text-[10px] text-teal-700">
+                      ({(file.size / 1024).toFixed(0)} KB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSupportingFiles((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="rounded-xs p-0.5 text-teal-600 hover:bg-teal-100 hover:text-teal-900 transition cursor-pointer"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+
+
           {/* Governance Notice */}
           <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-[11px] text-slate-600 flex items-start gap-2 leading-relaxed">
             <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <span>
-              Submitting this resolution transitions the grievance to{" "}
-              <strong>UNDER_REVIEW</strong>. Your Department Head and the
-              Complainant will be notified to review and confirm the proposed
-              resolution according to governance policy.
+              {grievance.reopenCount >= 3 ? (
+                <>
+                  Submitting this resolution transitions the grievance to{" "}
+                  <strong>UNDER_REVIEW</strong>. Your Department Head and the
+                  Employee will be notified to review and confirm the proposed
+                  resolution according to governance policy.
+                </>
+              ) : (
+                <>
+                  Submitting this resolution will finalize and resolve the grievance directly, notifying the Employee.
+                </>
+              )}
             </span>
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
-            >
-              <Send className="h-3.5 w-3.5" />
-              <span>
-                {isSubmitting
-                  ? "Submitting Resolution..."
-                  : "Submit Resolution for Review"}
-              </span>
-            </button>
-          </div>
-        </form>
+        {/* Footer Actions (Pinned) */}
+        <div className="flex items-center justify-end gap-2.5 p-4 border-t border-slate-100 bg-slate-50/80 rounded-b-2xl shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => submitForm(true)}
+            disabled={isSubmitting}
+            className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50 cursor-pointer"
+          >
+            Save as Draft
+          </button>
+          <button
+            type="button"
+            onClick={() => submitForm(false)}
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
+          >
+            <Send className="h-3.5 w-3.5" />
+            <span>
+              {isSubmitting
+                ? "Submitting..."
+                : grievance.reopenCount >= 3 ? "Submit for Review" : "Resolve Grievance"}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

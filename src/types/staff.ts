@@ -24,9 +24,8 @@ export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
 export type StaffView =
   | "overview"
   | "queue"
-  | "investigation"
-  | "resolutions"
-  | "profile";
+  | "profile"
+  | "activity";
 
 export interface StaffKpiStats {
   activeGrievances: number;
@@ -71,9 +70,11 @@ export interface StaffResolutionData {
   actionTaken: string;
   outcome: string;
   evidence?: string | null;
+  attachments?: StaffAttachmentItem[];
   submittedAt?: string;
   reviewStatus?: "PENDING" | "ACCEPTED" | "REJECTED";
   rejectionReason?: string | null;
+  isDraft?: boolean;
 }
 
 export interface StaffInvolvedDepartment {

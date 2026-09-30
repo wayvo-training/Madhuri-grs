@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   CheckCircle2,
   FileText,
   LayoutDashboard,
@@ -62,30 +63,16 @@ export function StaffViewSwitcher({
       badgeVariant: activeCount >= maxCapacity ? "danger" : "default",
     },
     {
-      id: "investigation",
-      label: "Investigation",
-      icon: Search,
-      badge: invCount,
-      badgeVariant:
-        stats && stats.slaBreached > 0
-          ? "danger"
-          : stats && stats.slaAtRisk > 0
-            ? "warning"
-            : "default",
-    },
-    {
-      id: "resolutions",
-      label: "Resolution",
-      icon: CheckCircle2,
-      badge: resCount,
-      badgeVariant: "default",
-    },
-    {
       id: "profile",
       label: "Capacity",
       icon: User,
       badge: `${activeWorkload}/${maxCapacity}`,
       badgeVariant: activeWorkload >= maxCapacity ? "danger" : "neutral",
+    },
+    {
+      id: "activity",
+      label: "Activity",
+      icon: Activity,
     },
   ];
 

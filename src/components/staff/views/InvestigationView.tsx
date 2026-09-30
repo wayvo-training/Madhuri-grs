@@ -55,7 +55,7 @@ export function InvestigationView({
             <h2 className="text-base font-bold text-slate-900">
               Investigation &amp; Inquiry Desk
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-500">
               Conduct inquiries, collate evidence, request additional user
               information, log internal case notes, and record investigation
               findings before drafting formal resolution.
@@ -64,9 +64,9 @@ export function InvestigationView({
         </div>
 
         {/* Quick Protocol Guidelines */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100 text-sm text-slate-600">
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ECFEFF] text-[11px] font-bold text-[#0E7490] dark:bg-cyan-500/20 dark:text-cyan-400">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#ECFEFF] text-[13px] font-bold text-[#0E7490] dark:bg-cyan-500/20 dark:text-cyan-400">
               1
             </span>
             <span>
@@ -74,7 +74,7 @@ export function InvestigationView({
             </span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[13px] font-bold text-amber-800 dark:bg-amber-500/20 dark:text-amber-400">
               2
             </span>
             <span>
@@ -82,7 +82,7 @@ export function InvestigationView({
             </span>
           </div>
           <div className="flex items-start gap-2">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-[11px] font-bold text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-100 text-[13px] font-bold text-purple-800 dark:bg-purple-500/20 dark:text-purple-400">
               3
             </span>
             <span>
@@ -99,7 +99,7 @@ export function InvestigationView({
             <FileSearch className="w-4 h-4 text-blue-600" />
             Active Investigation Cases ({activeCases.length})
           </h3>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-sm text-slate-500 font-medium">
             Max Active Limit: 10
           </span>
         </div>
@@ -110,7 +110,7 @@ export function InvestigationView({
             <h4 className="text-sm font-semibold text-slate-700">
               No Cases Currently Under Investigation
             </h4>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
+            <p className="text-sm text-slate-500 max-w-md mx-auto">
               All assigned grievances are up to date. Once new grievances are
               routed and assigned to your desk, you can begin inquiries and log
               case notes here.
@@ -118,17 +118,28 @@ export function InvestigationView({
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/80 text-[13px] font-bold uppercase tracking-wider text-slate-500">
+                  <SortableTh
+                    field="grievanceNumber"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3 px-3.5"
+                  >
+                    Grievance ID
+                  </SortableTh>
                   <SortableTh
                     field="title"
                     currentSort={sortState}
                     onSort={handleSort}
                     className="py-3 px-3.5"
                   >
-                    Grievance
+                    Summary
                   </SortableTh>
+                  <th className="py-3 px-3 text-slate-500 font-bold uppercase tracking-wider text-[13px] text-left">
+                    Reopened Status
+                  </th>
                   <SortableTh
                     field="category"
                     currentSort={sortState}
@@ -165,7 +176,7 @@ export function InvestigationView({
                   <th className="py-3 px-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-150">
+              <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">
                 {pagination.paginatedItems.map((item) => {
                   const isBreached = item.slaStatus === "BREACHED";
                   const isAtRisk = item.slaStatus === "AT_RISK";
@@ -186,66 +197,73 @@ export function InvestigationView({
                       key={item.id}
                       className="hover:bg-slate-50/70 transition"
                     >
-                      {/* Grievance Column: Number + Title */}
-                      <td className="py-3 px-3.5 max-w-[240px]">
-                        <span className="font-mono text-xs font-bold text-[#0F766E] block">
+                      {/* Grievance Number */}
+                      <td className="py-3 px-3.5 whitespace-nowrap">
+                        <span className="font-mono text-sm font-bold text-slate-900">
                           {item.grievanceNumber}
                         </span>
+                      </td>
+
+                      {/* Summary */}
+                      <td className="py-3 px-3.5 max-w-[200px]">
                         <span
-                          className="font-medium text-slate-900 line-clamp-1 mt-0.5"
+                          className="font-medium text-slate-900 line-clamp-2"
                           title={item.title}
                         >
                           {item.title}
                         </span>
-                        {isReopened && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-purple-700 mt-0.5">
-                            <RotateCcw className="w-2.5 h-2.5" /> Reopened (
-                            {item.reopenCount})
+                      </td>
+
+                      {/* Reopened Status */}
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {isReopened ? (
+                          <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900">
+                            Reopened ({item.reopenCount})
                           </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">-</span>
                         )}
                       </td>
 
                       {/* Category */}
-                      <td className="py-3 px-3 text-slate-600 truncate max-w-[140px]">
+                      <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
                         {item.category}
                       </td>
 
                       {/* Priority */}
                       <td className="py-3 px-3">
-                        <span
-                          className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            item.priority === "CRITICAL"
-                              ? "bg-rose-100 text-rose-800"
-                              : item.priority === "HIGH"
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {item.priority}
+                        <span className="text-[13px] font-medium text-slate-900">
+                          {item.priority === "CRITICAL"
+                            ? "Critical"
+                            : item.priority === "HIGH"
+                              ? "High"
+                              : item.priority === "MEDIUM"
+                                ? "Medium"
+                                : "Low"}
                         </span>
                       </td>
 
                       {/* Investigation Status */}
                       <td className="py-3 px-3">
                         {isWaitingOnUser ? (
-                          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Waiting on User
                           </span>
                         ) : isInProgress ? (
-                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
                             In Progress
                           </span>
                         ) : isAssigned ? (
-                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
                             Assigned
                           </span>
                         ) : isUnderReview ? (
-                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
                             Under Review
                           </span>
                         ) : (
-                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                             {item.status}
                           </span>
                         )}
@@ -253,16 +271,8 @@ export function InvestigationView({
 
                       {/* SLA */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            isBreached
-                              ? "bg-rose-100 text-rose-700"
-                              : isAtRisk
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          <Clock className="w-2.5 h-2.5" />
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
+                          <Clock className="w-3.5 h-3.5 text-slate-900" />
                           {isBreached
                             ? "SLA Breached"
                             : isAtRisk
@@ -272,7 +282,7 @@ export function InvestigationView({
                       </td>
 
                       {/* Last Activity */}
-                      <td className="py-3 px-3 text-slate-500 whitespace-nowrap text-[11px]">
+                      <td className="py-3 px-3 text-slate-900 whitespace-nowrap text-[13px]">
                         {lastActivityTime}
                       </td>
 
@@ -281,29 +291,8 @@ export function InvestigationView({
                         <ActionMenu
                           widthClass="w-52"
                           items={[
-                            ...(isAssigned
-                              ? [
-                                  {
-                                    label: "Start Investigation",
-                                    icon: (
-                                      <FileSearch className="h-3.5 w-3.5 text-[#0F766E]" />
-                                    ),
-                                    variant: "primary" as const,
-                                    onClick: () => onExamine(item, "statement"),
-                                  },
-                                ]
-                              : []),
                             ...(isInProgress
                               ? [
-                                  {
-                                    label: "Continue Investigation",
-                                    icon: (
-                                      <FileSearch className="h-3.5 w-3.5 text-[#0F766E]" />
-                                    ),
-                                    variant: "primary" as const,
-                                    onClick: () =>
-                                      onExamine(item, "investigation"),
-                                  },
                                   {
                                     label: "Submit Resolution",
                                     icon: (

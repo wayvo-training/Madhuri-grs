@@ -55,6 +55,7 @@ export async function GET(
           orderBy: { submitted_at: "desc" },
           take: 1,
           include: {
+            attachments: true,
             resolution_reviews: {
               orderBy: { reviewed_at: "desc" },
               take: 1,
@@ -104,7 +105,7 @@ export async function GET(
     const submitter = grievance.users;
     const submitterFullName = submitter
       ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
-      : "Complainant";
+      : "Employee";
 
     const latestResolution = grievance.resolutions?.[0];
     const latestReview = latestResolution?.resolution_reviews?.[0];
@@ -125,19 +126,31 @@ export async function GET(
           | "REJECTED"
           | undefined,
         rejectionReason: latestReview?.rejection_reason || null,
+        attachments: (latestResolution.attachments || []).map((att) => ({
+          id: att.attachment_id.toString(),
+          name: att.file_name,
+          size: att.file_size
+            ? `${Math.round(Number(att.file_size) / 1024)} KB`
+            : "Document",
+          type: att.file_type,
+          path: att.file_path,
+          uploadedAt: att.uploaded_at.toISOString(),
+        })),
       };
     }
 
-    const attachments = (grievance.attachments || []).map((att) => ({
-      id: att.attachment_id.toString(),
-      name: att.file_name,
-      size: att.file_size
-        ? `${Math.round(Number(att.file_size) / 1024)} KB`
-        : "Document",
-      type: att.file_type,
-      path: att.file_path,
-      uploadedAt: formatRelativeTime(grievance.created_at),
-    }));
+    const attachments = (grievance.attachments || [])
+      .filter((att) => !att.resolution_id)
+      .map((att) => ({
+        id: att.attachment_id.toString(),
+        name: att.file_name,
+        size: att.file_size
+          ? `${Math.round(Number(att.file_size) / 1024)} KB`
+          : "Document",
+        type: att.file_type,
+        path: att.file_path,
+        uploadedAt: formatRelativeTime(grievance.created_at),
+      }));
 
     // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
     const internalNotes: StaffInternalNote[] = (grievance.audit_logs || [])

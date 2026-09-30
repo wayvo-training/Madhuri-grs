@@ -2,17 +2,14 @@
 
 import { ArrowLeft, FileCheck2, Play, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  PriorityBadge,
-  SlaBadge,
-  StatusBadge,
-} from "@/components/dashboard/badges";
+import { StatusBadge } from "@/components/dashboard/badges";
 import {
   buildGmailComposeUrl,
   buildStaffComplainantInquiryEmail,
   buildStaffHodEscalationEmail,
 } from "@/lib/email";
 import type { StaffGrievanceItem } from "@/types/staff";
+import { ActivityTab } from "./details/ActivityTab";
 import { CollaborationTab } from "./details/CollaborationTab";
 import { InvestigationTab } from "./details/InvestigationTab";
 import { ResolutionTab } from "./details/ResolutionTab";
@@ -23,7 +20,7 @@ interface GrievanceDetailsProps {
   staffName: string;
   staffEmail: string;
   isOpen?: boolean;
-  initialTab?: "statement" | "investigation" | "resolution";
+  initialTab?: "statement" | "investigation" | "resolution" | "activity";
   hodEmail?: string;
   hodName?: string;
   onClose: () => void;
@@ -73,9 +70,10 @@ export function GrievanceDetails({
   onOpenDocumentPreview,
 }: GrievanceDetailsProps) {
   const [activeTab, setActiveTab] = useState<
-    "statement" | "investigation" | "resolution" | "collaboration"
+    "statement" | "investigation" | "resolution" | "collaboration" | "activity"
   >(initialTab);
   const [isStarting, setIsStarting] = useState(false);
+  const [autoOpenRequestModal, setAutoOpenRequestModal] = useState(false);
 
   useEffect(() => {
     if (initialTab) {
@@ -147,7 +145,7 @@ export function GrievanceDetails({
               <span>Back to My Grievances Queue</span>
             </button>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-[#0F766E] bg-[#F0FDFA] px-2.5 py-1 rounded-md border border-teal-200/80">
+              <span className="font-mono text-sm font-bold text-slate-900">
                 {grievance.grievanceNumber}
               </span>
               <button
@@ -170,19 +168,25 @@ export function GrievanceDetails({
                 <span className="text-slate-300">&bull;</span>
                 <span>{grievance.subcategory}</span>
                 <span className="text-slate-300">&bull;</span>
-                <PriorityBadge priority={grievance.priority} />
+                <span className="text-slate-900 font-semibold">{grievance.priority === 'CRITICAL' ? 'Critical' : grievance.priority === 'HIGH' ? 'High' : grievance.priority === 'MEDIUM' ? 'Medium' : 'Low'}</span>
                 <StatusBadge status={grievance.status} />
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {grievance.reopenCount > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs font-bold text-amber-800">
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reopened ({grievance.reopenCount})</span>
+                <span className="text-xs font-bold text-slate-900">
+                  Reopened ({grievance.reopenCount})
                 </span>
               )}
-              <SlaBadge status={grievance.slaStatus} />
+              {grievance.slaStatus && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                  {grievance.slaStatus === 'BREACHED' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" />}
+                  {grievance.slaStatus === 'AT_RISK' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                  {grievance.slaStatus === 'ON_TRACK' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                  {grievance.slaStatus === 'BREACHED' ? 'SLA Breached' : grievance.slaStatus === 'AT_RISK' ? 'SLA At Risk' : 'Within SLA'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -209,7 +213,18 @@ export function GrievanceDetails({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <span>Investigation Trail</span>
+            <span>Investigation</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("activity")}
+            className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+              activeTab === "activity"
+                ? "border-[#0F766E] text-[#0F766E]"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <span>Activities</span>
             <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[10px] text-slate-600">
               {grievance.auditTrail?.length || 0}
             </span>
@@ -253,6 +268,11 @@ export function GrievanceDetails({
               hodEscalationUrl={hodEscalationUrl}
               hodName={hodName}
               onOpenDocumentPreview={onOpenDocumentPreview}
+              isWaitingOnUser={isWaitingOnUser}
+              isInProgress={isInProgress}
+              autoOpenRequestModal={autoOpenRequestModal}
+              onResumeInvestigation={onResumeInvestigation}
+              onRequestAdditionalInfo={onRequestAdditionalInfo}
             />
           )}
 
@@ -263,16 +283,19 @@ export function GrievanceDetails({
           {activeTab === "investigation" && (
             <InvestigationTab
               grievance={grievance}
-              isWaitingOnUser={isWaitingOnUser}
-              isInProgress={isInProgress}
-              onResumeInvestigation={onResumeInvestigation}
-              onRequestAdditionalInfo={onRequestAdditionalInfo}
               onAddNote={onAddNote}
             />
           )}
 
+          {activeTab === "activity" && (
+            <ActivityTab grievance={grievance} />
+          )}
+
           {activeTab === "resolution" && (
-            <ResolutionTab grievance={grievance} />
+            <ResolutionTab
+              grievance={grievance}
+              onOpenDocumentPreview={onOpenDocumentPreview}
+            />
           )}
         </div>
 

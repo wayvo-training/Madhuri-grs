@@ -19,6 +19,12 @@ export async function POST(request: Request) {
       actionTaken: string;
       outcome: string;
       evidence?: string;
+      attachments?: Array<{
+        fileName: string;
+        filePath?: string;
+        fileType?: string;
+        fileSize?: number;
+      }>;
     };
 
     const {
@@ -88,11 +94,32 @@ export async function POST(request: Request) {
       },
     });
 
-    // 2. Transition grievance status to UNDER_REVIEW
+    // Save optional supporting resolution attachments
+    if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+      for (const att of body.attachments) {
+        if (att.fileName) {
+          await prisma.attachments.create({
+            data: {
+              grievance_id: gId,
+              resolution_id: resolution.resolution_id,
+              file_name: att.fileName,
+              file_path: att.filePath || `/uploads/${att.fileName}`,
+              file_type: att.fileType || "application/octet-stream",
+              file_size: att.fileSize ? BigInt(att.fileSize) : BigInt(1024),
+              uploaded_by: staffId,
+            },
+          });
+        }
+      }
+    }
+
+    const requiresHeadReview = grievance.reopen_count >= 3;
+
+    // 2. Transition grievance status
     await prisma.grievances.update({
       where: { grievance_id: gId },
       data: {
-        status: "UNDER_REVIEW",
+        status: requiresHeadReview ? "UNDER_REVIEW" : "RESOLVED",
       },
     });
 
@@ -110,8 +137,8 @@ export async function POST(request: Request) {
       },
     });
 
-    // 4. Notify Department Head for resolution review
-    if (departmentId) {
+    // 4. Notification
+    if (requiresHeadReview && departmentId) {
       const hod = await prisma.users.findFirst({
         where: {
           department_id: departmentId,
@@ -127,14 +154,25 @@ export async function POST(request: Request) {
           grievanceId: gId,
           type: "RESOLUTION_SUBMITTED",
           title: `Resolution Submitted: ${grievance.grievance_number}`,
-          message: `Staff member has submitted a formal resolution proposal for grievance ${grievance.grievance_number}. Review is required.`,
+          message: `Staff member has submitted a formal resolution proposal for grievance ${grievance.grievance_number}. Review is required due to multiple reopenings.`,
         });
       }
+    } else if (!requiresHeadReview) {
+      // Notify the complainant directly since no head review is required
+      await NotificationService.send({
+        userId: grievance.submitted_by,
+        grievanceId: gId,
+        type: "RESOLUTION_SUBMITTED",
+        title: `Resolution Submitted: ${grievance.grievance_number}`,
+        message: `A resolution has been provided for your grievance ${grievance.grievance_number}. Please review it.`,
+      });
     }
 
     return NextResponse.json({
       success: true,
-      message: "Resolution submitted successfully and awaiting review",
+      message: requiresHeadReview
+        ? "Resolution submitted successfully and awaiting head review due to multiple reopenings"
+        : "Resolution sent to complainant successfully",
       resolutionId: resolution.resolution_id.toString(),
     });
   } catch (error) {

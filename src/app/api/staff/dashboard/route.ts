@@ -82,6 +82,7 @@ export async function GET(request: Request) {
               orderBy: { submitted_at: "desc" as const },
               take: 1,
               include: {
+                attachments: true,
                 resolution_reviews: {
                   orderBy: { reviewed_at: "desc" as const },
                   take: 1,
@@ -137,7 +138,7 @@ export async function GET(request: Request) {
       const submitter = g.users;
       const submitterFullName = submitter
         ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
-        : "Complainant";
+        : "Employee";
 
       const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
 
@@ -160,19 +161,31 @@ export async function GET(request: Request) {
             | "REJECTED"
             | undefined,
           rejectionReason: latestReview?.rejection_reason || null,
+          attachments: (latestResolution.attachments || []).map((att) => ({
+            id: att.attachment_id.toString(),
+            name: att.file_name,
+            size: att.file_size
+              ? `${Math.round(Number(att.file_size) / 1024)} KB`
+              : "Document",
+            type: att.file_type,
+            path: att.file_path,
+            uploadedAt: att.uploaded_at.toISOString(),
+          })),
         };
       }
 
-      const attachments = (g.attachments || []).map((att) => ({
-        id: att.attachment_id.toString(),
-        name: att.file_name,
-        size: att.file_size
-          ? `${Math.round(Number(att.file_size) / 1024)} KB`
-          : "Document",
-        type: att.file_type,
-        path: att.file_path,
-        uploadedAt: formatRelativeTime(g.created_at),
-      }));
+      const attachments = (g.attachments || [])
+        .filter((att) => !att.resolution_id)
+        .map((att) => ({
+          id: att.attachment_id.toString(),
+          name: att.file_name,
+          size: att.file_size
+            ? `${Math.round(Number(att.file_size) / 1024)} KB`
+            : "Document",
+          type: att.file_type,
+          path: att.file_path,
+          uploadedAt: formatRelativeTime(g.created_at),
+        }));
 
       // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
       const internalNotes: StaffInternalNote[] = (g.audit_logs || [])

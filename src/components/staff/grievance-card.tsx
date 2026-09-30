@@ -63,7 +63,6 @@ export function GrievanceCard({
         <div className="flex items-center gap-2">
           {isReopened && (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">
-              <RotateCcw className="h-3 w-3" />
               <span>Reopened ({grievance.reopenCount})</span>
             </span>
           )}

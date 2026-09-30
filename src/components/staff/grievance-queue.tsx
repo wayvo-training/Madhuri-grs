@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/custom-select";
 import { Pagination } from "@/components/ui/pagination";
 import { Popover } from "@/components/ui/popover";
+import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
 import type {
   StaffGrievanceItem,
@@ -63,7 +64,15 @@ export function GrievanceQueue({
     isReopenedOnly: false,
   });
 
-  const [sortBy, setSortBy] = useState<"sla" | "newest" | "priority">("sla");
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
+
+  const handleSort = (field: string, direction: SortState["direction"]) => {
+    setSortState({ field, direction });
+  };
+
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
   // Comprehensive master categories: combines system taxonomy + assigned grievances
@@ -178,14 +187,6 @@ export function GrievanceQueue({
     [categories],
   );
 
-  const sortOptions: CustomSelectOption[] = useMemo(
-    () => [
-      { value: "sla", label: "SLA Urgency (Highest first)" },
-      { value: "priority", label: "Priority (Critical first)" },
-      { value: "newest", label: "Creation Date (Newest first)" },
-    ],
-    [],
-  );
 
   // Filtered grievances
   const filteredGrievances = useMemo(() => {
@@ -255,28 +256,35 @@ export function GrievanceQueue({
 
   // Sorted list
   const sortedGrievances = useMemo(() => {
-    return [...filteredGrievances].sort((a, b) => {
-      if (sortBy === "sla") {
-        // Breached first, then highest percentage used
-        if (a.slaStatus === "BREACHED" && b.slaStatus !== "BREACHED") return -1;
-        if (b.slaStatus === "BREACHED" && a.slaStatus !== "BREACHED") return 1;
-        return b.slaConsumptionPercent - a.slaConsumptionPercent;
+    const list = [...filteredGrievances];
+    if (!sortState.field || !sortState.direction) {
+      return list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    }
+
+    return list.sort((a, b) => {
+      let aVal: any = a[sortState.field as keyof typeof a];
+      let bVal: any = b[sortState.field as keyof typeof b];
+
+      // specific comparisons
+      if (sortState.field === "submittedAt") {
+        aVal = new Date(a.submittedAt).getTime();
+        bVal = new Date(b.submittedAt).getTime();
       }
-      if (sortBy === "priority") {
-        const score: Record<StaffPriority, number> = {
-          CRITICAL: 4,
-          HIGH: 3,
-          MEDIUM: 2,
-          LOW: 1,
-        };
-        return (score[b.priority] || 0) - (score[a.priority] || 0);
+      if (sortState.field === "priority") {
+        const score: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+        aVal = score[a.priority as string] || 0;
+        bVal = score[b.priority as string] || 0;
       }
-      // Newest
-      return (
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-      );
+      if (sortState.field === "slaConsumptionPercent") {
+        if (a.slaStatus === "BREACHED" && b.slaStatus !== "BREACHED") return sortState.direction === "asc" ? 1 : -1;
+        if (b.slaStatus === "BREACHED" && a.slaStatus !== "BREACHED") return sortState.direction === "asc" ? -1 : 1;
+      }
+
+      if (aVal < bVal) return sortState.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortState.direction === "asc" ? 1 : -1;
+      return 0;
     });
-  }, [filteredGrievances, sortBy]);
+  }, [filteredGrievances, sortState]);
 
   const pagination = usePagination(sortedGrievances, {
     initialPageSize: 10,
@@ -287,7 +295,7 @@ export function GrievanceQueue({
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset to page 1 on filter/tab/sort changes
   useEffect(() => {
     pagination.resetPage();
-  }, [filters, activeTab, sortBy, pagination.resetPage]);
+  }, [filters, activeTab, sortState, pagination.resetPage]);
 
   const hasActiveFilters =
     activeTab !== "all" ||
@@ -328,7 +336,7 @@ export function GrievanceQueue({
               onChange={(e) =>
                 setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))
               }
-              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400"
+              className="w-full pl-9 pr-4 py-2 text-sm sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400"
             />
             {filters.searchQuery && (
               <button
@@ -343,26 +351,10 @@ export function GrievanceQueue({
             )}
           </div>
 
-          {/* Sort Selector */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-slate-500 font-medium hidden sm:block">
-              Sort:
-            </span>
-            <CustomSelect
-              value={sortBy}
-              onChange={(val) =>
-                setSortBy(val as "sla" | "newest" | "priority")
-              }
-              options={sortOptions}
-              align="right"
-              size="sm"
-              className="w-56"
-            />
-          </div>
         </div>
 
         {/* Filter Dropdown Menus Row */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+        <div className="flex flex-wrap items-center gap-2 pt-1 text-sm">
           <div className="flex items-center gap-1.5 text-slate-500 mr-1">
             <Filter className="w-3.5 h-3.5" />
             <span className="font-medium">Filter by:</span>
@@ -398,7 +390,7 @@ export function GrievanceQueue({
               <button
                 type="button"
                 onClick={() => setIsFilterMenuOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 h-8 text-xs font-semibold transition cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 h-8 text-sm font-semibold transition cursor-pointer ${
                   appliedFiltersCount > 0
                     ? "border-[#0E7490] bg-[#ECFEFF] text-[#0E7490]"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -407,7 +399,7 @@ export function GrievanceQueue({
                 <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
                 <span>Filters</span>
                 {appliedFiltersCount > 0 && (
-                  <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#0E7490] text-[10px] font-bold text-white">
+                  <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#0E7490] text-[13px] font-bold text-white">
                     {appliedFiltersCount}
                   </span>
                 )}
@@ -424,7 +416,7 @@ export function GrievanceQueue({
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-1.5">
                   <Filter className="w-3.5 h-3.5 text-[#0E7490]" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <span className="text-sm font-bold uppercase tracking-wider text-slate-700">
                     Filter Grievances
                   </span>
                 </div>
@@ -439,7 +431,7 @@ export function GrievanceQueue({
                         category: "ALL",
                       }));
                     }}
-                    className="text-xs font-medium text-rose-600 hover:text-rose-700 cursor-pointer"
+                    className="text-sm font-medium text-rose-600 hover:text-rose-700 cursor-pointer"
                   >
                     Reset all
                   </button>
@@ -448,7 +440,7 @@ export function GrievanceQueue({
 
               {/* 1. Priority */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-semibold text-slate-700">
                   Priority
                 </span>
                 <CustomSelect
@@ -468,7 +460,7 @@ export function GrievanceQueue({
 
               {/* 2. Status */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-semibold text-slate-700">
                   Status
                 </span>
                 <CustomSelect
@@ -488,7 +480,7 @@ export function GrievanceQueue({
 
               {/* 3. Category */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-sm font-semibold text-slate-700">
                   Category
                 </span>
                 <CustomSelect
@@ -511,7 +503,7 @@ export function GrievanceQueue({
                 <button
                   type="button"
                   onClick={() => setIsFilterMenuOpen(false)}
-                  className="rounded-lg bg-[#0E7490] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#155E75] transition cursor-pointer"
+                  className="rounded-lg bg-[#0E7490] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#155E75] transition cursor-pointer"
                 >
                   Done
                 </button>
@@ -521,7 +513,7 @@ export function GrievanceQueue({
 
           {/* Active Filter Chips */}
           {filters.priority !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
               Priority: {filters.priority}
               <button
                 type="button"
@@ -537,7 +529,7 @@ export function GrievanceQueue({
           )}
 
           {filters.status !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
               Status:{" "}
               {statusOptions.find((s) => s.value === filters.status)?.label ||
                 filters.status}
@@ -555,7 +547,7 @@ export function GrievanceQueue({
           )}
 
           {filters.category !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs max-w-[220px]">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs max-w-[220px]">
               <span className="truncate">Category: {filters.category}</span>
               <button
                 type="button"
@@ -594,7 +586,7 @@ export function GrievanceQueue({
             <h4 className="text-sm font-semibold text-slate-800">
               No assigned grievances found
             </h4>
-            <p className="text-xs text-slate-500 mt-0.5 max-w-sm mx-auto">
+            <p className="text-sm text-slate-500 mt-0.5 max-w-sm mx-auto">
               {hasActiveFilters
                 ? "No grievances match your current search or filter criteria. Try clearing filters."
                 : "You currently have no grievances assigned under this queue view."}
@@ -604,7 +596,7 @@ export function GrievanceQueue({
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
             >
               Reset Filters
             </button>
@@ -612,19 +604,21 @@ export function GrievanceQueue({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                <th className="py-3 px-3.5">Grievance</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-3">Priority</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-3">SLA</th>
-                <th className="py-3 px-3">Last Updated</th>
-                <th className="py-3 px-3.5 text-right">Action</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/80 text-[13px] font-bold uppercase tracking-wider text-slate-900">
+                <SortableTh field="grievanceNumber" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Grievance ID</SortableTh>
+                <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Summary</SortableTh>
+                <th className="py-3 px-3 text-slate-900 font-bold uppercase tracking-wider text-[13px] text-left">Reopened Status</th>
+                <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Category</SortableTh>
+                <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Priority</SortableTh>
+                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Status</SortableTh>
+                <SortableTh field="slaConsumptionPercent" currentSort={sortState} onSort={handleSort} className="py-3 px-3">SLA</SortableTh>
+                <SortableTh field="submittedAt" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Last Updated</SortableTh>
+                <th className="py-3 px-3.5 text-right text-slate-900 font-bold">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-150">
+            <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">
               {pagination.paginatedItems.map((item) => {
                 const isBreached = item.slaStatus === "BREACHED";
                 const isAtRisk = item.slaStatus === "AT_RISK";
@@ -634,54 +628,61 @@ export function GrievanceQueue({
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                    {/* Grievance Number + Subject */}
-                    <td className="py-3 px-3.5 max-w-[240px]">
-                      <span className="font-mono text-xs font-bold text-[#0F766E] block">
+                    {/* Grievance Number */}
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className="font-mono text-sm font-bold text-slate-900">
                         {item.grievanceNumber}
                       </span>
+                    </td>
+
+                    {/* Summary */}
+                    <td className="py-3 px-3.5 max-w-[200px]">
                       <span
-                        className="font-medium text-slate-900 line-clamp-1 mt-0.5"
+                        className="font-medium text-slate-900 line-clamp-2"
                         title={item.title}
                       >
                         {item.title}
                       </span>
-                      {isReopened && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-purple-700 mt-0.5">
-                          <RotateCcw className="w-2.5 h-2.5" /> Reopened (
-                          {item.reopenCount})
+                    </td>
+
+                    {/* Reopened Status */}
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      {isReopened ? (
+                        <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900">
+                          Reopened ({item.reopenCount})
                         </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">-</span>
                       )}
                     </td>
 
                     {/* Category */}
-                    <td className="py-3 px-3 text-slate-600 truncate max-w-[140px]">
+                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
                       {item.category}
                     </td>
 
                     {/* Priority */}
                     <td className="py-3 px-3">
-                      <span
-                        className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          item.priority === "CRITICAL"
-                            ? "bg-rose-100 text-rose-800"
-                            : item.priority === "HIGH"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {item.priority}
+                      <span className="text-[13px] font-medium text-slate-900">
+                        {item.priority === "CRITICAL"
+                          ? "Critical"
+                          : item.priority === "HIGH"
+                            ? "High"
+                            : item.priority === "MEDIUM"
+                              ? "Medium"
+                              : "Low"}
                       </span>
                     </td>
 
                     {/* Status */}
                     <td className="py-3 px-3">
                       {item.status === "WAITING_ON_USER" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Waiting on User
                         </span>
                       ) : (
-                        <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
                           {item.status === "IN_PROGRESS"
                             ? "In Progress"
                             : item.status === "ASSIGNED"
@@ -695,16 +696,8 @@ export function GrievanceQueue({
 
                     {/* SLA */}
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isBreached
-                            ? "bg-rose-100 text-rose-700"
-                            : isAtRisk
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-emerald-50 text-emerald-700"
-                        }`}
-                      >
-                        <Clock className="w-2.5 h-2.5" />
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
+                        <Clock className="w-3.5 h-3.5 text-slate-900" />
                         {isBreached
                           ? "SLA Breached"
                           : isAtRisk
@@ -714,7 +707,7 @@ export function GrievanceQueue({
                     </td>
 
                     {/* Last Updated */}
-                    <td className="py-3 px-3 text-slate-500 whitespace-nowrap text-[11px]">
+                    <td className="py-3 px-3 text-slate-900 whitespace-nowrap text-[13px]">
                       {item.assignedAt || item.submittedAt}
                     </td>
 
