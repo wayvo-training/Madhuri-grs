@@ -88,8 +88,8 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  /* GRS Primary Teal Blue (#0E7490) */
-  --primary: #0e7490;
+  /* GRS Primary Teal Blue */
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
 
   /* Secondary - Soft Neutral Slate */
@@ -100,9 +100,9 @@
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
 
-  /* Accent - Light Teal Blue (#ECFEFF) with Primary Teal Blue text */
-  --accent: #ecfeff;
-  --accent-foreground: #0e7490;
+  /* Accent - Light Teal Blue */
+  --accent: #f0fdfa;
+  --accent-foreground: #0f766e;
 
   --destructive: #ef4444;
 
@@ -112,10 +112,10 @@
   --ring: #0e7490;
 
   /* Defined Enterprise Teal Blue Palette */
-  --teal-primary: #0e7490;
-  --teal-deep: #155e75;
-  --teal-accent: #06b6d4;
-  --teal-light: #ecfeff;
+  --teal-primary: #0f766e;
+  --teal-deep: #115e59;
+  --teal-accent: #14b8a6;
+  --teal-light: #f0fdfa;
 
   /* Chart Colors - Primary Teal Blue, Deep Teal Blue, Accent Cyan, Amber, Slate */
   --chart-1: #0e7490;
@@ -127,14 +127,14 @@
   --radius: 0.75rem;
 
   /* Sidebar - Deep Teal Blue Ground with Teal Blue Elements */
-  --sidebar: #155e75;
+  --sidebar: #115e59;
   --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #0e7490;
+  --sidebar-primary: #0f766e;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #0e7490;
+  --sidebar-accent: #0f766e;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #06b6d4;
+  --sidebar-ring: #14b8a6;
 }
 
 .dark {

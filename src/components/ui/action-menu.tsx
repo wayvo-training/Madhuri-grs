@@ -35,17 +35,17 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className={`rounded-xl p-1 ${widthClass}`}
+        className={`rounded-xl p-1 bg-white border border-slate-200 shadow-sm ${widthClass}`}
       >
         {items.map((item) => {
           let variantClass =
-            "text-slate-700 focus:bg-[#F0FDFA] focus:text-[#0F766E]";
+            "text-slate-700 focus:bg-slate-50 focus:text-slate-900";
           if (item.variant === "primary")
-            variantClass = "text-[#0F766E] font-semibold focus:bg-[#F0FDFA]";
+            variantClass = "text-[#0F766E] font-semibold focus:bg-slate-50 focus:text-[#0F766E]";
           if (item.variant === "warning")
-            variantClass = "text-amber-700 focus:bg-amber-50";
+            variantClass = "text-amber-700 focus:bg-slate-50 focus:text-amber-900";
           if (item.variant === "danger")
-            variantClass = "text-rose-700 focus:bg-rose-50";
+            variantClass = "text-rose-700 focus:bg-slate-50 focus:text-rose-900";
 
           const alignmentClass = item.icon
             ? "text-left"

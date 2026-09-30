@@ -17,6 +17,17 @@ export function useTableSort<T>(items: T[], defaultSort?: SortState) {
       let valA: any = a[sortState.field as keyof T] || "";
       let valB: any = b[sortState.field as keyof T] || "";
 
+      // Special handling for date fields
+      if (sortState.field === "timestamp" || sortState.field === "createdAt") {
+        const timeA = new Date(valA).getTime();
+        const timeB = new Date(valB).getTime();
+        if (!isNaN(timeA) && !isNaN(timeB)) {
+          if (timeA < timeB) return sortState.direction === "asc" ? -1 : 1;
+          if (timeA > timeB) return sortState.direction === "asc" ? 1 : -1;
+          return 0;
+        }
+      }
+
       if (typeof valA === "string") valA = valA.toLowerCase();
       if (typeof valB === "string") valB = valB.toLowerCase();
 
