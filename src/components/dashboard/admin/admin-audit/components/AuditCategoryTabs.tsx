@@ -1,9 +1,10 @@
 "use client";
 
 import {
-  AdvancedFilterBar,
-  type FilterCondition,
-} from "@/components/filters/advanced-filter-bar";
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
 import type { TabCategory } from "@/types/admin/audit";
 
@@ -20,53 +21,34 @@ export function AuditCategoryTabs({
   searchQuery,
   onSearchChange,
 }: AuditCategoryTabsProps) {
-  // Exclude "ALL" from options — empty filter = all
-  const filterFields = [
-    {
-      id: "category",
-      label: "Activity Type",
-      type: "select" as const,
-      options: CATEGORY_TABS.filter((t) => t.id !== "ALL").map((tab) => ({
-        label: tab.label,
-        value: tab.id,
-      })),
-    },
+  const filterFields: SearchFieldDef[] = [
+    { id: "timestamp", label: "Timestamp", type: "date" },
+    { id: "user", label: "User", type: "text" },
+    { id: "action", label: "Action", type: "text" },
+    { id: "entity_type", label: "Target Entity", type: "text" },
+    { id: "ip_address", label: "IP Address", type: "text" },
   ];
 
-  const currentFilters: FilterCondition[] =
-    activeTab !== "ALL"
-      ? [
-          {
-            id: `cat-${activeTab}`,
-            fieldId: "category",
-            operator: "Is" as const,
-            value: activeTab,
-          },
-        ]
-      : [];
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    onSearchChange("");
+    let newSearch = "";
 
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
-    // Audit API supports a single category param — take the latest selection
-    // If the user deselects all, revert to "ALL"
-    const catConds = newFilters.filter((f) => f.fieldId === "category");
-    if (catConds.length === 0) {
-      onTabChange("ALL");
-    } else {
-      // Keep only the most recently added (last) selection
-      const latest = catConds[catConds.length - 1];
-      onTabChange(latest.value as TabCategory);
-    }
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      
+      // All field searches collapse into the unified text search for this view
+      newSearch = valArray[0] || newSearch;
+    });
+
+    if (newSearch) onSearchChange(newSearch);
   };
 
   return (
-    <div className="mt-5 border-t border-slate-100 pt-4">
-      <AdvancedFilterBar
+    <div className="mt-4">
+      <AdvancedTableSearch
         fields={filterFields}
-        filters={currentFilters}
-        onFiltersChange={handleFiltersChange}
-        search={searchQuery}
-        onSearchChange={onSearchChange}
-        placeholder="Search actor, email, IP, action..."
+        onSearch={handleSearchChange}
+        className="w-full"
       />
     </div>
   );

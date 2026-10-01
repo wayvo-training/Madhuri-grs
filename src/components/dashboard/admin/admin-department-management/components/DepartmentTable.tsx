@@ -14,9 +14,10 @@ import {
   AdminToolbarAction,
 } from "@/components/dashboard/admin/admin-shared";
 import {
-  AdvancedFilterBar,
-  type FilterCondition,
-} from "@/components/filters/advanced-filter-bar";
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
@@ -79,32 +80,62 @@ export function DepartmentTable({
     (d) => d.status === "INACTIVE",
   ).length;
 
-  // Build filter fields for the AdvancedFilterBar
-  const filterFields = [
+  // Build filter fields for the AdvancedTableSearch
+  const filterFields: SearchFieldDef[] = [
     {
-      id: "status",
-      label: "Status",
-      type: "select" as const,
-      options: [
-        { label: `Active (${activeCount})`, value: "ACTIVE" },
-        { label: `Inactive (${inactiveCount})`, value: "INACTIVE" },
-      ],
+      id: "search",
+      label: "Search",
+      type: "text",
+    },
+    {
+      id: "id",
+      label: "ID",
+      type: "text",
+    },
+    {
+      id: "department",
+      label: "Department",
+      type: "select",
+      options: departments.map(d => ({ label: d.department_name, value: d.department_name })),
+    },
+    {
+      id: "staff",
+      label: "Staff",
+      type: "text",
+    },
+    {
+      id: "cases",
+      label: "Cases",
+      type: "text",
     },
   ];
 
-  // Sync AdvancedFilterBar conditions → statusFilter prop (multi-select)
-  const currentFilters: FilterCondition[] = statusFilter.map((s) => ({
-    id: `status-${s}`,
-    fieldId: "status",
-    operator: "Is" as const,
-    value: s,
-  }));
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    onStatusFilterChange([]);
+    onSearchQueryChange("");
 
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
-    const selected = newFilters
-      .filter((f) => f.fieldId === "status")
-      .map((f) => f.value);
-    onStatusFilterChange(selected);
+    let newStatus: string[] = [];
+    let newSearch = "";
+
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+
+      if (condition.field === "status") {
+        newStatus.push(...valArray);
+      }
+      if (
+        condition.field === "search" ||
+        condition.field === "id" ||
+        condition.field === "department" ||
+        condition.field === "staff" ||
+        condition.field === "cases"
+      ) {
+        newSearch = valArray[0] || newSearch;
+      }
+    });
+
+    if (newStatus.length > 0) onStatusFilterChange(newStatus);
+    if (newSearch) onSearchQueryChange(newSearch);
   };
 
   return (
@@ -112,39 +143,41 @@ export function DepartmentTable({
       id="departments"
       className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs"
     >
-      <div className="border-b border-slate-100 dark:border-slate-800 pb-5">
+      <div>
         <AdminPanelHeader
           title="Department Workload & Governance"
-          description="Enterprise divisions configured for automated routing, status governance, and workload resolution."
           action={
-            <AdminToolbarAction onClick={onOpenCreateModal}>
-              <Plus className="h-3.5 w-3.5" />
-              <span>New Department</span>
-            </AdminToolbarAction>
+            <div className="flex flex-wrap items-center gap-3 ml-4 sm:ml-8 lg:ml-12 w-full justify-end sm:w-auto flex-1">
+              <div className="w-full sm:w-[600px] max-w-[50vw]">
+                <AdvancedTableSearch
+                  fields={filterFields}
+                  onSearch={handleSearchChange}
+                  className="w-full"
+                />
+              </div>
+              <AdminToolbarAction onClick={onOpenCreateModal}>
+                <Plus className="h-3.5 w-3.5" />
+                <span>New Department</span>
+              </AdminToolbarAction>
+            </div>
           }
         />
       </div>
 
-      {/* Controls Bar: Search + Filter Icon */}
-      <div className="mt-5 mb-5">
-        <AdvancedFilterBar
-          fields={filterFields}
-          filters={currentFilters}
-          onFiltersChange={handleFiltersChange}
-          search={searchQuery}
-          onSearchChange={onSearchQueryChange}
-          placeholder="Search department..."
-        />
-      </div>
 
       {/* Departments Table */}
       <div className="mt-5 overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
-              <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                S.No
-              </th>
+              <SortableTh
+                field="department_id"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                ID
+              </SortableTh>
               <SortableTh
                 field="department_name"
                 currentSort={sortState}
@@ -231,9 +264,9 @@ export function DepartmentTable({
                         : "bg-slate-50/40 dark:bg-slate-800/40 opacity-80"
                     }`}
                   >
-                    {/* S.No */}
+                    {/* ID */}
                     <td className="whitespace-nowrap px-4 py-3.5 text-sm font-medium text-slate-500">
-                      {(currentPage - 1) * pageSize + index + 1}
+                      {dept.department_id}
                     </td>
 
                     {/* Department Name */}

@@ -2,11 +2,12 @@
 
 import { ShieldCheck } from "lucide-react";
 import { AdminEmptyState } from "@/components/dashboard/admin/admin-shared";
-import {
-  AdvancedFilterBar,
-  type FilterCondition,
-} from "@/components/filters/advanced-filter-bar";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
@@ -33,6 +34,7 @@ interface RolesTabProps {
   togglingRoleId: string | null;
   onEditRole: (role: SerializedRole) => void;
   onToggleRoleStatus: (role: SerializedRole) => void;
+  onTabChange: (tab: "roles" | "permissions") => void;
 }
 
 export function RolesTab({
@@ -53,17 +55,21 @@ export function RolesTab({
   togglingRoleId,
   onEditRole,
   onToggleRoleStatus,
+  onTabChange,
 }: RolesTabProps) {
   const { sortState, handleSort, sortedItems } = useTableSort(paginatedRoles, {
     field: "role_name",
     direction: "asc",
   });
 
-  const filterFields = [
+  const filterFields: SearchFieldDef[] = [
+    { id: "role_name", label: "Role Name", type: "text" },
+    { id: "description", label: "Description", type: "text" },
+    { id: "permissions", label: "Permissions", type: "text" },
     {
       id: "status",
       label: "Status",
-      type: "select" as const,
+      type: "select",
       options: [
         { label: `Active (${activeRolesCount})`, value: "ACTIVE" },
         { label: `Inactive (${inactiveRolesCount})`, value: "INACTIVE" },
@@ -71,31 +77,35 @@ export function RolesTab({
     },
   ];
 
-  const currentFilters: FilterCondition[] = roleStatusFilter.map((s) => ({
-    id: `status-${s}`,
-    fieldId: "status",
-    operator: "Is" as const,
-    value: s,
-  }));
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    onRoleStatusChange([]);
+    onRoleSearchChange("");
+    
+    let newStatus: string[] = [];
+    let newSearch = "";
 
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
-    const selected = newFilters
-      .filter((f) => f.fieldId === "status")
-      .map((f) => f.value);
-    onRoleStatusChange(selected);
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+
+      if (condition.field === "status") {
+        newStatus.push(...valArray);
+      } else {
+        newSearch = valArray[0] || newSearch;
+      }
+    });
+
+    if (newStatus.length > 0) onRoleStatusChange(newStatus);
+    if (newSearch) onRoleSearchChange(newSearch);
   };
 
   return (
     <div className="p-5 sm:p-6">
       {/* Controls Bar */}
       <div className="mb-5">
-        <AdvancedFilterBar
+        <AdvancedTableSearch
           fields={filterFields}
-          filters={currentFilters}
-          onFiltersChange={handleFiltersChange}
-          search={roleSearch}
-          onSearchChange={onRoleSearchChange}
-          placeholder="Search roles..."
+          onSearch={handleSearchChange}
+          className="w-full"
         />
       </div>
 

@@ -3,11 +3,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
-  RefreshCcw,
   RotateCcw,
-  Route,
-  ShieldAlert,
-  Timer,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -17,9 +13,10 @@ import {
   AdminPanelHeader,
 } from "@/components/dashboard/admin/admin-shared";
 import {
-  AdvancedFilterBar,
-  type FilterCondition,
-} from "@/components/filters/advanced-filter-bar";
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
 import { useRuleActions } from "@/hooks/admin/master-rules/useRuleActions";
 import { useRuleFilters } from "@/hooks/admin/master-rules/useRuleFilters";
@@ -50,7 +47,6 @@ export function AdminMasterRules({
     setSlaPolicies,
     reopenPolicies,
     setReopenPolicies,
-    activePriorityRules,
     defaultPriorityRule,
   } = useAdminRules({
     initialPriorityRules,
@@ -157,28 +153,16 @@ export function AdminMasterRules({
     return () => document.removeEventListener("mousedown", handleGlobalClick);
   }, []);
 
-  const getTabStyle = (tabId: string) => {
-    if (activeTab === tabId) {
-      return "bg-[#0F766E] text-white shadow-sm ring-1 ring-[#0F766E]";
-    }
-    return "bg-white text-slate-600 border border-slate-200 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-200 shadow-2xs";
-  };
-
-  const getTabIconColor = (tabId: string) => {
-    if (activeTab === tabId) return "text-white";
-    return "text-slate-400 group-hover:text-teal-600";
-  };
-
   return (
     <div
       id="master-configuration"
       className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
     >
       {/* Header */}
-      <div className="border-b border-slate-100 p-5 sm:p-6">
+      <div className="pt-5 sm:pt-6 px-5 sm:px-6">
         <AdminPanelHeader
           title="Master Governance & Rules"
-          description="Configure and manage the rules that govern grievance priority, department routing, SLA policies and reopen handling."
+
           action={
             <div className="flex items-center gap-3 shrink-0 flex-nowrap">
               {activeTab === "priority" && (
@@ -236,71 +220,6 @@ export function AdminMasterRules({
             </div>
           }
         />
-        <div className="mt-6 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("priority");
-              handleResetFilters();
-            }}
-            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("priority")}`}
-          >
-            <ShieldAlert
-              className={`h-4 w-4 transition-colors ${getTabIconColor("priority")}`}
-            />
-            <span>
-              Priority Rules{" "}
-              {priorityRules.length > 0 && `(${priorityRules.length})`}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("routing");
-              handleResetFilters();
-            }}
-            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("routing")}`}
-          >
-            <Route
-              className={`h-4 w-4 transition-colors ${getTabIconColor("routing")}`}
-            />
-            <span>
-              Routing Rules{" "}
-              {routingRules.length > 0 && `(${routingRules.length})`}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("sla");
-              handleResetFilters();
-            }}
-            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("sla")}`}
-          >
-            <Timer
-              className={`h-4 w-4 transition-colors ${getTabIconColor("sla")}`}
-            />
-            <span>
-              SLA Policies {slaPolicies.length > 0 && `(${slaPolicies.length})`}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab("reopen");
-              handleResetFilters();
-            }}
-            className={`group inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 whitespace-nowrap ${getTabStyle("reopen")}`}
-          >
-            <RefreshCcw
-              className={`h-4 w-4 transition-colors ${getTabIconColor("reopen")}`}
-            />
-            <span>
-              Reopen Policy{" "}
-              {reopenPolicies.length > 0 && `(${reopenPolicies.length})`}
-            </span>
-          </button>
-        </div>
       </div>
 
       {/* Global Action Banner */}
@@ -330,63 +249,122 @@ export function AdminMasterRules({
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex items-center gap-4 border-b border-slate-100 px-5 sm:px-6 mt-2 overflow-x-auto no-scrollbar">
+        {[
+          { id: "priority", label: "Priority Rules", count: priorityRules.length },
+          { id: "routing", label: "Routing Rules", count: routingRules.length },
+          { id: "sla", label: "SLA Policies", count: slaPolicies.length },
+          { id: "reopen", label: "Reopen Policy", count: reopenPolicies.length },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => {
+              setActiveTab(tab.id as any);
+              handleResetFilters();
+            }}
+            className={`flex items-center gap-2 px-2 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+              activeTab === tab.id
+                ? "border-[#0F766E] text-[#0F766E]"
+                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+            }`}
+          >
+            {tab.label}
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                activeTab === tab.id
+                  ? "bg-teal-50 text-teal-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Filter Toolbar */}
-      <div className="border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
-        <AdminFilterToolbar>
-          <AdvancedFilterBar
-            fields={[
-              {
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
+        <div className="flex-1 w-full lg:w-3/5">
+          <AdvancedTableSearch
+            fields={(() => {
+              const commonStatus = {
                 id: "status",
                 label: "Status",
-                type: "select",
+                type: "select" as const,
                 options: [
                   { label: "Active", value: "ACTIVE" },
                   { label: "Inactive", value: "INACTIVE" },
                 ],
-              },
-            ]}
-            filters={statusFilter.map((s) => ({
-              id: `status-${s}`,
-              fieldId: "status",
-              operator: "Is" as const,
-              value: s,
-            }))}
-            onFiltersChange={(newFilters: FilterCondition[]) => {
-              const selected = newFilters
-                .filter((f) => f.fieldId === "status")
-                .map((f) => f.value);
-              setStatusFilter(selected);
+              };
+              if (activeTab === "priority") {
+                return [
+                  { id: "rule_name", label: "Rule Name", type: "text" as const },
+                  { id: "category", label: "Category", type: "text" as const },
+                  { id: "priority", label: "Priority Level", type: "text" as const },
+                  commonStatus,
+                ];
+              }
+              if (activeTab === "routing") {
+                return [
+                  { id: "rule_name", label: "Rule Name", type: "text" as const },
+                  { id: "category", label: "Category", type: "text" as const },
+                  { id: "subcategory", label: "Subcategory", type: "text" as const },
+                  { id: "priority", label: "Priority", type: "text" as const },
+                  { id: "department", label: "Department", type: "text" as const },
+                  { id: "involvement", label: "Involvement", type: "text" as const },
+                  commonStatus,
+                ];
+              }
+              if (activeTab === "sla") {
+                return [
+                  { id: "policy_name", label: "Policy Name", type: "text" as const },
+                  { id: "description", label: "Description", type: "text" as const },
+                  { id: "duration_hours", label: "Resolution Target", type: "number" as const },
+                  { id: "warning_percent", label: "Warning %", type: "number" as const },
+                  { id: "escalation_percent", label: "Escalation %", type: "number" as const },
+                  commonStatus,
+                ];
+              }
+              if (activeTab === "reopen") {
+                return [
+                  { id: "policy_name", label: "Policy Name", type: "text" as const },
+                  { id: "description", label: "Description", type: "text" as const },
+                  { id: "reopen_window_hours", label: "Reopen Window", type: "number" as const },
+                  { id: "max_reopens", label: "Max Reopens", type: "number" as const },
+                  { id: "max_reviews", label: "Max Reviews", type: "number" as const },
+                  commonStatus,
+                ];
+              }
+              return [commonStatus];
+            })()}
+            onSearch={(conditions: SearchCondition[], mode: string) => {
+              setStatusFilter([]);
+              setSearchQuery("");
+              let newStatus: string[] = [];
+              let newSearch = "";
+              
+              conditions.forEach(condition => {
+                let valArray = Array.isArray(condition.value)
+                  ? condition.value
+                  : [condition.value as string];
+
+                if (condition.field === "status") {
+                  newStatus.push(...valArray);
+                } else {
+                  // Any other field is treated as a generic search term for the view
+                  newSearch = valArray[0] || newSearch;
+                }
+              });
+              
+              if (newStatus.length > 0) setStatusFilter(newStatus);
+              if (newSearch) setSearchQuery(newSearch);
             }}
-            search={searchQuery}
-            onSearchChange={setSearchQuery}
-            placeholder="Search rules..."
+            className="w-full"
           />
+        </div>
 
-          <RulesFilterPopover
-            activeTab={activeTab}
-            activeDropdown={activeDropdown}
-            setActiveDropdown={setActiveDropdown}
-            isFiltered={isFiltered}
-            onReset={handleResetFilters}
-            departments={departments}
-            categoryOptions={categoryOptions}
-            deptFilter={deptFilter}
-            setDeptFilter={setDeptFilter}
-            catFilter={catFilter}
-            setCatFilter={setCatFilter}
-          />
 
-          {isFiltered && (
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
-            >
-              <RotateCcw className="h-3 w-3" />
-              <span>Reset</span>
-            </button>
-          )}
-        </AdminFilterToolbar>
       </div>
 
       {/* Main Tab Content */}

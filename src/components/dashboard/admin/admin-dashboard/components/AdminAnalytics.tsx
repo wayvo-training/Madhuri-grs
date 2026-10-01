@@ -1,19 +1,55 @@
 "use client";
 
-import * as React from "react";
-import { AlertCircle, CheckCircle2, Clock, Info, ArrowRight, Building2, Users, Landmark, ClipboardList, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  Info,
+  Landmark,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
-import type { DashboardDepartmentSummary } from "@/types/admin/dashboard";
+import * as React from "react";
+import type { ChartConfig } from "@/components/ui/chart";
 import { DashboardPieChartCard } from "@/components/ui/dashboard-pie-chart";
-import { STATUS_COLORS, PRIORITY_COLORS, SLA_COLORS } from "@/lib/constants/chart-colors";
-import { ChartConfig } from "@/components/ui/chart";
+import {
+  PRIORITY_COLORS,
+  SLA_COLORS,
+  STATUS_COLORS,
+} from "@/lib/constants/chart-colors";
+import type { DashboardDepartmentSummary } from "@/types/admin/dashboard";
 
-export function DepartmentWorkloadCard({ departments }: { departments: DashboardDepartmentSummary[] }) {
-  const sortedDepts = [...departments].sort((a, b) => b.grievance_count - a.grievance_count).slice(0, 5);
-  const totalGrievances = departments.reduce((acc, d) => acc + d.grievance_count, 0);
+export function DepartmentWorkloadCard({
+  departments,
+}: {
+  departments: DashboardDepartmentSummary[];
+}) {
+  const sortedDepts = [...departments]
+    .sort((a, b) => b.grievance_count - a.grievance_count)
+    .slice(0, 5);
+  const totalGrievances = departments.reduce(
+    (acc, d) => acc + d.grievance_count,
+    0,
+  );
 
-  const colors = ["bg-blue-500", "bg-purple-500", "bg-emerald-500", "bg-orange-500", "bg-slate-300"];
-  const textColors = ["text-blue-500", "text-purple-500", "text-emerald-500", "text-orange-500", "text-slate-500"];
+  const colors = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-emerald-500",
+    "bg-orange-500",
+    "bg-slate-300",
+  ];
+  const textColors = [
+    "text-blue-500",
+    "text-purple-500",
+    "text-emerald-500",
+    "text-orange-500",
+    "text-slate-500",
+  ];
   const icons = [Users, Landmark, Building2, ClipboardList, ShieldCheck];
 
   return (
@@ -27,7 +63,9 @@ export function DepartmentWorkloadCard({ departments }: { departments: Dashboard
             <h3 className="text-lg font-bold text-slate-800 leading-tight">
               Department Workload
             </h3>
-            <p className="text-sm text-slate-500 mt-1">Active grievances by department</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Active grievances by department
+            </p>
           </div>
         </div>
         <Link
@@ -41,20 +79,33 @@ export function DepartmentWorkloadCard({ departments }: { departments: Dashboard
 
       <div className="px-5 sm:px-6 py-6 flex flex-col gap-5 flex-1 justify-start">
         {sortedDepts.map((dept, index) => {
-          const percentage = totalGrievances > 0 ? Math.round((dept.grievance_count / totalGrievances) * 100) : 0;
+          const percentage =
+            totalGrievances > 0
+              ? Math.round((dept.grievance_count / totalGrievances) * 100)
+              : 0;
           const Icon = icons[index % icons.length];
           const colorClass = colors[index % colors.length];
           const textClass = textColors[index % textColors.length];
-          
+
           return (
-            <div key={dept.department_id} className="flex items-center gap-4 text-sm font-semibold">
+            <div
+              key={dept.department_id}
+              className="flex items-center gap-4 text-sm font-semibold"
+            >
               <div className="flex items-center gap-3 w-40 shrink-0">
                 <Icon className={`h-4.5 w-4.5 ${textClass}`} />
-                <span className="text-slate-700 truncate">{dept.department_name}</span>
+                <span className="text-slate-700 truncate">
+                  {dept.department_name}
+                </span>
               </div>
-              
+
               <div className="flex-1 bg-slate-100 h-3 rounded-full overflow-hidden flex">
-                 <div className={`h-full ${colorClass} rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }} />
+                {percentage > 0 && (
+                  <div
+                    className={`h-full ${colorClass} rounded-full transition-all duration-500`}
+                    style={{ width: `${percentage}%` }}
+                  />
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 w-16 justify-end tabular-nums shrink-0">
@@ -69,7 +120,33 @@ export function DepartmentWorkloadCard({ departments }: { departments: Dashboard
   );
 }
 
-export function AdminAnalyticsGrid({ pieCharts }: { pieCharts: { statusData: { name: string; value: number; fill: string; description: string }[], priorityData: { name: string; value: number; fill: string; description: string }[], slaData: { name: string; value: number; fill: string; description: string }[], totalActive: number, totalPriority: number, totalSla: number } }) {
+export function AdminAnalyticsGrid({
+  pieCharts,
+}: {
+  pieCharts: {
+    statusData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
+    priorityData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
+    slaData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
+    totalActive: number;
+    totalPriority: number;
+    totalSla: number;
+  };
+}) {
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
     assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED },
@@ -89,8 +166,6 @@ export function AdminAnalyticsGrid({ pieCharts }: { pieCharts: { statusData: { n
     atRisk: { label: "At Risk", color: SLA_COLORS.AT_RISK },
     breached: { label: "Breached", color: SLA_COLORS.BREACHED },
   } satisfies ChartConfig;
-
-
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

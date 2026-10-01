@@ -2,10 +2,10 @@
 
 import { RotateCcw } from "lucide-react";
 import {
-  AdvancedFilterBar,
-  type FilterCondition,
-  type FilterFieldDef,
-} from "@/components/filters/advanced-filter-bar";
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import type {
   DepartmentOption,
   TabCounts,
@@ -19,6 +19,7 @@ interface AdminGrievanceToolbarProps {
   setActiveTab: (val: TableTab) => void;
   counts: TabCounts;
   departments: DepartmentOption[];
+  categories?: string[];
   selectedDept: string[];
   setSelectedDept: (val: string[]) => void;
   selectedPriority: string[];
@@ -37,6 +38,7 @@ export function AdminGrievanceToolbar({
   setActiveTab,
   counts,
   departments,
+  categories = [],
   selectedDept,
   setSelectedDept,
   selectedPriority,
@@ -47,11 +49,11 @@ export function AdminGrievanceToolbar({
   setSelectedSla,
   setCurrentPage,
 }: AdminGrievanceToolbarProps) {
-  const filterFields: FilterFieldDef[] = [
+  const filterFields: SearchFieldDef[] = [
     {
       id: "department",
       label: "Department",
-      type: "searchable-select",
+      type: "select",
       options: departments.map((d) => ({
         label: d.department_name,
         value: d.department_name,
@@ -95,60 +97,49 @@ export function AdminGrievanceToolbar({
         { label: "On Track", value: "ON_TRACK" },
       ],
     },
+    {
+      id: "category",
+      label: "Category",
+      type: "select",
+      options: categories.map(c => ({ label: c, value: c })),
+    },
+    {
+      id: "search",
+      label: "Search (ID/Submitter)",
+      type: "text",
+    },
   ];
 
-  const currentFilters: FilterCondition[] = [];
-  selectedDept.forEach((dept) => {
-    currentFilters.push({
-      id: `dept-${dept}`,
-      fieldId: "department",
-      operator: "Is",
-      value: dept,
-    });
-  });
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    setSelectedDept([]);
+    setSelectedPriority([]);
+    setSelectedStatus([]);
+    setSelectedSla([]);
+    setSearchQuery("");
 
-  selectedPriority.forEach((prio) => {
-    currentFilters.push({
-      id: `priority-${prio}`,
-      fieldId: "priority",
-      operator: "Is",
-      value: prio,
-    });
-  });
+    let newDept: string[] = [];
+    let newPriority: string[] = [];
+    let newStatus: string[] = [];
+    let newSla: string[] = [];
+    let newSearch = "";
 
-  selectedStatus.forEach((stat) => {
-    currentFilters.push({
-      id: `status-${stat}`,
-      fieldId: "status",
-      operator: "Is",
-      value: stat,
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      if (condition.field === "department") newDept.push(...valArray);
+      if (condition.field === "priority") newPriority.push(...valArray);
+      if (condition.field === "status") newStatus.push(...valArray);
+      if (condition.field === "sla") newSla.push(...valArray);
+      if (condition.field === "category" || condition.field === "search") {
+        newSearch = valArray[0] || newSearch;
+      }
     });
-  });
 
-  selectedSla.forEach((sla) => {
-    currentFilters.push({
-      id: `sla-${sla}`,
-      fieldId: "sla",
-      operator: "Is",
-      value: sla,
-    });
-  });
+    if (newDept.length > 0) setSelectedDept(newDept);
+    if (newPriority.length > 0) setSelectedPriority(newPriority);
+    if (newStatus.length > 0) setSelectedStatus(newStatus);
+    if (newSla.length > 0) setSelectedSla(newSla);
+    if (newSearch) setSearchQuery(newSearch);
 
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
-    const depts: string[] = [];
-    const prios: string[] = [];
-    const stats: string[] = [];
-    const slas: string[] = [];
-    newFilters.forEach((f) => {
-      if (f.fieldId === "department") depts.push(f.value);
-      if (f.fieldId === "priority") prios.push(f.value);
-      if (f.fieldId === "status") stats.push(f.value);
-      if (f.fieldId === "sla") slas.push(f.value);
-    });
-    setSelectedDept(depts);
-    setSelectedPriority(prios);
-    setSelectedStatus(stats);
-    setSelectedSla(slas);
     setCurrentPage(1);
   };
 
@@ -165,30 +156,12 @@ export function AdminGrievanceToolbar({
     <div className="flex flex-col gap-4 w-full">
       {/* Search Input, View Controls & Active Filters Row */}
       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-end w-full">
-        {/* Advanced Filter Builder (Search & Filter Tags) */}
         <div className="flex-1 w-full">
-          <AdvancedFilterBar
+          <AdvancedTableSearch
             fields={filterFields}
-            filters={currentFilters}
-            onFiltersChange={handleFiltersChange}
-            search={searchQuery}
-            onSearchChange={setSearchQuery}
-            placeholder="Search by ID or submitter..."
+            onSearch={handleSearchChange}
+            className="w-full"
           />
-        </div>
-
-        {/* Action Controls (Reset & View) */}
-        <div className="flex items-center gap-2">
-          {currentFilters.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
-            >
-              <RotateCcw className="h-3 w-3" />
-              <span>Reset Filters</span>
-            </button>
-          )}
         </div>
       </div>
     </div>

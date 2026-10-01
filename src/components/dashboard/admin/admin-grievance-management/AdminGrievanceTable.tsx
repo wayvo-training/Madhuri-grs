@@ -13,6 +13,7 @@ export function AdminGrievanceTable({
   initialTotalCount = 0,
   initialCounts,
   departments,
+  categories = [],
 }: AdminGrievanceTableProps) {
   const {
     grievancesList,
@@ -58,10 +59,7 @@ export function AdminGrievanceTable({
               <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
             )}
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Showing page {currentPage} of {totalPages} ({totalCount} total
-            records across all departments).
-          </p>
+
         </div>
 
         {/* Search and Dropdown Filters */}
@@ -72,6 +70,7 @@ export function AdminGrievanceTable({
           setActiveTab={setActiveTab}
           counts={counts}
           departments={departments}
+          categories={categories}
           selectedDept={selectedDept}
           setSelectedDept={setSelectedDept}
           selectedPriority={selectedPriority}

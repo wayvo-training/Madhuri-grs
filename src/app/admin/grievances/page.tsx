@@ -24,6 +24,7 @@ export default async function AdminGrievancesPage() {
       reopenedCount,
       escalatedCount,
     ],
+    categoriesData,
   ] = await Promise.all([
     prisma.grievances.findMany({
       take: 10,
@@ -98,6 +99,10 @@ export default async function AdminGrievancesPage() {
         where: { status: "ESCALATED" },
       }),
     ]),
+    prisma.categories.findMany({
+      select: { category_name: true },
+      orderBy: { category_name: "asc" },
+    }),
   ]);
 
   const grievanceIds = rawGrievances.map((g) => g.grievance_id);
@@ -182,6 +187,7 @@ export default async function AdminGrievancesPage() {
           closed: closedCount,
         }}
         departments={serializedDepartments}
+        categories={categoriesData.map(c => c.category_name)}
       />
     </DashboardShell>
   );

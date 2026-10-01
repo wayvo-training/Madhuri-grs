@@ -16,7 +16,10 @@ export default function AdminDashboardLoading() {
         {/* Charts Skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl border border-slate-200 bg-white flex flex-col justify-between overflow-hidden shadow-2xs h-[290px] xl:h-[260px]">
+            <div
+              key={i}
+              className="rounded-2xl border border-slate-200 bg-white flex flex-col justify-between overflow-hidden shadow-2xs h-[290px] xl:h-[260px]"
+            >
               <div className="p-5 sm:p-6 pb-2">
                 <Skeleton className="h-6 w-1/2 mb-2" />
                 <Skeleton className="h-4 w-3/4" />

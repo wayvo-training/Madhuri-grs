@@ -61,7 +61,7 @@ export function RoutingRulesView({
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
   const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -196,8 +196,6 @@ export function RoutingRulesView({
                       <ActionMenu
                         widthClass="w-36"
                         items={[
-                          { label: "Configure", onClick: () => onEdit(r) },
-
                           {
                             label: "Delete Rule",
                             variant: "danger" as const,
@@ -222,6 +220,8 @@ export function RoutingRulesView({
           totalCount={totalCount}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
           itemLabel="Routing Rules"
         />
       )}

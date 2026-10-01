@@ -23,9 +23,24 @@ export interface AdminDashboardProps {
   departments: DashboardDepartmentSummary[];
   recentGrievances: DashboardRecentGrievance[];
   pieCharts: {
-    statusData: { name: string; value: number; fill: string; description: string }[];
-    priorityData: { name: string; value: number; fill: string; description: string }[];
-    slaData: { name: string; value: number; fill: string; description: string }[];
+    statusData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
+    priorityData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
+    slaData: {
+      name: string;
+      value: number;
+      fill: string;
+      description: string;
+    }[];
     totalActive: number;
     totalPriority: number;
     totalSla: number;

@@ -6,7 +6,14 @@ import { useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import { useTableSort } from "@/hooks/useTableSort";
 import type { DashboardRecentGrievance } from "@/types/admin/dashboard";
@@ -101,9 +108,7 @@ export function RecentGrievancesTable({
               </TableRow>
             ) : (
               paginatedGrievances.map((g) => (
-                <TableRow
-                  key={g.grievance_id}
-                >
+                <TableRow key={g.grievance_id}>
                   <TableCell className="pl-3 pr-2 font-mono font-medium text-slate-900">
                     {g.grievance_number}
                   </TableCell>

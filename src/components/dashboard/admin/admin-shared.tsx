@@ -1,7 +1,8 @@
 import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
 import { Search } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, KeyboardEvent } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -139,18 +140,39 @@ export function AdminSearchInput({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
+  const [val, setVal] = useState(value);
+
+  useEffect(() => {
+    setVal(value);
+  }, [value]);
+
+  const handleSearch = () => {
+    onChange(val);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
-    <div className="relative min-w-52">
-      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-        <Search className="h-4 w-4" />
-      </div>
+    <div className="relative min-w-52 flex items-center">
       <input
         type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        value={val}
+        onChange={(event) => setVal(event.target.value)}
+        onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
+        className="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-3 pr-10 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white"
       />
+      <button
+        onClick={handleSearch}
+        className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+        type="button"
+      >
+        <Search className="h-4 w-4" />
+      </button>
     </div>
   );
 }

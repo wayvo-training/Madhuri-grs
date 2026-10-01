@@ -115,6 +115,7 @@ export function AdminRolesManager({
           togglingRoleId={togglingRoleId}
           onEditRole={openEditRoleModal}
           onToggleRoleStatus={handleToggleRoleStatus}
+          onTabChange={setActiveTab}
         />
       )}
 
@@ -136,6 +137,7 @@ export function AdminRolesManager({
           pageSize={permPageSize}
           onPageChange={setPermCurrentPage}
           onPageSizeChange={setPermPageSize}
+          onTabChange={setActiveTab}
         />
       )}
 

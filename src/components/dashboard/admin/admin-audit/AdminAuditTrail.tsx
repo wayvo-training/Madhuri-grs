@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
+import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
 import { useAdminAudit } from "@/hooks/admin/audit/useAdminAudit";
 import type { AdminAuditTrailProps } from "@/types/admin/audit";
 import { AuditCategoryTabs } from "./components/AuditCategoryTabs";
@@ -41,11 +42,32 @@ export function AdminAuditTrail({
         className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
       >
         {/* Header */}
-        <div className="border-b border-slate-100 dark:border-slate-800 p-5 sm:p-6">
+        <div className="pt-5 sm:pt-6 px-5 sm:px-6">
           <AdminPanelHeader
             title="Observability & Audit Trail"
-            description="Complete record of sessions, API requests, route navigation, errors, and administrative governance."
+
           />
+
+          {/* Top-Level Tabs */}
+          <div className="flex items-center gap-6 mt-2 border-b border-slate-100 overflow-x-auto no-scrollbar pb-1">
+            {CATEGORY_TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-[#0F766E] text-[#0F766E]"
+                      : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
           {/* Search + Category Filter (combined via AdvancedFilterBar) */}
           <AuditCategoryTabs

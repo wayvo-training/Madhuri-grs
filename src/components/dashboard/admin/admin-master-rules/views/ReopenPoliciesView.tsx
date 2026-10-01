@@ -156,8 +156,6 @@ export function ReopenPoliciesView({
                       <ActionMenu
                         widthClass="w-36"
                         items={[
-                          { label: "Configure", onClick: () => onEdit(p) },
-
                           {
                             label: "Delete Policy",
                             variant: "danger" as const,

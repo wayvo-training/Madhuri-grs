@@ -1,10 +1,11 @@
 "use client";
 
-import {
-  AdvancedFilterBar,
-  type FilterCondition,
-} from "@/components/filters/advanced-filter-bar";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
@@ -30,6 +31,7 @@ interface PermissionsTabProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onTabChange: (tab: "roles" | "permissions") => void;
 }
 
 export function PermissionsTab({
@@ -49,17 +51,21 @@ export function PermissionsTab({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  onTabChange,
 }: PermissionsTabProps) {
   const { sortState, handleSort, sortedItems } = useTableSort(
     paginatedPermissions,
     { field: "permission_code", direction: "asc" },
   );
 
-  const filterFields = [
+  const filterFields: SearchFieldDef[] = [
+    { id: "permission_code", label: "Permission Code", type: "text" },
+    { id: "permission_name", label: "Display Name", type: "text" },
+    { id: "description", label: "Description", type: "text" },
     {
       id: "status",
       label: "Status",
-      type: "select" as const,
+      type: "select",
       options: [
         { label: `Active (${activePermsCount})`, value: "ACTIVE" },
         { label: `Inactive (${inactivePermsCount})`, value: "INACTIVE" },
@@ -67,31 +73,35 @@ export function PermissionsTab({
     },
   ];
 
-  const currentFilters: FilterCondition[] = permStatusFilter.map((s) => ({
-    id: `status-${s}`,
-    fieldId: "status",
-    operator: "Is" as const,
-    value: s,
-  }));
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    onPermStatusChange([]);
+    onPermSearchChange("");
 
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
-    const selected = newFilters
-      .filter((f) => f.fieldId === "status")
-      .map((f) => f.value);
-    onPermStatusChange(selected);
+    let newStatus: string[] = [];
+    let newSearch = "";
+
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+
+      if (condition.field === "status") {
+        newStatus.push(...valArray);
+      } else {
+        newSearch = valArray[0] || newSearch;
+      }
+    });
+
+    if (newStatus.length > 0) onPermStatusChange(newStatus);
+    if (newSearch) onPermSearchChange(newSearch);
   };
 
   return (
     <div className="p-5 sm:p-6">
       {/* Controls Bar */}
       <div className="mb-5">
-        <AdvancedFilterBar
+        <AdvancedTableSearch
           fields={filterFields}
-          filters={currentFilters}
-          onFiltersChange={handleFiltersChange}
-          search={permSearch}
-          onSearchChange={onPermSearchChange}
-          placeholder="Search permissions..."
+          onSearch={handleSearchChange}
+          className="w-full"
         />
       </div>
 
