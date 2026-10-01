@@ -22,6 +22,7 @@ import {
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import {
   SortableTableHead,
   type SortState,
@@ -58,6 +59,12 @@ export interface QueueViewProps {
   setStatusFilter?: (status: string) => void;
   departmentFilter?: string;
   setDepartmentFilter?: (dept: string) => void;
+  slaFilter?: string;
+  setSlaFilter?: (sla: string) => void;
+  categoryFilter?: string;
+  setCategoryFilter?: (cat: string) => void;
+  subCategoryFilter?: string;
+  setSubCategoryFilter?: (sub: string) => void;
   availableDepartments?: { id: string; name: string }[];
   selectedDeptId?: string;
   onDepartmentChange?: (deptId: string) => void;
@@ -85,6 +92,12 @@ export function QueueView({
   setStatusFilter,
   departmentFilter = "ALL",
   setDepartmentFilter,
+  slaFilter = "ALL",
+  setSlaFilter,
+  categoryFilter = "ALL",
+  setCategoryFilter,
+  subCategoryFilter = "ALL",
+  setSubCategoryFilter,
   availableDepartments = [],
   selectedDeptId,
   onDepartmentChange,
@@ -95,9 +108,10 @@ export function QueueView({
   onIntervene,
   onReviewResolution,
 }: QueueViewProps) {
-  // View DropdownMenu state
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const viewMenuRef = useRef<HTMLDivElement>(null);
+
+  // Local Advanced Search state
+  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,10 +132,16 @@ export function QueueView({
     setCurrentPage(1);
   }, []);
 
-  const sortedGrievances = useMemo(() => {
-    if (!sortState.field || !sortState.direction) return filteredGrievances;
+  const localFilteredGrievances = useMemo(() => {
+    return grievances.filter((g) =>
+      evaluateSearchConditions(g, advancedConditions, advancedMode)
+    );
+  }, [grievances, advancedConditions, advancedMode]);
 
-    return [...filteredGrievances].sort((a, b) => {
+  const sortedGrievances = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return localFilteredGrievances;
+
+    return [...localFilteredGrievances].sort((a, b) => {
       let valA: any = a[sortState.field as keyof GrievanceItem] || "";
       let valB: any = b[sortState.field as keyof GrievanceItem] || "";
 
@@ -132,29 +152,13 @@ export function QueueView({
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredGrievances, sortState]);
+  }, [localFilteredGrievances, sortState]);
 
   const paginatedGrievances = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return sortedGrievances.slice(start, start + pageSize);
   }, [sortedGrievances, currentPage, pageSize]);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        viewMenuRef.current &&
-        !viewMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsViewOpen(false);
-      }
-    }
-    if (isViewOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isViewOpen]);
 
   const departmentOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -177,14 +181,39 @@ export function QueueView({
     ];
   }, [availableDepartments, grievances]);
 
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    grievances.forEach((g) => {
+      if (g.category) set.add(g.category);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((c) => ({ label: c, value: c }));
+  }, [grievances]);
+
+  const subcategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    grievances.forEach((g) => {
+      if (g.subcategory) set.add(g.subcategory);
+    });
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((c) => ({ label: c, value: c }));
+  }, [grievances]);
+
   const filterFields: SearchFieldDef[] = [
+    { id: "ticketCode", label: "Grievance ID", type: "text" },
     {
-      id: "department",
-      label: "Department",
+      id: "category",
+      label: "Category",
       type: "select",
-      options: departmentOptions
-        .filter((o) => o.value !== "ALL")
-        .map((o) => ({ label: o.label, value: o.value as string })),
+      options: categoryOptions,
+    },
+    {
+      id: "subCategory",
+      label: "Sub Category",
+      type: "select",
+      options: subcategoryOptions,
     },
     {
       id: "priority",
@@ -198,10 +227,27 @@ export function QueueView({
       ],
     },
     {
+      id: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { label: "Submitted", value: "SUBMITTED" },
+        { label: "Routed", value: "ROUTED" },
+        { label: "Assigned", value: "ASSIGNED" },
+        { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Under Review", value: "UNDER_REVIEW" },
+        { label: "Reopened", value: "REOPENED" },
+        { label: "Escalated", value: "ESCALATED" },
+        { label: "Resolved", value: "RESOLVED" },
+        { label: "Closed", value: "CLOSED" },
+      ],
+    },
+    {
       id: "sla",
       label: "SLA Status",
       type: "select",
       options: [
+        { label: "Breached", value: "BREACHED" },
         { label: "SLA Critical", value: "SLA_CRITICAL" },
         { label: "SLA Risk", value: "SLA_RISK" },
         { label: "On Track", value: "ON_TRACK" },
@@ -231,36 +277,8 @@ export function QueueView({
   ];
 
   const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
-    let dept = "ALL";
-    let prio = "ALL";
-    let status = "ALL";
-    let staff = "ALL";
-    let search = "";
-
-    conditions.forEach((condition) => {
-      const valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
-      if (valArray.length > 0) {
-        if (condition.field === "department") dept = valArray[0];
-        if (condition.field === "priority") prio = valArray[0];
-        if (condition.field === "status") status = valArray[0];
-        if (condition.field === "staff") staff = valArray[0];
-        if (condition.field === "search") search = valArray[0];
-      }
-    });
-
-    if (setDepartmentFilter) setDepartmentFilter(dept);
-    if (onDepartmentChange && dept !== "ALL") {
-      const matchDept = availableDepartments.find(
-        (d) => d.name === dept || d.id === dept,
-      );
-      if (matchDept && matchDept.id !== selectedDeptId) {
-        onDepartmentChange(matchDept.id);
-      }
-    }
-    setPriorityFilter(prio);
-    if (setStatusFilter) setStatusFilter(status);
-    setStaffFilter(staff);
-    setSearchQuery(search);
+    setAdvancedConditions(conditions);
+    setAdvancedMode(mode);
     setCurrentPage(1);
   };
 
@@ -268,9 +286,14 @@ export function QueueView({
     if (setDepartmentFilter) setDepartmentFilter("ALL");
     setPriorityFilter("ALL");
     if (setStatusFilter) setStatusFilter("ALL");
+    if (setSlaFilter) setSlaFilter("ALL");
+    if (setCategoryFilter) setCategoryFilter("ALL");
+    if (setSubCategoryFilter) setSubCategoryFilter("ALL");
     setStaffFilter("ALL");
     setSelectedTab("ALL");
     setSearchQuery("");
+    setAdvancedConditions([]);
+    setAdvancedMode("AND");
     resetFilters();
     setCurrentPage(1);
   };
@@ -327,143 +350,27 @@ export function QueueView({
         .length,
   };
 
-  // Exact 8 views requested by the user:
-  // All, Exceptions, In Progress, SLA Risk, SLA Critical, Reopened, Escalated, Closed
-  const dropdownViews: {
-    key: DepartmentHeadTab;
-    label: string;
-    count: number;
-    dotColor?: string;
-  }[] = [
-    { key: "ALL", label: "All", count: counts.all },
-    {
-      key: "EXCEPTIONS",
-      label: "Exceptions",
-      count: counts.exceptions,
-      dotColor: "bg-amber-400",
-    },
-    {
-      key: "IN_PROGRESS",
-      label: "In Progress",
-      count: counts.inProgress,
-      dotColor: "bg-emerald-500",
-    },
-    {
-      key: "SLA_RISK",
-      label: "SLA Risk",
-      count: counts.slaRisk,
-      dotColor: "bg-amber-500",
-    },
-    {
-      key: "SLA_CRITICAL",
-      label: "SLA Critical",
-      count: counts.slaCritical,
-      dotColor: "bg-rose-500",
-    },
-    {
-      key: "REOPENED",
-      label: "Reopened",
-      count: counts.reopened,
-      dotColor: "bg-purple-500",
-    },
-    {
-      key: "ESCALATED",
-      label: "Escalated",
-      count: counts.escalated,
-      dotColor: "bg-red-600",
-    },
-    { key: "CLOSED", label: "Closed", count: counts.closed },
-  ];
-
-  const activeDropdownItem = dropdownViews.find((v) => v.key === selectedTab);
-  const activeViewLabel =
-    selectedTab !== "ALL" && activeDropdownItem
-      ? `View: ${activeDropdownItem.label}`
-      : "View";
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
-      <div className="p-3.5 sm:p-5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 bg-white border-b border-slate-200/80">
+      <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80">
         {/* Title Header */}
-        <div>
+        <div className="shrink-0">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Live Grievance Oversight Queue
           </h2>
-
         </div>
 
         {/* Controls Bar: View & Filter */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end lg:w-3/5">
-          {/* Advanced Filter Builder (Search & Filter Tags) */}
-          <div className="flex-1 w-full">
-            <AdvancedTableSearch
-              fields={filterFields}
-              onSearch={handleSearchChange}
-              className="w-full"
-            />
-          </div>
-
-
-
-            {/* [ View ▼ ] DropdownMenu */}
-            <div className="relative inline-block" ref={viewMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsViewOpen(!isViewOpen)}
-                className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition cursor-pointer ${
-                  selectedTab !== "ALL"
-                    ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span>{activeViewLabel}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-              </button>
-
-              {isViewOpen && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-2xl border border-slate-200 bg-white py-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100">
-                  <div className="px-3.5 py-1.5 text-[13px] font-bold uppercase tracking-wider text-slate-400">
-                    View ▾
-                  </div>
-                  <div className="border-t border-slate-100 my-1" />
-                  {dropdownViews.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTab(item.key);
-                        setIsViewOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between px-3.5 py-2 text-sm transition cursor-pointer ${
-                        selectedTab === item.key
-                          ? "bg-emerald-50 font-semibold text-emerald-900"
-                          : "font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {item.dotColor && (
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${item.dotColor}`}
-                          />
-                        )}
-                        <span>{item.label}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[13px] font-medium text-slate-600">
-                          {item.count}
-                        </span>
-                        {selectedTab === item.key && (
-                          <Check className="h-3.5 w-3.5 text-emerald-700" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="flex-1 min-w-0">
+          <AdvancedTableSearch
+            fields={filterFields}
+            onSearch={handleSearchChange}
+            className="w-full"
+          />
         </div>
+      </div>
 
       {/* Grievances Data Table */}
       <div className="overflow-x-auto custom-scrollbar">

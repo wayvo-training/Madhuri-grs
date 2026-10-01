@@ -19,6 +19,12 @@ import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
@@ -60,18 +66,106 @@ export function SlaGovernanceView({
     direction: null,
   });
 
+  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedMode, setAdvancedMode] = useState<string>("AND");
+
   useEffect(() => {
     setCurrentPage(1);
-  }, []);
+  }, [advancedConditions, advancedMode]);
 
   const handleSort = (field: string, direction: "asc" | "desc" | null) => {
     setSortState({ field, direction });
   };
 
-  const sortedList = useMemo(() => {
-    if (!sortState.field || !sortState.direction) return escalatedList;
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    grievances.forEach((g) => {
+      if (g.category) set.add(g.category);
+    });
+    return Array.from(set).sort().map((c) => ({ label: c, value: c }));
+  }, [grievances]);
 
-    return [...escalatedList].sort((a, b) => {
+  const subcategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    grievances.forEach((g) => {
+      if (g.subcategory) set.add(g.subcategory);
+    });
+    return Array.from(set).sort().map((c) => ({ label: c, value: c }));
+  }, [grievances]);
+
+  const filterFields: SearchFieldDef[] = useMemo(() => [
+    { id: "ticketCode", label: "Grievance ID", type: "text" },
+    {
+      id: "category",
+      label: "Category",
+      type: "select",
+      options: categoryOptions,
+    },
+    {
+      id: "subCategory",
+      label: "Sub Category",
+      type: "select",
+      options: subcategoryOptions,
+    },
+    {
+      id: "sla",
+      label: "SLA Status",
+      type: "select",
+      options: [
+        { label: "On Track", value: "ON_TRACK" },
+        { label: "At Risk", value: "AT_RISK" },
+        { label: "Breached", value: "BREACHED" },
+      ],
+    },
+    {
+      id: "escalationStage",
+      label: "Escalation",
+      type: "select",
+      options: [
+        { label: "SLA Threshold Reached", value: "SLA_THRESHOLD_REACHED" },
+        { label: "Grievance Escalated", value: "GRIEVANCE_ESCALATED" },
+        { label: "HOD Notified", value: "HOD_NOTIFIED" },
+        { label: "Under Review", value: "UNDER_REVIEW" },
+        { label: "Bottleneck Identified", value: "BOTTLENECK_IDENTIFIED" },
+        { label: "Intervention Taken", value: "INTERVENTION_TAKEN" },
+        { label: "Audit Logged", value: "AUDIT_LOGGED" },
+        { label: "Staff Notified", value: "STAFF_NOTIFIED" },
+        { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Resolution Submitted", value: "RESOLUTION_SUBMITTED" },
+        { label: "Escalation Cleared", value: "ESCALATION_CLEARED" }
+      ],
+    },
+    { id: "assignedStaffName", label: "Assigned Staff", type: "text" },
+    {
+      id: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { label: "Escalated", value: "ESCALATED" },
+        { label: "Under Review", value: "UNDER_REVIEW" },
+        { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Resolved", value: "RESOLVED" },
+        { label: "Closed", value: "CLOSED" },
+      ],
+    },
+    { id: "search", label: "Global Search", type: "text" }
+  ], [categoryOptions, subcategoryOptions]);
+
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    setAdvancedConditions(conditions);
+    setAdvancedMode(mode);
+  };
+
+  const filteredList = useMemo(() => {
+    return escalatedList.filter((g) =>
+      evaluateSearchConditions(g, advancedConditions, advancedMode)
+    );
+  }, [escalatedList, advancedConditions, advancedMode]);
+
+  const sortedList = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return filteredList;
+
+    return [...filteredList].sort((a, b) => {
       let valA: any = a[sortState.field as keyof GrievanceItem] || "";
       let valB: any = b[sortState.field as keyof GrievanceItem] || "";
 
@@ -82,7 +176,7 @@ export function SlaGovernanceView({
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [escalatedList, sortState]);
+  }, [filteredList, sortState]);
 
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -125,30 +219,31 @@ export function SlaGovernanceView({
 
       {/* SLA & ESCALATIONS QUEUE */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-3 gap-2">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-600" />
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between border-b border-slate-100 pb-3 gap-4">
+          <div className="flex items-start gap-2 shrink-0">
+            <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
             <div>
               <h3 className="text-base font-semibold text-slate-900">
                 Escalation & SLA Governance
               </h3>
-              <p className="text-sm font-normal text-slate-500">
+              <p className="text-sm font-normal text-slate-500 max-w-sm">
                 Review escalated grievances, monitor SLA breaches, and take
                 corrective intervention when required.
               </p>
             </div>
           </div>
-          <span className="text-sm font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
-            {
-              grievances.filter(
-                (g) =>
-                  g.status === "ESCALATED" ||
-                  g.hodIntervention ||
-                  g.status === "UNDER_REVIEW",
-              ).length
-            }{" "}
-            Managed Cases
-          </span>
+          <div className="flex-1 min-w-0 flex flex-col items-end gap-3 w-full">
+            <span className="text-[13px] font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 whitespace-nowrap">
+              {escalatedList.length} Managed Cases
+            </span>
+            <div className="w-full">
+              <AdvancedTableSearch
+                fields={filterFields}
+                onSearch={handleSearchChange}
+                className="w-full"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto custom-scrollbar">

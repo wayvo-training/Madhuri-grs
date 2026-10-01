@@ -12,6 +12,12 @@ import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -58,14 +64,49 @@ export function StaffView({
     setCurrentPage(1);
   }, []);
 
+  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedMode, setAdvancedMode] = useState<string>("AND");
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [advancedConditions, advancedMode]);
+
   const handleSort = (field: string, direction: "asc" | "desc" | null) => {
     setSortState({ field, direction });
   };
 
-  const sortedStaff = useMemo(() => {
-    if (!sortState.field || !sortState.direction) return staffList;
+  const filterFields: SearchFieldDef[] = [
+    { id: "employeeCode", label: "Staff ID", type: "text" },
+    { id: "name", label: "Staff Name", type: "text" },
+    { id: "activeTickets", label: "Assigned Cases", type: "number" },
+    {
+      id: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { label: "Active", value: "ACTIVE" },
+        { label: "On Leave", value: "ON_LEAVE" },
+        { label: "Busy", value: "BUSY" },
+      ],
+    },
+    { id: "search", label: "Global Search", type: "text" },
+  ];
 
-    return [...staffList].sort((a, b) => {
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    setAdvancedConditions(conditions);
+    setAdvancedMode(mode);
+  };
+
+  const filteredStaff = useMemo(() => {
+    return staffList.filter((s) =>
+      evaluateSearchConditions(s, advancedConditions, advancedMode)
+    );
+  }, [staffList, advancedConditions, advancedMode]);
+
+  const sortedStaff = useMemo(() => {
+    if (!sortState.field || !sortState.direction) return filteredStaff;
+
+    return [...filteredStaff].sort((a, b) => {
       let valA: any = a[sortState.field as keyof StaffMember] || "";
       let valB: any = b[sortState.field as keyof StaffMember] || "";
 
@@ -76,7 +117,7 @@ export function StaffView({
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [staffList, sortState]);
+  }, [filteredStaff, sortState]);
 
   const paginatedStaff = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -121,19 +162,32 @@ export function StaffView({
 
       {/* Full-Width Staff Roster Cards Grid */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-5">
-        <AdminPanelHeader
-          title="Staff Workload & Availability"
-          description="Monitor staff workload, availability, and grievance assignments"
-          action={
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="shrink-0">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+              Staff Workload & Availability
+            </h2>
+            <p className="mt-0.5 text-[13px] font-normal text-slate-500">
+              Monitor staff workload, availability, and grievance assignments
+            </p>
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col items-end gap-3 w-full">
             <span className="text-sm font-medium text-slate-600">
-              Department Utilization:{" "}
-              <strong className="font-semibold text-emerald-800">
+              <span>Department Utilization:{" "}</span>
+              <strong className="font-semibold text-emerald-800 ml-1">
                 {metrics.totalActiveTickets} / {metrics.totalStaffCapacity}{" "}
                 capacity
               </strong>
             </span>
-          }
-        />
+            <div className="w-full">
+              <AdvancedTableSearch
+                fields={filterFields}
+                onSearch={handleSearchChange}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-sm border-collapse">
@@ -154,6 +208,14 @@ export function StaffView({
                   className="py-3 px-3 whitespace-nowrap"
                 >
                   Status
+                </SortableTh>
+                <SortableTh
+                  field="employeeCode"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Staff ID
                 </SortableTh>
                 <SortableTh
                   field="activeTickets"
@@ -180,7 +242,7 @@ export function StaffView({
               {paginatedStaff.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="py-10 text-center text-slate-500 text-sm"
                   >
                     No staff members found.
@@ -240,6 +302,11 @@ export function StaffView({
                             Available
                           </span>
                         )}
+                      </td>
+
+                      {/* Staff ID */}
+                      <td className="py-3 px-3 align-top font-mono text-[13px] text-slate-600">
+                        {staff.employeeCode}
                       </td>
 
                       {/* Workload */}

@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
+import {
   type KnowledgeArticleData,
   KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
@@ -35,6 +40,23 @@ export function KnowledgeView() {
     useState<KnowledgeArticleData | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const filterFields: SearchFieldDef[] = [
+    { id: "search", label: "Search Knowledge", type: "text" },
+  ];
+
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    let newSearch = "";
+    conditions.forEach((condition) => {
+      let valArray = Array.isArray(condition.value)
+        ? condition.value
+        : [condition.value as string];
+      if (condition.field === "search") {
+        newSearch = valArray[0] || newSearch;
+      }
+    });
+    setSearchQuery(newSearch);
+  };
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
@@ -200,14 +222,11 @@ export function KnowledgeView() {
           </div>
 
           {/* Search */}
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search knowledge articles..."
-              className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-1.5 text-xs text-slate-900 focus:outline-hidden focus:border-[#0F766E]"
+          <div className="flex-1 min-w-[250px] max-w-sm">
+            <AdvancedTableSearch
+              fields={filterFields}
+              onSearch={handleSearchChange}
+              className="w-full"
             />
           </div>
         </div>

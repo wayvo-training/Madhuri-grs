@@ -1,11 +1,17 @@
 "use client";
 
 import { ArrowDownUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { useTableSort } from "@/hooks/useTableSort";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type { EscalationAuditRecord } from "@/types/department-head";
 
 export interface ActivityViewProps {
@@ -15,12 +21,59 @@ export interface ActivityViewProps {
 export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedMode, setAdvancedMode] = useState<string>("AND");
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [advancedConditions, advancedMode]);
+
+  const filterFields: SearchFieldDef[] = [
+    { id: "grievanceId", label: "Grievance ID", type: "text" },
+    { id: "actor", label: "Performed By", type: "text" },
+    {
+      id: "role",
+      label: "Role",
+      type: "select",
+      options: [
+        { label: "Department Head", value: "DEPARTMENT_HEAD" },
+        { label: "End User", value: "END_USER" },
+        { label: "System", value: "SYSTEM" },
+        { label: "Staff", value: "STAFF" },
+      ],
+    },
+    { id: "search", label: "Global Search", type: "text" },
+  ];
+
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    setAdvancedConditions(conditions);
+    setAdvancedMode(mode);
+  };
+
+  const filteredFeed = useMemo(() => {
+    return governanceAuditFeed.filter((a) => {
+      const feedGrievanceRef = a.action.includes(":") ? a.action.split(":")[0].trim() : "N/A";
+      const computedRole = a.actor.includes("DEPARTMENT_HEAD")
+        ? "DEPARTMENT_HEAD"
+        : a.actor.includes("END_USER")
+          ? "END_USER"
+          : a.actor.includes("SLA") || a.actor.includes("SYSTEM")
+            ? "SYSTEM"
+            : "STAFF";
+      
+      return evaluateSearchConditions(
+        { ...a, grievanceId: feedGrievanceRef, role: computedRole },
+        advancedConditions,
+        advancedMode
+      );
+    });
+  }, [governanceAuditFeed, advancedConditions, advancedMode]);
 
   const {
     sortState,
     handleSort,
     sortedItems: sortedFeed,
-  } = useTableSort(governanceAuditFeed, {
+  } = useTableSort(filteredFeed, {
     field: "timestamp",
     direction: "desc",
   });
@@ -31,15 +84,22 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
-        <div className="flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 border-b border-slate-100 pb-3">
+          <div className="shrink-0">
             <h3 className="text-base font-semibold text-slate-900">
               Department Head Activity / Audit
             </h3>
-            <p className="text-sm font-normal text-slate-500">
+            <p className="text-sm font-normal text-slate-500 max-w-sm">
               Historical governance events, staff actions, interventions, and
               SLA-related changes across this department.
             </p>
+          </div>
+          <div className="flex-1 min-w-0 w-full">
+            <AdvancedTableSearch
+              fields={filterFields}
+              onSearch={handleSearchChange}
+              className="w-full"
+            />
           </div>
         </div>
 
