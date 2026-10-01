@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertCircle, BookOpen, CheckCircle2, Send, X } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ProposeKnowledgeModalProps {
@@ -40,7 +41,9 @@ export function ProposeKnowledgeModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !problemSummary.trim() || !solutionSteps.trim()) {
-      setErrorMsg("Please fill in the title, problem pattern, and solution steps.");
+      setErrorMsg(
+        "Please fill in the title, problem pattern, and solution steps.",
+      );
       return;
     }
 
@@ -48,8 +51,12 @@ export function ProposeKnowledgeModal({
     setErrorMsg(null);
 
     try {
-      const catId = (grievance as unknown as Record<string, unknown>).categoryId || undefined;
-      const subCatId = (grievance as unknown as Record<string, unknown>).subcategoryId || undefined;
+      const catId =
+        (grievance as unknown as Record<string, unknown>).categoryId ||
+        undefined;
+      const subCatId =
+        (grievance as unknown as Record<string, unknown>).subcategoryId ||
+        undefined;
 
       const res = await fetch("/api/staff/knowledge", {
         method: "POST",
@@ -72,14 +79,18 @@ export function ProposeKnowledgeModal({
         throw new Error(data.message || "Failed to propose Knowledge Article.");
       }
 
-      setSuccessMsg("Knowledge Base Article proposed successfully! Your Department Head will review it before publication.");
+      setSuccessMsg(
+        "Knowledge Base Article proposed successfully! Your Department Head will review it before publication.",
+      );
       setTimeout(() => {
         onClose();
         setSuccessMsg(null);
       }, 2000);
     } catch (err) {
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to propose Knowledge Article",
+        err instanceof Error
+          ? err.message
+          : "Failed to propose Knowledge Article",
       );
     } finally {
       setIsSubmitting(false);
@@ -114,7 +125,10 @@ export function ProposeKnowledgeModal({
         </div>
 
         {/* Scrollable Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-5 space-y-4 text-xs"
+        >
           {errorMsg && (
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -130,11 +144,16 @@ export function ProposeKnowledgeModal({
           )}
 
           <div className="rounded-xl border border-teal-200 bg-[#F0FDFA]/70 p-3 text-[11px] text-teal-800 leading-relaxed">
-            Extract generalized, reusable resolution guidance from this case to assist staff with future grievances. Please ensure all employee personal identifiers are sanitized.
+            Extract generalized, reusable resolution guidance from this case to
+            assist staff with future grievances. Please ensure all employee
+            personal identifiers are sanitized.
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="prop-title" className="font-semibold text-slate-700">
+            <label
+              htmlFor="prop-title"
+              className="font-semibold text-slate-700"
+            >
               Article Title <span className="text-rose-500">*</span>
             </label>
             <input
@@ -149,7 +168,10 @@ export function ProposeKnowledgeModal({
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="prop-problem" className="font-semibold text-slate-700">
+            <label
+              htmlFor="prop-problem"
+              className="font-semibold text-slate-700"
+            >
               Problem / Issue Pattern <span className="text-rose-500">*</span>
             </label>
             <textarea
@@ -164,8 +186,12 @@ export function ProposeKnowledgeModal({
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="prop-solution" className="font-semibold text-slate-700">
-              Recommended Solution Steps <span className="text-rose-500">*</span>
+            <label
+              htmlFor="prop-solution"
+              className="font-semibold text-slate-700"
+            >
+              Recommended Solution Steps{" "}
+              <span className="text-rose-500">*</span>
             </label>
             <textarea
               id="prop-solution"
@@ -180,7 +206,10 @@ export function ProposeKnowledgeModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label htmlFor="prop-considerations" className="font-semibold text-slate-700">
+              <label
+                htmlFor="prop-considerations"
+                className="font-semibold text-slate-700"
+              >
                 Important Considerations (Optional)
               </label>
               <input
@@ -194,7 +223,10 @@ export function ProposeKnowledgeModal({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="prop-references" className="font-semibold text-slate-700">
+              <label
+                htmlFor="prop-references"
+                className="font-semibold text-slate-700"
+              >
                 Supporting References (Optional)
               </label>
               <input
@@ -222,7 +254,9 @@ export function ProposeKnowledgeModal({
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>{isSubmitting ? "Submitting..." : "Submit to Department Head"}</span>
+              <span>
+                {isSubmitting ? "Submitting..." : "Submit to Department Head"}
+              </span>
             </button>
           </div>
         </form>

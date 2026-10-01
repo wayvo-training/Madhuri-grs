@@ -27,14 +27,20 @@ export async function PATCH(
 
     if (!action || (action !== "PUBLISH" && action !== "REJECT")) {
       return NextResponse.json(
-        { success: false, message: "Valid action ('PUBLISH' or 'REJECT') is required" },
+        {
+          success: false,
+          message: "Valid action ('PUBLISH' or 'REJECT') is required",
+        },
         { status: 400 },
       );
     }
 
     if (action === "REJECT" && !rejectionReason?.trim()) {
       return NextResponse.json(
-        { success: false, message: "Rejection reason is required when rejecting an article" },
+        {
+          success: false,
+          message: "Rejection reason is required when rejecting an article",
+        },
         { status: 400 },
       );
     }
@@ -75,7 +81,10 @@ export async function PATCH(
     await prisma.audit_logs.create({
       data: {
         user_id: hodId,
-        action: action === "PUBLISH" ? "KNOWLEDGE_ARTICLE_PUBLISHED" : "KNOWLEDGE_ARTICLE_REJECTED",
+        action:
+          action === "PUBLISH"
+            ? "KNOWLEDGE_ARTICLE_PUBLISHED"
+            : "KNOWLEDGE_ARTICLE_REJECTED",
         entity_type: "KNOWLEDGE_ARTICLE",
         entity_id: articleId,
         new_value: {
@@ -89,20 +98,26 @@ export async function PATCH(
     // Notify authoring staff member
     await NotificationService.send({
       userId: existingArticle.created_by,
-      type: action === "PUBLISH" ? "KNOWLEDGE_ARTICLE_PUBLISHED" : "KNOWLEDGE_ARTICLE_REJECTED",
-      title: action === "PUBLISH"
-        ? `Knowledge Article Published: ${existingArticle.title}`
-        : `Knowledge Article Rework Required: ${existingArticle.title}`,
-      message: action === "PUBLISH"
-        ? `Your suggested Knowledge Article "${existingArticle.title}" has been reviewed and published by your Department Head.`
-        : `Your Knowledge Article proposal "${existingArticle.title}" requires revisions. Feedback: ${rejectionReason?.trim()}`,
+      type:
+        action === "PUBLISH"
+          ? "KNOWLEDGE_ARTICLE_PUBLISHED"
+          : "KNOWLEDGE_ARTICLE_REJECTED",
+      title:
+        action === "PUBLISH"
+          ? `Knowledge Article Published: ${existingArticle.title}`
+          : `Knowledge Article Rework Required: ${existingArticle.title}`,
+      message:
+        action === "PUBLISH"
+          ? `Your suggested Knowledge Article "${existingArticle.title}" has been reviewed and published by your Department Head.`
+          : `Your Knowledge Article proposal "${existingArticle.title}" requires revisions. Feedback: ${rejectionReason?.trim()}`,
     });
 
     return NextResponse.json({
       success: true,
-      message: action === "PUBLISH"
-        ? "Knowledge article approved and published successfully"
-        : "Knowledge article rejected with feedback",
+      message:
+        action === "PUBLISH"
+          ? "Knowledge article approved and published successfully"
+          : "Knowledge article rejected with feedback",
       articleId: updatedArticle.article_id.toString(),
       status: newStatus,
     });

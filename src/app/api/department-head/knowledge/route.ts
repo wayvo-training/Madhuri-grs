@@ -65,7 +65,11 @@ export async function GET(request: Request) {
         subcategoryId: art.subcategory_id?.toString() || null,
         createdBy: creatorName,
         createdAt: art.created_at.toISOString(),
-        status: art.status as "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED",
+        status: art.status as
+          | "DRAFT"
+          | "PENDING_REVIEW"
+          | "PUBLISHED"
+          | "REJECTED",
       };
     });
 

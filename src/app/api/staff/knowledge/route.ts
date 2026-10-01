@@ -38,7 +38,11 @@ export async function POST(request: Request) {
 
     if (!title?.trim() || !problemSummary?.trim() || !solutionSteps?.trim()) {
       return NextResponse.json(
-        { success: false, message: "Article title, problem summary, and solution steps are required." },
+        {
+          success: false,
+          message:
+            "Article title, problem summary, and solution steps are required.",
+        },
         { status: 400 },
       );
     }

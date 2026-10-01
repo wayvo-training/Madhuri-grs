@@ -1,6 +1,14 @@
 "use client";
 
-import { BookOpen, CheckCircle2, Clock, FileText, Lightbulb, Shield, X } from "lucide-react";
+import {
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Lightbulb,
+  Shield,
+  X,
+} from "lucide-react";
 
 export interface KnowledgeArticleData {
   id: string;
@@ -138,7 +146,9 @@ export function KnowledgeArticleViewerModal({
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 leading-relaxed flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
             <span>
-              This Knowledge Base article is an authorized reference guide for Staff. Staff retains full responsibility to investigate each individual grievance independently.
+              This Knowledge Base article is an authorized reference guide for
+              Staff. Staff retains full responsibility to investigate each
+              individual grievance independently.
             </span>
           </div>
         </div>
