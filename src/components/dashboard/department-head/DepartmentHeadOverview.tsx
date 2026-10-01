@@ -209,7 +209,7 @@ export function DepartmentHeadOverviewInner({
   const handleEscalationFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!escalationModalGrievance) return;
-    
+
     if (escalationInterventionType === "REASSIGN") {
       const g = escalationModalGrievance;
       setEscalationModalGrievance(null);

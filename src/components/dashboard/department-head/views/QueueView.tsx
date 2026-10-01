@@ -15,18 +15,25 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
-import {
-  AdvancedFilterBar,
-  type FilterCondition,
-  type FilterFieldDef,
-} from "@/components/filters/advanced-filter-bar";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import {
   SortableTableHead,
   type SortState,
 } from "@/components/ui/sortable-table-head";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type {
   CaseDrawerTab,
   DepartmentHeadTab,
@@ -170,12 +177,14 @@ export function QueueView({
     ];
   }, [availableDepartments, grievances]);
 
-  const filterFields: FilterFieldDef[] = [
+  const filterFields: SearchFieldDef[] = [
     {
       id: "department",
       label: "Department",
-      type: "searchable-select",
-      options: departmentOptions.filter((o) => o.value !== "ALL"),
+      type: "select",
+      options: departmentOptions
+        .filter((o) => o.value !== "ALL")
+        .map((o) => ({ label: o.label, value: o.value as string })),
     },
     {
       id: "priority",
@@ -186,22 +195,6 @@ export function QueueView({
         { label: "High", value: "HIGH" },
         { label: "Medium", value: "MEDIUM" },
         { label: "Low", value: "LOW" },
-      ],
-    },
-    {
-      id: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { label: "Submitted", value: "SUBMITTED" },
-        { label: "Routed", value: "ROUTED" },
-        { label: "Assigned", value: "ASSIGNED" },
-        { label: "In Progress", value: "IN_PROGRESS" },
-        { label: "Under Review", value: "UNDER_REVIEW" },
-        { label: "Resolved", value: "RESOLVED" },
-        { label: "Closed", value: "CLOSED" },
-        { label: "Reopened", value: "REOPENED" },
-        { label: "Escalated", value: "ESCALATED" },
       ],
     },
     {
@@ -219,7 +212,7 @@ export function QueueView({
           {
             id: "staff",
             label: "Assigned Staff",
-            type: "searchable-select" as const,
+            type: "select" as const,
             options: [
               { label: "Unassigned Only", value: "UNASSIGNED" },
               ...staffList.map((s) => ({
@@ -230,52 +223,29 @@ export function QueueView({
           },
         ]
       : []),
+    {
+      id: "search",
+      label: "Search",
+      type: "text",
+    },
   ];
 
-  const currentFilters: FilterCondition[] = [];
-  if (departmentFilter && departmentFilter !== "ALL") {
-    currentFilters.push({
-      id: "dept",
-      fieldId: "department",
-      operator: "Is",
-      value: departmentFilter,
-    });
-  }
-  if (priorityFilter !== "ALL") {
-    currentFilters.push({
-      id: "priority",
-      fieldId: "priority",
-      operator: "Is",
-      value: priorityFilter,
-    });
-  }
-  if (statusFilter && statusFilter !== "ALL") {
-    currentFilters.push({
-      id: "status",
-      fieldId: "status",
-      operator: "Is",
-      value: statusFilter,
-    });
-  }
-  if (staffFilter !== "ALL") {
-    currentFilters.push({
-      id: "staff",
-      fieldId: "staff",
-      operator: "Is",
-      value: staffFilter,
-    });
-  }
-
-  const handleFiltersChange = (newFilters: FilterCondition[]) => {
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
     let dept = "ALL";
     let prio = "ALL";
     let status = "ALL";
     let staff = "ALL";
-    newFilters.forEach((f) => {
-      if (f.fieldId === "department") dept = f.value;
-      if (f.fieldId === "priority") prio = f.value;
-      if (f.fieldId === "status") status = f.value;
-      if (f.fieldId === "staff") staff = f.value;
+    let search = "";
+
+    conditions.forEach((condition) => {
+      const valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      if (valArray.length > 0) {
+        if (condition.field === "department") dept = valArray[0];
+        if (condition.field === "priority") prio = valArray[0];
+        if (condition.field === "status") status = valArray[0];
+        if (condition.field === "staff") staff = valArray[0];
+        if (condition.field === "search") search = valArray[0];
+      }
     });
 
     if (setDepartmentFilter) setDepartmentFilter(dept);
@@ -290,6 +260,7 @@ export function QueueView({
     setPriorityFilter(prio);
     if (setStatusFilter) setStatusFilter(status);
     setStaffFilter(staff);
+    setSearchQuery(search);
     setCurrentPage(1);
   };
 
@@ -419,44 +390,21 @@ export function QueueView({
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Live Grievance Oversight Queue
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Showing{" "}
-            {filteredGrievances.length > 0
-              ? (currentPage - 1) * pageSize + 1
-              : 0}{" "}
-            - {Math.min(currentPage * pageSize, filteredGrievances.length)} of{" "}
-            {filteredGrievances.length} records across department queue.
-          </p>
+
         </div>
 
         {/* Controls Bar: View & Filter */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end lg:w-3/5">
           {/* Advanced Filter Builder (Search & Filter Tags) */}
           <div className="flex-1 w-full">
-            <AdvancedFilterBar
+            <AdvancedTableSearch
               fields={filterFields}
-              filters={currentFilters}
-              onFiltersChange={handleFiltersChange}
-              search={searchQuery}
-              onSearchChange={setSearchQuery}
-              placeholder="Search by ID, keyword, or submitter..."
+              onSearch={handleSearchChange}
+              className="w-full"
             />
           </div>
 
-          {/* Controls: Reset + [ View ▼ ] DropdownMenu */}
-          <div className="flex items-center gap-2">
-            {(currentFilters.length > 0 ||
-              selectedTab !== "ALL" ||
-              searchQuery) && (
-              <button
-                type="button"
-                onClick={handleClear}
-                className="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>Reset</span>
-              </button>
-            )}
+
 
             {/* [ View ▼ ] DropdownMenu */}
             <div className="relative inline-block" ref={viewMenuRef}>
@@ -516,7 +464,6 @@ export function QueueView({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Grievances Data Table */}
       <div className="overflow-x-auto custom-scrollbar">

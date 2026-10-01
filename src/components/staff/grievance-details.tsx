@@ -168,7 +168,15 @@ export function GrievanceDetails({
                 <span className="text-slate-300">&bull;</span>
                 <span>{grievance.subcategory}</span>
                 <span className="text-slate-300">&bull;</span>
-                <span className="text-slate-900 font-semibold">{grievance.priority === 'CRITICAL' ? 'Critical' : grievance.priority === 'HIGH' ? 'High' : grievance.priority === 'MEDIUM' ? 'Medium' : 'Low'}</span>
+                <span className="text-slate-900 font-semibold">
+                  {grievance.priority === "CRITICAL"
+                    ? "Critical"
+                    : grievance.priority === "HIGH"
+                      ? "High"
+                      : grievance.priority === "MEDIUM"
+                        ? "Medium"
+                        : "Low"}
+                </span>
                 <StatusBadge status={grievance.status} />
               </div>
             </div>
@@ -181,10 +189,20 @@ export function GrievanceDetails({
               )}
               {grievance.slaStatus && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                  {grievance.slaStatus === 'BREACHED' && <span className="h-1.5 w-1.5 rounded-full bg-red-600" />}
-                  {grievance.slaStatus === 'AT_RISK' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-                  {grievance.slaStatus === 'ON_TRACK' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-                  {grievance.slaStatus === 'BREACHED' ? 'SLA Breached' : grievance.slaStatus === 'AT_RISK' ? 'SLA At Risk' : 'Within SLA'}
+                  {grievance.slaStatus === "BREACHED" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                  )}
+                  {grievance.slaStatus === "AT_RISK" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  )}
+                  {grievance.slaStatus === "ON_TRACK" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  )}
+                  {grievance.slaStatus === "BREACHED"
+                    ? "SLA Breached"
+                    : grievance.slaStatus === "AT_RISK"
+                      ? "SLA At Risk"
+                      : "Within SLA"}
                 </span>
               )}
             </div>
@@ -281,15 +299,10 @@ export function GrievanceDetails({
           )}
 
           {activeTab === "investigation" && (
-            <InvestigationTab
-              grievance={grievance}
-              onAddNote={onAddNote}
-            />
+            <InvestigationTab grievance={grievance} onAddNote={onAddNote} />
           )}
 
-          {activeTab === "activity" && (
-            <ActivityTab grievance={grievance} />
-          )}
+          {activeTab === "activity" && <ActivityTab grievance={grievance} />}
 
           {activeTab === "resolution" && (
             <ResolutionTab

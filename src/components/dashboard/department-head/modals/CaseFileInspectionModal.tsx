@@ -9,12 +9,12 @@ import type {
   StaffMember,
 } from "@/types/department-head";
 import {
+  CaseActivityTab,
   CaseInspectionFooter,
   CaseInspectionHeader,
   CaseNotesTab,
   CaseProgressTab,
   CaseStatementTab,
-  CaseActivityTab,
 } from "./case-inspection";
 
 export interface CaseFileInspectionModalProps {

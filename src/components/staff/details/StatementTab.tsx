@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { StaffGrievanceItem } from "@/types/staff";
 import {
-  KnowledgeArticleViewerModal,
   type KnowledgeArticleData,
+  KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
+import type { StaffGrievanceItem } from "@/types/staff";
 
 interface StatementTabProps {
   grievance: StaffGrievanceItem;
@@ -80,8 +80,10 @@ export function StatementTab({
   useEffect(() => {
     const fetchKb = async () => {
       try {
-        const catId = (grievance as unknown as Record<string, unknown>).categoryId || "";
-        const subCatId = (grievance as unknown as Record<string, unknown>).subcategoryId || "";
+        const catId =
+          (grievance as unknown as Record<string, unknown>).categoryId || "";
+        const subCatId =
+          (grievance as unknown as Record<string, unknown>).subcategoryId || "";
         const res = await fetch(
           `/api/staff/knowledge/recommendations?categoryId=${catId}&subcategoryId=${subCatId}`,
         );
@@ -302,11 +304,10 @@ export function StatementTab({
               <span>Two-Way Inquiry Active:</span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              The employee has been notified via In-App Notification and
-              Email. Once {grievance.submitterName} submits their response or
-              uploads the requested documents, the status will automatically
-              update to <strong>In Progress</strong> and you will receive a
-              notification.
+              The employee has been notified via In-App Notification and Email.
+              Once {grievance.submitterName} submits their response or uploads
+              the requested documents, the status will automatically update to{" "}
+              <strong>In Progress</strong> and you will receive a notification.
             </p>
           </div>
         </div>
@@ -396,8 +397,7 @@ export function StatementTab({
                         />
                         <span className="flex items-center gap-1.5">
                           <Mail className="h-3.5 w-3.5 text-emerald-600" />
-                          <strong>Email</strong> (
-                          {grievance.submitterEmail})
+                          <strong>Email</strong> ({grievance.submitterEmail})
                         </span>
                       </label>
                     </div>
@@ -456,7 +456,9 @@ export function StatementTab({
                         }}
                         className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 focus:border-[#0F766E] focus:outline-hidden bg-slate-50/50"
                       >
-                        <option value="">Select a document to request...</option>
+                        <option value="">
+                          Select a document to request...
+                        </option>
                         {[
                           "Appraisal / Scorecard Sheet",
                           "Salary Slip / Remuneration Sheet",
@@ -481,7 +483,9 @@ export function StatementTab({
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setSelectedDocs(selectedDocs.filter((d) => d !== doc))
+                                  setSelectedDocs(
+                                    selectedDocs.filter((d) => d !== doc),
+                                  )
                                 }
                                 className="text-blue-400 hover:text-blue-700 hover:bg-blue-100 rounded-sm p-0.5 transition"
                               >
@@ -522,9 +526,7 @@ export function StatementTab({
                       >
                         <Send className="h-3.5 w-3.5" />
                         <span>
-                          {isSendingRequest
-                            ? "Dispatching..."
-                            : "Send Request"}
+                          {isSendingRequest ? "Dispatching..." : "Send Request"}
                         </span>
                       </button>
                     </div>
@@ -668,7 +670,8 @@ export function StatementTab({
                     {art.title}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5">
-                    Published &bull; Relevant to {art.category} / {art.subcategory}
+                    Published &bull; Relevant to {art.category} /{" "}
+                    {art.subcategory}
                   </div>
                 </div>
                 <button
@@ -687,7 +690,8 @@ export function StatementTab({
           </div>
 
           <div className="text-[11px] text-teal-800 italic pt-0.5 leading-relaxed">
-            Note: Recommendations are informational reference material. The system does not automatically resolve or modify this grievance.
+            Note: Recommendations are informational reference material. The
+            system does not automatically resolve or modify this grievance.
           </div>
         </div>
       )}
@@ -695,7 +699,8 @@ export function StatementTab({
       {/* Attached Documents / Proofs */}
       <div className="space-y-2">
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-          Attached Proofs &amp; Documentation ({grievance.attachments?.length || 0})
+          Attached Proofs &amp; Documentation (
+          {grievance.attachments?.length || 0})
         </h4>
         {grievance.attachments && grievance.attachments.length > 0 ? (
           <div className="space-y-2">

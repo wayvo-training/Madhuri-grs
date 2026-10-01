@@ -1,20 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowDownUp } from "lucide-react";
-import { formatAuditFeedDetails } from "@/lib/department-head/utils";
-import type { EscalationAuditRecord } from "@/types/department-head";
+import { useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
+import { formatAuditFeedDetails } from "@/lib/department-head/utils";
+import type { EscalationAuditRecord } from "@/types/department-head";
 
 export interface ActivityViewProps {
   governanceAuditFeed: EscalationAuditRecord[];
 }
 
-export function ActivityView({
-  governanceAuditFeed,
-}: ActivityViewProps) {
+export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -22,7 +20,10 @@ export function ActivityView({
     sortState,
     handleSort,
     sortedItems: sortedFeed,
-  } = useTableSort(governanceAuditFeed, { field: "timestamp", direction: "desc" });
+  } = useTableSort(governanceAuditFeed, {
+    field: "timestamp",
+    direction: "desc",
+  });
 
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedFeed = sortedFeed.slice(startIndex, startIndex + pageSize);
@@ -40,7 +41,7 @@ export function ActivityView({
               SLA-related changes across this department.
             </p>
           </div>
-          </div>
+        </div>
 
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-[13px] border-collapse">
@@ -132,7 +133,8 @@ export function ActivityView({
                           ? "Department Head"
                           : feed.actor.includes("END_USER")
                             ? "End User"
-                            : feed.actor.includes("SLA") || feed.actor.includes("SYSTEM")
+                            : feed.actor.includes("SLA") ||
+                                feed.actor.includes("SYSTEM")
                               ? "System"
                               : "Staff"}
                       </td>

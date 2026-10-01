@@ -1,6 +1,6 @@
 "use client";
 
-import { Inbox, Layers, UserCheck, Users, Mail } from "lucide-react";
+import { Inbox, Layers, Mail, UserCheck, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   AdminMetricCard,
@@ -8,7 +8,10 @@ import {
 } from "@/components/dashboard/admin/admin-shared";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
-import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
+import {
+  SortableTh,
+  type SortState,
+} from "@/components/ui/sortable-table-head";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -46,7 +49,10 @@ export function StaffView({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -133,12 +139,38 @@ export function StaffView({
           <table className="w-full text-left text-sm border-collapse">
             <thead className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-sm font-semibold text-slate-600 dark:text-slate-400">
               <tr>
-                <SortableTh field="name" currentSort={sortState} onSort={handleSort} className="py-3 pl-4 pr-3 whitespace-nowrap">
+                <SortableTh
+                  field="name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 pl-4 pr-3 whitespace-nowrap"
+                >
                   Staff Member
                 </SortableTh>
-                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Status</SortableTh>
-                <SortableTh field="activeTickets" currentSort={sortState} onSort={handleSort} className="py-3 px-3 min-w-48">Active Workload</SortableTh>
-                <SortableTh field="activeTickets" currentSort={sortState} onSort={handleSort} className="py-3 px-3 whitespace-nowrap">Assigned Cases</SortableTh>
+                <SortableTh
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Status
+                </SortableTh>
+                <SortableTh
+                  field="activeTickets"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 min-w-48"
+                >
+                  Active Workload
+                </SortableTh>
+                <SortableTh
+                  field="activeTickets"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3 whitespace-nowrap"
+                >
+                  Assigned Cases
+                </SortableTh>
                 <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
                   Actions
                 </th>
@@ -285,7 +317,10 @@ export function StaffView({
                                 icon: <Mail className="h-3.5 w-3.5" />,
                                 variant: "default",
                                 onClick: () => {
-                                  window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${staff.email}`, '_blank');
+                                  window.open(
+                                    `https://mail.google.com/mail/?view=cm&fs=1&to=${staff.email}`,
+                                    "_blank",
+                                  );
                                 },
                               },
                             ]}

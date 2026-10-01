@@ -15,9 +15,9 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
-import { SortableTh } from "@/components/ui/sortable-table-head";
 import type { StaffAuditItem } from "@/types/staff";
 
 interface StaffActivityViewProps {
@@ -249,13 +249,18 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                   {pagination.paginatedItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50/80 transition"
+                    >
                       <td className="p-4 align-top whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 shrink-0">
                             {getActionIcon(item.action)}
                           </div>
-                          <span className="text-xs font-bold text-slate-900">{item.action}</span>
+                          <span className="text-xs font-bold text-slate-900">
+                            {item.action}
+                          </span>
                         </div>
                       </td>
                       <td className="p-4 align-top whitespace-nowrap">
@@ -268,15 +273,20 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                         )}
                       </td>
                       <td className="p-4 align-top">
-                        <p className="text-xs text-slate-700 leading-relaxed max-w-md">{item.details}</p>
+                        <p className="text-xs text-slate-700 leading-relaxed max-w-md">
+                          {item.details}
+                        </p>
                       </td>
                       <td className="p-4 align-top whitespace-nowrap">
-                        <span className="text-xs text-slate-700 font-medium">{item.actor || "-"}</span>
+                        <span className="text-xs text-slate-700 font-medium">
+                          {item.actor || "-"}
+                        </span>
                       </td>
                       <td className="p-4 align-top whitespace-nowrap">
                         <span className="text-[11px] text-slate-500 flex items-center gap-1">
                           <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                          {item.relativeTime || new Date(item.timestamp).toLocaleString()}
+                          {item.relativeTime ||
+                            new Date(item.timestamp).toLocaleString()}
                         </span>
                       </td>
                     </tr>

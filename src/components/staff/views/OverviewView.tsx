@@ -1,6 +1,16 @@
+import {
+  AlertOctagon,
+  AlertTriangle,
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Clock,
+  Eye,
+  FileCheck2,
+  Inbox,
+} from "lucide-react";
 import { useState } from "react";
-import { StaffPieCharts } from "./StaffPieCharts";
-import { AlertOctagon, AlertTriangle, ArrowRight, FileCheck2, Inbox, Clock, Eye, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
 import type {
@@ -10,6 +20,7 @@ import type {
   StaffMemberProfile,
   StaffView,
 } from "@/types/staff";
+import { StaffPieCharts } from "./StaffPieCharts";
 
 type SortKey =
   | "grievanceNumber"
@@ -102,7 +113,8 @@ export function OverviewView({
         comp = a.category.localeCompare(b.category);
         break;
       case "priority":
-        comp = (priorityWeight[a.priority] || 0) - (priorityWeight[b.priority] || 0);
+        comp =
+          (priorityWeight[a.priority] || 0) - (priorityWeight[b.priority] || 0);
         break;
       case "status":
         comp = (statusWeight[a.status] || 0) - (statusWeight[b.status] || 0);
@@ -111,7 +123,9 @@ export function OverviewView({
         comp = (slaWeight[a.slaStatus] || 0) - (slaWeight[b.slaStatus] || 0);
         break;
       case "lastUpdated":
-        comp = new Date(a.assignedAt || a.submittedAt).getTime() - new Date(b.assignedAt || b.submittedAt).getTime();
+        comp =
+          new Date(a.assignedAt || a.submittedAt).getTime() -
+          new Date(b.assignedAt || b.submittedAt).getTime();
         break;
     }
     return sortDirection === "asc" ? comp : -comp;
@@ -165,8 +179,6 @@ export function OverviewView({
       {/* Staff Pie Charts (Workload & SLA Overview) */}
       <StaffPieCharts grievances={assignedGrievances} layout="horizontal" />
 
-
-
       {/* 1. Grievances Requiring Immediate Attention (Compact Alert Section) */}
       {attentionItems.length > 0 && (
         <div className="flex-1 flex flex-col rounded-2xl border border-amber-200 bg-amber-50/50 p-3 sm:p-3.5 space-y-2 min-h-0">
@@ -199,7 +211,9 @@ export function OverviewView({
                   {renderSortHeader("Status", "status")}
                   {renderSortHeader("SLA", "slaStatus")}
                   {renderSortHeader("Last Updated", "lastUpdated")}
-                  <th className="py-2 px-3 whitespace-nowrap text-right text-slate-900 font-bold">Action</th>
+                  <th className="py-2 px-3 whitespace-nowrap text-right text-slate-900 font-bold">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-200/60">
@@ -210,7 +224,10 @@ export function OverviewView({
                     item.reopenCount > 0 || item.status === "REOPENED";
 
                   return (
-                    <tr key={item.id} className="hover:bg-amber-50/30 transition">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-amber-50/30 transition"
+                    >
                       {/* Grievance Number */}
                       <td className="py-2 px-3 whitespace-nowrap">
                         <span className="font-mono text-xs font-bold text-slate-900">
@@ -232,7 +249,10 @@ export function OverviewView({
                       <td className="py-2 px-3 whitespace-nowrap">
                         {isReopened ? (
                           <span className="inline-flex items-center gap-0.5 text-xs font-bold text-slate-900">
-                            Reopened {item.reopenCount > 0 ? `(${item.reopenCount})` : ""}
+                            Reopened{" "}
+                            {item.reopenCount > 0
+                              ? `(${item.reopenCount})`
+                              : ""}
                           </span>
                         ) : (
                           <span className="text-slate-400 text-xs">-</span>
@@ -317,7 +337,6 @@ export function OverviewView({
           </div>
         </div>
       )}
-
     </div>
   );
 }

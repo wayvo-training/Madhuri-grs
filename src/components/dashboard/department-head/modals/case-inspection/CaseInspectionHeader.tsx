@@ -71,9 +71,13 @@ export function CaseInspectionHeader({
               <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Current Head Intervention &ndash; {hodIntervention.actionLabel}</span>
+                  <span>
+                    Current Head Intervention &ndash;{" "}
+                    {hodIntervention.actionLabel}
+                  </span>
                 </div>
-                {(hodIntervention.note || hodIntervention.actionType === "MONITOR") && (
+                {(hodIntervention.note ||
+                  hodIntervention.actionType === "MONITOR") && (
                   <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
                     {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
                   </span>

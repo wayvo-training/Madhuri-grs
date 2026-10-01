@@ -1,5 +1,12 @@
+import {
+  Activity,
+  CheckCircle2,
+  FileText,
+  LayoutDashboard,
+  Search,
+  User,
+} from "lucide-react";
 import React from "react";
-import { Activity, CheckCircle2, FileText, LayoutDashboard, Search, User } from "lucide-react";
 import type { StaffView } from "@/types/staff";
 
 interface StaffSidebarProps {
@@ -26,10 +33,16 @@ export function StaffSidebar({ activeView, switchView }: StaffSidebarProps) {
             type="button"
             onClick={() => switchView(tab.id as StaffView)}
             className={`group flex w-full items-center gap-2 rounded px-2 py-1 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#14B8A6] focus-visible:ring-offset-1 ${
-              isActive ? "bg-[#0F766E] text-white" : "bg-white text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+              isActive
+                ? "bg-[#0F766E] text-white"
+                : "bg-white text-slate-600 hover:bg-teal-50 hover:text-teal-700"
             }`}
           >
-            <Icon className={isActive ? "h-4 w-4 text-white" : "h-4 w-4 text-slate-400"} />
+            <Icon
+              className={
+                isActive ? "h-4 w-4 text-white" : "h-4 w-4 text-slate-400"
+              }
+            />
             <span>{tab.label}</span>
           </button>
         );

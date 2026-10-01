@@ -42,7 +42,11 @@ export function DepartmentHeadViewSwitcher({
   actionSuccessMessage,
   onClearSuccessMessage,
 }: DepartmentHeadViewSwitcherProps) {
-  const views: { id: DepartmentHeadView; label: string; icon: typeof LayoutDashboard }[] = [
+  const views: {
+    id: DepartmentHeadView;
+    label: string;
+    icon: typeof LayoutDashboard;
+  }[] = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "queue", label: "Grievance Queue", icon: Inbox },
     { id: "staff", label: "Staff Roster", icon: Users },
@@ -68,7 +72,6 @@ export function DepartmentHeadViewSwitcher({
           </button>
         </div>
       )}
-
     </div>
   );
 }

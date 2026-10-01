@@ -1,9 +1,17 @@
 "use client";
 
-import { BookOpen, Eye, FileCheck2, FileSpreadsheet, FileText, ImageIcon, Paperclip } from "lucide-react";
+import {
+  BookOpen,
+  Eye,
+  FileCheck2,
+  FileSpreadsheet,
+  FileText,
+  ImageIcon,
+  Paperclip,
+} from "lucide-react";
 import { useState } from "react";
-import type { StaffGrievanceItem } from "@/types/staff";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ResolutionTabProps {
   grievance: StaffGrievanceItem;
@@ -21,7 +29,10 @@ interface ResolutionTabProps {
   }) => void;
 }
 
-export function ResolutionTab({ grievance, onOpenDocumentPreview }: ResolutionTabProps) {
+export function ResolutionTab({
+  grievance,
+  onOpenDocumentPreview,
+}: ResolutionTabProps) {
   const [isProposeKbOpen, setIsProposeKbOpen] = useState(false);
 
   if (!grievance.submittedResolution) {
@@ -118,7 +129,8 @@ export function ResolutionTab({ grievance, onOpenDocumentPreview }: ResolutionTa
         <div className="space-y-2 pt-2">
           <span className="font-semibold text-slate-800 flex items-center gap-1.5">
             <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
-            Staff Supporting Resolution Documents ({resolutionAttachments.length}):
+            Staff Supporting Resolution Documents (
+            {resolutionAttachments.length}):
           </span>
           <div className="space-y-2">
             {resolutionAttachments.map((file) => (

@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowDownUp } from "lucide-react";
+import { useState } from "react";
 import {
   formatAuditActionTitle,
   formatAuditLogContent,
 } from "@/lib/department-head/utils";
-import type {
-  CaseProgressData,
-  GrievanceItem,
-} from "@/types/department-head";
+import type { CaseProgressData, GrievanceItem } from "@/types/department-head";
 
 interface CaseActivityTabProps {
   currentGrievance: GrievanceItem;
@@ -22,7 +19,7 @@ export function CaseActivityTab({
 }: CaseActivityTabProps) {
   const [timelineSort] = useState<"desc" | "asc">("desc");
 
-  let timelineEvents = [
+  const timelineEvents = [
     ...(caseProgressData?.timeline && caseProgressData.timeline.length > 0
       ? caseProgressData.timeline
       : (currentGrievance.auditTrail || []).map((log, idx) => ({
@@ -38,8 +35,6 @@ export function CaseActivityTab({
   if (timelineSort === "desc") {
     timelineEvents.reverse();
   }
-
-
 
   return (
     <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">

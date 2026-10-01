@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  KnowledgeArticleViewerModal,
   type KnowledgeArticleData,
+  KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
 
 export function KnowledgeView() {
@@ -27,17 +27,21 @@ export function KnowledgeView() {
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   // Viewer Modal
-  const [viewingArticle, setViewingArticle] = useState<KnowledgeArticleData | null>(null);
+  const [viewingArticle, setViewingArticle] =
+    useState<KnowledgeArticleData | null>(null);
 
   // Rejection Modal
-  const [rejectingArticle, setRejectingArticle] = useState<KnowledgeArticleData | null>(null);
+  const [rejectingArticle, setRejectingArticle] =
+    useState<KnowledgeArticleData | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/department-head/knowledge?status=${statusFilter === "ALL" ? "" : statusFilter}`);
+      const res = await fetch(
+        `/api/department-head/knowledge?status=${statusFilter === "ALL" ? "" : statusFilter}`,
+      );
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.articles)) {
         setArticles(data.articles);
@@ -66,7 +70,9 @@ export function KnowledgeView() {
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to publish article");
       }
-      setActionSuccessMsg(`Knowledge article "${article.title}" published successfully!`);
+      setActionSuccessMsg(
+        `Knowledge article "${article.title}" published successfully!`,
+      );
       fetchArticles();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to publish article");
@@ -79,19 +85,24 @@ export function KnowledgeView() {
     if (!rejectingArticle || !rejectionReason.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/department-head/knowledge/${rejectingArticle.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "REJECT",
-          rejectionReason: rejectionReason.trim(),
-        }),
-      });
+      const res = await fetch(
+        `/api/department-head/knowledge/${rejectingArticle.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "REJECT",
+            rejectionReason: rejectionReason.trim(),
+          }),
+        },
+      );
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to reject article");
       }
-      setActionSuccessMsg(`Article "${rejectingArticle.title}" rejected with feedback.`);
+      setActionSuccessMsg(
+        `Article "${rejectingArticle.title}" rejected with feedback.`,
+      );
       setRejectingArticle(null);
       setRejectionReason("");
       fetchArticles();
@@ -145,7 +156,8 @@ export function KnowledgeView() {
                 Knowledge Article Governance
               </h3>
               <p className="text-xs text-slate-500">
-                Review, approve, or request rework on reusable resolution knowledge proposed by Staff.
+                Review, approve, or request rework on reusable resolution
+                knowledge proposed by Staff.
               </p>
             </div>
           </div>
@@ -155,7 +167,9 @@ export function KnowledgeView() {
             onClick={() => fetchArticles()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer self-start sm:self-auto"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+            />
             <span>Refresh</span>
           </button>
         </div>
@@ -207,7 +221,9 @@ export function KnowledgeView() {
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center space-y-2">
           <BookOpen className="h-8 w-8 text-slate-300 mx-auto" />
-          <h4 className="text-xs font-bold text-slate-700">No Knowledge Articles Found</h4>
+          <h4 className="text-xs font-bold text-slate-700">
+            No Knowledge Articles Found
+          </h4>
           <p className="text-xs text-slate-400">
             {statusFilter === "PENDING_REVIEW"
               ? "There are no knowledge articles currently awaiting your review."
@@ -242,9 +258,9 @@ export function KnowledgeView() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    Category: <strong>{art.category}</strong> &bull; Subcategory:{" "}
-                    <strong>{art.subcategory}</strong> &bull; Author:{" "}
-                    <strong>{art.createdBy}</strong>
+                    Category: <strong>{art.category}</strong> &bull;
+                    Subcategory: <strong>{art.subcategory}</strong> &bull;
+                    Author: <strong>{art.createdBy}</strong>
                   </p>
                 </div>
 
@@ -287,7 +303,9 @@ export function KnowledgeView() {
 
               {/* Problem Snippet */}
               <div className="text-xs text-slate-700 space-y-1">
-                <span className="font-semibold text-slate-900">Problem Pattern:</span>
+                <span className="font-semibold text-slate-900">
+                  Problem Pattern:
+                </span>
                 <p className="line-clamp-2 text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                   {art.problem}
                 </p>
@@ -326,8 +344,8 @@ export function KnowledgeView() {
 
             <div className="space-y-2 text-xs">
               <p className="text-slate-600">
-                Provide constructive rework feedback for Staff regarding article:{" "}
-                <strong>{rejectingArticle.title}</strong>
+                Provide constructive rework feedback for Staff regarding
+                article: <strong>{rejectingArticle.title}</strong>
               </p>
               <textarea
                 rows={3}

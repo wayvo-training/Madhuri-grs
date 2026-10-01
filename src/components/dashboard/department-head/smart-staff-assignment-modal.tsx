@@ -140,7 +140,7 @@ export function SmartStaffAssignmentModal({
   const topCandidate = recommendedCandidates[0];
 
   const manualCandidates = staffList.filter(
-    (s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE"
+    (s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE",
   );
 
   // Find currently assigned staff info for reassignment view
@@ -546,22 +546,25 @@ export function SmartStaffAssignmentModal({
                     >
                       <option value="">Select another available staff</option>
                       {manualCandidates.map((candidate) => {
-                        const isAtCap = candidate.activeTickets >= (candidate.maxCapacity || 10);
+                        const isAtCap =
+                          candidate.activeTickets >=
+                          (candidate.maxCapacity || 10);
                         const availCap = Math.max(
                           0,
-                          (candidate.maxCapacity || 10) - candidate.activeTickets,
+                          (candidate.maxCapacity || 10) -
+                            candidate.activeTickets,
                         );
                         return (
                           <option
                             key={candidate.id}
                             value={candidate.id}
                             disabled={
-                              candidate.status === "ON_LEAVE" ||
-                              isAtCap
+                              candidate.status === "ON_LEAVE" || isAtCap
                             }
                           >
                             {candidate.name} — Active Workload:{" "}
-                            {candidate.activeTickets} / {candidate.maxCapacity || 10}{" "}
+                            {candidate.activeTickets} /{" "}
+                            {candidate.maxCapacity || 10}{" "}
                             {isAtCap
                               ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
                               : `(Available Capacity: ${availCap})`}

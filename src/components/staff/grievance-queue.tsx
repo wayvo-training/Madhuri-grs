@@ -15,12 +15,20 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
+import {
   CustomSelect,
   type CustomSelectOption,
 } from "@/components/ui/custom-select";
 import { Pagination } from "@/components/ui/pagination";
 import { Popover } from "@/components/ui/popover";
-import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
+import {
+  SortableTh,
+  type SortState,
+} from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
 import type {
   StaffGrievanceItem,
@@ -68,6 +76,9 @@ export function GrievanceQueue({
     field: null,
     direction: null,
   });
+
+  const [advancedSearch, setAdvancedSearch] = useState<SearchCondition[]>([]);
+  const [filterMode, setFilterMode] = useState<string>("AND");
 
   const handleSort = (field: string, direction: SortState["direction"]) => {
     setSortState({ field, direction });
@@ -187,6 +198,48 @@ export function GrievanceQueue({
     [categories],
   );
 
+  const searchFields: SearchFieldDef[] = useMemo(
+    () => [
+      { id: "grievanceNumber", label: "Grievance ID", type: "text" },
+      { id: "title", label: "Title", type: "text" },
+      { id: "submitterName", label: "Submitter", type: "text" },
+      {
+        id: "category",
+        label: "Category",
+        type: "select",
+        options: categoryOptions
+          .filter((o) => o.value !== "ALL")
+          .map((o) => ({ value: o.value as string, label: o.label as string })),
+      },
+      {
+        id: "priority",
+        label: "Priority",
+        type: "select",
+        options: priorityOptions
+          .filter((o) => o.value !== "ALL")
+          .map((o) => ({ value: o.value as string, label: o.label as string })),
+      },
+      {
+        id: "status",
+        label: "Status",
+        type: "select",
+        options: statusOptions
+          .filter((o) => o.value !== "ALL")
+          .map((o) => ({ value: o.value as string, label: o.label as string })),
+      },
+      {
+        id: "slaStatus",
+        label: "SLA Status",
+        type: "select",
+        options: [
+          { value: "ON_TRACK", label: "On Track" },
+          { value: "AT_RISK", label: "At Risk" },
+          { value: "BREACHED", label: "Breached" },
+        ],
+      },
+    ],
+    [categoryOptions, priorityOptions, statusOptions],
+  );
 
   // Filtered grievances
   const filteredGrievances = useMemo(() => {
@@ -250,15 +303,50 @@ export function GrievanceQueue({
         return false;
       }
 
+      // 7. Advanced Table Search
+      if (advancedSearch.length > 0) {
+        let conditionMet = filterMode === "AND" ? true : false;
+        
+        for (const cond of advancedSearch) {
+          const { field, operator, value } = cond;
+          const itemVal = item[field as keyof typeof item] as string | null | undefined;
+          const strVal = String(itemVal || "").toLowerCase();
+          const queryVal = String(value || "").toLowerCase();
+          
+          let matches = false;
+          switch (operator) {
+            case "equals": matches = strVal === queryVal; break;
+            case "not_equals": matches = strVal !== queryVal; break;
+            case "contains": matches = strVal.includes(queryVal); break;
+            case "starts_with": matches = strVal.startsWith(queryVal); break;
+            case "is_empty": matches = strVal === ""; break;
+            case "is_not_empty": matches = strVal !== ""; break;
+            case "is_in": matches = strVal === queryVal; break;
+            case "is_not_in": matches = strVal !== queryVal; break;
+          }
+          
+          if (filterMode === "AND" && !matches) conditionMet = false;
+          if (filterMode === "OR" && matches) conditionMet = true;
+          if (filterMode === "NOT" && matches) conditionMet = false;
+        }
+        
+        if (filterMode === "NOT") conditionMet = !conditionMet; // flip logic for NOT if no matches occurred? Actually NOT means ALL must NOT match.
+        
+        if (!conditionMet) return false;
+      }
+
       return true;
     });
-  }, [grievances, activeTab, filters]);
+  }, [grievances, activeTab, filters, advancedSearch]);
 
   // Sorted list
   const sortedGrievances = useMemo(() => {
     const list = [...filteredGrievances];
     if (!sortState.field || !sortState.direction) {
-      return list.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      return list.sort(
+        (a, b) =>
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
+      );
     }
 
     return list.sort((a, b) => {
@@ -271,13 +359,20 @@ export function GrievanceQueue({
         bVal = new Date(b.submittedAt).getTime();
       }
       if (sortState.field === "priority") {
-        const score: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+        const score: Record<string, number> = {
+          CRITICAL: 4,
+          HIGH: 3,
+          MEDIUM: 2,
+          LOW: 1,
+        };
         aVal = score[a.priority as string] || 0;
         bVal = score[b.priority as string] || 0;
       }
       if (sortState.field === "slaConsumptionPercent") {
-        if (a.slaStatus === "BREACHED" && b.slaStatus !== "BREACHED") return sortState.direction === "asc" ? 1 : -1;
-        if (b.slaStatus === "BREACHED" && a.slaStatus !== "BREACHED") return sortState.direction === "asc" ? -1 : 1;
+        if (a.slaStatus === "BREACHED" && b.slaStatus !== "BREACHED")
+          return sortState.direction === "asc" ? 1 : -1;
+        if (b.slaStatus === "BREACHED" && a.slaStatus !== "BREACHED")
+          return sortState.direction === "asc" ? -1 : 1;
       }
 
       if (aVal < bVal) return sortState.direction === "asc" ? -1 : 1;
@@ -295,7 +390,7 @@ export function GrievanceQueue({
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset to page 1 on filter/tab/sort changes
   useEffect(() => {
     pagination.resetPage();
-  }, [filters, activeTab, sortState, pagination.resetPage]);
+  }, [filters, activeTab, sortState, advancedSearch, pagination.resetPage]);
 
   const hasActiveFilters =
     activeTab !== "all" ||
@@ -319,10 +414,18 @@ export function GrievanceQueue({
       category: "ALL",
       isReopenedOnly: false,
     });
+    setAdvancedSearch([]);
   };
 
   return (
     <div className="space-y-4">
+      {/* Advanced Table Search Toolbar */}
+      <AdvancedTableSearch
+        fields={searchFields}
+        onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+        className="w-full"
+      />
+
       {/* Filter and Search Controls Bar */}
       <div className="bg-slate-50/70 p-3 sm:p-4 rounded-xl border border-slate-200/80 space-y-3">
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
@@ -350,7 +453,6 @@ export function GrievanceQueue({
               </button>
             )}
           </div>
-
         </div>
 
         {/* Filter Dropdown Menus Row */}
@@ -607,15 +709,68 @@ export function GrievanceQueue({
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/80 text-[13px] font-bold uppercase tracking-wider text-slate-900">
-                <SortableTh field="grievanceNumber" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Grievance ID</SortableTh>
-                <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3 px-3.5">Summary</SortableTh>
-                <th className="py-3 px-3 text-slate-900 font-bold uppercase tracking-wider text-[13px] text-left">Reopened Status</th>
-                <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Category</SortableTh>
-                <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Priority</SortableTh>
-                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Status</SortableTh>
-                <SortableTh field="slaConsumptionPercent" currentSort={sortState} onSort={handleSort} className="py-3 px-3">SLA</SortableTh>
-                <SortableTh field="submittedAt" currentSort={sortState} onSort={handleSort} className="py-3 px-3">Last Updated</SortableTh>
-                <th className="py-3 px-3.5 text-right text-slate-900 font-bold">Action</th>
+                <SortableTh
+                  field="grievanceNumber"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3.5"
+                >
+                  Grievance ID
+                </SortableTh>
+                <SortableTh
+                  field="title"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3.5"
+                >
+                  Summary
+                </SortableTh>
+                <th className="py-3 px-3 text-slate-900 font-bold uppercase tracking-wider text-[13px] text-left">
+                  Reopened Status
+                </th>
+                <SortableTh
+                  field="category"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Category
+                </SortableTh>
+                <SortableTh
+                  field="priority"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Priority
+                </SortableTh>
+                <SortableTh
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Status
+                </SortableTh>
+                <SortableTh
+                  field="slaConsumptionPercent"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  SLA
+                </SortableTh>
+                <SortableTh
+                  field="submittedAt"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Last Updated
+                </SortableTh>
+                <th className="py-3 px-3.5 text-right text-slate-900 font-bold">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">

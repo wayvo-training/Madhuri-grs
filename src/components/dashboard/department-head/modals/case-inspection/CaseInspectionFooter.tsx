@@ -129,15 +129,15 @@ export function CaseInspectionFooter({
           )}
 
           {requiresHeadResolutionReview(currentGrievance) && (
-              <button
-                type="button"
-                onClick={() => onReviewResolutionClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>Submit Resolution</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => onReviewResolutionClick(currentGrievance)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Submit Resolution</span>
+            </button>
+          )}
 
           <button
             type="button"

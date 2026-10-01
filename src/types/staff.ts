@@ -21,11 +21,7 @@ export type StaffGrievanceStatus =
 
 export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
 
-export type StaffView =
-  | "overview"
-  | "queue"
-  | "profile"
-  | "activity";
+export type StaffView = "overview" | "queue" | "profile" | "activity";
 
 export interface StaffKpiStats {
   activeGrievances: number;

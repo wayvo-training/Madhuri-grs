@@ -7,8 +7,8 @@ import type {
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
-import { AttentionRequiredPanel } from "./overview-panels";
 import { GrievancePieCharts } from "./GrievancePieCharts";
+import { AttentionRequiredPanel } from "./overview-panels";
 
 export interface OverviewViewProps {
   currentDepartmentName: string;

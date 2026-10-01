@@ -209,7 +209,10 @@ export function ResolutionView({
                       </span>
                     </td>
                     <td className="py-3 px-3.5 max-w-[200px]">
-                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
+                      <span
+                        className="font-medium text-slate-900 line-clamp-2"
+                        title={item.title}
+                      >
                         {item.title}
                       </span>
                     </td>
@@ -355,7 +358,10 @@ export function ResolutionView({
                       </span>
                     </td>
                     <td className="py-3 px-3.5 max-w-[200px]">
-                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
+                      <span
+                        className="font-medium text-slate-900 line-clamp-2"
+                        title={item.title}
+                      >
                         {item.title}
                       </span>
                     </td>
@@ -494,7 +500,10 @@ export function ResolutionView({
                       </span>
                     </td>
                     <td className="py-3 px-3.5 max-w-[200px]">
-                      <span className="font-medium text-slate-900 line-clamp-2" title={item.title}>
+                      <span
+                        className="font-medium text-slate-900 line-clamp-2"
+                        title={item.title}
+                      >
                         {item.title}
                       </span>
                     </td>

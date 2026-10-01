@@ -11,11 +11,7 @@ import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
 
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
-import {
-  OverviewView,
-  ProfileView,
-  QueueView,
-} from "@/components/staff/views";
+import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
 import type {
   StaffAuditItem,
@@ -434,9 +430,7 @@ export function StaffDashboard({
         />
       )}
 
-      {activeView === "activity" && (
-        <FullActivityView staffName={staffName} />
-      )}
+      {activeView === "activity" && <FullActivityView staffName={staffName} />}
 
       {/* Grievance Details Modal */}
       {selectedGrievance && (

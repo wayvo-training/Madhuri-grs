@@ -12,10 +12,7 @@ export function useStaffNavigation(defaultView: StaffView = "overview") {
       const hash = window.location.hash.replace("#", "").toLowerCase();
       if (hash === "queue" || hash === "assigned") {
         setActiveView("queue");
-      } else if (
-        hash === "profile" ||
-        hash === "activity"
-      ) {
+      } else if (hash === "profile" || hash === "activity") {
         setActiveView(hash as StaffView);
       } else {
         setActiveView("overview");

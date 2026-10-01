@@ -135,7 +135,9 @@ export function DocumentViewerModal({
                 title="Request Additional Documents from Employee"
               >
                 <FileQuestion className="h-3.5 w-3.5 text-blue-600" />
-                <span className="hidden sm:inline">Request Additional Documents</span>
+                <span className="hidden sm:inline">
+                  Request Additional Documents
+                </span>
               </button>
             )}
             <button

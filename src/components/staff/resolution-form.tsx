@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, FileCheck2, FileText, Paperclip, Send, X } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  FileCheck2,
+  FileText,
+  Paperclip,
+  Send,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
@@ -43,9 +51,7 @@ export function ResolutionForm({
       !actionTaken.trim() ||
       !outcome.trim()
     ) {
-      setErrorMsg(
-        "Please complete all required fields before submitting.",
-      );
+      setErrorMsg("Please complete all required fields before submitting.");
       return;
     }
 
@@ -62,7 +68,7 @@ export function ResolutionForm({
     }));
 
     try {
-      let resId: string | undefined = undefined;
+      let resId: string | undefined;
       if (onSubmit) {
         await onSubmit(grievance.id, {
           problemSummary: problemSummary.trim(),
@@ -249,7 +255,9 @@ export function ResolutionForm({
           <div className="space-y-1.5">
             <label className="font-semibold text-slate-700 flex items-center justify-between">
               <span>Supporting Documents (Optional)</span>
-              <span className="text-[11px] font-normal text-slate-500">PDF, Images, Sheets, Docs</span>
+              <span className="text-[11px] font-normal text-slate-500">
+                PDF, Images, Sheets, Docs
+              </span>
             </label>
 
             <div className="flex items-center gap-3">
@@ -293,7 +301,9 @@ export function ResolutionForm({
                     <button
                       type="button"
                       onClick={() =>
-                        setSupportingFiles((prev) => prev.filter((_, i) => i !== idx))
+                        setSupportingFiles((prev) =>
+                          prev.filter((_, i) => i !== idx),
+                        )
                       }
                       className="rounded-xs p-0.5 text-teal-600 hover:bg-teal-100 hover:text-teal-900 transition cursor-pointer"
                     >
@@ -304,8 +314,6 @@ export function ResolutionForm({
               </div>
             )}
           </div>
-
-
 
           {/* Governance Notice */}
           <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-[11px] text-slate-600 flex items-start gap-2 leading-relaxed">
@@ -320,7 +328,8 @@ export function ResolutionForm({
                 </>
               ) : (
                 <>
-                  Submitting this resolution will finalize and resolve the grievance directly, notifying the Employee.
+                  Submitting this resolution will finalize and resolve the
+                  grievance directly, notifying the Employee.
                 </>
               )}
             </span>
@@ -354,7 +363,9 @@ export function ResolutionForm({
             <span>
               {isSubmitting
                 ? "Submitting..."
-                : grievance.reopenCount >= 3 ? "Submit for Review" : "Resolve Grievance"}
+                : grievance.reopenCount >= 3
+                  ? "Submit for Review"
+                  : "Resolve Grievance"}
             </span>
           </button>
         </div>

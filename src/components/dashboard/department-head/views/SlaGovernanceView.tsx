@@ -15,7 +15,10 @@ import { StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
-import { SortableTh, type SortState } from "@/components/ui/sortable-table-head";
+import {
+  SortableTh,
+  type SortState,
+} from "@/components/ui/sortable-table-head";
 import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
@@ -52,7 +55,10 @@ export function SlaGovernanceView({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sortState, setSortState] = useState<SortState>({ field: null, direction: null });
+  const [sortState, setSortState] = useState<SortState>({
+    field: null,
+    direction: null,
+  });
 
   useEffect(() => {
     setCurrentPage(1);
@@ -149,14 +155,70 @@ export function SlaGovernanceView({
           <table className="w-full text-left text-sm border-collapse">
             <thead className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-sm font-semibold text-slate-600 dark:text-slate-400">
               <tr>
-                <SortableTh field="ticketCode" currentSort={sortState} onSort={handleSort} className="py-2 pl-4 pr-3 whitespace-nowrap">Grievance ID</SortableTh>
-                <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Summary</SortableTh>
-                <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Category</SortableTh>
-                <SortableTh field="subcategory" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Sub Category</SortableTh>
-                <SortableTh field="slaTimeLeft" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">SLA</SortableTh>
-                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Escalation</SortableTh>
-                <SortableTh field="assignedStaffName" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Assigned Staff</SortableTh>
-                <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-2 px-3 whitespace-nowrap">Status</SortableTh>
+                <SortableTh
+                  field="ticketCode"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 pl-4 pr-3 whitespace-nowrap"
+                >
+                  Grievance ID
+                </SortableTh>
+                <SortableTh
+                  field="title"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Summary
+                </SortableTh>
+                <SortableTh
+                  field="category"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Category
+                </SortableTh>
+                <SortableTh
+                  field="subcategory"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Sub Category
+                </SortableTh>
+                <SortableTh
+                  field="slaTimeLeft"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  SLA
+                </SortableTh>
+                <SortableTh
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Escalation
+                </SortableTh>
+                <SortableTh
+                  field="assignedStaffName"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Assigned Staff
+                </SortableTh>
+                <SortableTh
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-2 px-3 whitespace-nowrap"
+                >
+                  Status
+                </SortableTh>
                 <th className="py-2 pl-3 pr-4 text-right whitespace-nowrap">
                   Action
                 </th>
@@ -227,28 +289,42 @@ export function SlaGovernanceView({
                         <div className="flex flex-col items-start gap-1">
                           {item.hodIntervention ? (
                             <details className="group">
-                              <summary className={`list-none cursor-pointer w-fit inline-flex items-center text-[13px] group-hover:opacity-80 transition-opacity ${
-                                isEscalated 
-                                  ? "font-semibold text-slate-900 dark:text-slate-200"
-                                  : isUnderIntervention || needsReview
+                              <summary
+                                className={`list-none cursor-pointer w-fit inline-flex items-center text-[13px] group-hover:opacity-80 transition-opacity ${
+                                  isEscalated
                                     ? "font-semibold text-slate-900 dark:text-slate-200"
-                                    : "font-medium text-slate-700 dark:text-slate-300"
-                              }`}>
-                                {isEscalated ? "Escalated" : isUnderIntervention ? "Under Intervention" : needsReview ? "Resolution Required" : "Monitor"}
+                                    : isUnderIntervention || needsReview
+                                      ? "font-semibold text-slate-900 dark:text-slate-200"
+                                      : "font-medium text-slate-700 dark:text-slate-300"
+                                }`}
+                              >
+                                {isEscalated
+                                  ? "Escalated"
+                                  : isUnderIntervention
+                                    ? "Under Intervention"
+                                    : needsReview
+                                      ? "Resolution Required"
+                                      : "Monitor"}
                               </summary>
                               <div className="text-[13px] text-slate-500 max-w-[210px] leading-tight mt-1 animate-in fade-in">
                                 {item.hodIntervention.actionLabel}
                               </div>
                             </details>
                           ) : (
-                            <span className={`w-fit inline-flex items-center text-[13px] ${
-                              isEscalated
-                                ? "font-semibold text-slate-900 dark:text-slate-200"
-                                : needsReview
+                            <span
+                              className={`w-fit inline-flex items-center text-[13px] ${
+                                isEscalated
                                   ? "font-semibold text-slate-900 dark:text-slate-200"
-                                  : "font-medium text-slate-700 dark:text-slate-300"
-                            }`}>
-                              {isEscalated ? "Escalated" : needsReview ? "Resolution Required" : "Monitor"}
+                                  : needsReview
+                                    ? "font-semibold text-slate-900 dark:text-slate-200"
+                                    : "font-medium text-slate-700 dark:text-slate-300"
+                              }`}
+                            >
+                              {isEscalated
+                                ? "Escalated"
+                                : needsReview
+                                  ? "Resolution Required"
+                                  : "Monitor"}
                             </span>
                           )}
                         </div>

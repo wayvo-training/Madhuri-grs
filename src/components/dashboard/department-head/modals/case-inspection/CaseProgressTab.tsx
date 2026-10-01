@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowDownUp, Check, Clock, User, UserPlus } from "lucide-react";
+import { useState } from "react";
 import {
   formatAuditActionTitle,
   formatAuditLogContent,
@@ -156,7 +156,7 @@ export function CaseProgressTab({
     caseProgressData?.assignment?.status ||
     (currentGrievance.assignedStaffName ? "In Progress" : "Pending");
 
-  let timelineEvents = [
+  const timelineEvents = [
     ...(caseProgressData?.timeline && caseProgressData.timeline.length > 0
       ? caseProgressData.timeline
       : (currentGrievance.auditTrail || []).map((log, idx) => ({
@@ -431,7 +431,6 @@ export function CaseProgressTab({
           </div>
         )}
       </div>
-
     </>
   );
 }
