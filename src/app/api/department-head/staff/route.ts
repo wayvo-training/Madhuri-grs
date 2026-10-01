@@ -54,6 +54,7 @@ export async function GET(request: Request) {
 
       return {
         id: u.user_id.toString(),
+        employeeCode: u.employee_code,
         name: `${u.first_name} ${u.last_name || ""}`.trim(),
         designation: `${roleDisplay} (${u.departments?.department_name || "Operations"})`,
         email: u.email,

@@ -153,6 +153,9 @@ export interface FilterGrievanceOptions {
   staffFilter: string;
   statusFilter?: string;
   departmentFilter?: string;
+  slaFilter?: string;
+  categoryFilter?: string;
+  subCategoryFilter?: string;
 }
 
 export function filterDepartmentGrievances(
@@ -164,6 +167,9 @@ export function filterDepartmentGrievances(
     staffFilter,
     statusFilter,
     departmentFilter,
+    slaFilter,
+    categoryFilter,
+    subCategoryFilter,
   }: FilterGrievanceOptions,
 ): GrievanceItem[] {
   return grievances.filter((g) => {
@@ -245,6 +251,18 @@ export function filterDepartmentGrievances(
           d.toLowerCase() === departmentFilter.toLowerCase(),
       );
       if (!matchCollab) return false;
+    }
+
+    if (slaFilter && slaFilter !== "ALL") {
+      if (g.slaStatus !== slaFilter) return false;
+    }
+
+    if (categoryFilter && categoryFilter !== "ALL") {
+      if (g.category !== categoryFilter) return false;
+    }
+
+    if (subCategoryFilter && subCategoryFilter !== "ALL") {
+      if (g.subcategory !== subCategoryFilter) return false;
     }
 
     if (searchQuery.trim()) {

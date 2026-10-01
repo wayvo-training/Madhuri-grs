@@ -27,6 +27,9 @@ export function useQueueFilters({
   const [staffFilter, setStaffFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [slaFilter, setSlaFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [subCategoryFilter, setSubCategoryFilter] = useState("ALL");
 
   const resetFilters = () => {
     setSelectedTab("ALL");
@@ -34,6 +37,9 @@ export function useQueueFilters({
     setStaffFilter("ALL");
     setStatusFilter("ALL");
     setDepartmentFilter("ALL");
+    setSlaFilter("ALL");
+    setCategoryFilter("ALL");
+    setSubCategoryFilter("ALL");
     setSearchQuery("");
   };
 
@@ -43,6 +49,9 @@ export function useQueueFilters({
     staffFilter !== "ALL" ||
     statusFilter !== "ALL" ||
     departmentFilter !== "ALL" ||
+    slaFilter !== "ALL" ||
+    categoryFilter !== "ALL" ||
+    subCategoryFilter !== "ALL" ||
     searchQuery.trim().length > 0;
 
   const metrics = useMemo(
@@ -64,6 +73,9 @@ export function useQueueFilters({
         staffFilter,
         statusFilter,
         departmentFilter,
+        slaFilter,
+        categoryFilter,
+        subCategoryFilter,
       }),
     [
       grievances,
@@ -73,6 +85,9 @@ export function useQueueFilters({
       staffFilter,
       statusFilter,
       departmentFilter,
+      slaFilter,
+      categoryFilter,
+      subCategoryFilter,
     ],
   );
 
@@ -89,6 +104,12 @@ export function useQueueFilters({
     setStatusFilter,
     departmentFilter,
     setDepartmentFilter,
+    slaFilter,
+    setSlaFilter,
+    categoryFilter,
+    setCategoryFilter,
+    subCategoryFilter,
+    setSubCategoryFilter,
     resetFilters,
     isFiltered,
     metrics,

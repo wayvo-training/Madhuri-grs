@@ -233,6 +233,7 @@ export function AdvancedTableSearch({
       // Map conditions and apply the inversion hack for legacy table support
       const mapped = currentConditions.map((c) => {
         let val = c.value;
+        let op = c.operator;
         const fieldDef = fields.find((f) => f.id === c.field);
         if (
           fieldDef?.type === "select" &&
@@ -241,11 +242,12 @@ export function AdvancedTableSearch({
           const allOps = fieldDef.options?.map((o) => o.value) || [];
           const selVals = Array.isArray(val) ? val : val ? [val] : [];
           val = allOps.filter((o) => !selVals.includes(o));
+          op = "is_in";
         }
         return {
           id: c.id,
           field: c.field,
-          operator: c.operator,
+          operator: op,
           value: val,
         };
       });

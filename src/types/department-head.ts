@@ -98,6 +98,7 @@ export interface GrievanceItem {
 
 export interface StaffMember {
   id: string;
+  employeeCode: string;
   name: string;
   designation: string;
   email: string;
