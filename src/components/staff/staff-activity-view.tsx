@@ -16,8 +16,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type { StaffAuditItem } from "@/types/staff";
 
 interface StaffActivityViewProps {
@@ -28,8 +34,8 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
   const [activities, setActivities] = useState<StaffAuditItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAction, setSelectedAction] = useState("ALL");
+  const [advancedSearch, setAdvancedSearch] = useState<SearchCondition[]>([]);
+  const [filterMode, setFilterMode] = useState<string>("AND");
 
   const fetchActivities = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) setIsRefreshing(true);
@@ -63,39 +69,36 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
     return Array.from(actions);
   }, [activities]);
 
+  const searchFields: SearchFieldDef[] = useMemo(() => [
+    {
+      id: "action",
+      label: "Action",
+      type: "select",
+      options: uniqueActions.map(act => ({ value: act, label: act })),
+    },
+    { id: "grievanceNumber", label: "Grievance ID", type: "text" },
+    { id: "actor", label: "Actor", type: "text" },
+    { id: "search", label: "Global Search", type: "text" },
+  ], [uniqueActions]);
+
   const { sortState, handleSort, sortedItems } = useTableSort(activities, {
     field: "timestamp",
     direction: "desc",
   });
 
   const filteredActivities = useMemo(() => {
-    return sortedItems.filter((item) => {
-      if (selectedAction !== "ALL" && item.action !== selectedAction) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchAction = item.action.toLowerCase().includes(query);
-        const matchDetails = item.details.toLowerCase().includes(query);
-        const matchActor = item.actor.toLowerCase().includes(query);
-        const matchGrievance = item.grievanceNumber
-          ?.toLowerCase()
-          .includes(query);
-        return matchAction || matchDetails || matchActor || matchGrievance;
-      }
-      return true;
-    });
-  }, [sortedItems, selectedAction, searchQuery]);
+    return sortedItems.filter((item) => evaluateSearchConditions(item, advancedSearch, filterMode));
+  }, [sortedItems, advancedSearch, filterMode]);
 
   const pagination = usePagination(filteredActivities, {
     initialPageSize: 10,
     pageSizeOptions: [5, 10, 20, 50],
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset to page 1 on query/action filter changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset to page 1 on search changes
   useEffect(() => {
     pagination.resetPage();
-  }, [searchQuery, selectedAction, sortState, pagination.resetPage]);
+  }, [advancedSearch, filterMode, sortState, pagination.resetPage]);
 
   const getActionIcon = (action: string) => {
     const lower = action.toLowerCase();
@@ -121,7 +124,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         <div>
           <div className="flex items-center gap-2">
             <Link
@@ -132,12 +135,12 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
               <span>Dashboard</span>
             </Link>
             <span className="text-slate-300">/</span>
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
               <Activity className="w-3.5 h-3.5" />
               <span>Activity History</span>
             </div>
           </div>
-          <h1 className="text-lg font-bold text-slate-900 mt-2">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-2">
             Staff Activity &amp; Audit Trail
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -147,39 +150,18 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by grievance number, activity, actor, or details..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex-1 min-w-0 w-full">
+          <AdvancedTableSearch
+            fields={searchFields}
+            onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+            className="w-full"
           />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div className="flex items-center gap-2 shrink-0">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <select
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              className="text-xs px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition text-slate-700 font-medium"
-            >
-              <option value="ALL">All Event Types</option>
-              {uniqueActions.map((act) => (
-                <option key={act} value={act}>
-                  {act}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
       </div>
 
       {/* Activity Timeline List */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center space-y-3">
             <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
@@ -194,7 +176,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
               No matching activity records
             </h3>
             <p className="text-xs text-slate-500">
-              {searchQuery || selectedAction !== "ALL"
+              {advancedSearch.length > 0
                 ? "Try adjusting your search query or filter selection."
                 : "No recent activities recorded for your assigned cases."}
             </p>
@@ -204,7 +186,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 dark:border-slate-800/60">
+                  <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800/60">
                     <SortableTh
                       field="action"
                       currentSort={sortState}
@@ -251,14 +233,14 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                   {pagination.paginatedItems.map((item) => (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/80 transition"
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition"
                     >
                       <td className="p-4 align-top whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200/80 shrink-0">
+                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shrink-0">
                             {getActionIcon(item.action)}
                           </div>
-                          <span className="text-xs font-bold text-slate-900">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                             {item.action}
                           </span>
                         </div>

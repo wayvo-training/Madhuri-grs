@@ -368,16 +368,7 @@
     color: #f8fafc;
   }
 
-  /* General Page Shell & Background Containers */
-  .dark .bg-slate-50,
-  .dark .bg-slate-50\/50,
-  .dark .bg-slate-50\/60,
-  .dark .bg-slate-50\/70,
-  .dark .bg-slate-50\/80,
-  .dark .bg-\[\#F8FAFC\],
-  .dark [class*="bg-[#F8FAFC]"] {
-    background-color: #0b1120;
-  }
+
 
   .dark .bg-slate-100 {
     background-color: #111c2e;
@@ -455,12 +446,7 @@
     box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
   }
 
-  /* General Table Elements */
-  .dark th {
-    background-color: #111c2e;
-    color: #cbd5e1;
-    border-color: #243449;
-  }
+
 
   .dark td {
     border-color: #243449;

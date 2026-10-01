@@ -35,6 +35,7 @@ import type {
   StaffPriority,
   StaffQueueFilterState,
 } from "@/types/staff";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 
 interface GrievanceQueueProps {
   grievances: StaffGrievanceItem[];
@@ -201,8 +202,15 @@ export function GrievanceQueue({
   const searchFields: SearchFieldDef[] = useMemo(
     () => [
       { id: "grievanceNumber", label: "Grievance ID", type: "text" },
-      { id: "title", label: "Title", type: "text" },
-      { id: "submitterName", label: "Submitter", type: "text" },
+      {
+        id: "isReopened",
+        label: "Reopened Status",
+        type: "select",
+        options: [
+          { value: "YES", label: "Reopened" },
+          { value: "NO", label: "Standard" },
+        ],
+      },
       {
         id: "category",
         label: "Category",
@@ -237,6 +245,7 @@ export function GrievanceQueue({
           { value: "BREACHED", label: "Breached" },
         ],
       },
+      { id: "search", label: "Global Search", type: "text" },
     ],
     [categoryOptions, priorityOptions, statusOptions],
   );
@@ -244,7 +253,7 @@ export function GrievanceQueue({
   // Filtered grievances
   const filteredGrievances = useMemo(() => {
     return grievances.filter((item) => {
-      // 1. Tab-level filter
+      // 1. Tab-level filter (preserves initialTab functionality from dashboard)
       if (activeTab === "in_progress") {
         if (
           item.status !== "IN_PROGRESS" &&
@@ -271,73 +280,15 @@ export function GrievanceQueue({
         }
       }
 
-      // 2. Search query (id, title, category, submitter)
-      if (filters.searchQuery.trim()) {
-        const query = filters.searchQuery.toLowerCase();
-        const matchNumber = item.grievanceNumber.toLowerCase().includes(query);
-        const matchTitle = item.title.toLowerCase().includes(query);
-        const matchCategory = item.category.toLowerCase().includes(query);
-        const matchSubmitter = item.submitterName.toLowerCase().includes(query);
-        if (!matchNumber && !matchTitle && !matchCategory && !matchSubmitter) {
-          return false;
-        }
-      }
-
-      // 3. Status filter
-      if (filters.status !== "ALL" && item.status !== filters.status) {
-        return false;
-      }
-
-      // 4. Priority filter
-      if (filters.priority !== "ALL" && item.priority !== filters.priority) {
-        return false;
-      }
-
-      // 5. Category filter
-      if (filters.category !== "ALL" && item.category !== filters.category) {
-        return false;
-      }
-
-      // 6. SLA status filter
-      if (filters.slaStatus !== "ALL" && item.slaStatus !== filters.slaStatus) {
-        return false;
-      }
-
-      // 7. Advanced Table Search
-      if (advancedSearch.length > 0) {
-        let conditionMet = filterMode === "AND" ? true : false;
-        
-        for (const cond of advancedSearch) {
-          const { field, operator, value } = cond;
-          const itemVal = item[field as keyof typeof item] as string | null | undefined;
-          const strVal = String(itemVal || "").toLowerCase();
-          const queryVal = String(value || "").toLowerCase();
-          
-          let matches = false;
-          switch (operator) {
-            case "equals": matches = strVal === queryVal; break;
-            case "not_equals": matches = strVal !== queryVal; break;
-            case "contains": matches = strVal.includes(queryVal); break;
-            case "starts_with": matches = strVal.startsWith(queryVal); break;
-            case "is_empty": matches = strVal === ""; break;
-            case "is_not_empty": matches = strVal !== ""; break;
-            case "is_in": matches = strVal === queryVal; break;
-            case "is_not_in": matches = strVal !== queryVal; break;
-          }
-          
-          if (filterMode === "AND" && !matches) conditionMet = false;
-          if (filterMode === "OR" && matches) conditionMet = true;
-          if (filterMode === "NOT" && matches) conditionMet = false;
-        }
-        
-        if (filterMode === "NOT") conditionMet = !conditionMet; // flip logic for NOT if no matches occurred? Actually NOT means ALL must NOT match.
-        
-        if (!conditionMet) return false;
-      }
-
-      return true;
+      // 2. Advanced Search Evaluator
+      const computedItem = {
+        ...item,
+        isReopened: item.reopenCount > 0 ? "YES" : "NO",
+      };
+      
+      return evaluateSearchConditions(computedItem, advancedSearch, filterMode);
     });
-  }, [grievances, activeTab, filters, advancedSearch]);
+  }, [grievances, activeTab, advancedSearch, filterMode]);
 
   // Sorted list
   const sortedGrievances = useMemo(() => {
@@ -419,262 +370,22 @@ export function GrievanceQueue({
 
   return (
     <div className="space-y-4">
-      {/* Advanced Table Search Toolbar */}
-      <AdvancedTableSearch
-        fields={searchFields}
-        onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
-        className="w-full"
-      />
-
-      {/* Filter and Search Controls Bar */}
-      <div className="bg-slate-50/70 p-3 sm:p-4 rounded-xl border border-slate-200/80 space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search by grievance ID, title, complainant, or category..."
-              value={filters.searchQuery}
-              onChange={(e) =>
-                setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))
-              }
-              className="w-full pl-9 pr-4 py-2 text-sm sm:text-sm bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 placeholder:text-slate-400"
-            />
-            {filters.searchQuery && (
-              <button
-                type="button"
-                onClick={() =>
-                  setFilters((prev) => ({ ...prev, searchQuery: "" }))
-                }
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Filter Dropdown Menus Row */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 text-sm">
-          <div className="flex items-center gap-1.5 text-slate-500 mr-1">
-            <Filter className="w-3.5 h-3.5" />
-            <span className="font-medium">Filter by:</span>
-          </div>
-
-          {/* Queue View Dropdown */}
-          <CustomSelect
-            value={activeTab}
-            onChange={(val) =>
-              setActiveTab(
-                val as
-                  | "all"
-                  | "in_progress"
-                  | "at_risk"
-                  | "breached"
-                  | "reopened"
-                  | "completed",
-              )
-            }
-            options={queueOptions}
-            size="sm"
-            aria-label="Filter by queue view"
-            className="w-auto"
-          />
-
-          {/* Unified Filters Dropdown Menu (combines Priority, Status, Category into 1 dropdown) */}
-          <Popover
-            isOpen={isFilterMenuOpen}
-            onOpenChange={setIsFilterMenuOpen}
-            align="left"
-            widthClass="w-80"
-            trigger={
-              <button
-                type="button"
-                onClick={() => setIsFilterMenuOpen((prev) => !prev)}
-                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 h-8 text-sm font-semibold transition cursor-pointer ${
-                  appliedFiltersCount > 0
-                    ? "border-[#0E7490] bg-[#ECFEFF] text-[#0E7490]"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
-                <span>Filters</span>
-                {appliedFiltersCount > 0 && (
-                  <span className="flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-[#0E7490] text-[13px] font-bold text-white">
-                    {appliedFiltersCount}
-                  </span>
-                )}
-                <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
-                    isFilterMenuOpen ? "rotate-180 text-[#0E7490]" : ""
-                  }`}
-                />
-              </button>
-            }
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {activeTab !== "all" && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className="text-sm font-medium text-slate-500 hover:text-slate-700 transition"
           >
-            <div className="flex flex-col gap-3.5">
-              {/* Popover Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <div className="flex items-center gap-1.5">
-                  <Filter className="w-3.5 h-3.5 text-[#0E7490]" />
-                  <span className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                    Filter Grievances
-                  </span>
-                </div>
-                {appliedFiltersCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFilters((prev) => ({
-                        ...prev,
-                        priority: "ALL",
-                        status: "ALL",
-                        category: "ALL",
-                      }));
-                    }}
-                    className="text-sm font-medium text-rose-600 hover:text-rose-700 cursor-pointer"
-                  >
-                    Reset all
-                  </button>
-                )}
-              </div>
-
-              {/* 1. Priority */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-slate-700">
-                  Priority
-                </span>
-                <CustomSelect
-                  value={filters.priority}
-                  onChange={(val) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      priority: val as StaffPriority | "ALL",
-                    }))
-                  }
-                  options={priorityOptions}
-                  size="sm"
-                  aria-label="Filter by priority"
-                  className="w-full"
-                />
-              </div>
-
-              {/* 2. Status */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-slate-700">
-                  Status
-                </span>
-                <CustomSelect
-                  value={filters.status}
-                  onChange={(val) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      status: val as StaffQueueFilterState["status"],
-                    }))
-                  }
-                  options={statusOptions}
-                  size="sm"
-                  aria-label="Filter by status"
-                  className="w-full"
-                />
-              </div>
-
-              {/* 3. Category */}
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-semibold text-slate-700">
-                  Category
-                </span>
-                <CustomSelect
-                  value={filters.category}
-                  onChange={(val) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      category: val,
-                    }))
-                  }
-                  options={categoryOptions}
-                  size="sm"
-                  aria-label="Filter by category"
-                  className="w-full"
-                />
-              </div>
-
-              {/* Close / Done footer */}
-              <div className="flex items-center justify-end border-t border-slate-100 pt-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsFilterMenuOpen(false)}
-                  className="rounded-lg bg-[#0E7490] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#155E75] transition cursor-pointer"
-                >
-                  Done
-                </button>
-              </div>
-            </div>
-          </Popover>
-
-          {/* Active Filter Chips */}
-          {filters.priority !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
-              Priority: {filters.priority}
-              <button
-                type="button"
-                onClick={() =>
-                  setFilters((prev) => ({ ...prev, priority: "ALL" }))
-                }
-                className="hover:text-[#155E75] cursor-pointer ml-0.5"
-                title="Remove priority filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          )}
-
-          {filters.status !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs">
-              Status:{" "}
-              {statusOptions.find((s) => s.value === filters.status)?.label ||
-                filters.status}
-              <button
-                type="button"
-                onClick={() =>
-                  setFilters((prev) => ({ ...prev, status: "ALL" }))
-                }
-                className="hover:text-[#155E75] cursor-pointer ml-0.5"
-                title="Remove status filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          )}
-
-          {filters.category !== "ALL" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-medium bg-[#ECFEFF] text-[#0E7490] border border-[#A5F3FC] shadow-2xs max-w-[220px]">
-              <span className="truncate">Category: {filters.category}</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setFilters((prev) => ({ ...prev, category: "ALL" }))
-                }
-                className="hover:text-[#155E75] cursor-pointer ml-0.5 shrink-0"
-                title="Remove category filter"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          )}
-
-          {/* Clear button if any filter is set */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="flex items-center gap-1 py-1 px-2 text-rose-600 hover:text-rose-700 font-medium ml-auto cursor-pointer"
-            >
-              <X className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
-          )}
+            ← Back to All Cases
+          </button>
+        )}
+        <div className="flex-1 min-w-0 w-full">
+          <AdvancedTableSearch
+            fields={searchFields}
+            onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+            className="w-full"
+          />
         </div>
       </div>
 
