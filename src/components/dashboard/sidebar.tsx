@@ -1,9 +1,16 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   ROLE_NAVIGATION,
   type UserRole,
@@ -199,45 +206,59 @@ export function DashboardSidebar({
         })}
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter style={{ borderTop: "1px solid var(--sidebar-border)" }}>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<div />}
-              className="w-full justify-between hover:bg-transparent cursor-default"
-            >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
-                  <span className="font-semibold text-sm truncate text-green-500">
-                    {userName}
-                  </span>
-                  <div className="flex flex-col">
-                    {userEmail && (
-                      <span className="text-xs text-green-500 truncate">
-                        {userEmail}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-between hover:bg-sidebar-accent cursor-pointer"
+                  />
+                }
+              >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
+                      {userName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
+                      <span className="font-semibold text-sm truncate text-sidebar-foreground">
+                        {userName}
                       </span>
+                    </div>
+                  </div>
+                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-sidebar-foreground ml-auto" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                side={isMobile ? "bottom" : "right"}
+                align="end"
+                sideOffset={4}
+              >
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none overflow-hidden">
+                    {userName && (
+                      <p className="font-medium text-sm truncate">{userName}</p>
                     )}
-                    <span className="text-xs text-green-500 truncate">
-                      {roleDisplayLabels[userRole]}
-                    </span>
+                    {userEmail && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {userEmail}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                title="Sign out"
-                aria-label="Sign out"
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors disabled:opacity-50 cursor-pointer flex-shrink-0"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </SidebarMenuButton>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-rose-600 focus:bg-rose-50 focus:text-rose-600 cursor-pointer"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

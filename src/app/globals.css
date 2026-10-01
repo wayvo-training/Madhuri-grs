@@ -126,15 +126,15 @@
 
   --radius: 0.75rem;
 
-  /* Sidebar - Deep Teal Blue Ground with Teal Blue Elements */
-  --sidebar: #115e59;
-  --sidebar-foreground: #f8fafc;
+  /* Sidebar - White Theme */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
   --sidebar-primary: #0f766e;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #0f766e;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: rgba(255, 255, 255, 0.12);
-  --sidebar-ring: #14b8a6;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0e7490;
 }
 
 .dark {

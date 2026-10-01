@@ -175,9 +175,6 @@ export default function FaqPage() {
                         className="group flex w-full items-center justify-between gap-4 text-left cursor-pointer"
                       >
                         <div className="pr-2 space-y-1">
-                          <span className="inline-block rounded-full bg-teal-light border border-[#A5F3FC] px-2.5 py-0.5 text-[10px] font-bold text-teal-primary uppercase tracking-wider">
-                            {faq.category}
-                          </span>
                           <h3 className="text-sm sm:text-[15px] font-semibold text-slate-800 group-hover:text-teal-primary transition-colors leading-snug">
                             {faq.question}
                           </h3>

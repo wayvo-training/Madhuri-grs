@@ -98,5 +98,10 @@ export function ThemeInitScript() {
     })();
   `;
 
-  return <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: script }} />;
+  return (
+    <script
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: script }}
+    />
+  );
 }

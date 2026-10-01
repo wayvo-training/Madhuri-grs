@@ -26,7 +26,9 @@ export function PriorityBadge({
 
   switch (normalized) {
     case "CRITICAL":
-      return <span className="text-sm font-semibold text-amber-700">Critical</span>;
+      return (
+        <span className="text-sm font-semibold text-amber-700">Critical</span>
+      );
     case "HIGH":
       return <span className="text-sm font-medium text-slate-900">High</span>;
     case "MEDIUM":

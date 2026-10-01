@@ -1,6 +1,13 @@
 import * as React from "react";
-import { Pie, PieChart, Cell, Label, ResponsiveContainer, Tooltip } from "recharts";
-import { UserGrievanceItem } from "./end-user-portal";
+import {
+  Cell,
+  Label,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import type { UserGrievanceItem } from "./end-user-portal";
 
 function CompactPieChartCard({
   title,
@@ -28,9 +35,15 @@ function CompactPieChartCard({
         <div className="w-[120px] h-[120px] shrink-0 relative">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '11px', padding: '4px 8px' }}
-                itemStyle={{ color: '#0f172a', fontWeight: 600 }}
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "8px",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                  fontSize: "11px",
+                  padding: "4px 8px",
+                }}
+                itemStyle={{ color: "#0f172a", fontWeight: 600 }}
               />
               <Pie
                 data={data}
@@ -56,10 +69,18 @@ function CompactPieChartCard({
                           textAnchor="middle"
                           dominantBaseline="middle"
                         >
-                          <tspan x={viewBox.cx} y={viewBox.cy - 4} className="fill-slate-900 dark:fill-white text-xl font-bold">
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy - 4}
+                            className="fill-slate-900 dark:fill-white text-xl font-bold"
+                          >
                             {centerValue}
                           </tspan>
-                          <tspan x={viewBox.cx} y={viewBox.cy + 10} className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-widest uppercase">
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy + 10}
+                            className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-widest uppercase"
+                          >
                             {centerLabel}
                           </tspan>
                         </text>
@@ -74,16 +95,29 @@ function CompactPieChartCard({
 
         <div className="flex flex-col gap-2 flex-1 min-w-0 justify-center">
           {data.map((item) => {
-            const percentage = centerValue > 0 ? Math.round((item.value / centerValue) * 100) : 0;
+            const percentage =
+              centerValue > 0
+                ? Math.round((item.value / centerValue) * 100)
+                : 0;
             return (
-              <div key={item.name} className="flex items-center justify-between text-[11px]">
+              <div
+                key={item.name}
+                className="flex items-center justify-between text-[11px]"
+              >
                 <div className="flex items-center gap-1.5 truncate pr-2">
-                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="font-semibold text-slate-700 truncate">{item.name}</span>
+                  <span
+                    className="h-2 w-2 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="font-semibold text-slate-700 truncate">
+                    {item.name}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 tabular-nums shrink-0">
                   <span className="font-bold text-slate-800">{item.value}</span>
-                  <span className="text-slate-400 font-medium w-7 text-right">({percentage}%)</span>
+                  <span className="text-slate-400 font-medium w-7 text-right">
+                    ({percentage}%)
+                  </span>
                 </div>
               </div>
             );
@@ -94,15 +128,27 @@ function CompactPieChartCard({
   );
 }
 
-export function EndUserPieCharts({ grievances }: { grievances: UserGrievanceItem[] }) {
+export function EndUserPieCharts({
+  grievances,
+}: {
+  grievances: UserGrievanceItem[];
+}) {
   // 1. Status Breakdown (Active grievances)
-  let inProgress = 0, assigned = 0, closed = 0, waiting = 0;
-  
+  let inProgress = 0,
+    assigned = 0,
+    closed = 0,
+    waiting = 0;
+
   // 2. Priority Distribution (Active grievances)
-  let critical = 0, high = 0, medium = 0, low = 0;
-  
+  let critical = 0,
+    high = 0,
+    medium = 0,
+    low = 0;
+
   // 3. SLA Status (Active grievances)
-  let onTrack = 0, atRisk = 0, breached = 0;
+  let onTrack = 0,
+    atRisk = 0,
+    breached = 0;
 
   grievances.forEach((g) => {
     // Status Breakdown (Waiting on User, In Progress, Assigned, Closed)
@@ -127,7 +173,7 @@ export function EndUserPieCharts({ grievances }: { grievances: UserGrievanceItem
         const dueDate = new Date(g.dueAt).getTime();
         const now = Date.now();
         const twoDays = 2 * 24 * 60 * 60 * 1000;
-        
+
         if (now > dueDate) breached++;
         else if (dueDate - now <= twoDays) atRisk++;
         else onTrack++;

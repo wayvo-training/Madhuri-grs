@@ -1,15 +1,13 @@
 "use client";
 
-import * as React from "react";
-import { Label, Pie, PieChart, Cell } from "recharts";
+import type * as React from "react";
+import { Cell, Label, Pie, PieChart } from "recharts";
 import {
-  ChartConfig,
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-
-
 
 export function formatStatusLabel(status: string) {
   switch (status) {
@@ -53,7 +51,12 @@ interface DashboardPieChartCardProps {
   // data contains the actual count for each category.
   data: { name: string; value: number; fill: string; description?: string }[];
   // fullLegendData is optional: use this if you want the legend to show 0-count items that don't appear in the pie
-  fullLegendData?: { name: string; value: number; fill: string; description?: string }[];
+  fullLegendData?: {
+    name: string;
+    value: number;
+    fill: string;
+    description?: string;
+  }[];
   config: ChartConfig;
   centerValue: number;
   centerLabelTop?: string;
@@ -106,7 +109,10 @@ export function DashboardPieChartCard({
               className="w-full h-full pb-0 [&_.recharts-pie-label-text]:fill-slate-700"
             >
               <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />}
+                />
                 <Pie
                   data={pieData}
                   dataKey="value"
@@ -125,13 +131,25 @@ export function DashboardPieChartCard({
                             textAnchor="middle"
                             dominantBaseline="middle"
                           >
-                            <tspan x={viewBox.cx} y={viewBox.cy - 8} className="fill-slate-900 dark:fill-white text-2xl font-bold">
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy - 8}
+                              className="fill-slate-900 dark:fill-white text-2xl font-bold"
+                            >
                               {centerValue}
                             </tspan>
-                            <tspan x={viewBox.cx} y={viewBox.cy + 10} className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase">
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy + 10}
+                              className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase"
+                            >
                               {centerLabelTop}
                             </tspan>
-                            <tspan x={viewBox.cx} y={viewBox.cy + 21} className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase">
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy + 21}
+                              className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase"
+                            >
                               {centerLabelBottom}
                             </tspan>
                           </text>
@@ -154,19 +172,29 @@ export function DashboardPieChartCard({
 
         <div className="flex flex-col gap-2.5 w-full sm:w-auto sm:flex-1 justify-center max-w-[210px]">
           {legendData.map((item) => (
-            <div key={item.name} className="flex items-center justify-between gap-2">
+            <div
+              key={item.name}
+              className="flex items-center justify-between gap-2"
+            >
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
+                <span
+                  className="h-3 w-3 rounded-full shrink-0"
+                  style={{ backgroundColor: item.fill }}
+                />
                 <div className="flex flex-col min-w-0">
-                  <span className="font-semibold text-slate-800 text-xs leading-none truncate">{item.name}</span>
+                  <span className="font-semibold text-slate-800 text-xs leading-none">
+                    {item.name}
+                  </span>
                   {item.description && (
-                    <span className="text-[11px] font-normal text-slate-500 mt-0.5 leading-none truncate">
+                    <span className="text-[11px] font-normal text-slate-500 mt-0.5 leading-snug">
                       {item.description}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="font-bold text-slate-800 text-xs leading-none tabular-nums shrink-0">{item.value}</span>
+              <span className="font-bold text-slate-800 text-xs leading-none tabular-nums shrink-0">
+                {item.value}
+              </span>
             </div>
           ))}
         </div>
