@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   Building2,
   CheckCircle2,
@@ -9,7 +10,6 @@ import {
   Sliders,
   User,
   Users,
-  Activity,
 } from "lucide-react";
 import type { ElementType } from "react";
 import type { PermissionCode } from "@/lib/permissions";

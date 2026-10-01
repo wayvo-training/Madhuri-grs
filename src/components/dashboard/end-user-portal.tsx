@@ -13,8 +13,15 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EndUserPieCharts } from "./EndUserPieCharts";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export interface UserGrievanceItem {
   id: string;
@@ -214,9 +221,7 @@ export function EndUserPortal({
       </div>
 
       {/* End User Compact Pie Charts */}
-      {grievances.length > 0 && (
-        <EndUserPieCharts grievances={grievances} />
-      )}
+      {grievances.length > 0 && <EndUserPieCharts grievances={grievances} />}
 
       {/* Global Success Feedback Banner */}
       {submitSuccess && (
@@ -339,12 +344,16 @@ export function EndUserPortal({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="py-3 px-4">Grievance Code &amp; Title</TableHead>
+                  <TableHead className="py-3 px-4">
+                    Grievance Code &amp; Title
+                  </TableHead>
                   <TableHead className="py-3 px-3">Category</TableHead>
                   <TableHead className="py-3 px-3">Priority</TableHead>
                   <TableHead className="py-3 px-3">Status</TableHead>
                   <TableHead className="py-3 px-3">Submitted</TableHead>
-                  <TableHead className="py-3 px-4 text-right">Actions</TableHead>
+                  <TableHead className="py-3 px-4 text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
