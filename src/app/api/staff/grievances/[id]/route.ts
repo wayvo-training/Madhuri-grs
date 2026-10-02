@@ -515,6 +515,16 @@ export async function PATCH(
         });
       }
 
+      // 5. Notify the Staff member to confirm their own request
+      await NotificationService.send({
+        userId: staffId,
+        grievanceId,
+        type: "SYSTEM",
+        channel: "IN_APP",
+        title: `Information Requested (${grievance.grievance_number})`,
+        message: `You successfully requested additional information from the complainant. The grievance is now Waiting on User.`,
+      });
+
       return NextResponse.json({
         success: true,
         message:

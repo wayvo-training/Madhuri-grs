@@ -10,8 +10,9 @@ import {
   X,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
+import { toast } from "sonner";
 
 interface ResolutionFormProps {
   isOpen: boolean;
@@ -42,9 +43,41 @@ export function ResolutionForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen && grievance.id) {
+      const saved = localStorage.getItem(`draft_resolution_${grievance.id}`);
+      if (saved) {
+        try {
+          const draftData = JSON.parse(saved);
+          if (draftData.problemSummary) setProblemSummary(draftData.problemSummary);
+          if (draftData.findings) setFindings(draftData.findings);
+          if (draftData.actionTaken) setActionTaken(draftData.actionTaken);
+          if (draftData.outcome) setOutcome(draftData.outcome);
+          if (draftData.evidence) setEvidence(draftData.evidence);
+        } catch (e) {
+          console.error("Failed to parse saved draft", e);
+        }
+      }
+    }
+  }, [isOpen, grievance.id]);
+
   if (!isOpen) return null;
 
   const submitForm = async (isDraft: boolean) => {
+    if (isDraft) {
+      const draftData = {
+        problemSummary,
+        findings,
+        actionTaken,
+        outcome,
+        evidence,
+      };
+      localStorage.setItem(`draft_resolution_${grievance.id}`, JSON.stringify(draftData));
+      toast.success("Resolution draft saved to your browser.");
+      onClose();
+      return;
+    }
+
     if (
       !problemSummary.trim() ||
       !findings.trim() ||
@@ -107,6 +140,7 @@ export function ResolutionForm({
         resId = data.resolutionId;
       }
 
+      localStorage.removeItem(`draft_resolution_${grievance.id}`);
       onResolutionSuccess?.(grievance.id);
       onClose();
     } catch (err) {
@@ -356,7 +390,13 @@ export function ResolutionForm({
           <button
             type="button"
             onClick={() => submitForm(false)}
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              !problemSummary.trim() ||
+              !findings.trim() ||
+              !actionTaken.trim() ||
+              !outcome.trim()
+            }
             className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
           >
             <Send className="h-3.5 w-3.5" />

@@ -131,7 +131,7 @@ export function StaffSingleGrievanceView({
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.error || "Failed to submit resolution");
+      throw new Error(errJson.message || errJson.error || "Failed to submit resolution");
     }
 
     setIsResolving(false);

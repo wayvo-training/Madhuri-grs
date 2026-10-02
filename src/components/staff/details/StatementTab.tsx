@@ -24,6 +24,7 @@ import {
   KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
 import type { StaffGrievanceItem } from "@/types/staff";
+import { toast } from "sonner";
 
 interface StatementTabProps {
   grievance: StaffGrievanceItem;
@@ -145,16 +146,14 @@ export function StatementTab({
         message: inquiryMessage.trim(),
         requestedDocs: docsToSend,
       });
-      setRequestSuccess(
-        `Request dispatched via ${selectedChannels.join(" & ")}.`,
-      );
+      toast.success(`Request dispatched via ${selectedChannels.join(" & ")}.`);
       setIsRequestInfoOpen(false);
       setInquiryMessage("");
       setSelectedDocs([]);
       setCustomDocInput("");
     } catch (err: unknown) {
       console.error("Failed to request additional info:", err);
-      alert(
+      toast.error(
         err instanceof Error
           ? err.message
           : "Failed to request additional information",
