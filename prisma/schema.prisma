@@ -355,6 +355,7 @@ model routing_rules {
   subcategories          subcategories? @relation(fields: [subcategory_id], references: [subcategory_id], onUpdate: NoAction)
 
   @@index([category_id, subcategory_id], map: "idx_routing_rules_category")
+  @@unique([category_id, subcategory_id], map: "uq_active_routing_rule", where: raw("((status)::text = 'ACTIVE'::text)"))
 }
 
 model sessions {
