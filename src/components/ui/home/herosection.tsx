@@ -1,0 +1,64 @@
+"use client";
+
+import { ArrowRight, Search } from "lucide-react";
+import Link from "next/link";
+
+interface HeroSectionProps {
+  headline: string;
+  subtext: string;
+  ctaText: string;
+  ctaHref: string;
+}
+
+export default function HeroSection({
+  headline,
+  subtext,
+  ctaText,
+  ctaHref,
+}: HeroSectionProps) {
+  return (
+    <section className="relative overflow-hidden bg-white pt-10 pb-6 sm:pt-14 sm:pb-8">
+      {/* Subtle background ambient blur */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex transform-gpu justify-center overflow-hidden blur-3xl">
+        <div className="aspect-1155/478 w-[72.1875rem] bg-linear-to-tr from-cyan-100 via-sky-50 to-slate-50 opacity-60" />
+      </div>
+
+      <div className="mx-auto max-w-5xl px-6 text-center lg:px-8">
+        {/* Category Pill */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-semibold text-slate-800 shadow-xs backdrop-blur-xs">
+          <span className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
+          Enterprise Grievance Resolution & SLA Governance
+        </div>
+
+        {/* Headline */}
+        <h1 className="mt-6 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.14]">
+          {headline}
+        </h1>
+
+        {/* Subtitle */}
+        <p className="mx-auto mt-5 max-w-2xl text-base sm:text-lg lg:text-xl leading-relaxed text-slate-600 font-normal">
+          {subtext}
+        </p>
+
+        {/* Action Buttons */}
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href={ctaHref}
+            className="group inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-teal-950/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#115E59]"
+          >
+            {ctaText}
+            <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+          </Link>
+
+          <a
+            href="#track"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-[#F0FDFA] hover:text-[#0F766E]"
+          >
+            <Search className="h-4 w-4 text-[#0F766E]" />
+            Track Existing Grievance
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
