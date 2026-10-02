@@ -37,7 +37,7 @@ function getRelativeTime(dateStr: string) {
   return `${days}d ago`;
 }
 
-export function NotificationDrawer({ userId }: { userId?: string }) {
+export function NotificationDrawer({ userId, userRole }: { userId?: string, userRole?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,10 +101,19 @@ export function NotificationDrawer({ userId }: { userId?: string }) {
     }
     setIsOpen(false);
     if (notification.grievanceId) {
-      // Navigate to the related grievance or dashboard if applicable
-      router.push(
-        `/department-head/dashboard?grievance=${notification.grievanceId}`,
-      );
+      if (userRole === "END_USER") {
+        if (notification.type === "ADDITIONAL_INFO_REQUESTED" || notification.title.toLowerCase().includes("additional info") || notification.title.toLowerCase().includes("action required")) {
+          router.push(`/end-user/messages/${notification.grievanceId}`);
+        } else {
+          router.push(`/end-user/grievances/${notification.grievanceId}`);
+        }
+      } else if (userRole === "STAFF") {
+        router.push(`/staff/dashboard?grievance=${notification.grievanceId}`);
+      } else {
+        router.push(
+          `/department-head/dashboard?grievance=${notification.grievanceId}`,
+        );
+      }
     }
   };
 
