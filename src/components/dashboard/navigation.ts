@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  Bell,
   Building2,
   CheckCircle2,
   FileText,
@@ -10,6 +11,7 @@ import {
   Sliders,
   User,
   Users,
+  MessageSquare,
 } from "lucide-react";
 import type { ElementType } from "react";
 import type { PermissionCode } from "@/lib/permissions";
@@ -46,6 +48,11 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Grievances & Exceptions",
           href: "/admin/grievances",
           icon: FileText,
+        },
+        {
+          title: "Messages",
+          href: "/admin/messages",
+          icon: MessageSquare,
         },
       ],
     },
@@ -99,6 +106,11 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           href: "/department-head/dashboard#queue",
           icon: FileText,
         },
+        {
+          title: "Messages",
+          href: "/department-head/messages",
+          icon: MessageSquare,
+        },
       ],
     },
     {
@@ -137,6 +149,11 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           href: "/staff/dashboard#queue",
           icon: FileText,
         },
+        {
+          title: "Messages",
+          href: "/staff/messages",
+          icon: MessageSquare,
+        },
       ],
     },
     {
@@ -167,10 +184,30 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Portal Overview",
-          href: "/dashboard",
+          href: "/end-user/dashboard",
           icon: LayoutDashboard,
         },
+        {
+          title: "My Grievances",
+          href: "/end-user/grievances",
+          icon: FileText,
+        },
+        {
+          title: "Track Grievance",
+          href: "/end-user/track",
+          icon: Search,
+        }
       ],
     },
+    {
+      label: "Account",
+      items: [
+        {
+          title: "Messages",
+          href: "/end-user/messages",
+          icon: MessageSquare,
+        }
+      ]
+    }
   ],
 };

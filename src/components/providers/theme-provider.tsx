@@ -78,30 +78,3 @@ export const useTheme = () => {
   return context;
 };
 
-export function ThemeInitScript() {
-  const script = `
-    (function() {
-      try {
-        var localTheme = localStorage.getItem('theme');
-        var theme = localTheme || 'system';
-        
-        if (theme === 'system') {
-          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.add('light');
-          }
-        } else {
-          document.documentElement.classList.add(theme);
-        }
-      } catch (e) {}
-    })();
-  `;
-
-  return (
-    <script
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: script }}
-    />
-  );
-}

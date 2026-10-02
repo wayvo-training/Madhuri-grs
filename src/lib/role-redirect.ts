@@ -7,6 +7,6 @@ export function getRoleDashboardPath(role?: string | null): string {
     case "STAFF":
       return "/staff/dashboard";
     default:
-      return "/dashboard";
+      return "/end-user/dashboard";
   }
 }

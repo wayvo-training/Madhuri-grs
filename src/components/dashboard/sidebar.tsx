@@ -121,7 +121,7 @@ export function DashboardSidebar({
 
     return (
       itemHref !== "/admin/dashboard" &&
-      itemHref !== "/dashboard" &&
+      itemHref !== "/end-user/dashboard" &&
       pathname.startsWith(itemHref)
     );
   };
