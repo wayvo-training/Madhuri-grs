@@ -137,6 +137,17 @@ export async function POST(request: Request) {
       },
     });
 
+    // 3.5 Log status history
+    await prisma.grievance_status_history.create({
+      data: {
+        grievance_id: gId,
+        old_status: grievance.status,
+        new_status: requiresHeadReview ? "UNDER_REVIEW" : "RESOLVED",
+        changed_by: staffId,
+        remarks: "Resolution submitted",
+      },
+    });
+
     // 4. Notification
     if (requiresHeadReview && departmentId) {
       const hod = await prisma.users.findFirst({
@@ -175,10 +186,16 @@ export async function POST(request: Request) {
         : "Resolution sent to complainant successfully",
       resolutionId: resolution.resolution_id.toString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in POST /api/staff/resolutions:", error);
+    try {
+      const fs = require('fs/promises');
+      const path = require('path');
+      await fs.writeFile(path.join(process.cwd(), "error-staff-resolution.log"), String(error.stack || error));
+    } catch (e) {}
+    
     return NextResponse.json(
-      { success: false, message: "Failed to submit resolution" },
+      { success: false, message: error.message || "Failed to submit resolution" },
       { status: 500 },
     );
   }
