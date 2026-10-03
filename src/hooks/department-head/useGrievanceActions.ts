@@ -228,20 +228,31 @@ export function useGrievanceActions({
       grievance,
       decision,
       feedback,
+      findings,
+      actionTaken,
+      outcome,
     }: {
       grievance: GrievanceItem;
       decision: "APPROVE" | "CLARIFY";
       feedback: string;
+      findings?: string;
+      actionTaken?: string;
+      outcome?: string;
     }) => {
+      const isDirectResolution =
+        (grievance.reopenCount ?? 0) >= 2 ||
+        grievance.status === "ESCALATED" ||
+        grievance.status !== "UNDER_REVIEW";
       if (decision === "APPROVE") {
         const finalAudit: EscalationAuditRecord = {
           id: `aud-${Date.now()}-11`,
           timestamp: "Just now",
           actor: `${currentHodName} (DEPARTMENT_HEAD)`,
-          action: "ACCEPT_RESOLUTION",
-          details:
-            "Department Head approved final resolution. Escalation cleared, grievance successfully closed.",
-          stage: "ESCALATION_CLEARED",
+          action: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ACCEPT_RESOLUTION",
+          details: isDirectResolution 
+            ? "Department Head submitted a direct resolution." 
+            : "Department Head approved final resolution. Escalation cleared, grievance successfully closed.",
+          stage: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ESCALATION_CLEARED",
         };
 
         setGrievances((prev) =>
@@ -249,9 +260,9 @@ export function useGrievanceActions({
             g.id === grievance.id
               ? {
                   ...g,
-                  status: "CLOSED",
+                  status: isDirectResolution ? "RESOLVED" : "CLOSED",
                   slaStatus: "ON_TRACK",
-                  escalationStage: "ESCALATION_CLEARED",
+                  escalationStage: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ESCALATION_CLEARED",
                   auditTrail: [...(g.auditTrail || []), finalAudit],
                 }
               : g,
@@ -312,6 +323,9 @@ export function useGrievanceActions({
             body: JSON.stringify({
               decision,
               feedback,
+              findings,
+              actionTaken,
+              outcome,
             }),
           },
         );

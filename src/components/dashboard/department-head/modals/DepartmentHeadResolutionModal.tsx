@@ -24,7 +24,10 @@ export function DepartmentHeadResolutionModal({
   onFeedbackChange,
 }: DepartmentHeadResolutionModalProps) {
   const isClarify = decision === "CLARIFY" || decision === "REJECT";
-  const isDirectResolution = (grievance.reopenCount ?? 0) >= 3;
+  const isDirectResolution =
+    (grievance.reopenCount ?? 0) >= 2 ||
+    grievance.status === "ESCALATED" ||
+    grievance.status !== "UNDER_REVIEW";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
@@ -117,26 +120,58 @@ export function DepartmentHeadResolutionModal({
               className="block text-xs font-semibold text-slate-800 mb-1.5"
             >
               {isDirectResolution
-                ? "Resolution Details (Logged to Audit Trail)"
+                ? "Problem Summary"
                 : decision === "APPROVE"
                   ? "Final Approval Remarks (Logged to Audit Trail)"
                   : "Clarification Directives"}
             </label>
             <textarea
               id="review-feedback"
-              rows={3}
+              rows={isDirectResolution ? 2 : 3}
               value={feedback}
               onChange={(e) => onFeedbackChange(e.target.value)}
               placeholder={
                 isDirectResolution
-                  ? "e.g. Issue resolved directly by Department Head after maximum reopens reached. Replaced faulty hardware..."
+                  ? "e.g. Issue directly resolved by Department Head."
                   : decision === "APPROVE"
                     ? "e.g. Resolution verified and sanctioned. All compliance requirements fulfilled."
                     : "e.g. Please verify additional bank annexures before final submission."
               }
               className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+              required={!isDirectResolution}
             />
           </div>
+
+          {isDirectResolution && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                  Findings / Investigation Details
+                </label>
+                <textarea
+                  id="direct-findings"
+                  name="findings"
+                  rows={3}
+                  placeholder="e.g. Re-evaluated the documents provided by the citizen..."
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                  Action Taken
+                </label>
+                <textarea
+                  id="direct-action"
+                  name="actionTaken"
+                  rows={3}
+                  placeholder="e.g. Approved the requested change and updated records."
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  required
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
             <button

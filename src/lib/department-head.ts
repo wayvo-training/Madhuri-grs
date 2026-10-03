@@ -99,10 +99,25 @@ export async function resolveDepartmentHeadAuth(
 export function formatSlaTimeLeft(
   dueAt: Date | null,
   slaStatus: string | null,
+  priority?: string,
+  createdAt?: Date | null,
 ): string {
-  if (!dueAt) return "No SLA set";
+  let effectiveDue = dueAt;
+  if (!effectiveDue && createdAt && priority) {
+    const mins =
+      priority === "CRITICAL"
+        ? 720
+        : priority === "HIGH"
+          ? 1440
+          : priority === "LOW"
+            ? 4320
+            : 2880;
+    effectiveDue = new Date(new Date(createdAt).getTime() + mins * 60 * 1000);
+  }
+
+  if (!effectiveDue) return "Within SLA";
   const now = new Date();
-  const diffMs = dueAt.getTime() - now.getTime();
+  const diffMs = effectiveDue.getTime() - now.getTime();
 
   if (diffMs <= 0 || slaStatus === "BREACHED") {
     const elapsedMinutes = Math.abs(Math.floor(diffMs / (1000 * 60)));

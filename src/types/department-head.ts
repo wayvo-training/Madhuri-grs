@@ -14,6 +14,8 @@ export interface GrievanceItem {
   title: string;
   category: string;
   subcategory: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
   submitterName: string;
   submitterRole: string;
   submitterEmail: string;
@@ -38,8 +40,11 @@ export interface GrievanceItem {
   isReopened?: boolean;
   reopenCount?: number;
   reopenReason?: string;
+  hasProposedKb?: boolean;
   isCrossDepartment?: boolean;
   collaboratingDepartments?: string[];
+  isPrimaryDepartment?: boolean;
+  myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   escalationReason?: string;
   escalationLevel?: number;
   // 11-Step SLA Escalation & Resolution Lifecycle
@@ -74,7 +79,14 @@ export interface GrievanceItem {
     newDeadline?: string;
   } | null;
   submittedResolution?: {
+    id?: string;
+    submittedByUserId?: string;
+    submittedByRole?: string | null;
     staffName: string;
+    problemSummary?: string;
+    actionTaken?: string;
+    findings?: string;
+    outcome?: string;
     note: string;
     submittedAt: string;
   } | null;

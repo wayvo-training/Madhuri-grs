@@ -23,6 +23,7 @@ import {
   type KnowledgeArticleData,
   KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
+import { toast } from "sonner";
 
 export function KnowledgeView() {
   const [articles, setArticles] = useState<KnowledgeArticleData[]>([]);
@@ -95,9 +96,13 @@ export function KnowledgeView() {
       setActionSuccessMsg(
         `Knowledge article "${article.title}" published successfully!`,
       );
+      toast.success("Knowledge Article Published", {
+        description: `"${article.title}" has been published to the Knowledge Base.`,
+      });
       fetchArticles();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to publish article");
+      const msg = err instanceof Error ? err.message : "Failed to publish article";
+      toast.error("Failed to publish article", { description: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -125,11 +130,15 @@ export function KnowledgeView() {
       setActionSuccessMsg(
         `Article "${rejectingArticle.title}" rejected with feedback.`,
       );
+      toast.success("Article Rejected", {
+        description: `Feedback sent for "${rejectingArticle.title}".`,
+      });
       setRejectingArticle(null);
       setRejectionReason("");
       fetchArticles();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to reject article");
+      const msg = err instanceof Error ? err.message : "Failed to reject article";
+      toast.error("Failed to reject article", { description: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -313,7 +322,7 @@ export function KnowledgeView() {
                         className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer disabled:opacity-50"
                       >
                         <FileCheck2 className="h-3.5 w-3.5" />
-                        <span>Publish Article</span>
+                        <span>Approve</span>
                       </button>
                     </>
                   )}
@@ -405,6 +414,15 @@ export function KnowledgeView() {
         isOpen={Boolean(viewingArticle)}
         onClose={() => setViewingArticle(null)}
         article={viewingArticle}
+        isApprover={true}
+        onApprove={async (art) => {
+          setViewingArticle(null);
+          await handlePublish(art);
+        }}
+        onReject={(art) => {
+          setViewingArticle(null);
+          setRejectingArticle(art);
+        }}
       />
     </div>
   );

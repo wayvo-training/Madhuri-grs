@@ -108,7 +108,18 @@ export async function GET(
           },
         },
         attachments: true,
-        resolutions: true,
+        resolutions: {
+          orderBy: { submitted_at: "desc" },
+          take: 1,
+          include: {
+            users: {
+              include: { roles: true },
+            },
+            knowledge_articles: {
+              select: { article_id: true },
+            },
+          },
+        },
       },
     });
 
@@ -566,6 +577,33 @@ export async function GET(
             uploadedAt: formatFullDateTime(a.uploaded_at),
           })),
           internalNotes,
+          submittedResolution: grievance.resolutions?.[0]
+            ? {
+                id: grievance.resolutions[0].resolution_id.toString(),
+                submittedByUserId:
+                  grievance.resolutions[0].submitted_by.toString(),
+                submittedByRole:
+                  (grievance.resolutions[0] as unknown as {
+                    users?: { roles?: { role_name?: string } };
+                  }).users?.roles?.role_name || null,
+                staffName:
+                  `${(grievance.resolutions[0] as unknown as { users?: { first_name?: string; last_name?: string } }).users?.first_name || ""} ${(grievance.resolutions[0] as unknown as { users?: { first_name?: string; last_name?: string } }).users?.last_name || ""}`.trim(),
+                problemSummary: grievance.resolutions[0].problem_summary,
+                actionTaken: grievance.resolutions[0].action_taken,
+                findings: grievance.resolutions[0].findings,
+                outcome: grievance.resolutions[0].outcome,
+                note:
+                  grievance.resolutions[0].action_taken ||
+                  grievance.resolutions[0].problem_summary,
+                submittedAt: formatRelativeTime(
+                  grievance.resolutions[0].submitted_at,
+                ),
+              }
+            : null,
+          hasProposedKb:
+            ((grievance.resolutions?.[0] as unknown as {
+              knowledge_articles?: unknown[];
+            })?.knowledge_articles?.length ?? 0) > 0,
         },
         currentStage: {
           key: currentStageKey,

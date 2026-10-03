@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  BookOpen,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
+import { canHeadProposeKnowledge } from "@/lib/department-head/filters";
 import {
   SortableTableHead,
   type SortState,
@@ -74,6 +76,7 @@ export interface QueueViewProps {
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
   onIntervene: (item: GrievanceItem) => void;
   onReviewResolution: (item: GrievanceItem) => void;
+  onProposeKb?: (item: GrievanceItem) => void;
 }
 
 export function QueueView({
@@ -107,6 +110,7 @@ export function QueueView({
   onAssign,
   onIntervene,
   onReviewResolution,
+  onProposeKb,
 }: QueueViewProps) {
 
   // Local Advanced Search state
@@ -606,7 +610,12 @@ export function QueueView({
                             icon: <Eye className="h-3.5 w-3.5" />,
                             onClick: () => onInspect(item, "progress"),
                           },
-                          ...((item.reopenCount ?? 0) >= 3
+                          ...(((item.reopenCount ?? 0) >= 2 ||
+                          item.status === "ESCALATED" ||
+                          item.status === "UNDER_REVIEW") &&
+                          item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          item.isPrimaryDepartment !== false
                             ? [
                                 {
                                   label: "Submit Resolution",
@@ -630,7 +639,6 @@ export function QueueView({
                             : []),
                           ...(item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
-                          item.status !== "ESCALATED" &&
                           !item.assignedStaffName &&
                           !item.assignedStaffId
                             ? [
@@ -644,7 +652,6 @@ export function QueueView({
                             : []),
                           ...(item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
-                          item.status !== "ESCALATED" &&
                           (item.assignedStaffName || item.assignedStaffId)
                             ? [
                                 {
@@ -653,6 +660,16 @@ export function QueueView({
                                   variant: "default" as const,
                                   onClick: () =>
                                     onAssign(item, item.assignedStaffId || ""),
+                                },
+                              ]
+                            : []),
+                          ...(!item.hasProposedKb && canHeadProposeKnowledge(item)
+                            ? [
+                                {
+                                  label: "Propose KB Article",
+                                  icon: <BookOpen className="h-3.5 w-3.5" />,
+                                  variant: "default" as const,
+                                  onClick: () => onProposeKb?.(item),
                                 },
                               ]
                             : []),

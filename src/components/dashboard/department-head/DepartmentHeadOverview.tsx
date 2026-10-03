@@ -27,6 +27,10 @@ import {
   DocumentViewerModal,
   SmartStaffAssignmentModal,
 } from "./modals";
+import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { ResolutionForm } from "@/components/staff/resolution-form";
+import { toast } from "sonner";
+import type { StaffGrievanceItem } from "@/types/staff";
 import {
   ActivityView,
   KnowledgeView,
@@ -176,7 +180,14 @@ export function DepartmentHeadOverviewInner({
   const [previewDocument, setPreviewDocument] =
     useState<DocumentPreviewData | null>(null);
 
+  const [proposeKbGrievance, setProposeKbGrievance] =
+    useState<GrievanceItem | null>(null);
+
   // Modal Handlers
+  const handleOpenProposeKbModal = useCallback((item: GrievanceItem) => {
+    setProposeKbGrievance(item);
+  }, []);
+
   const handleOpenAssignModal = useCallback(
     (item: GrievanceItem, _currentStaffId?: string) => {
       setAssignModalGrievance(item);
@@ -193,6 +204,12 @@ export function DepartmentHeadOverviewInner({
   }, []);
 
   const handleOpenResolutionModal = useCallback((item: GrievanceItem) => {
+    if (item.isPrimaryDepartment === false) {
+      toast.error(
+        "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+      );
+      return;
+    }
     setResolutionModalGrievance(item);
     setResolutionDecision("APPROVE");
     setResolutionFeedback("");
@@ -231,10 +248,19 @@ export function DepartmentHeadOverviewInner({
   const handleResolutionFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resolutionModalGrievance) return;
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const findings = formData.get("findings") as string | null;
+    const actionTaken = formData.get("actionTaken") as string | null;
+
     await executeResolutionSubmit({
       grievance: resolutionModalGrievance,
       decision: resolutionDecision,
       feedback: resolutionFeedback,
+      findings: findings || undefined,
+      actionTaken: actionTaken || undefined,
     });
     setResolutionModalGrievance(null);
   };
@@ -325,6 +351,7 @@ export function DepartmentHeadOverviewInner({
           onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
           onReviewResolution={handleOpenResolutionModal}
+          onProposeKb={handleOpenProposeKbModal}
         />
       )}
 
@@ -356,6 +383,7 @@ export function DepartmentHeadOverviewInner({
           onIntervene={handleOpenEscalateModal}
           onReviewResolution={handleOpenResolutionModal}
           onAssign={handleOpenAssignModal}
+          onProposeKb={handleOpenProposeKbModal}
         />
       )}
 
@@ -394,17 +422,49 @@ export function DepartmentHeadOverviewInner({
         />
       )}
 
-      {resolutionModalGrievance && (
-        <DepartmentHeadResolutionModal
-          grievance={resolutionModalGrievance}
-          decision={resolutionDecision}
-          feedback={resolutionFeedback}
-          onClose={() => setResolutionModalGrievance(null)}
-          onSubmit={handleResolutionFormSubmit}
-          onDecisionChange={setResolutionDecision}
-          onFeedbackChange={setResolutionFeedback}
-        />
-      )}
+      {resolutionModalGrievance &&
+        ((resolutionModalGrievance.reopenCount ?? 0) >= 2 ||
+        resolutionModalGrievance.status === "ESCALATED" ||
+        resolutionModalGrievance.status !== "UNDER_REVIEW" ? (
+          <ResolutionForm
+            isOpen={!!resolutionModalGrievance}
+            onClose={() => setResolutionModalGrievance(null)}
+            grievance={
+              {
+                id: resolutionModalGrievance.id,
+                grievanceNumber: resolutionModalGrievance.ticketCode,
+                category: resolutionModalGrievance.category,
+                title: resolutionModalGrievance.title,
+                status: resolutionModalGrievance.status,
+                priority: resolutionModalGrievance.priority,
+                reopenCount: resolutionModalGrievance.reopenCount,
+                isPrimaryOwner: resolutionModalGrievance.isPrimaryDepartment,
+                myInvolvementType: resolutionModalGrievance.myInvolvementType,
+              } as StaffGrievanceItem
+            }
+            onSubmit={async (id, data) => {
+              await executeResolutionSubmit({
+                grievance: resolutionModalGrievance,
+                decision: "APPROVE",
+                feedback: data.problemSummary,
+                findings: data.findings,
+                actionTaken: data.actionTaken,
+                outcome: data.outcome,
+              });
+              setResolutionModalGrievance(null);
+            }}
+          />
+        ) : (
+          <DepartmentHeadResolutionModal
+            grievance={resolutionModalGrievance}
+            decision={resolutionDecision}
+            feedback={resolutionFeedback}
+            onClose={() => setResolutionModalGrievance(null)}
+            onSubmit={handleResolutionFormSubmit}
+            onDecisionChange={setResolutionDecision}
+            onFeedbackChange={setResolutionFeedback}
+          />
+        ))}
 
       {leaveReassignmentModalStaff && (
         <DepartmentHeadLeaveReassignmentModal
@@ -446,7 +506,32 @@ export function DepartmentHeadOverviewInner({
             setSelectedCaseFile(null);
             handleOpenResolutionModal(item);
           }}
+          onProposeKbClick={(item) => {
+            handleOpenProposeKbModal(item);
+          }}
           onAddInternalNote={handleAddInternalNote}
+        />
+      )}
+
+      {proposeKbGrievance && (
+        <ProposeKnowledgeModal
+          isOpen={Boolean(proposeKbGrievance)}
+          onClose={() => setProposeKbGrievance(null)}
+          onSuccess={() => {
+            const proposedId = proposeKbGrievance.id;
+            setGrievances((prev) =>
+              prev.map((g) =>
+                g.id === proposedId ? { ...g, hasProposedKb: true } : g,
+              ),
+            );
+            if (selectedCaseFile && selectedCaseFile.id === proposedId) {
+              setSelectedCaseFile((prev) =>
+                prev ? { ...prev, hasProposedKb: true } : null,
+              );
+            }
+            loadData(selectedDeptId);
+          }}
+          grievance={proposeKbGrievance}
         />
       )}
 

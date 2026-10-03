@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  BookOpen,
   Clock,
   Eye,
   FileCheck,
@@ -25,7 +26,10 @@ import {
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
-import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
+import {
+  canHeadProposeKnowledge,
+  requiresHeadResolutionReview,
+} from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -39,6 +43,7 @@ export interface SlaGovernanceViewProps {
   onIntervene: (item: GrievanceItem) => void;
   onReviewResolution: (item: GrievanceItem) => void;
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
+  onProposeKb?: (item: GrievanceItem) => void;
 }
 
 export function SlaGovernanceView({
@@ -48,6 +53,7 @@ export function SlaGovernanceView({
   onIntervene,
   onReviewResolution,
   onAssign,
+  onProposeKb,
 }: SlaGovernanceViewProps) {
   const escalatedList = grievances.filter((g) => {
     return (
@@ -444,7 +450,8 @@ export function SlaGovernanceView({
                               icon: <Eye className="h-3.5 w-3.5" />,
                               onClick: () => onInspect(item, "progress"),
                             },
-                            ...(needsReview
+                            ...((needsReview || isEscalated) &&
+                            item.isPrimaryDepartment !== false
                               ? [
                                   {
                                     label: "Submit Resolution",
@@ -466,9 +473,17 @@ export function SlaGovernanceView({
                                   },
                                 ]
                               : []),
-                            ...(item.status === "CLOSED" ||
-                            item.status === "RESOLVED"
-                              ? []
+                            ...(!item.hasProposedKb && canHeadProposeKnowledge(item)
+                              ? [
+                                  {
+                                    label: "Propose KB Article",
+                                    icon: (
+                                      <BookOpen className="h-3.5 w-3.5" />
+                                    ),
+                                    variant: "default" as const,
+                                    onClick: () => onProposeKb?.(item),
+                                  },
+                                ]
                               : item.assignedStaffName || item.assignedStaffId
                                 ? [
                                     {

@@ -105,11 +105,11 @@ export async function PATCH(
       title:
         action === "PUBLISH"
           ? `Knowledge Article Published: ${existingArticle.title}`
-          : `Knowledge Article Rework Required: ${existingArticle.title}`,
+          : `Knowledge Article Rejected: ${existingArticle.title}`,
       message:
         action === "PUBLISH"
-          ? `Your suggested Knowledge Article "${existingArticle.title}" has been reviewed and published by your Department Head.`
-          : `Your Knowledge Article proposal "${existingArticle.title}" requires revisions. Feedback: ${rejectionReason?.trim()}`,
+          ? `Your proposed Knowledge Article "${existingArticle.title}" has been approved and published by your Department Head.`
+          : `Your Knowledge Article proposal "${existingArticle.title}" has been rejected. Reason: ${rejectionReason?.trim()}`,
     });
 
     return NextResponse.json({

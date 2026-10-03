@@ -19,7 +19,7 @@ export default async function DepartmentHeadGrievanceMessagesPage({ params }: Pa
   let grievanceId = parseInt(id, 10);
   if (isNaN(grievanceId)) return notFound();
 
-  let deptId = user.department_id;
+  let deptId: bigint | null = user.department_id ? BigInt(user.department_id) : null;
   if (!deptId && isAdmin) {
     const firstDept = await prisma.departments.findFirst({
       where: { status: "ACTIVE" },
@@ -29,12 +29,14 @@ export default async function DepartmentHeadGrievanceMessagesPage({ params }: Pa
   }
 
   // Ensure DH can only view messages for grievances in their department
-  const grievance = await prisma.grievances.findUnique({
+  const grievance = await prisma.grievances.findFirst({
     where: {
       grievance_id: grievanceId,
-      grievance_departments: {
-        department_id: deptId,
-      }
+      ...(deptId ? {
+        grievance_departments: {
+          department_id: deptId,
+        },
+      } : {}),
     },
     include: {
       users: true, // to get end user name

@@ -3,12 +3,16 @@
 import {
   AlertCircle,
   ArrowLeft,
+  BookOpen,
   CheckCircle2,
   Mail,
   UserCheck,
 } from "lucide-react";
 import { useState } from "react";
-import { requiresHeadResolutionReview } from "@/lib/department-head/filters";
+import {
+  canHeadProposeKnowledge,
+  requiresHeadResolutionReview,
+} from "@/lib/department-head/filters";
 import type {
   CaseProgressData,
   GrievanceItem,
@@ -28,6 +32,7 @@ interface CaseInspectionFooterProps {
   onAssignClick: (item: GrievanceItem) => void;
   onEscalateClick: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
+  onProposeKbClick?: (item: GrievanceItem) => void;
   onAddInternalNote?: (
     grievance: GrievanceItem,
     note: string,
@@ -46,6 +51,7 @@ export function CaseInspectionFooter({
   onAssignClick,
   onEscalateClick,
   onReviewResolutionClick,
+  onProposeKbClick,
   onAddInternalNote,
 }: CaseInspectionFooterProps) {
   const [isDirectiveModalOpen, setIsDirectiveModalOpen] = useState(false);
@@ -128,14 +134,30 @@ export function CaseInspectionFooter({
             </button>
           )}
 
-          {requiresHeadResolutionReview(currentGrievance) && (
+          {requiresHeadResolutionReview(currentGrievance) &&
+            (currentGrievance.isPrimaryDepartment !== false ? (
+              <button
+                type="button"
+                onClick={() => onReviewResolutionClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Submit Resolution</span>
+              </button>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200">
+                Supporting Dept · Lead Dept Submits Final Resolution
+              </span>
+            ))}
+
+          {canHeadProposeKnowledge(currentGrievance) && onProposeKbClick && (
             <button
               type="button"
-              onClick={() => onReviewResolutionClick(currentGrievance)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+              onClick={() => onProposeKbClick(currentGrievance)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-[#F0FDFA] px-3.5 py-2 text-xs font-semibold text-[#0F766E] shadow-2xs hover:bg-teal-100 transition cursor-pointer"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Submit Resolution</span>
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>Propose as Knowledge Article</span>
             </button>
           )}
 

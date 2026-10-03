@@ -67,14 +67,26 @@ export async function POST(
       );
     }
 
-    // 3. Verify grievance belongs to head's department (or Admin preview)
-    const grievanceDept = await prisma.grievance_departments.findFirst({
+    // 3. Resolve the target grievance_department
+    // First priority: Match the selected staff member's department
+    // Fallback: Match the active head's department
+    let grievanceDept = await prisma.grievance_departments.findFirst({
       where: {
         grievance_id: grievanceId,
-        ...(isAdmin ? {} : { department_id: departmentId }),
+        department_id: staff.department_id ? BigInt(staff.department_id) : departmentId,
       },
       include: { grievances: true },
     });
+
+    if (!grievanceDept) {
+      grievanceDept = await prisma.grievance_departments.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          ...(isAdmin ? {} : { department_id: departmentId }),
+        },
+        include: { grievances: true },
+      });
+    }
 
     if (!grievanceDept) {
       return NextResponse.json(

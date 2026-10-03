@@ -137,11 +137,12 @@ export function CaseProgressTab({
   const assignedStaff = staffList.find(
     (s: StaffMember) => s.id === currentGrievance.assignedStaffId,
   );
-  const officerName =
+  let officerName =
     caseProgressData?.assignment?.staffName ||
     currentGrievance.assignedStaffName ||
     assignedStaff?.name ||
     null;
+  if (officerName === "Unassigned") officerName = null;
   const officerDesignation =
     caseProgressData?.assignment?.designation ||
     assignedStaff?.designation ||

@@ -35,7 +35,9 @@ export async function GET(request: Request) {
       let parsedContent: {
         problem?: string;
         solutionSteps?: string;
+        resolution?: string;
         considerations?: string;
+        keyPoints?: string;
         references?: string;
         rejectionReason?: string;
       } = {};
@@ -51,12 +53,19 @@ export async function GET(request: Request) {
         ? `${creator.first_name} ${creator.last_name || ""}`.trim()
         : "Staff Member";
 
+      const resolutionText =
+        parsedContent.resolution || parsedContent.solutionSteps || "";
+      const keyPointsText =
+        parsedContent.keyPoints || parsedContent.considerations || null;
+
       return {
         id: art.article_id.toString(),
         title: art.title,
         problem: parsedContent.problem || "",
-        solutionSteps: parsedContent.solutionSteps || "",
-        considerations: parsedContent.considerations || null,
+        solutionSteps: resolutionText,
+        resolution: resolutionText,
+        considerations: keyPointsText,
+        keyPoints: keyPointsText,
         references: parsedContent.references || null,
         rejectionReason: parsedContent.rejectionReason || null,
         category: art.categories?.category_name || "General",

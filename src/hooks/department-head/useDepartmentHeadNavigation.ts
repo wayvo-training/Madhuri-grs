@@ -13,7 +13,8 @@ export function useDepartmentHeadNavigation() {
         hash === "queue" ||
         hash === "staff" ||
         hash === "sla" ||
-        hash === "activity"
+        hash === "activity" ||
+        hash === "knowledge"
       ) {
         setActiveView(hash as DepartmentHeadView);
       } else {

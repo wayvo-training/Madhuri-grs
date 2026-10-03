@@ -9,7 +9,30 @@ export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
   if (item.status === "CLOSED" || item.status === "RESOLVED") {
     return false;
   }
-  return (item.reopenCount ?? 0) >= 3;
+  return (
+    (item.reopenCount ?? 0) >= 2 ||
+    item.status === "ESCALATED" ||
+    item.status === "UNDER_REVIEW"
+  );
+}
+
+export function canHeadProposeKnowledge(item: GrievanceItem): boolean {
+  if (item.hasProposedKb) return false;
+
+  const isClosedOrResolved =
+    item.status === "CLOSED" || item.status === "RESOLVED";
+  if (!isClosedOrResolved) return false;
+
+  const role = item.submittedResolution?.submittedByRole;
+  if (role) {
+    return role === "DEPARTMENT_HEAD";
+  }
+
+  // Fallback: If reopen count reached max threshold (>= 2) or was escalated with direct head resolution
+  const isHeadDirectResolution =
+    (item.reopenCount ?? 0) >= 2 ||
+    item.escalationStage === "RESOLUTION_SUBMITTED";
+  return isHeadDirectResolution;
 }
 
 export function computeDepartmentMetrics(

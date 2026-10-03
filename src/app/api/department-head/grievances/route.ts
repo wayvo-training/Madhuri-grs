@@ -152,7 +152,10 @@ export async function GET(request: Request) {
     if (staffId === "UNASSIGNED") {
       conditions.push({
         assignments: {
-          none: { assignment_status: "ASSIGNED" },
+          none: {
+            assignment_status: "ASSIGNED",
+            grievance_departments: { department_id: departmentId },
+          },
         },
       });
     } else if (staffId !== "ALL") {
@@ -163,6 +166,7 @@ export async function GET(request: Request) {
             some: {
               staff_id: staffBigInt,
               assignment_status: "ASSIGNED",
+              grievance_departments: { department_id: departmentId },
             },
           },
         });
@@ -175,7 +179,14 @@ export async function GET(request: Request) {
     if (tab === "UNASSIGNED") {
       conditions.push({
         OR: [
-          { assignments: { none: { assignment_status: "ASSIGNED" } } },
+          {
+            assignments: {
+              none: {
+                assignment_status: "ASSIGNED",
+                grievance_departments: { department_id: departmentId },
+              },
+            },
+          },
           { status: "SUBMITTED" },
           { status: "ROUTED" },
         ],
@@ -237,7 +248,10 @@ export async function GET(request: Request) {
             },
           },
           assignments: {
-            where: { assignment_status: "ASSIGNED" },
+            where: {
+              assignment_status: "ASSIGNED",
+              grievance_departments: { department_id: departmentId },
+            },
             include: {
               users_assignments_staff_idTousers: true,
             },
@@ -251,7 +265,14 @@ export async function GET(request: Request) {
           resolutions: {
             orderBy: { submitted_at: "desc" },
             take: 1,
-            include: { users: true },
+            include: {
+              users: {
+                include: { roles: true },
+              },
+              knowledge_articles: {
+                select: { article_id: true },
+              },
+            },
           },
           attachments: true,
           audit_logs: {
@@ -268,6 +289,13 @@ export async function GET(request: Request) {
       }),
       prisma.grievances.count({ where }),
     ]);
+
+    // Fetch all involved departments across grievances to determine involvement types
+    const gIds = rawGrievances.map((g) => g.grievance_id);
+    const allDeptRecords = await prisma.grievance_departments.findMany({
+      where: { grievance_id: { in: gIds } },
+      include: { departments: true },
+    });
 
     // Format into frontend GrievanceItem shape
     const items = rawGrievances.map((g) => {
@@ -401,12 +429,26 @@ export async function GET(request: Request) {
         };
       }
 
-      // Check cross-department collaboration
-      const deptList: string[] = [];
-      if (g.grievance_departments) {
+      // Check cross-department collaboration and involvement
+      const relatedDepts = allDeptRecords.filter(
+        (d) => d.grievance_id === g.grievance_id
+      );
+      const deptList: string[] = relatedDepts.map(
+        (d) => d.departments.department_name
+      );
+      if (deptList.length === 0 && g.grievance_departments) {
         deptList.push(g.grievance_departments.departments.department_name);
       }
       const isCrossDepartment = deptList.length > 1;
+
+      const myDeptRecord = relatedDepts.find(
+        (d) => d.department_id === departmentId
+      );
+      const myInvolvementType =
+        (myDeptRecord?.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+        "PRIMARY";
+      const isPrimaryDepartment =
+        myInvolvementType === "PRIMARY" || !departmentId;
 
       return {
         id: g.grievance_id.toString(),
@@ -415,6 +457,8 @@ export async function GET(request: Request) {
         description: g.description,
         category: g.categories.category_name,
         subcategory: g.subcategories.subcategory_name,
+        categoryId: g.category_id ? g.category_id.toString() : null,
+        subcategoryId: g.subcategory_id ? g.subcategory_id.toString() : null,
         submitterName:
           `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
         submitterRole: g.users.roles?.role_name || "Employee",
@@ -434,7 +478,12 @@ export async function GET(request: Request) {
           | "AT_RISK"
           | "BREACHED",
         slaDeadline: formatFriendlyDate(g.due_at),
-        slaTimeLeft: formatSlaTimeLeft(g.due_at, g.sla_status),
+        slaTimeLeft: formatSlaTimeLeft(
+          g.due_at,
+          g.sla_status,
+          g.priority,
+          g.created_at,
+        ),
         slaConsumptionPercent: calculateSlaConsumption(
           g.created_at,
           g.due_at,
@@ -449,8 +498,11 @@ export async function GET(request: Request) {
         createdAt: formatFriendlyDate(g.created_at),
         isReopened: g.reopen_count > 0 || g.status === "REOPENED",
         reopenCount: g.reopen_count,
+        hasProposedKb: ((latestResolution?.knowledge_articles?.length ?? 0) > 0),
         isCrossDepartment,
         collaboratingDepartments: deptList,
+        isPrimaryDepartment,
+        myInvolvementType,
         escalationReason: latestEscalation?.reason || undefined,
         escalationLevel: latestEscalation?.escalation_level || undefined,
         escalationStage:
@@ -464,9 +516,19 @@ export async function GET(request: Request) {
         hodIntervention,
         submittedResolution: latestResolution
           ? {
+              id: latestResolution.resolution_id.toString(),
+              submittedByUserId: latestResolution.submitted_by.toString(),
+              submittedByRole:
+                latestResolution.users.roles?.role_name || null,
               staffName:
                 `${latestResolution.users.first_name} ${latestResolution.users.last_name || ""}`.trim(),
-              note: `${latestResolution.problem_summary}: ${latestResolution.action_taken}`,
+              problemSummary: latestResolution.problem_summary,
+              actionTaken: latestResolution.action_taken,
+              findings: latestResolution.findings,
+              outcome: latestResolution.outcome,
+              note:
+                latestResolution.action_taken ||
+                latestResolution.problem_summary,
               submittedAt: formatRelativeTime(latestResolution.submitted_at),
             }
           : null,

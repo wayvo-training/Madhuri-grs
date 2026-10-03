@@ -25,7 +25,10 @@ export async function GET(request: Request) {
         grievances: {
           include: {
             assignments: {
-              where: { assignment_status: "ASSIGNED" },
+              where: {
+                assignment_status: "ASSIGNED",
+                grievance_departments: { department_id: departmentId },
+              },
               select: { assignment_id: true, staff_id: true },
             },
             grievance_departments: {

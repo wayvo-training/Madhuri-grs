@@ -31,6 +31,7 @@ export interface CaseFileInspectionModalProps {
   onAssignClick: (item: GrievanceItem) => void;
   onEscalateClick: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
+  onProposeKbClick?: (item: GrievanceItem) => void;
   onAddInternalNote: (
     grievance: GrievanceItem,
     note: string,
@@ -51,6 +52,7 @@ export function CaseFileInspectionModal({
   onAssignClick,
   onEscalateClick,
   onReviewResolutionClick,
+  onProposeKbClick,
   onAddInternalNote,
 }: CaseFileInspectionModalProps) {
   const [activeTab, setActiveTab] = useState<CaseDrawerTab>(initialTab);
@@ -75,13 +77,22 @@ export function CaseFileInspectionModal({
       .then((json) => {
         if (isMounted && json.success && json.data) {
           setCaseProgressData(json.data);
-          if (json.data.internalNotes || json.data.grievance?.internalNotes) {
-            setCurrentGrievance((prev) => ({
-              ...prev,
-              internalNotes:
-                json.data.internalNotes || json.data.grievance?.internalNotes,
-            }));
-          }
+          setCurrentGrievance((prev) => ({
+            ...prev,
+            ...(json.data.internalNotes || json.data.grievance?.internalNotes
+              ? {
+                  internalNotes:
+                    json.data.internalNotes ||
+                    json.data.grievance?.internalNotes,
+                }
+              : {}),
+            ...(json.data.grievance?.submittedResolution
+              ? { submittedResolution: json.data.grievance.submittedResolution }
+              : {}),
+            ...(json.data.grievance?.hasProposedKb !== undefined
+              ? { hasProposedKb: json.data.grievance.hasProposedKb }
+              : {}),
+          }));
         }
       })
       .catch((err) => {
@@ -249,6 +260,7 @@ export function CaseFileInspectionModal({
           onAssignClick={onAssignClick}
           onEscalateClick={onEscalateClick}
           onReviewResolutionClick={onReviewResolutionClick}
+          onProposeKbClick={onProposeKbClick}
           onAddInternalNote={onAddInternalNote}
         />
       </div>

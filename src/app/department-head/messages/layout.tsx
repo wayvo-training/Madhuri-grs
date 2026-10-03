@@ -8,7 +8,7 @@ export default async function DepartmentHeadMessagesLayout({ children }: { child
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
   const isAdmin = user.roles.role_name === "ADMIN";
 
-  let deptId = user.department_id;
+  let deptId: bigint | null = user.department_id ? BigInt(user.department_id) : null;
 
   // Admin fallback
   if (!deptId && isAdmin) {
@@ -24,9 +24,11 @@ export default async function DepartmentHeadMessagesLayout({ children }: { child
   // Fetch all grievances routed to this department
   const grievances = await prisma.grievances.findMany({
     where: {
-      grievance_departments: {
-        department_id: deptId,
-      }
+      ...(deptId ? {
+        grievance_departments: {
+          department_id: deptId,
+        }
+      } : {}),
     },
     include: {
       audit_logs: {
