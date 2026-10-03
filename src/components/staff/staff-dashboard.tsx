@@ -9,6 +9,7 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { toast } from "sonner";
 
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
@@ -448,6 +449,12 @@ export function StaffDashboard({
           onResumeInvestigation={handleResumeInvestigation}
           onOpenDocumentPreview={setPreviewDocument}
           onOpenResolutionForm={(g: StaffGrievanceItem) => {
+            if (g.isPrimaryOwner === false) {
+              toast.error(
+                "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+              );
+              return;
+            }
             setSelectedGrievance(null);
             setResolvingGrievance(g);
           }}
@@ -461,6 +468,11 @@ export function StaffDashboard({
           grievance={resolvingGrievance}
           onClose={() => setResolvingGrievance(null)}
           onSubmit={handleSubmitResolution}
+          onResolutionSuccess={async () => {
+            setResolvingGrievance(null);
+            setSelectedGrievance(null);
+            await fetchDashboardData(true);
+          }}
         />
       )}
 

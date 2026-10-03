@@ -9,6 +9,7 @@ import {
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { GrievanceQueue } from "@/components/staff/grievance-queue";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { toast } from "sonner";
 import type {
   StaffDashboardData,
   StaffGrievanceItem,
@@ -235,6 +236,12 @@ export function StaffGrievanceManager({
           onOpenDocumentPreview={setPreviewDocument}
           onOpenResolveModal={() => {
             const target = selectedGrievance;
+            if (target?.isPrimaryOwner === false) {
+              toast.error(
+                "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+              );
+              return;
+            }
             setSelectedGrievance(null);
             setResolvingGrievance(target);
           }}

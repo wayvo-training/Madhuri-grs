@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Eye, FileCheck2, Mail, RotateCcw, User } from "lucide-react";
+import { CheckCircle2, Clock, Eye, FileCheck2, Mail, RotateCcw, User } from "lucide-react";
 import {
   PriorityBadge,
   SlaBadge,
@@ -30,7 +30,7 @@ export function GrievanceCard({
   const isReopened =
     grievance.reopenCount > 0 || grievance.status === "REOPENED";
   const isCompleted =
-    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW";
+    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW" || grievance.status === "RESOLVED";
 
   const inquiryUrl = buildGmailComposeUrl(
     buildStaffComplainantInquiryEmail({
@@ -134,16 +134,26 @@ export function GrievanceCard({
             <span>Examine Grievance</span>
           </button>
 
-          {!isCompleted && (
-            <button
-              type="button"
-              onClick={() => onResolve(grievance)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-            >
-              <FileCheck2 className="h-3.5 w-3.5" />
-              <span>Submit Resolution</span>
-            </button>
-          )}
+          {!isCompleted &&
+            (grievance.isPrimaryOwner !== false ? (
+              <button
+                type="button"
+                onClick={() => onResolve(grievance)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition cursor-pointer bg-[#0F766E] hover:bg-[#115E59]"
+              >
+                <FileCheck2 className="h-3.5 w-3.5" />
+                <span>Submit Final Resolution</span>
+              </button>
+            ) : grievance.isMyDepartmentCompleted || grievance.myDepartmentStatus === "COMPLETED" ? (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 border border-emerald-200">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Findings Submitted
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 border border-amber-200">
+                Supporting Dept · Lead Resolves
+              </span>
+            ))}
         </div>
       </div>
     </div>

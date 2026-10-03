@@ -17,6 +17,7 @@ export type StaffGrievanceStatus =
   | "REOPENED"
   | "REOPEN_REVIEW"
   | "CLOSED"
+  | "RESOLVED"
   | "ESCALATED";
 
 export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
@@ -61,6 +62,8 @@ export interface StaffAuditItem {
 
 export interface StaffResolutionData {
   id?: string;
+  submittedByUserId?: string;
+  submittedByRole?: string;
   problemSummary: string;
   findings: string;
   actionTaken: string;
@@ -89,6 +92,8 @@ export interface StaffGrievanceItem {
   description: string;
   category: string;
   subcategory: string;
+  categoryId?: string;
+  subcategoryId?: string;
   priority: StaffPriority;
   status: StaffGrievanceStatus;
   reopenCount: number;
@@ -103,11 +108,16 @@ export interface StaffGrievanceItem {
   submitterEmail: string;
   submitterRole: string;
   hasResolution: boolean;
+  hasProposedKb?: boolean;
   submittedResolution?: StaffResolutionData | null;
   attachments?: StaffAttachmentItem[];
   internalNotes?: StaffInternalNote[];
   auditTrail?: StaffAuditItem[];
   departmentsInvolved?: StaffInvolvedDepartment[];
+  myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
+  isPrimaryOwner?: boolean;
+  myDepartmentStatus?: string;
+  isMyDepartmentCompleted?: boolean;
 }
 
 export interface StaffMemberProfile {

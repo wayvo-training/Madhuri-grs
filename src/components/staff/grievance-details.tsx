@@ -1,13 +1,15 @@
 "use client";
 
-import { ArrowLeft, FileCheck2, Play, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, BookOpen, CheckCircle2, FileCheck2, Play, RotateCcw, ShieldAlert, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
+import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import {
   buildGmailComposeUrl,
   buildStaffComplainantInquiryEmail,
   buildStaffHodEscalationEmail,
 } from "@/lib/email";
+import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import type { StaffGrievanceItem } from "@/types/staff";
 import { ActivityTab } from "./details/ActivityTab";
 import { CollaborationTab } from "./details/CollaborationTab";
@@ -74,6 +76,10 @@ export function GrievanceDetails({
   >(initialTab);
   const [isStarting, setIsStarting] = useState(false);
   const [autoOpenRequestModal, setAutoOpenRequestModal] = useState(false);
+  const [isProposeKbOpen, setIsProposeKbOpen] = useState(false);
+  const [hasProposedKb, setHasProposedKb] = useState(
+    Boolean(grievance.hasProposedKb),
+  );
 
   useEffect(() => {
     if (initialTab) {
@@ -84,7 +90,7 @@ export function GrievanceDetails({
   if (!isOpen) return null;
 
   const isCompleted =
-    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW";
+    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW" || grievance.status === "RESOLVED";
   const isWaitingOnUser = grievance.status === "WAITING_ON_USER";
   const isInProgress = grievance.status === "IN_PROGRESS";
 
@@ -295,7 +301,7 @@ export function GrievanceDetails({
           )}
 
           {activeTab === "collaboration" && (
-            <CollaborationTab grievance={grievance} />
+            <CollaborationTab grievance={grievance} onAddNote={onAddNote} />
           )}
 
           {activeTab === "investigation" && (
@@ -340,19 +346,55 @@ export function GrievanceDetails({
             )}
 
             {!isCompleted && (
+              <>
+                {grievance.isPrimaryOwner !== false ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenResolutionForm) {
+                        onOpenResolutionForm(grievance);
+                      } else {
+                        onOpenResolveModal?.();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Submit Final Resolution</span>
+                  </button>
+                ) : grievance.isMyDepartmentCompleted || grievance.myDepartmentStatus === "COMPLETED" ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                      Department Findings Submitted · Awaiting Lead Dept Resolution
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 border border-amber-200">
+                      <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+                      Supporting Dept · Lead Dept Submits Final Resolution
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {isCompleted && (
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 border border-slate-200">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Case Resolved & Closed
+              </span>
+            )}
+
+            {!hasProposedKb && canStaffProposeKnowledge(grievance) && (
               <button
                 type="button"
-                onClick={() => {
-                  if (onOpenResolutionForm) {
-                    onOpenResolutionForm(grievance);
-                  } else {
-                    onOpenResolveModal?.();
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                onClick={() => setIsProposeKbOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-[#F0FDFA] px-3.5 py-2 text-xs font-semibold text-[#0F766E] shadow-2xs hover:bg-teal-100 transition cursor-pointer"
               >
-                <FileCheck2 className="h-3.5 w-3.5" />
-                <span>Submit Resolution</span>
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Propose as Knowledge Article</span>
               </button>
             )}
 
@@ -365,6 +407,14 @@ export function GrievanceDetails({
             </button>
           </div>
         </div>
+
+        {/* Propose Knowledge Article Modal */}
+        <ProposeKnowledgeModal
+          isOpen={isProposeKbOpen}
+          onClose={() => setIsProposeKbOpen(false)}
+          onSuccess={() => setHasProposedKb(true)}
+          grievance={grievance}
+        />
       </div>
     </div>
   );

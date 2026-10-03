@@ -9,6 +9,7 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { toast } from "sonner";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
 interface StaffSingleGrievanceViewProps {
@@ -194,7 +195,15 @@ export function StaffSingleGrievanceView({
         onStartInvestigation={handleStartInvestigation}
         onRequestAdditionalInfo={handleRequestAdditionalInfo}
         onOpenDocumentPreview={setPreviewDocument}
-        onOpenResolveModal={() => setIsResolving(true)}
+        onOpenResolveModal={() => {
+          if (grievance.isPrimaryOwner === false) {
+            toast.error(
+              "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+            );
+            return;
+          }
+          setIsResolving(true);
+        }}
       />
 
       {isResolving && (
@@ -203,6 +212,10 @@ export function StaffSingleGrievanceView({
           isOpen={true}
           onClose={() => setIsResolving(false)}
           onSubmit={handleSubmitResolution}
+          onResolutionSuccess={async () => {
+            setIsResolving(false);
+            await fetchGrievance();
+          }}
         />
       )}
 

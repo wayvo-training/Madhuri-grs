@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ResolutionTabProps {
@@ -34,6 +35,9 @@ export function ResolutionTab({
   onOpenDocumentPreview,
 }: ResolutionTabProps) {
   const [isProposeKbOpen, setIsProposeKbOpen] = useState(false);
+  const [hasProposedKb, setHasProposedKb] = useState(
+    Boolean(grievance.hasProposedKb),
+  );
 
   if (!grievance.submittedResolution) {
     return null;
@@ -63,14 +67,16 @@ export function ResolutionTab({
                 {grievance.submittedResolution.reviewStatus}
               </span>
             )}
-            <button
-              type="button"
-              onClick={() => setIsProposeKbOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-[#F0FDFA] px-2.5 py-1 text-[11px] font-bold text-[#0F766E] hover:bg-teal-100 transition cursor-pointer shadow-2xs"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              <span>Propose Reusable Knowledge Article</span>
-            </button>
+            {!hasProposedKb && canStaffProposeKnowledge(grievance) && (
+              <button
+                type="button"
+                onClick={() => setIsProposeKbOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-[#F0FDFA] px-2.5 py-1 text-[11px] font-bold text-[#0F766E] hover:bg-teal-100 transition cursor-pointer shadow-2xs"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Propose as Knowledge Article</span>
+              </button>
+            )}
           </div>
         </div>
         {grievance.submittedResolution.rejectionReason && (
@@ -211,6 +217,7 @@ export function ResolutionTab({
       <ProposeKnowledgeModal
         isOpen={isProposeKbOpen}
         onClose={() => setIsProposeKbOpen(false)}
+        onSuccess={() => setHasProposedKb(true)}
         grievance={grievance}
       />
     </div>

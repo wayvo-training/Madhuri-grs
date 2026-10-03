@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BookOpen,
   ChevronDown,
   Clock,
   Eye,
@@ -13,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
@@ -80,6 +83,8 @@ export function GrievanceQueue({
 
   const [advancedSearch, setAdvancedSearch] = useState<SearchCondition[]>([]);
   const [filterMode, setFilterMode] = useState<string>("AND");
+  const [proposeKbItem, setProposeKbItem] = useState<StaffGrievanceItem | null>(null);
+  const [locallyProposedIds, setLocallyProposedIds] = useState<Set<string>>(new Set());
 
   const handleSort = (field: string, direction: SortState["direction"]) => {
     setSortState({ field, direction });
@@ -589,7 +594,7 @@ export function GrievanceQueue({
                             ),
                             onClick: () => onExamine(item),
                           },
-                          ...(!isClosed && item.status !== "UNDER_REVIEW"
+                          ...(!isClosed && item.status !== "UNDER_REVIEW" && item.status !== "RESOLVED"
                             ? [
                                 {
                                   label: "Resolve",
@@ -598,6 +603,18 @@ export function GrievanceQueue({
                                   ),
                                   variant: "primary" as const,
                                   onClick: () => onResolve(item),
+                                },
+                              ]
+                            : []),
+                          ...(!item.hasProposedKb && !locallyProposedIds.has(item.id) && canStaffProposeKnowledge(item)
+                            ? [
+                                {
+                                  label: "Propose KB Article",
+                                  icon: (
+                                    <BookOpen className="h-3.5 w-3.5 text-teal-600" />
+                                  ),
+                                  variant: "default" as const,
+                                  onClick: () => setProposeKbItem(item),
                                 },
                               ]
                             : []),
@@ -621,6 +638,23 @@ export function GrievanceQueue({
             itemLabel="grievances"
           />
         </div>
+      )}
+
+      {proposeKbItem && (
+        <ProposeKnowledgeModal
+          isOpen={Boolean(proposeKbItem)}
+          onClose={() => setProposeKbItem(null)}
+          onSuccess={() => {
+            const proposedId = proposeKbItem.id;
+            setLocallyProposedIds((prev) => {
+              const next = new Set(prev);
+              next.add(proposedId);
+              return next;
+            });
+            proposeKbItem.hasProposedKb = true;
+          }}
+          grievance={proposeKbItem}
+        />
       )}
     </div>
   );

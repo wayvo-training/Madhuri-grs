@@ -57,7 +57,9 @@ export async function POST(request: Request) {
       include: {
         assignments: {
           where: { assignment_status: "ASSIGNED" },
-          take: 1,
+          include: {
+            grievance_departments: true,
+          },
         },
       },
     });
@@ -69,13 +71,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const currentAssignment = grievance.assignments?.[0];
-    if (!isAdmin && currentAssignment?.staff_id !== staffId) {
+    const activeAssignments = grievance.assignments || [];
+    const myAssignment = activeAssignments.find((a) => a.staff_id === staffId);
+
+    if (!isAdmin && !myAssignment) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Forbidden: You are not the assigned staff for this grievance",
+            "Forbidden: You are not an assigned staff member for this grievance",
+        },
+        { status: 403 },
+      );
+    }
+
+    // In a multi-department collaboration, verify primary lead responsibility
+    const allInvolvedDepts = await prisma.grievance_departments.findMany({
+      where: { grievance_id: gId },
+    });
+    const hasMultipleDepts = allInvolvedDepts.length > 1;
+    const isPrimaryStaff =
+      myAssignment?.grievance_departments?.involvement_type === "PRIMARY";
+
+    if (!isAdmin && hasMultipleDepts && !isPrimaryStaff) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: As a supporting department contributor, please submit your department findings via the Collaboration tab. Only the Primary Lead department officer can submit the final customer resolution.",
         },
         { status: 403 },
       );
@@ -112,8 +135,29 @@ export async function POST(request: Request) {
         }
       }
     }
+    // Evaluate active reopen policies to determine if max reopens reached
+    const activePolicies = await prisma.reopen_policies.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: { created_at: "desc" },
+    });
 
-    const requiresHeadReview = grievance.reopen_count >= 3;
+    let matchedPolicy = null;
+    for (const policy of activePolicies) {
+      if (policy.applicable_condition) {
+        const cond = policy.applicable_condition as any;
+        const matchesCategory = !cond.category_id || cond.category_id === grievance.category_id.toString();
+        const matchesSubcategory = !cond.subcategory_id || cond.subcategory_id === grievance.subcategory_id.toString();
+        if (matchesCategory && matchesSubcategory) {
+          matchedPolicy = policy;
+          break;
+        }
+      } else {
+        if (!matchedPolicy) matchedPolicy = policy;
+      }
+    }
+
+    const maxReopens = matchedPolicy?.max_reopen_count ?? 3;
+    const requiresHeadReview = grievance.reopen_count >= (maxReopens === 1 ? 2 : maxReopens);
 
     // 2. Transition grievance status
     await prisma.grievances.update({

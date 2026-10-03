@@ -291,10 +291,10 @@ export function InvestigationView({
                         <ActionMenu
                           widthClass="w-52"
                           items={[
-                            ...(isInProgress
+                            ...(isInProgress && item.isPrimaryOwner !== false
                               ? [
                                   {
-                                    label: "Submit Resolution",
+                                    label: "Submit Final Resolution",
                                     icon: (
                                       <FileCheck2 className="h-3.5 w-3.5 text-[#0F766E]" />
                                     ),

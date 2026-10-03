@@ -47,7 +47,7 @@ export async function GET(
         attachments: true,
         assignments: {
           where: {
-            assignment_status: "ASSIGNED",
+            assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
             ...(isAdmin ? {} : { staff_id: staffId }),
           },
         },
@@ -56,9 +56,15 @@ export async function GET(
           take: 1,
           include: {
             attachments: true,
+            users: {
+              include: { roles: true },
+            },
             resolution_reviews: {
               orderBy: { reviewed_at: "desc" },
               take: 1,
+            },
+            knowledge_articles: {
+              select: { article_id: true },
             },
           },
         },
@@ -96,6 +102,14 @@ export async function GET(
 
     const currentAssignment = grievance.assignments?.[0];
 
+    // Proactively evaluate SLA threshold notifications
+    try {
+      const { evaluateGrievanceSla } = await import("@/lib/engines/sla-engine");
+      await evaluateGrievanceSla(grievanceId);
+    } catch (slaErr) {
+      console.error("SLA evaluation error:", slaErr);
+    }
+
     const slaCalc = calculateSlaStatus(
       grievance.created_at,
       grievance.due_at,
@@ -114,6 +128,9 @@ export async function GET(
     if (latestResolution) {
       submittedResolution = {
         id: latestResolution.resolution_id.toString(),
+        submittedByUserId: latestResolution.submitted_by.toString(),
+        submittedByRole:
+          latestResolution.users?.roles?.role_name || undefined,
         problemSummary: latestResolution.problem_summary,
         findings: latestResolution.findings,
         actionTaken: latestResolution.action_taken,
@@ -275,6 +292,10 @@ export async function GET(
       };
     });
 
+    const myDept = departmentsInvolved.find((d) => d.isMyAssignment);
+    const myInvolvementType = myDept?.involvementType || (isAdmin ? "PRIMARY" : "PRIMARY");
+    const isPrimaryOwner = myInvolvementType === "PRIMARY" || isAdmin;
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -282,6 +303,8 @@ export async function GET(
       description: grievance.description,
       category: grievance.categories?.category_name || "General",
       subcategory: grievance.subcategories?.subcategory_name || "General",
+      categoryId: grievance.category_id?.toString(),
+      subcategoryId: grievance.subcategory_id?.toString(),
       priority:
         (grievance.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
       status: grievance.status as StaffGrievanceItem["status"],
@@ -299,11 +322,19 @@ export async function GET(
       submitterEmail: submitter?.email || "",
       submitterRole: submitter?.roles?.role_name || "Employee",
       hasResolution: Boolean(latestResolution),
+      hasProposedKb:
+        ((latestResolution as unknown as {
+          knowledge_articles?: unknown[];
+        })?.knowledge_articles?.length ?? 0) > 0,
       submittedResolution,
       attachments,
       internalNotes,
       auditTrail,
       departmentsInvolved,
+      myInvolvementType,
+      isPrimaryOwner,
+      myDepartmentStatus: myDept?.status || "ASSIGNED",
+      isMyDepartmentCompleted: myDept?.status === "COMPLETED",
     };
 
     return NextResponse.json({
@@ -590,27 +621,43 @@ export async function PATCH(
         },
       });
 
-      // Notify Department Head if present
-      const grievanceDept = await prisma.grievance_departments.findFirst({
+      // Notify all involved Department Heads and collaborating assigned staff
+      const involvedDepts = await prisma.grievance_departments.findMany({
         where: { grievance_id: grievanceId },
+        include: {
+          assignments: {
+            where: { assignment_status: "ASSIGNED" },
+          },
+        },
       });
-      if (grievanceDept?.department_id) {
-        const deptHead = await prisma.users.findFirst({
+
+      const userIdsToNotify = new Set<bigint>();
+      for (const d of involvedDepts) {
+        if (d.assignments?.staff_id && d.assignments.staff_id !== staffId) {
+          userIdsToNotify.add(d.assignments.staff_id);
+        }
+        const deptHeads = await prisma.users.findMany({
           where: {
-            department_id: grievanceDept.department_id,
+            department_id: d.department_id,
             roles: { role_name: "DEPARTMENT_HEAD" },
             status: "ACTIVE",
           },
         });
-        if (deptHead) {
-          await NotificationService.send({
-            userId: deptHead.user_id,
-            grievanceId,
-            type: "HEAD_INTERNAL_NOTE",
-            title: "Staff Investigation Note Logged",
-            message: `${authorDisplay} logged an investigation note on grievance ${grievance.grievance_number}.`,
-          });
+        for (const dh of deptHeads) {
+          if (dh.user_id !== staffId) {
+            userIdsToNotify.add(dh.user_id);
+          }
         }
+      }
+
+      for (const uId of userIdsToNotify) {
+        await NotificationService.send({
+          userId: uId,
+          grievanceId,
+          type: "HEAD_INTERNAL_NOTE",
+          title: "Cross-Department Collaboration Note",
+          message: `${authorDisplay} posted a collaboration update on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? noteContent.substring(0, 60) + '...' : noteContent}"`,
+        });
       }
 
       return NextResponse.json({

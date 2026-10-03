@@ -37,17 +37,25 @@ export async function GET(req: NextRequest) {
             resolutions: {
               orderBy: { submitted_at: "desc" as const },
               take: 1,
+              include: {
+                users: {
+                  include: { roles: true },
+                },
+                knowledge_articles: {
+                  select: { article_id: true },
+                },
+              },
             },
           },
         },
       },
     };
 
-    // Fetch grievances where this staff member is currently assigned
+    // Fetch grievances where this staff member is currently or previously assigned
     let assignments = await prisma.assignments.findMany({
       where: {
         staff_id: staffId,
-        assignment_status: "ASSIGNED",
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
       },
       ...assignmentQuery,
       orderBy: { assigned_at: "desc" },
@@ -101,6 +109,24 @@ export async function GET(req: NextRequest) {
         submitterEmail: submitter?.email || "",
         submitterRole: submitter?.roles?.role_name || "EMPLOYEE",
         hasResolution: g.resolutions.length > 0,
+        hasProposedKb:
+          ((g.resolutions[0] as unknown as {
+            knowledge_articles?: unknown[];
+          })?.knowledge_articles?.length ?? 0) > 0,
+        submittedResolution: g.resolutions[0]
+          ? {
+              id: g.resolutions[0].resolution_id.toString(),
+              submittedByUserId: g.resolutions[0].submitted_by.toString(),
+              submittedByRole:
+                g.resolutions[0].users?.roles?.role_name || undefined,
+              problemSummary: g.resolutions[0].problem_summary,
+              findings: g.resolutions[0].findings,
+              actionTaken: g.resolutions[0].action_taken,
+              outcome: g.resolutions[0].outcome,
+              evidence: g.resolutions[0].evidence,
+              submittedAt: g.resolutions[0].submitted_at.toISOString(),
+            }
+          : null,
       };
     });
 

@@ -63,8 +63,19 @@ export async function GET(request: Request) {
       });
     }
 
+    // Evaluate active grievances SLA thresholds
+    try {
+      const { evaluateAllActiveGrievancesSla } = await import(
+        "@/lib/engines/sla-engine"
+      );
+      await evaluateAllActiveGrievancesSla(departmentId ?? undefined);
+    } catch (slaErr) {
+      console.error("SLA evaluation error in staff dashboard:", slaErr);
+    }
+
     const assignmentQuery = {
       include: {
+        grievance_departments: true,
         grievances: {
           include: {
             categories: true,
@@ -80,12 +91,15 @@ export async function GET(request: Request) {
             attachments: true,
             resolutions: {
               orderBy: { submitted_at: "desc" as const },
-              take: 1,
+              take: 5,
               include: {
                 attachments: true,
                 resolution_reviews: {
                   orderBy: { reviewed_at: "desc" as const },
                   take: 1,
+                },
+                knowledge_articles: {
+                  select: { article_id: true },
                 },
               },
             },
@@ -139,6 +153,13 @@ export async function GET(request: Request) {
       const submitterFullName = submitter
         ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
         : "Employee";
+
+      const myInvolvementType =
+        (a.grievance_departments?.involvement_type as
+          | "PRIMARY"
+          | "SUPPORTING"
+          | "EQUAL") || "PRIMARY";
+      const isPrimaryOwner = myInvolvementType === "PRIMARY" || isAdmin;
 
       const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
 
@@ -295,10 +316,20 @@ export async function GET(request: Request) {
         submitterEmail: submitter?.email || "",
         submitterRole: submitter?.roles?.role_name || "Employee",
         hasResolution: Boolean(latestResolution),
+        hasProposedKb:
+          (
+            g.resolutions as unknown as Array<{
+              knowledge_articles?: unknown[];
+            }>
+          )?.some((r) => (r.knowledge_articles?.length ?? 0) > 0) ?? false,
         submittedResolution,
         attachments,
         internalNotes,
         auditTrail,
+        myInvolvementType,
+        isPrimaryOwner,
+        myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
+        isMyDepartmentCompleted: a.grievance_departments?.status === "COMPLETED",
       };
     });
 

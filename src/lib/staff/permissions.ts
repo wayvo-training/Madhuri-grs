@@ -26,9 +26,7 @@ export async function resolveStaffAuth(
   }
 
   const { user } = auth;
-  const isAdmin =
-    user.roles.role_name === "ADMIN" ||
-    user.roles.role_name === "DEPARTMENT_HEAD";
+  const isAdmin = user.roles.role_name === "ADMIN";
   const staffId = BigInt(user.user_id);
   const departmentId = user.department_id ? BigInt(user.department_id) : null;
 

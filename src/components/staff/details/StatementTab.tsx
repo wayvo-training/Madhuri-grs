@@ -82,11 +82,17 @@ export function StatementTab({
     const fetchKb = async () => {
       try {
         const catId =
-          (grievance as unknown as Record<string, unknown>).categoryId || "";
+          grievance.categoryId ||
+          (grievance as unknown as Record<string, unknown>).category_id ||
+          "";
         const subCatId =
-          (grievance as unknown as Record<string, unknown>).subcategoryId || "";
+          grievance.subcategoryId ||
+          (grievance as unknown as Record<string, unknown>).subcategory_id ||
+          "";
+        const catName = encodeURIComponent(grievance.category || "");
+        const subCatName = encodeURIComponent(grievance.subcategory || "");
         const res = await fetch(
-          `/api/staff/knowledge/recommendations?categoryId=${catId}&subcategoryId=${subCatId}`,
+          `/api/staff/knowledge/recommendations?categoryId=${catId}&subcategoryId=${subCatId}&category=${catName}&subcategory=${subCatName}`,
         );
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.articles)) {

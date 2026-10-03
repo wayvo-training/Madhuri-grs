@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 import { toast } from "sonner";
 
@@ -41,6 +41,7 @@ export function ResolutionForm({
   const [evidence, setEvidence] = useState("");
   const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -88,7 +89,9 @@ export function ResolutionForm({
       return;
     }
 
+    if (isSubmittingRef.current) return;
     setIsSubmitting(true);
+    isSubmittingRef.current = true;
     setErrorMsg(null);
 
     const attachmentPayloads = supportingFiles.map((f) => ({
@@ -102,7 +105,24 @@ export function ResolutionForm({
 
     try {
       let resId: string | undefined;
-      if (onSubmit) {
+      if (grievance.isPrimaryOwner === false) {
+        // Supporting Department Findings Submission
+        const res = await fetch(`/api/staff/grievances/${grievance.id}/findings`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            findings: findings.trim(),
+            actionTaken: actionTaken.trim(),
+            notes: `${problemSummary.trim()}\n\nOutcome / Recommendations:\n${outcome.trim()}`,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Failed to submit department findings");
+        }
+        toast.success("Department findings submitted! Forwarded to Lead Department.");
+      } else if (onSubmit) {
         await onSubmit(grievance.id, {
           problemSummary: problemSummary.trim(),
           findings: findings.trim(),
@@ -138,6 +158,7 @@ export function ResolutionForm({
           throw new Error(data.message || "Failed to submit resolution");
         }
         resId = data.resolutionId;
+        toast.success("Resolution submitted successfully!");
       }
 
       localStorage.removeItem(`draft_resolution_${grievance.id}`);
@@ -151,6 +172,7 @@ export function ResolutionForm({
       );
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -160,15 +182,28 @@ export function ResolutionForm({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                grievance.isPrimaryOwner === false
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
               <FileCheck2 className="h-5 w-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Submit Grievance Resolution
+                {grievance.isPrimaryOwner === false
+                  ? "Submit Department Findings & Sign-Off"
+                  : "Submit Grievance Resolution"}
               </h3>
               <p className="text-xs text-slate-500">
                 Case {grievance.grievanceNumber} &bull; {grievance.title}
+                {grievance.isPrimaryOwner === false && (
+                  <span className="ml-1 text-amber-600 font-medium">
+                    (Supporting Contributor)
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -180,6 +215,16 @@ export function ResolutionForm({
             <X className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Supporting Contributor Notice Banner */}
+        {grievance.isPrimaryOwner === false && (
+          <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>Supporting Department Role:</strong> Submitting your departmental findings completes your investigation and updates your departmental status to <strong>COMPLETED</strong>. Your findings will be shared with the Lead Department to compile the final employee resolution.
+            </span>
+          </div>
+        )}
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
@@ -353,7 +398,13 @@ export function ResolutionForm({
           <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-[11px] text-slate-600 flex items-start gap-2 leading-relaxed">
             <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <span>
-              {grievance.reopenCount >= 3 ? (
+              {grievance.isPrimaryOwner === false ? (
+                <>
+                  Submitting department findings will mark your department's involvement as{" "}
+                  <strong>COMPLETED</strong> and record your findings in the collaborative case file.
+                  The Lead Department will be alerted to review your findings and submit the final customer resolution.
+                </>
+              ) : grievance.reopenCount >= 3 ? (
                 <>
                   Submitting this resolution transitions the grievance to{" "}
                   <strong>UNDER_REVIEW</strong>. Your Department Head and the
@@ -397,15 +448,21 @@ export function ResolutionForm({
               !actionTaken.trim() ||
               !outcome.trim()
             }
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
+            className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
+              grievance.isPrimaryOwner === false
+                ? "bg-amber-600 hover:bg-amber-700"
+                : "bg-[#0F766E] hover:bg-[#115E59]"
+            }`}
           >
             <Send className="h-3.5 w-3.5" />
             <span>
               {isSubmitting
                 ? "Submitting..."
-                : grievance.reopenCount >= 3
-                  ? "Submit for Review"
-                  : "Resolve Grievance"}
+                : grievance.isPrimaryOwner === false
+                  ? "Submit Department Findings"
+                  : grievance.reopenCount >= 3
+                    ? "Submit for Review"
+                    : "Resolve Grievance"}
             </span>
           </button>
         </div>

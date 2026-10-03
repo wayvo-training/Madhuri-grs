@@ -1,15 +1,35 @@
-import { CheckCircle2, Clock, MessagesSquare, Users } from "lucide-react";
+import { CheckCircle2, Clock, MessagesSquare, Send, Users } from "lucide-react";
+import { useState } from "react";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface CollaborationTabProps {
   grievance: StaffGrievanceItem;
+  onAddNote?: (grievanceId: string, note: string) => Promise<void>;
 }
 
-export function CollaborationTab({ grievance }: CollaborationTabProps) {
+export function CollaborationTab({
+  grievance,
+  onAddNote,
+}: CollaborationTabProps) {
   const departments = grievance.departmentsInvolved || [];
   const crossDeptNotes = (grievance.internalNotes || []).filter(
     (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
   );
+
+  const [noteText, setNoteText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSendNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteText.trim() || !onAddNote || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onAddNote(grievance.id, noteText.trim());
+      setNoteText("");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -72,37 +92,68 @@ export function CollaborationTab({ grievance }: CollaborationTabProps) {
           </div>
         </div>
 
-        {/* Cross-Department Notes */}
+        {/* Cross-Department Notes & Communication */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-slate-800 border-b border-slate-100 pb-2">
-            <MessagesSquare className="w-5 h-5 text-blue-600" />
-            <h4 className="font-bold">Cross-Department Collaboration</h4>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2 text-slate-800">
+              <MessagesSquare className="w-5 h-5 text-blue-600" />
+              <h4 className="font-bold">Cross-Department Collaboration</h4>
+            </div>
+            <span className="text-[11px] text-slate-500 font-medium">
+              Shared case timeline
+            </span>
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[400px] overflow-y-auto">
+
+          {/* Notes Feed */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[280px] overflow-y-auto space-y-3">
             {crossDeptNotes.length > 0 ? (
-              <div className="space-y-4">
-                {crossDeptNotes.map((note) => (
-                  <div key={note.id} className="text-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-semibold text-slate-800 text-xs">
-                        {note.author}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {note.timestamp}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-sm whitespace-pre-wrap">
-                      {note.note}
-                    </div>
+              crossDeptNotes.map((note) => (
+                <div key={note.id} className="text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-slate-800 text-xs">
+                      {note.author}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {note.timestamp}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-2xs whitespace-pre-wrap text-xs leading-relaxed">
+                    {note.note}
+                  </div>
+                </div>
+              ))
             ) : (
-              <div className="text-center text-sm text-slate-500 py-6">
-                No cross-department communication yet.
+              <div className="text-center text-xs text-slate-400 py-6">
+                No cross-department communication yet. Use the box below to coordinate.
               </div>
             )}
           </div>
+
+          {/* Direct Collaboration Composer */}
+          {onAddNote && (
+            <form onSubmit={handleSendNote} className="space-y-2 pt-1">
+              <textarea
+                rows={2}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Post an update for collaborating departments (e.g. 'Invoices audited. Finance sign-off completed; forwarding for Compliance review.')..."
+                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-teal-600 focus:ring-1 focus:ring-teal-600 shadow-2xs resize-none"
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-400">
+                  Visible to all assigned officers & department heads
+                </span>
+                <button
+                  type="submit"
+                  disabled={!noteText.trim() || isSubmitting}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>{isSubmitting ? "Sending..." : "Send Note"}</span>
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

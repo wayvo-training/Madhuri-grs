@@ -180,25 +180,25 @@ export function OverviewView({
       <StaffPieCharts grievances={assignedGrievances} layout="horizontal" />
 
       {/* 1. Grievances Requiring Immediate Attention (Compact Alert Section) */}
-      {attentionItems.length > 0 && (
-        <div className="flex-1 flex flex-col rounded-2xl border border-amber-200 bg-amber-50/50 p-3 sm:p-3.5 space-y-2 min-h-0">
-          <div className="flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <h3 className="text-xs font-bold text-amber-900">
-                Grievances Requiring Immediate Attention
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSwitchView("queue")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition cursor-pointer"
-            >
-              <span>View All Grievances</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+      <div className="flex-1 flex flex-col rounded-2xl border border-amber-200 bg-amber-50/50 p-3 sm:p-3.5 space-y-2 min-h-0">
+        <div className="flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+            <h3 className="text-xs font-bold text-amber-900">
+              Grievances Requiring Immediate Attention
+            </h3>
           </div>
+          <button
+            type="button"
+            onClick={() => onSwitchView("queue")}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition cursor-pointer"
+          >
+            <span>View All Grievances</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
+        {attentionItems.length > 0 ? (
           <div className="flex-1 overflow-auto rounded-xl bg-white border border-amber-200/90 shadow-2xs">
             <table className="w-full text-left text-xs border-collapse relative">
               <thead className="sticky top-0 z-10 bg-amber-50/50">
@@ -335,8 +335,20 @@ export function OverviewView({
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-white border border-amber-200/90 shadow-2xs p-8 text-center">
+            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+              <FileCheck2 className="h-5 w-5 text-emerald-600" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-800">All Clear!</h4>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm">
+              You currently have no active grievances requiring immediate
+              attention (such as SLA breaches, high-risk delays, or
+              reopenings).
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
