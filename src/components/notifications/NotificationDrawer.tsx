@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  BookOpen,
   Briefcase,
   CheckCircle2,
   CircleAlert,
@@ -63,6 +64,21 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
     }
   }, [userId]);
 
+  // Fetch on mount and set up polling
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Poll every 30 seconds for new notifications
+    const intervalId = setInterval(() => {
+      if (!isOpen) { // only poll if closed to avoid jitter while reading
+        fetchNotifications();
+      }
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [fetchNotifications, isOpen]);
+
+  // Fetch immediately when opened to get latest
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
@@ -100,6 +116,12 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
       markAsRead(notification.id);
     }
     setIsOpen(false);
+    if (notification.type.startsWith("KNOWLEDGE_ARTICLE")) {
+      if (userRole === "DEPARTMENT_HEAD" || userRole === "ADMIN") {
+        router.push("/department-head/dashboard#knowledge");
+        return;
+      }
+    }
     if (notification.grievanceId) {
       if (userRole === "END_USER") {
         if (notification.type === "ADDITIONAL_INFO_REQUESTED" || notification.title.toLowerCase().includes("additional info") || notification.title.toLowerCase().includes("action required")) {
@@ -128,6 +150,9 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
 
   const getIcon = (type: string, title: string = "") => {
     const t = title.toLowerCase();
+    if (type.startsWith("KNOWLEDGE_ARTICLE") || t.includes("knowledge article")) {
+      return <BookOpen className="h-4 w-4 text-[#0F766E]" />;
+    }
     if (type === "SLA_BREACH" || t.includes("breach")) {
       return <CircleAlert className="h-4 w-4 text-red-500" />;
     }
@@ -249,11 +274,7 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                             {notification.message}
                           </p>
-                          {notification.grievanceId && (
-                            <p className="text-[10px] font-mono text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/40 inline-block mt-1">
-                              {notification.grievanceId}
-                            </p>
-                          )}
+                          {/* Removed raw grievanceId display to fix the '17' issue */}
                         </div>
                       </div>
                       {!notification.isRead && (

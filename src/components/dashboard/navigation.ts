@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   Bell,
+  BookOpen,
   Building2,
   CheckCircle2,
   FileText,
@@ -105,6 +106,11 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Grievance Queue",
           href: "/department-head/dashboard#queue",
           icon: FileText,
+        },
+        {
+          title: "Knowledge Base",
+          href: "/department-head/dashboard#knowledge",
+          icon: BookOpen,
         },
         {
           title: "Messages",

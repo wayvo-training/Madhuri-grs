@@ -14,11 +14,7 @@ export function AcceptResolutionButton({ grievanceId }: AcceptResolutionButtonPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  const handleAccept = async () => {
-    if (!confirm("Are you sure you want to accept this resolution? The grievance will be permanently closed.")) {
-      return;
-    }
-
+  const executeAccept = async () => {
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/end-user/grievances/${grievanceId}/accept`, {
@@ -37,6 +33,20 @@ export function AcceptResolutionButton({ grievanceId }: AcceptResolutionButtonPr
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleAccept = () => {
+    toast("Confirm Acceptance", {
+      description: "Are you sure you want to accept this resolution? The grievance will be permanently closed.",
+      action: {
+        label: "Confirm",
+        onClick: () => executeAccept(),
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => console.log("Cancelled acceptance"),
+      },
+    });
   };
 
   return (

@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const grievanceNumber = `GRS-${year}-${seq}`;
 
     // Apply Routing Rules
-    const activeRule = await prisma.routing_rules.findFirst({
+    let activeRule = await prisma.routing_rules.findFirst({
       where: {
         category_id: BigInt(categoryId),
         subcategory_id: BigInt(subcategoryId),
@@ -37,10 +37,74 @@ export async function POST(request: Request) {
       },
     });
 
+    if (!activeRule) {
+      activeRule = await prisma.routing_rules.findFirst({
+        where: {
+          category_id: BigInt(categoryId),
+          subcategory_id: null,
+          status: "ACTIVE",
+        },
+      });
+    }
+
+    if (!activeRule) {
+      activeRule = await prisma.routing_rules.findFirst({
+        where: {
+          category_id: null,
+          subcategory_id: null,
+          status: "ACTIVE",
+        },
+      });
+    }
+
     let assignedDepartmentId = null;
     const title = problemStatement.length > 50 ? problemStatement.substring(0, 50) + '...' : problemStatement;
+
+    // Resolve category and subcategory names for priority matching
+    const subcategoryRecord = await prisma.subcategories.findUnique({
+      where: { subcategory_id: BigInt(subcategoryId) },
+      include: { categories: true },
+    });
     
-    // Create the grievance first with status SUBMITTED
+    // Apply Priority Rules
+    const { determinePriority } = await import("@/lib/engines/priority-engine");
+    const priorityResult = await determinePriority({
+      categoryId: categoryId,
+      categoryName: subcategoryRecord?.categories?.category_name,
+      subcategoryId: subcategoryId,
+      subcategoryName: subcategoryRecord?.subcategory_name,
+      title: title,
+      description: problemStatement,
+    });
+
+    const priorityLevel = priorityResult.priority || "MEDIUM";
+
+    // Lookup active SLA Policy based on priority
+    const slaPolicy = await prisma.sla_policies.findFirst({
+      where: {
+        priority_level: priorityLevel,
+        status: "ACTIVE",
+      },
+    });
+
+    const DEFAULT_DURATIONS: Record<string, number> = {
+      CRITICAL: 12 * 60, // 720 mins (12h)
+      HIGH: 24 * 60, // 1440 mins (24h)
+      MEDIUM: 48 * 60, // 2880 mins (48h)
+      LOW: 72 * 60, // 4320 mins (72h)
+    };
+
+    const targetMinutes =
+      slaPolicy?.target_duration_minutes ||
+      DEFAULT_DURATIONS[priorityLevel] ||
+      2880;
+    const now = new Date();
+    const dueAt = new Date(now.getTime() + targetMinutes * 60 * 1000);
+
+    const isAutoRouted = Boolean(activeRule && activeRule.department_id);
+    const initialStatus = isAutoRouted ? "ROUTED" : "SUBMITTED";
+
+    // Create the grievance with status ROUTED (if rule matched) or SUBMITTED (if manual routing needed), priority, calculated due_at, and sla_status
     const newGrievance = await prisma.grievances.create({
       data: {
         grievance_number: grievanceNumber,
@@ -48,10 +112,37 @@ export async function POST(request: Request) {
         subcategory_id: BigInt(subcategoryId),
         title: title,
         description: problemStatement,
-        status: "SUBMITTED", // Changed to SUBMITTED to satisfy Postgres check constraint
-        priority: "MEDIUM",
+        status: initialStatus,
+        priority: priorityLevel,
+        priority_rule_id: priorityResult.priorityRuleId,
+        due_at: dueAt,
+        sla_status: "ON_TRACK",
         submitted_by: user.user_id,
       },
+    });
+
+    // Initialize SLA tracking record
+    if (slaPolicy) {
+      await prisma.sla_tracking.create({
+        data: {
+          grievance_id: newGrievance.grievance_id,
+          sla_policy_id: slaPolicy.sla_policy_id,
+          cycle_number: 1,
+          started_at: now,
+          due_at: dueAt,
+          status: "ON_TRACK",
+        },
+      });
+    }
+
+    // Notify the End User of successful submission
+    const { NotificationService } = await import("@/lib/services/notification.service");
+    await NotificationService.send({
+      userId: user.user_id,
+      grievanceId: newGrievance.grievance_id,
+      type: "GRIEVANCE_SUBMITTED",
+      title: "Grievance Submitted Successfully",
+      message: `Your grievance ${newGrievance.grievance_number} has been submitted successfully and is being processed.`,
     });
 
     // If there is a routing rule, assign it to a department
@@ -93,23 +184,39 @@ export async function POST(request: Request) {
         const departmentHeads = await prisma.users.findMany({
           where: {
             department_id: { in: Array.from(departmentIdsToNotify) },
-            roles: { role_name: "DEPARTMENT_HEAD" },
+            roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+            status: "ACTIVE",
           },
         });
 
         for (const head of departmentHeads) {
-          await prisma.notifications.create({
-            data: {
-              user_id: head.user_id,
-              grievance_id: newGrievance.grievance_id,
-              notification_type: "NEW_ASSIGNMENT",
-              channel: "IN_APP",
-              title: "New Grievance Assigned",
-              message: `Grievance ${newGrievance.grievance_number} has been routed to your department for review.`,
-              status: "PENDING",
-            }
+          await NotificationService.send({
+            userId: head.user_id,
+            grievanceId: newGrievance.grievance_id,
+            type: "NEW_ASSIGNMENT",
+            title: "New Grievance Assigned",
+            message: `Grievance ${newGrievance.grievance_number} has been routed to your department for review.`,
           });
         }
+      }
+    } else {
+      // Manual Routing Fallback
+      // Notify all active Admins that a grievance needs manual routing
+      const admins = await prisma.users.findMany({
+        where: {
+          roles: { role_name: "ADMIN" },
+          status: "ACTIVE",
+        },
+      });
+
+      for (const admin of admins) {
+        await NotificationService.send({
+          userId: admin.user_id,
+          grievanceId: newGrievance.grievance_id,
+          type: "ROUTING_EXCEPTION",
+          title: "Manual Routing Required",
+          message: `Grievance ${newGrievance.grievance_number} matched no active routing rules and requires manual routing.`,
+        });
       }
     }
 

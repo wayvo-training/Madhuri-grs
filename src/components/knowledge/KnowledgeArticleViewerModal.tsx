@@ -4,7 +4,9 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  FileCheck2,
   FileText,
+  FileX,
   Lightbulb,
   Shield,
   X,
@@ -14,12 +16,16 @@ export interface KnowledgeArticleData {
   id: string;
   title: string;
   problem: string;
-  solutionSteps: string;
+  solutionSteps?: string;
+  resolution?: string;
   considerations?: string | null;
+  keyPoints?: string | null;
   references?: string | null;
   rejectionReason?: string | null;
   category?: string;
   subcategory?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
   createdBy?: string;
   createdAt?: string;
   status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED";
@@ -29,18 +35,27 @@ interface KnowledgeArticleViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   article: KnowledgeArticleData | null;
+  onApprove?: (article: KnowledgeArticleData) => Promise<void>;
+  onReject?: (article: KnowledgeArticleData) => void;
+  isApprover?: boolean;
 }
 
 export function KnowledgeArticleViewerModal({
   isOpen,
   onClose,
   article,
+  onApprove,
+  onReject,
+  isApprover = false,
 }: KnowledgeArticleViewerModalProps) {
   if (!isOpen || !article) return null;
 
+  const resolutionText = article.resolution || article.solutionSteps || "";
+  const keyPointsText = article.keyPoints || article.considerations || "";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
+      <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
           <div className="flex items-center gap-2.5">
@@ -67,8 +82,11 @@ export function KnowledgeArticleViewerModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Category: {article.category || "General"} &bull; Subcategory:{" "}
-                {article.subcategory || "General"}
+                Category: <strong>{article.category || "General"}</strong> &bull; Subcategory:{" "}
+                <strong>{article.subcategory || "General"}</strong>
+                {article.createdBy && (
+                  <> &bull; Proposed by: <strong>{article.createdBy}</strong></>
+                )}
               </p>
             </div>
           </div>
@@ -88,43 +106,43 @@ export function KnowledgeArticleViewerModal({
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-900 space-y-1">
               <strong className="flex items-center gap-1.5 font-bold">
                 <Shield className="h-3.5 w-3.5 text-rose-600" />
-                Department Head Review Feedback (Rework Required):
+                Department Head Review Feedback (Rejected):
               </strong>
-              <p className="text-xs">{article.rejectionReason}</p>
+              <p className="text-xs leading-relaxed">{article.rejectionReason}</p>
             </div>
           )}
 
-          {/* Problem / Issue Pattern */}
+          {/* Problem / Scenario */}
           <div className="space-y-1">
             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-slate-500" />
-              Problem / Issue Pattern:
+              Problem / Scenario:
             </span>
-            <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50 text-slate-800 leading-relaxed font-normal">
+            <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
               {article.problem}
             </div>
           </div>
 
-          {/* Recommended Solution Steps */}
+          {/* Resolution / Recommended Approach */}
           <div className="space-y-1">
             <span className="font-semibold text-slate-700 flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-              Recommended Standard Solution Steps:
+              Resolution / Recommended Approach:
             </span>
             <div className="rounded-xl border border-emerald-200/80 p-3.5 bg-emerald-50/30 text-slate-900 leading-relaxed font-normal whitespace-pre-wrap">
-              {article.solutionSteps}
+              {resolutionText}
             </div>
           </div>
 
-          {/* Important Considerations */}
-          {article.considerations && (
+          {/* Key Points / Preventive Guidance */}
+          {keyPointsText && (
             <div className="space-y-1">
               <span className="font-semibold text-slate-700 flex items-center gap-1.5">
                 <Lightbulb className="h-3.5 w-3.5 text-amber-600" />
-                Important Governance &amp; Policy Considerations:
+                Key Points / Preventive Guidance:
               </span>
-              <div className="rounded-xl border border-amber-200 p-3 bg-amber-50/30 text-slate-800 leading-relaxed font-normal">
-                {article.considerations}
+              <div className="rounded-xl border border-amber-200 p-3 bg-amber-50/30 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
+                {keyPointsText}
               </div>
             </div>
           )}
@@ -136,25 +154,46 @@ export function KnowledgeArticleViewerModal({
                 <BookOpen className="h-3.5 w-3.5 text-blue-600" />
                 Supporting Policy References &amp; Links:
               </span>
-              <div className="rounded-xl border border-blue-200 p-3 bg-blue-50/30 text-slate-800 leading-relaxed font-normal">
+              <div className="rounded-xl border border-blue-200 p-3 bg-blue-50/30 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
                 {article.references}
               </div>
             </div>
           )}
 
           {/* Informational Disclaimer Banner */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 leading-relaxed flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
             <span>
-              This Knowledge Base article is an authorized reference guide for
-              Staff. Staff retains full responsibility to investigate each
-              individual grievance independently.
+              <strong>Reference Material Only:</strong> This Knowledge Base article is an authorized standard operating guide.
+              Articles are reference material only and must not automatically resolve, route, assign, or alter the priority of any grievance.
             </span>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end p-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
+        <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
+          <div className="flex items-center gap-2">
+            {isApprover && article.status === "PENDING_REVIEW" && onReject && onApprove && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onReject(article)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
+                >
+                  <FileX className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Reject</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApprove(article)}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  <span>Approve</span>
+                </button>
+              </>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}

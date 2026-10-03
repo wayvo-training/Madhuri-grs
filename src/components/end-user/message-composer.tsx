@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { UploadCloud, Paperclip, X, Send, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
   const [responseText, setResponseText] = useState("");
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = React.useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,8 +26,9 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!responseText.trim() || isSubmitting) return;
+    if (!responseText.trim() || isSubmittingRef.current) return;
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -61,6 +63,7 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
       // Clear form
       setResponseText("");
       setFilesToUpload([]);
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
 
       // Refresh data without full page reload
@@ -70,6 +73,7 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
         description: err.message || "An unexpected error occurred.",
       });
       setError(err.message || "Failed to submit response");
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

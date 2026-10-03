@@ -21,6 +21,8 @@ const mapStatusToStage = (status: string) => {
     case 'ASSIGNED': return 'ASSIGNED';
     case 'IN_PROGRESS':
     case 'ESCALATED': return 'IN_PROGRESS';
+    case 'REOPENED': return 'REOPENED';
+    case 'UNDER_REVIEW': return 'HEAD_REVIEW';
     case 'RESOLVED':
     case 'RESOLUTION': return 'RESOLUTION';
     case 'EMPLOYEE_REVIEW': return 'EMPLOYEE_REVIEW';
@@ -35,8 +37,10 @@ const getStageInfo = (id: string, grievance: any) => {
     case "ROUTED": return { label: "Routed", desc: `Routed to ${grievance?.grievance_departments?.[0]?.departments?.department_name || "department"}.` };
     case "ASSIGNED": return { label: "Assigned", desc: "Assigned for investigation." };
     case "IN_PROGRESS": return { label: "In Progress", desc: "Investigation is in progress." };
+    case "HEAD_REVIEW": return { label: "Head Review", desc: "Department Head is reviewing the resolution." };
     case "RESOLUTION": return { label: "Resolution", desc: "Resolution proposed." };
-    case "EMPLOYEE_REVIEW": return { label: "Employee Review", desc: "Awaiting your review." };
+    case "EMPLOYEE_REVIEW": return { label: "Citizen Review", desc: "Awaiting your review." };
+    case "REOPENED": return { label: "Reopened", desc: "Grievance has been reopened." };
     case "CLOSED": return { label: "Closed", desc: "Grievance is closed." };
     default: return { label: id, desc: "" };
   }
@@ -128,7 +132,17 @@ export default async function EndUserTrackPage(props: PageProps) {
     const lastNode = timelineNodes[timelineNodes.length - 1];
     
     if (lastNode && lastNode.id !== "CLOSED") {
-      const lastIndex = standardFlow.indexOf(lastNode.id);
+      let lastIndex = standardFlow.indexOf(lastNode.id);
+      
+      // If we are currently at HEAD_REVIEW, skip to CLOSED
+      if (lastNode.id === "HEAD_REVIEW") {
+        lastIndex = standardFlow.indexOf("EMPLOYEE_REVIEW");
+      }
+      // If the last recognized step is REOPENED (missing from flow)
+      else if (lastNode.id === "REOPENED") {
+        lastIndex = standardFlow.indexOf("ASSIGNED");
+      }
+
       const startIndex = lastIndex !== -1 ? lastIndex + 1 : standardFlow.indexOf("IN_PROGRESS");
       
       for (let i = startIndex; i < standardFlow.length; i++) {

@@ -22,6 +22,10 @@ export async function POST(
       where: { grievance_id: grievanceId },
       include: {
         grievance_departments: true,
+        assignments: {
+          where: { assignment_status: "ASSIGNED" },
+          take: 1
+        }
       }
     });
 
@@ -78,22 +82,80 @@ export async function POST(
     });
 
     // Notifications
-    // Notify Department Head
-    const deptId = grievance.grievance_departments?.department_id;
-    if (deptId) {
-      const hod = await prisma.users.findFirst({
-        where: { department_id: deptId, roles: { role_name: "DEPARTMENT_HEAD" }, status: "ACTIVE" },
-        select: { user_id: true }
+    // 1. Notify all Department Heads involved in this grievance (Primary & Collaborating)
+    const involvedDepts = await prisma.grievance_departments.findMany({
+      where: { grievance_id: grievanceId },
+      select: { department_id: true },
+    });
+    const deptIds = new Set<bigint>();
+    if (grievance.grievance_departments?.department_id) {
+      deptIds.add(grievance.grievance_departments.department_id);
+    }
+    for (const d of involvedDepts) {
+      deptIds.add(d.department_id);
+    }
+
+    // 1. Fetch latest resolution to identify who resolved this grievance
+    const latestResolution = await prisma.resolutions.findFirst({
+      where: { grievance_id: grievanceId },
+      orderBy: { submitted_at: "desc" },
+      include: {
+        users: {
+          include: { roles: true },
+        },
+      },
+    });
+
+    const resolverRole = latestResolution?.users?.roles?.role_name;
+    const resolverUserId = latestResolution?.submitted_by;
+    const isHeadResolver = resolverRole === "DEPARTMENT_HEAD";
+
+    // 2. Notify all Department Heads involved in this grievance
+    for (const dId of Array.from(deptIds)) {
+      const hods = await prisma.users.findMany({
+        where: {
+          department_id: dId,
+          roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
       });
-      if (hod) {
+      for (const hod of hods) {
+        const isThisHodTheResolver = resolverUserId === hod.user_id;
         await NotificationService.send({
           userId: hod.user_id,
           grievanceId: grievanceId,
           type: "RESOLUTION_ACCEPTED",
-          title: "Resolution Accepted",
-          message: `The citizen has accepted the resolution for grievance ${grievance.grievance_number}. The grievance is now closed.`,
+          title: `Resolution Accepted: ${grievance.grievance_number}`,
+          message: isThisHodTheResolver
+            ? `The citizen has accepted your direct resolution for grievance ${grievance.grievance_number}. You can now propose it as a Knowledge Article.`
+            : `The citizen has accepted the resolution for grievance ${grievance.grievance_number}. The grievance is now officially closed.`,
         });
       }
+    }
+
+    // 3. Notify the Staff member who handled/resolved the grievance (if resolved by staff)
+    let staffIdToNotify: bigint | null = null;
+    if (!isHeadResolver && latestResolution) {
+      staffIdToNotify = latestResolution.submitted_by;
+    } else if (!isHeadResolver) {
+      const lastAssignment = await prisma.assignments.findFirst({
+        where: { grievance_id: grievanceId },
+        orderBy: { assigned_at: "desc" },
+      });
+      if (lastAssignment) {
+        staffIdToNotify = lastAssignment.staff_id;
+      }
+    }
+
+    if (staffIdToNotify) {
+      await NotificationService.send({
+        userId: staffIdToNotify,
+        grievanceId: grievanceId,
+        type: "RESOLUTION_ACCEPTED",
+        title: `Resolution Accepted: ${grievance.grievance_number}`,
+        message: `Your resolution for grievance ${grievance.grievance_number} was accepted by the citizen. The case is now officially closed. You can now propose it as a Knowledge Article.`,
+      });
     }
 
     return NextResponse.json({ success: true, message: "Resolution accepted successfully" });
