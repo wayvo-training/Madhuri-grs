@@ -62,6 +62,11 @@ interface AdminRuleConfigModalProps {
   maxReviews: string;
   setMaxReviews: Dispatch<SetStateAction<string>>;
 
+  newCategoryName: string;
+  setNewCategoryName: Dispatch<SetStateAction<string>>;
+  newSubcategoryName: string;
+  setNewSubcategoryName: Dispatch<SetStateAction<string>>;
+
   isSubmitting: boolean;
 
   departments: RuleDepartmentOption[];
@@ -111,6 +116,10 @@ export function AdminRuleConfigModal({
   setMaxReopens,
   maxReviews,
   setMaxReviews,
+  newCategoryName,
+  setNewCategoryName,
+  newSubcategoryName,
+  setNewSubcategoryName,
 
   isSubmitting,
 
@@ -287,23 +296,44 @@ export function AdminRuleConfigModal({
                     >
                       Category Scope *
                     </label>
-                    <select
-                      id="prio-cat-select"
-                      value={selectedPriorityCatId}
-                      required={!isDefault}
-                      onChange={(e) => {
-                        setSelectedPriorityCatId(e.target.value);
-                        setSelectedPrioritySubcatId("");
-                      }}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                    >
-                      <option value="">-- Select Category --</option>
-                      {categories.map((c) => (
-                        <option key={c.category_id} value={c.category_id}>
-                          {c.category_name}
-                        </option>
-                      ))}
-                    </select>
+                    {selectedPriorityCatId === "CUSTOM" ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom category name"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          required
+                          className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPriorityCatId("")}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        id="prio-cat-select"
+                        value={selectedPriorityCatId}
+                        required={!isDefault}
+                        onChange={(e) => {
+                          setSelectedPriorityCatId(e.target.value);
+                          setSelectedPrioritySubcatId("");
+                        }}
+                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                      >
+                        <option value="">-- Select Category --</option>
+                        {categories.map((c) => (
+                          <option key={c.category_id} value={c.category_id}>
+                            {c.category_name}
+                          </option>
+                        ))}
+                        <option value="CUSTOM">Custom (Add New)</option>
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -313,27 +343,48 @@ export function AdminRuleConfigModal({
                     >
                       Subcategory Scope
                     </label>
-                    <select
-                      id="prio-subcat-select"
-                      value={selectedPrioritySubcatId}
-                      disabled={!selectedPriorityCatId}
-                      onChange={(e) =>
-                        setSelectedPrioritySubcatId(e.target.value)
-                      }
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                    >
-                      <option value="">-- All Subcategories --</option>
-                      {categories
-                        .find((c) => c.category_id === selectedPriorityCatId)
-                        ?.subcategories?.map((s) => (
-                          <option
-                            key={s.subcategory_id}
-                            value={s.subcategory_id}
-                          >
-                            {s.subcategory_name}
-                          </option>
-                        ))}
-                    </select>
+                    {selectedPrioritySubcatId === "CUSTOM" ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom subcategory name"
+                          value={newSubcategoryName}
+                          onChange={(e) => setNewSubcategoryName(e.target.value)}
+                          required
+                          className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPrioritySubcatId("")}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        id="prio-subcat-select"
+                        value={selectedPrioritySubcatId}
+                        disabled={!selectedPriorityCatId}
+                        onChange={(e) =>
+                          setSelectedPrioritySubcatId(e.target.value)
+                        }
+                        className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                      >
+                        <option value="">-- All Subcategories --</option>
+                        {categories
+                          .find((c) => c.category_id === selectedPriorityCatId)
+                          ?.subcategories?.map((s) => (
+                            <option
+                              key={s.subcategory_id}
+                              value={s.subcategory_id}
+                            >
+                              {s.subcategory_name}
+                            </option>
+                          ))}
+                        {selectedPriorityCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                      </select>
+                    )}
                   </div>
                 </div>
               )}
@@ -405,23 +456,44 @@ export function AdminRuleConfigModal({
                   >
                     Category Scope *
                   </label>
-                  <select
-                    id="routing-cat-select"
-                    value={selectedCatId}
-                    required
-                    onChange={(e) => {
-                      setSelectedCatId(e.target.value);
-                      setSelectedRoutingSubcatId("");
-                    }}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  >
-                    <option value="">-- Select Category --</option>
-                    {categories.map((c) => (
-                      <option key={c.category_id} value={c.category_id}>
-                        {c.category_name}
-                      </option>
-                    ))}
-                  </select>
+                  {selectedCatId === "CUSTOM" ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom category name"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        required
+                        className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCatId("")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      id="routing-cat-select"
+                      value={selectedCatId}
+                      required
+                      onChange={(e) => {
+                        setSelectedCatId(e.target.value);
+                        setSelectedRoutingSubcatId("");
+                      }}
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    >
+                      <option value="">-- Select Category --</option>
+                      {categories.map((c) => (
+                        <option key={c.category_id} value={c.category_id}>
+                          {c.category_name}
+                        </option>
+                      ))}
+                      <option value="CUSTOM">Custom (Add New)</option>
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -431,23 +503,44 @@ export function AdminRuleConfigModal({
                   >
                     Subcategory Scope *
                   </label>
-                  <select
-                    id="routing-subcat-select"
-                    value={selectedRoutingSubcatId}
-                    disabled={!selectedCatId}
-                    required
-                    onChange={(e) => setSelectedRoutingSubcatId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  >
-                    <option value="">-- Select Subcategory --</option>
-                    {categories
-                      .find((c) => c.category_id === selectedCatId)
-                      ?.subcategories?.map((s) => (
-                        <option key={s.subcategory_id} value={s.subcategory_id}>
-                          {s.subcategory_name}
-                        </option>
-                      ))}
-                  </select>
+                  {selectedRoutingSubcatId === "CUSTOM" ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom subcategory name"
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        required
+                        className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRoutingSubcatId("")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      id="routing-subcat-select"
+                      value={selectedRoutingSubcatId}
+                      disabled={!selectedCatId}
+                      required
+                      onChange={(e) => setSelectedRoutingSubcatId(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    >
+                      <option value="">-- Select Subcategory --</option>
+                      {categories
+                        .find((c) => c.category_id === selectedCatId)
+                        ?.subcategories?.map((s) => (
+                          <option key={s.subcategory_id} value={s.subcategory_id}>
+                            {s.subcategory_name}
+                          </option>
+                        ))}
+                      {selectedCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -577,6 +670,85 @@ export function AdminRuleConfigModal({
 
           {modalRuleType === "reopen" && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label
+                    htmlFor="reopen-cat-select"
+                    className="block font-semibold text-slate-700"
+                  >
+                    Category Scope
+                  </label>
+                  <select
+                    id="reopen-cat-select"
+                    value={selectedPriorityCatId}
+                    onChange={(e) => {
+                      setSelectedPriorityCatId(e.target.value);
+                      setSelectedPrioritySubcatId("");
+                    }}
+                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                  >
+                    <option value="">-- All Categories --</option>
+                    {categories.map((c) => (
+                      <option key={c.category_id} value={c.category_id}>
+                        {c.category_name}
+                      </option>
+                    ))}
+                    <option value="CUSTOM">Custom (Add New)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="reopen-subcat-select"
+                    className="block font-semibold text-slate-700"
+                  >
+                    Subcategory Scope
+                  </label>
+                  {selectedPrioritySubcatId === "CUSTOM" ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom subcategory name"
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        required
+                        className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPrioritySubcatId("")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      id="reopen-subcat-select"
+                      value={selectedPrioritySubcatId}
+                      disabled={!selectedPriorityCatId}
+                      onChange={(e) =>
+                        setSelectedPrioritySubcatId(e.target.value)
+                      }
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    >
+                      <option value="">-- All Subcategories --</option>
+                      {categories
+                        .find((c) => c.category_id === selectedPriorityCatId)
+                        ?.subcategories?.map((s) => (
+                          <option
+                            key={s.subcategory_id}
+                            value={s.subcategory_id}
+                          >
+                            {s.subcategory_name}
+                          </option>
+                        ))}
+                      {selectedPriorityCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                    </select>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label

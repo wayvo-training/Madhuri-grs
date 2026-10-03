@@ -251,6 +251,8 @@ export function useRuleActions({
   // Priority-specific Taxonomy State
   const [selectedPriorityCatId, setSelectedPriorityCatId] = useState("");
   const [selectedPrioritySubcatId, setSelectedPrioritySubcatId] = useState("");
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
 
   // SLA-specific State
   const [durationHours, setDurationHours] = useState("24");
@@ -276,6 +278,8 @@ export function useRuleActions({
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
     setSelectedSupportingDepts([]);
+    setNewCategoryName("");
+    setNewSubcategoryName("");
   }
 
   const openConfigureRow = (
@@ -364,6 +368,8 @@ export function useRuleActions({
           is_default: isDefault,
           status: ruleStatus,
           conditions,
+          new_category_name: selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name: selectedPrioritySubcatId === "CUSTOM" ? newSubcategoryName : undefined,
         };
       } else if (modalRuleType === "routing") {
         if (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId) {
@@ -395,8 +401,10 @@ export function useRuleActions({
           rule_order: Number.parseInt(ruleOrder, 10) || 10,
           status: ruleStatus,
           department_name: chosenDept?.department_name,
-          category_name: chosenCat?.category_name,
-          subcategory_name: chosenSub?.subcategory_name,
+          category_name: selectedCatId === "CUSTOM" ? newCategoryName : chosenCat?.category_name,
+          subcategory_name: selectedRoutingSubcatId === "CUSTOM" ? newSubcategoryName : chosenSub?.subcategory_name,
+          new_category_name: selectedCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name: selectedRoutingSubcatId === "CUSTOM" ? newSubcategoryName : undefined,
         };
       } else if (modalRuleType === "sla") {
         endpoint = "/api/admin/rules/sla";
@@ -413,6 +421,29 @@ export function useRuleActions({
           status: ruleStatus,
         };
       } else if (modalRuleType === "reopen") {
+        const conditions: any = {};
+        if (selectedPriorityCatId) {
+          if (selectedPriorityCatId !== "CUSTOM") {
+            conditions.category_id = selectedPriorityCatId;
+            const prioCat = categories.find((c) => c.category_id === selectedPriorityCatId);
+            conditions.category = prioCat?.category_name;
+          } else {
+            conditions.category_id = "CUSTOM";
+          }
+        }
+        if (selectedPrioritySubcatId) {
+          if (selectedPrioritySubcatId !== "CUSTOM") {
+            conditions.subcategory_id = selectedPrioritySubcatId;
+            const prioCat = categories.find((c) => c.category_id === selectedPriorityCatId);
+            const prioSubcat = prioCat?.subcategories?.find(
+              (s) => s.subcategory_id === selectedPrioritySubcatId,
+            );
+            conditions.subcategory = prioSubcat?.subcategory_name;
+          } else {
+            conditions.subcategory_id = "CUSTOM";
+          }
+        }
+
         endpoint = "/api/admin/rules/reopen";
         payload = {
           policy_name: ruleName.trim(),
@@ -420,6 +451,9 @@ export function useRuleActions({
           max_reopen_count: Number.parseInt(maxReopens, 10) || 2,
           max_manual_review_count: Number.parseInt(maxReviews, 10) || 1,
           status: ruleStatus,
+          applicable_condition: Object.keys(conditions).length > 0 ? conditions : undefined,
+          new_category_name: selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name: selectedPrioritySubcatId === "CUSTOM" ? newSubcategoryName : undefined,
         };
       }
 
@@ -521,6 +555,10 @@ export function useRuleActions({
     setMaxReopens,
     maxReviews,
     setMaxReviews,
+    newCategoryName,
+    setNewCategoryName,
+    newSubcategoryName,
+    setNewSubcategoryName,
     resetForm,
     openConfigureRow,
     handleCreateRule,

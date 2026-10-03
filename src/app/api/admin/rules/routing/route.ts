@@ -111,6 +111,8 @@ export async function POST(request: Request) {
       rule_order,
       conditions,
       status,
+      new_category_name,
+      new_subcategory_name,
     } = body;
 
     // 1. Validate rule_name
@@ -141,8 +143,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Validate category_id (Category cannot be null!)
-    if (!category_id) {
+    // 2. Resolve category_id (Create on fly if CUSTOM)
+    let finalCatId: bigint | null = null;
+    let finalCatName = "";
+
+    if (category_id === "CUSTOM" && new_category_name) {
+      const existingCat = await prisma.categories.findUnique({ where: { category_name: new_category_name.trim() } });
+      if (existingCat) {
+        finalCatId = existingCat.category_id;
+        finalCatName = existingCat.category_name;
+      } else {
+        const newCat = await prisma.categories.create({
+          data: {
+            category_name: new_category_name.trim(),
+            status: "ACTIVE",
+          }
+        });
+        finalCatId = newCat.category_id;
+        finalCatName = newCat.category_name;
+      }
+    } else if (!category_id) {
       return NextResponse.json(
         {
           success: false,
@@ -151,35 +171,62 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    } else {
+      finalCatId = validateBigIntId(category_id);
+      if (!finalCatId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "category_id must be a valid integer identifier or CUSTOM.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const category = await prisma.categories.findUnique({
+        where: { category_id: finalCatId },
+      });
+
+      if (category?.status !== "ACTIVE") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Selected category was not found or is inactive.",
+          },
+          { status: 400 },
+        );
+      }
+      finalCatName = category.category_name;
     }
 
-    const catId = validateBigIntId(category_id);
-    if (!catId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "category_id must be a valid integer identifier.",
-        },
-        { status: 400 },
-      );
-    }
+    // 3. Resolve subcategory_id (Create on fly if CUSTOM)
+    let finalSubcatId: bigint | null = null;
+    let finalSubcatName = "";
 
-    const category = await prisma.categories.findUnique({
-      where: { category_id: catId },
-    });
-
-    if (category?.status !== "ACTIVE") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Selected category was not found or is inactive.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // 3. Validate subcategory_id (Mandatory: Every routing rule must be scoped to an exact Subcategory)
-    if (!subcategory_id) {
+    if (subcategory_id === "CUSTOM" && new_subcategory_name && finalCatId) {
+      const existingSub = await prisma.subcategories.findUnique({
+        where: {
+          category_id_subcategory_name: {
+            category_id: finalCatId,
+            subcategory_name: new_subcategory_name.trim(),
+          }
+        }
+      });
+      if (existingSub) {
+        finalSubcatId = existingSub.subcategory_id;
+        finalSubcatName = existingSub.subcategory_name;
+      } else {
+        const newSub = await prisma.subcategories.create({
+          data: {
+            category_id: finalCatId,
+            subcategory_name: new_subcategory_name.trim(),
+            status: "ACTIVE",
+          }
+        });
+        finalSubcatId = newSub.subcategory_id;
+        finalSubcatName = newSub.subcategory_name;
+      }
+    } else if (!subcategory_id) {
       return NextResponse.json(
         {
           success: false,
@@ -188,41 +235,42 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
-    }
+    } else {
+      finalSubcatId = validateBigIntId(subcategory_id);
+      if (!finalSubcatId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "subcategory_id must be a valid integer identifier or CUSTOM.",
+          },
+          { status: 400 },
+        );
+      }
 
-    const subcatId = validateBigIntId(subcategory_id);
-    if (!subcatId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "subcategory_id must be a valid integer identifier.",
-        },
-        { status: 400 },
-      );
-    }
+      const subcategory = await prisma.subcategories.findUnique({
+        where: { subcategory_id: finalSubcatId },
+      });
 
-    const subcategory = await prisma.subcategories.findUnique({
-      where: { subcategory_id: subcatId },
-    });
+      if (subcategory?.status !== "ACTIVE") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Selected subcategory was not found or is inactive.",
+          },
+          { status: 400 },
+        );
+      }
 
-    if (subcategory?.status !== "ACTIVE") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Selected subcategory was not found or is inactive.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (subcategory.category_id !== catId) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `The selected subcategory ("${subcategory.subcategory_name}") does not belong to category "${category.category_name}".`,
-        },
-        { status: 400 },
-      );
+      if (subcategory.category_id !== finalCatId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `The selected subcategory ("${subcategory.subcategory_name}") does not belong to category "${finalCatName}".`,
+          },
+          { status: 400 },
+        );
+      }
+      finalSubcatName = subcategory.subcategory_name;
     }
 
     // 4. Validate department_id
@@ -334,8 +382,8 @@ export async function POST(request: Request) {
     if (ruleStatus === "ACTIVE") {
       const conflictingRule = await prisma.routing_rules.findFirst({
         where: {
-          category_id: catId,
-          subcategory_id: subcatId,
+          category_id: finalCatId,
+          subcategory_id: finalSubcatId,
           status: "ACTIVE",
         },
         include: {
@@ -344,9 +392,9 @@ export async function POST(request: Request) {
       });
 
       if (conflictingRule) {
-        const scopeDesc = subcategory
-          ? `"${category.category_name} → ${subcategory.subcategory_name}"`
-          : `"${category.category_name} (All Subcategories)"`;
+        const scopeDesc = finalSubcatId
+          ? `"${finalCatName} → ${finalSubcatName}"`
+          : `"${finalCatName} (All Subcategories)"`;
 
         return NextResponse.json(
           {
@@ -361,8 +409,8 @@ export async function POST(request: Request) {
     // 10b. Check duplicate configuration across all fields (even if name is different)
     const configConflict = await prisma.routing_rules.findFirst({
       where: {
-        category_id: catId,
-        subcategory_id: subcatId,
+        category_id: finalCatId,
+        subcategory_id: finalSubcatId,
         department_id: deptId,
         involvement_type: invType,
       },
@@ -372,9 +420,9 @@ export async function POST(request: Request) {
     });
 
     if (configConflict) {
-      const scopeDesc = subcategory
-        ? `"${category.category_name} → ${subcategory.subcategory_name}"`
-        : `"${category.category_name}"`;
+      const scopeDesc = finalSubcatId
+        ? `"${finalCatName} → ${finalSubcatName}"`
+        : `"${finalCatName}"`;
 
       return NextResponse.json(
         {
@@ -390,8 +438,8 @@ export async function POST(request: Request) {
       const created = await tx.routing_rules.create({
         data: {
           rule_name: trimmedName,
-          category_id: catId,
-          subcategory_id: subcatId,
+          category_id: finalCatId,
+          subcategory_id: finalSubcatId,
           department_id: deptId,
           involvement_type: invType,
           supporting_departments: normalizedSupporting,
@@ -411,10 +459,10 @@ export async function POST(request: Request) {
           new_value: {
             routing_rule_id: created.routing_rule_id.toString(),
             rule_name: created.rule_name,
-            category_id: catId.toString(),
-            category_name: category.category_name,
-            subcategory_id: subcatId ? subcatId.toString() : null,
-            subcategory_name: subcategory ? subcategory.subcategory_name : null,
+            category_id: finalCatId.toString(),
+            category_name: finalCatName,
+            subcategory_id: finalSubcatId ? finalSubcatId.toString() : null,
+            subcategory_name: finalSubcatName ? finalSubcatName : null,
             department_id: deptId.toString(),
             department_name: department.department_name,
             involvement_type: created.involvement_type,
@@ -452,12 +500,12 @@ export async function POST(request: Request) {
         rule: {
           routing_rule_id: rule.routing_rule_id.toString(),
           rule_name: rule.rule_name,
-          category_id: category.category_id.toString(),
-          category_name: category.category_name,
-          subcategory_id: subcategory
-            ? subcategory.subcategory_id.toString()
+          category_id: finalCatId.toString(),
+          category_name: finalCatName,
+          subcategory_id: finalSubcatId
+            ? finalSubcatId.toString()
             : null,
-          subcategory_name: subcategory ? subcategory.subcategory_name : null,
+          subcategory_name: finalSubcatName ? finalSubcatName : null,
           department_id: department.department_id.toString(),
           department_name: department.department_name,
           involvement_type: rule.involvement_type,

@@ -73,6 +73,12 @@ export function ReopenPoliciesView({
               >
                 Policy Name
               </SortableTableHead>
+              <TableHead className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500">
+                Category
+              </TableHead>
+              <TableHead className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500">
+                Subcategory
+              </TableHead>
               <SortableTableHead
                 field="reopen_window_hours"
                 currentSort={sortState}
@@ -133,6 +139,26 @@ export function ReopenPoliciesView({
                       <span className="font-semibold text-slate-900">
                         {p.policy_name}
                       </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5 text-slate-600">
+                      {(() => {
+                        try {
+                          const cond = p.applicable_condition as { category?: string };
+                          return cond?.category || "All";
+                        } catch {
+                          return "All";
+                        }
+                      })()}
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5 text-slate-600">
+                      {(() => {
+                        try {
+                          const cond = p.applicable_condition as { subcategory?: string };
+                          return cond?.subcategory || "All";
+                        } catch {
+                          return "All";
+                        }
+                      })()}
                     </TableCell>
                     <TableCell className="px-2 py-2.5 text-slate-600">
                       {p.reopen_window_hours

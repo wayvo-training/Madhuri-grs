@@ -43,6 +43,7 @@ export interface SerializedReopenPolicy {
   max_reopen_count: number;
   max_manual_review_count: number;
   status: string;
+  applicable_condition?: unknown;
 }
 
 export interface SerializedSubcategory {

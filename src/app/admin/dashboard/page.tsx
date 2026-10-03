@@ -50,7 +50,10 @@ export default async function AdminDashboardPage() {
       where: { sla_status: { in: ["AT_RISK", "BREACHED"] } },
     }),
     prisma.grievances.count({
-      where: { status: "SUBMITTED" },
+      where: {
+        status: "SUBMITTED",
+        grievance_departments: { is: null },
+      },
     }),
     prisma.departments.findMany({
       where: { status: "ACTIVE" },

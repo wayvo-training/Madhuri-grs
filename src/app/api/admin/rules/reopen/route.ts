@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -43,49 +44,45 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Check active reopen policy conflict (system-wide single active policy rule)
-    if (requestedStatus === "ACTIVE") {
-      const activePolicy = await prisma.reopen_policies.findFirst({
-        where: { status: "ACTIVE" },
-      });
-
-      if (activePolicy) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `An active reopen policy already exists ("${activePolicy.policy_name}"). Only one reopen policy can be active at a time. Please update the existing policy or deactivate it first.`,
-          },
-          { status: 409 },
-        );
-      }
-    }
-
     const windowHours = reopen_window_hours
       ? Number(reopen_window_hours)
       : null;
     const maxReopen = Number(max_reopen_count) || 2;
     const maxReviews = Number(max_manual_review_count) || 1;
 
-    // 3. Check duplicate configuration across all functional fields
-    const configConflict = await prisma.reopen_policies.findFirst({
-      where: {
-        reopen_window_hours: windowHours,
-        max_reopen_count: maxReopen,
-        max_manual_review_count: maxReviews,
-      },
-    });
-
-    if (configConflict) {
-      const windowText = windowHours
-        ? `${windowHours}h window`
-        : "unlimited window";
-      return NextResponse.json(
-        {
-          success: false,
-          message: `A reopen policy with identical configuration already exists ("${configConflict.policy_name}" has ${windowText}, ${maxReopen} max reopens, and ${maxReviews} max reviews). Please modify the parameters or use the existing policy.`,
-        },
-        { status: 409 },
-      );
+    // Optional: resolve custom categories if provided
+    let finalCondition = body.applicable_condition || null;
+    if (finalCondition) {
+      if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
+        let cat = await prisma.categories.findFirst({
+          where: { category_name: { equals: body.new_category_name, mode: "insensitive" } }
+        });
+        if (!cat) {
+          cat = await prisma.categories.create({
+            data: { category_name: body.new_category_name }
+          });
+        }
+        finalCondition.category_id = cat.category_id.toString();
+        finalCondition.category = cat.category_name;
+      }
+      if (body.new_subcategory_name && finalCondition.subcategory_id === "CUSTOM" && finalCondition.category_id) {
+        let subcat = await prisma.subcategories.findFirst({
+          where: { 
+            subcategory_name: { equals: body.new_subcategory_name, mode: "insensitive" },
+            category_id: BigInt(finalCondition.category_id)
+          }
+        });
+        if (!subcat) {
+          subcat = await prisma.subcategories.create({
+            data: { 
+              subcategory_name: body.new_subcategory_name,
+              category_id: BigInt(finalCondition.category_id)
+            }
+          });
+        }
+        finalCondition.subcategory_id = subcat.subcategory_id.toString();
+        finalCondition.subcategory = subcat.subcategory_name;
+      }
     }
 
     const policy = await prisma.$transaction(async (tx) => {
@@ -95,6 +92,7 @@ export async function POST(request: Request) {
           reopen_window_hours: windowHours,
           max_reopen_count: maxReopen,
           max_manual_review_count: maxReviews,
+          applicable_condition: finalCondition ? (finalCondition as any) : Prisma.JsonNull,
           status: requestedStatus,
           created_by: user.user_id,
         },
@@ -123,7 +121,10 @@ export async function POST(request: Request) {
       policy: {
         reopen_policy_id: policy.reopen_policy_id.toString(),
         policy_name: policy.policy_name,
+        reopen_window_hours: policy.reopen_window_hours,
         max_reopen_count: policy.max_reopen_count,
+        max_manual_review_count: policy.max_manual_review_count,
+        applicable_condition: policy.applicable_condition,
         status: policy.status,
       },
     });
@@ -158,22 +159,7 @@ export async function PATCH(request: Request) {
     const policyId = BigInt(reopen_policy_id);
 
     if (status === "ACTIVE") {
-      const existingActive = await prisma.reopen_policies.findFirst({
-        where: {
-          status: "ACTIVE",
-          reopen_policy_id: { not: policyId },
-        },
-      });
-
-      if (existingActive) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Cannot activate this policy because "${existingActive.policy_name}" is already active. Only one reopen policy can be active at a time. Please deactivate it first.`,
-          },
-          { status: 409 },
-        );
-      }
+      // Allow multiple active policies now since they can apply to specific categories.
     }
 
     const updated = await prisma.$transaction(async (tx) => {

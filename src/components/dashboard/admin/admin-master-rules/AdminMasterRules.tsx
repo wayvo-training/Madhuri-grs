@@ -126,6 +126,10 @@ export function AdminMasterRules({
     setEditingRuleId,
     ruleStatus,
     setRuleStatus,
+    newCategoryName,
+    setNewCategoryName,
+    newSubcategoryName,
+    setNewSubcategoryName,
 
     resetForm,
     handleCreateRule,
@@ -372,6 +376,7 @@ export function AdminMasterRules({
         {activeTab === "priority" && (
           <PriorityRulesView
             rules={priorityRules}
+            categories={categories}
             defaultRule={defaultPriorityRule}
             searchQuery={searchQuery}
             catFilter={catFilter}
@@ -510,6 +515,17 @@ export function AdminMasterRules({
               setMaxReopens(p.max_reopen_count.toString());
               setMaxReviews(p.max_manual_review_count.toString());
 
+              try {
+                const cond = p.applicable_condition as {
+                  category_id?: string;
+                  subcategory_id?: string;
+                };
+                if (cond?.category_id)
+                  setSelectedPriorityCatId(cond.category_id);
+                if (cond?.subcategory_id)
+                  setSelectedPrioritySubcatId(cond.subcategory_id);
+              } catch (_e) {}
+
               setRuleModalOpen(true);
             }}
           />
@@ -559,6 +575,10 @@ export function AdminMasterRules({
         setMaxReopens={setMaxReopens}
         maxReviews={maxReviews}
         setMaxReviews={setMaxReviews}
+        newCategoryName={newCategoryName}
+        setNewCategoryName={setNewCategoryName}
+        newSubcategoryName={newSubcategoryName}
+        setNewSubcategoryName={setNewSubcategoryName}
         isSubmitting={isSubmitting}
         departments={departments}
         categories={categories}

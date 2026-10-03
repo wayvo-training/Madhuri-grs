@@ -109,6 +109,7 @@ export default async function AdminRulesPage() {
       reopen_window_hours: p.reopen_window_hours,
       max_reopen_count: p.max_reopen_count,
       max_manual_review_count: p.max_manual_review_count,
+      applicable_condition: p.applicable_condition,
       status: p.status,
     }));
 

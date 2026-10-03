@@ -29,6 +29,8 @@ export async function POST(request: Request) {
       rule_order,
       is_default,
       status,
+      new_category_name,
+      new_subcategory_name,
     } = body;
 
     // 1. Validate rule_name
@@ -126,77 +128,119 @@ export async function POST(request: Request) {
       }
 
       if (rawCatId) {
-        const parsedCatId = validateBigIntId(rawCatId);
-        if (!parsedCatId) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "category_id must be a valid integer identifier.",
-            },
-            { status: 400 },
-          );
-        }
+        if (rawCatId === "CUSTOM" && new_category_name) {
+          const existingCat = await prisma.categories.findUnique({ where: { category_name: new_category_name.trim() } });
+          if (existingCat) {
+            categoryRecord = existingCat;
+          } else {
+            const newCat = await prisma.categories.create({
+              data: {
+                category_name: new_category_name.trim(),
+                status: "ACTIVE",
+              }
+            });
+            categoryRecord = newCat;
+          }
+          sanitizedConditions.category_id = categoryRecord.category_id.toString();
+          sanitizedConditions.category = categoryRecord.category_name;
+        } else {
+          const parsedCatId = validateBigIntId(rawCatId);
+          if (!parsedCatId) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "category_id must be a valid integer identifier or CUSTOM.",
+              },
+              { status: 400 },
+            );
+          }
 
-        const foundCategory = await prisma.categories.findUnique({
-          where: { category_id: parsedCatId },
-        });
+          const foundCategory = await prisma.categories.findUnique({
+            where: { category_id: parsedCatId },
+          });
 
-        if (foundCategory?.status !== "ACTIVE") {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "Selected category was not found or is inactive.",
-            },
-            { status: 400 },
-          );
+          if (foundCategory?.status !== "ACTIVE") {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "Selected category was not found or is inactive.",
+              },
+              { status: 400 },
+            );
+          }
+          categoryRecord = foundCategory;
+          sanitizedConditions.category_id = foundCategory.category_id.toString();
+          sanitizedConditions.category = foundCategory.category_name;
         }
-        categoryRecord = foundCategory;
-        sanitizedConditions.category_id = foundCategory.category_id.toString();
-        sanitizedConditions.category = foundCategory.category_name;
       }
 
-      if (rawSubcatId) {
-        const parsedSubcatId = validateBigIntId(rawSubcatId);
-        if (!parsedSubcatId) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "subcategory_id must be a valid integer identifier.",
-            },
-            { status: 400 },
-          );
-        }
+      if (rawSubcatId && categoryRecord) {
+        if (rawSubcatId === "CUSTOM" && new_subcategory_name) {
+          const existingSub = await prisma.subcategories.findUnique({
+            where: {
+              category_id_subcategory_name: {
+                category_id: categoryRecord.category_id,
+                subcategory_name: new_subcategory_name.trim(),
+              }
+            }
+          });
+          if (existingSub) {
+            subcategoryRecord = existingSub;
+          } else {
+            const newSub = await prisma.subcategories.create({
+              data: {
+                category_id: categoryRecord.category_id,
+                subcategory_name: new_subcategory_name.trim(),
+                status: "ACTIVE",
+              }
+            });
+            subcategoryRecord = newSub;
+          }
+          sanitizedConditions.subcategory_id = subcategoryRecord.subcategory_id.toString();
+          sanitizedConditions.subcategory = subcategoryRecord.subcategory_name;
+        } else {
+          const parsedSubcatId = validateBigIntId(rawSubcatId);
+          if (!parsedSubcatId) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "subcategory_id must be a valid integer identifier or CUSTOM.",
+              },
+              { status: 400 },
+            );
+          }
 
-        const foundSubcat = await prisma.subcategories.findUnique({
-          where: { subcategory_id: parsedSubcatId },
-        });
+          const foundSubcat = await prisma.subcategories.findUnique({
+            where: { subcategory_id: parsedSubcatId },
+          });
 
-        if (foundSubcat?.status !== "ACTIVE") {
-          return NextResponse.json(
-            {
-              success: false,
-              message: "Selected subcategory was not found or is inactive.",
-            },
-            { status: 400 },
-          );
-        }
+          if (foundSubcat?.status !== "ACTIVE") {
+            return NextResponse.json(
+              {
+                success: false,
+                message: "Selected subcategory was not found or is inactive.",
+              },
+              { status: 400 },
+            );
+          }
 
-        if (
-          categoryRecord &&
-          foundSubcat.category_id !== categoryRecord.category_id
-        ) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: `The selected subcategory ("${foundSubcat.subcategory_name}") does not belong to category "${categoryRecord.category_name}".`,
-            },
-            { status: 400 },
-          );
+          if (
+            categoryRecord &&
+            foundSubcat.category_id !== categoryRecord.category_id
+          ) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: `The selected subcategory ("${foundSubcat.subcategory_name}") does not belong to category "${categoryRecord.category_name}".`,
+              },
+              { status: 400 },
+            );
+          }
+          subcategoryRecord = foundSubcat;
+          sanitizedConditions.subcategory_id =
+            foundSubcat.subcategory_id.toString();
+          sanitizedConditions.subcategory = foundSubcat.subcategory_name;
         }
-        subcategoryRecord = foundSubcat;
-        sanitizedConditions.subcategory_id =
-          foundSubcat.subcategory_id.toString();
-        sanitizedConditions.subcategory = foundSubcat.subcategory_name;
       }
     }
 

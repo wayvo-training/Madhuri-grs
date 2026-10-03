@@ -26,7 +26,8 @@ export async function GET(request: Request) {
     // 1. Tab condition
     if (tab === "EXCEPTIONS") {
       conditions.push({
-        OR: [{ status: "SUBMITTED" }, { grievance_departments: { is: null } }],
+        status: "SUBMITTED",
+        grievance_departments: { is: null },
       });
     } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
       conditions.push({

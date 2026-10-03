@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { NotificationService } from "@/lib/services/notification.service";
 
 export async function POST(
   request: Request,
@@ -208,6 +209,26 @@ export async function POST(
         },
       });
     });
+
+    // Send notification to the new Primary Department Head
+    const primaryHead = await prisma.users.findFirst({
+      where: {
+        department_id: primaryDepartmentId,
+        roles: { role_name: "DEPARTMENT_HEAD" },
+        status: "ACTIVE",
+      }
+    });
+
+    if (primaryHead) {
+      await NotificationService.send({
+        userId: primaryHead.user_id,
+        grievanceId: grievanceId,
+        type: "ASSIGNMENT",
+        channel: "IN_APP",
+        title: "New Case Assigned",
+        message: `Grievance ${grievance.grievance_number} has been routed to your department for review by Admin.`
+      });
+    }
 
     const suppSummaryMsg =
       validSupportingDepts.length > 0
