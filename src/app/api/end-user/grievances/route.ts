@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/auth";
 import { promises as fs } from "fs";
+import { NextResponse } from "next/server";
 import path from "path";
+import { getCurrentUser } from "@/lib/auth";
+import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,10 @@ export async function POST(request: Request) {
     const files = formData.getAll("files") as File[];
 
     if (!categoryId || !subcategoryId || !problemStatement) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
     // Generate unique grievance number
@@ -57,15 +61,18 @@ export async function POST(request: Request) {
       });
     }
 
-    let assignedDepartmentId = null;
-    const title = problemStatement.length > 50 ? problemStatement.substring(0, 50) + '...' : problemStatement;
+    const assignedDepartmentId = null;
+    const title =
+      problemStatement.length > 50
+        ? problemStatement.substring(0, 50) + "..."
+        : problemStatement;
 
     // Resolve category and subcategory names for priority matching
     const subcategoryRecord = await prisma.subcategories.findUnique({
       where: { subcategory_id: BigInt(subcategoryId) },
       include: { categories: true },
     });
-    
+
     // Apply Priority Rules
     const { determinePriority } = await import("@/lib/engines/priority-engine");
     const priorityResult = await determinePriority({
@@ -87,16 +94,9 @@ export async function POST(request: Request) {
       },
     });
 
-    const DEFAULT_DURATIONS: Record<string, number> = {
-      CRITICAL: 12 * 60, // 720 mins (12h)
-      HIGH: 24 * 60, // 1440 mins (24h)
-      MEDIUM: 48 * 60, // 2880 mins (48h)
-      LOW: 72 * 60, // 4320 mins (72h)
-    };
-
     const targetMinutes =
       slaPolicy?.target_duration_minutes ||
-      DEFAULT_DURATIONS[priorityLevel] ||
+      DEFAULT_SLA_DURATIONS_MINUTES[priorityLevel] ||
       2880;
     const now = new Date();
     const dueAt = new Date(now.getTime() + targetMinutes * 60 * 1000);
@@ -136,7 +136,9 @@ export async function POST(request: Request) {
     }
 
     // Notify the End User of successful submission
-    const { NotificationService } = await import("@/lib/services/notification.service");
+    const { NotificationService } = await import(
+      "@/lib/services/notification.service"
+    );
     await NotificationService.send({
       userId: user.user_id,
       grievanceId: newGrievance.grievance_id,
@@ -239,7 +241,7 @@ export async function POST(request: Request) {
         const buffer = Buffer.from(bytes);
         const fileName = `${newGrievance.grievance_number}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
         const filePath = path.join(uploadDir, fileName);
-        
+
         await fs.writeFile(filePath, buffer);
 
         await prisma.attachments.create({
@@ -250,7 +252,7 @@ export async function POST(request: Request) {
             file_type: file.type,
             file_size: BigInt(file.size),
             uploaded_by: user.user_id,
-          }
+          },
         });
       }
     }
@@ -261,16 +263,19 @@ export async function POST(request: Request) {
         grievance_id: newGrievance.grievance_id.toString(),
         grievance_number: newGrievance.grievance_number,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: any) {
     console.error("Error submitting grievance:", error);
     try {
-      await fs.writeFile(path.join(process.cwd(), "error.log"), String(error.stack || error));
+      await fs.writeFile(
+        path.join(process.cwd(), "error.log"),
+        String(error.stack || error),
+      );
     } catch (e) {}
     return NextResponse.json(
       { error: "Failed to submit grievance", details: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

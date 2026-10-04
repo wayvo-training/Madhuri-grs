@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  evaluateReopenPolicy,
+  requiresHeadManualReview,
+} from "@/lib/engines/reopen-engine";
+import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
-  if (!user || user.roles?.role_name !== "END_USER") {
+  if (user?.roles?.role_name !== "END_USER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -16,56 +20,60 @@ export async function POST(
 
   try {
     const grievanceId = BigInt(id);
-    
+
     // Find the grievance
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
       include: {
         grievance_departments: true,
-      }
+      },
     });
 
     if (!grievance || grievance.submitted_by !== user.user_id) {
-      return NextResponse.json({ success: false, message: "Grievance not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Grievance not found" },
+        { status: 404 },
+      );
     }
 
     if (grievance.status !== "RESOLVED") {
-      return NextResponse.json({ success: false, message: "Only resolved grievances can be reopened" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Only resolved grievances can be reopened" },
+        { status: 400 },
+      );
     }
 
-    // Evaluate Reopen Policy
-    const activePolicies = await prisma.reopen_policies.findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { created_at: "desc" },
+    // Evaluate Reopen Policy dynamically
+    const reopenPolicy = await evaluateReopenPolicy({
+      categoryId: grievance.category_id,
+      subcategoryId: grievance.subcategory_id,
+      priority: grievance.priority,
     });
 
-    let matchedPolicy = null;
-    for (const policy of activePolicies) {
-      if (policy.applicable_condition) {
-        const cond = policy.applicable_condition as any;
-        const matchesCategory = !cond.category_id || cond.category_id === grievance.category_id.toString();
-        const matchesSubcategory = !cond.subcategory_id || cond.subcategory_id === grievance.subcategory_id.toString();
-        if (matchesCategory && matchesSubcategory) {
-          matchedPolicy = policy;
-          break;
-        }
-      } else {
-        // global fallback policy
-        if (!matchedPolicy) matchedPolicy = policy;
-      }
-    }
-
-    const maxReopens = matchedPolicy?.max_reopen_count ?? 3;
-    const windowHours = matchedPolicy?.reopen_window_hours ?? null;
+    const maxReopens = reopenPolicy.maxReopenCount;
+    const windowHours = reopenPolicy.reopenWindowHours;
 
     if (grievance.reopen_count >= maxReopens) {
-      return NextResponse.json({ success: false, message: `Maximum reopen limit of ${maxReopens} reached for this grievance.` }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Maximum reopen limit of ${maxReopens} reached for this grievance.`,
+        },
+        { status: 400 },
+      );
     }
 
     if (windowHours && grievance.closed_at) {
-      const hoursSinceClosed = (Date.now() - grievance.closed_at.getTime()) / (1000 * 60 * 60);
+      const hoursSinceClosed =
+        (Date.now() - grievance.closed_at.getTime()) / (1000 * 60 * 60);
       if (hoursSinceClosed > windowHours) {
-        return NextResponse.json({ success: false, message: `Reopen window of ${windowHours} hours has expired.` }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Reopen window of ${windowHours} hours has expired.`,
+          },
+          { status: 400 },
+        );
       }
     }
 
@@ -73,8 +81,8 @@ export async function POST(
     const reason = body.reason || "Reopened by user";
 
     const newReopenCount = grievance.reopen_count + 1;
-    // Escalate on the final allowed reopen attempt if maxReopens >= 2, or if it reaches 3 by default
-    const isEscalated = newReopenCount >= (maxReopens === 1 ? 2 : maxReopens);
+    // Escalate on reaching manual review threshold or max allowed count
+    const isEscalated = requiresHeadManualReview(newReopenCount, reopenPolicy);
     const newStatus = isEscalated ? "ESCALATED" : "REOPENED";
 
     // Update grievance
@@ -88,7 +96,7 @@ export async function POST(
 
     // Fetch assigned staff before revoking so we can notify them
     const activeAssignments = await prisma.assignments.findMany({
-      where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" }
+      where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" },
     });
 
     // Revoke active assignments so the grievance returns to the unassigned queue
@@ -111,7 +119,9 @@ export async function POST(
         action: "REOPENED",
         entity_type: "GRIEVANCE",
         entity_id: grievanceId,
-        new_value: { details: `Grievance reopened by the end user: ${reason}${isEscalated ? ". Automatically escalated to Department Head." : ""}` },
+        new_value: {
+          details: `Grievance reopened by the end user: ${reason}${isEscalated ? ". Automatically escalated to Department Head." : ""}`,
+        },
       },
     });
 
@@ -147,15 +157,22 @@ export async function POST(
 
     let hod = deptId
       ? await prisma.users.findFirst({
-          where: { department_id: deptId, roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } }, status: "ACTIVE" },
-          select: { user_id: true }
+          where: {
+            department_id: deptId,
+            roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+            status: "ACTIVE",
+          },
+          select: { user_id: true },
         })
       : null;
 
     if (!hod) {
       hod = await prisma.users.findFirst({
-        where: { roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } }, status: "ACTIVE" },
-        select: { user_id: true }
+        where: {
+          roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
       });
     }
 
@@ -169,7 +186,7 @@ export async function POST(
             reason: `Automatically escalated due to reaching max reopen limit (${newReopenCount} reopens). Citizen reason: ${reason}`,
             status: "OPEN",
             escalation_level: 1,
-          }
+          },
         });
       }
 
@@ -177,7 +194,9 @@ export async function POST(
         userId: hod.user_id,
         grievanceId: grievanceId,
         type: isEscalated ? "GRIEVANCE_ESCALATED" : "GRIEVANCE_REOPENED",
-        title: isEscalated ? `Max Reopen Limit Reached — Head Manual Review Required` : "Grievance Reopened by User",
+        title: isEscalated
+          ? `Max Reopen Limit Reached — Head Manual Review Required`
+          : "Grievance Reopened by User",
         message: isEscalated
           ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Citizen reason: ${reason}. As Department Head, you can solve this grievance directly or assign it to another person.`
           : `Grievance ${grievance.grievance_number} has been reopened by the citizen. Reason provided: ${reason}`,
@@ -195,9 +214,15 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ success: true, message: "Grievance reopened successfully" });
+    return NextResponse.json({
+      success: true,
+      message: "Grievance reopened successfully",
+    });
   } catch (error) {
     console.error("Error reopening grievance:", error);
-    return NextResponse.json({ success: false, message: "Failed to reopen grievance" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to reopen grievance" },
+      { status: 500 },
+    );
   }
 }

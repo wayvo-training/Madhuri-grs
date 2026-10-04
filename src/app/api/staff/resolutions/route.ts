@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  evaluateReopenPolicy,
+  requiresHeadManualReview,
+} from "@/lib/engines/reopen-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -136,29 +140,17 @@ export async function POST(request: Request) {
         }
       }
     }
-    // Evaluate active reopen policies to determine if max reopens reached
-    const activePolicies = await prisma.reopen_policies.findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { created_at: "desc" },
+    // Evaluate active reopen policies dynamically
+    const reopenPolicy = await evaluateReopenPolicy({
+      categoryId: grievance.category_id,
+      subcategoryId: grievance.subcategory_id,
+      priority: grievance.priority,
     });
 
-    let matchedPolicy = null;
-    for (const policy of activePolicies) {
-      if (policy.applicable_condition) {
-        const cond = policy.applicable_condition as any;
-        const matchesCategory = !cond.category_id || cond.category_id === grievance.category_id.toString();
-        const matchesSubcategory = !cond.subcategory_id || cond.subcategory_id === grievance.subcategory_id.toString();
-        if (matchesCategory && matchesSubcategory) {
-          matchedPolicy = policy;
-          break;
-        }
-      } else {
-        if (!matchedPolicy) matchedPolicy = policy;
-      }
-    }
-
-    const maxReopens = matchedPolicy?.max_reopen_count ?? 3;
-    const requiresHeadReview = grievance.reopen_count >= (maxReopens === 1 ? 2 : maxReopens);
+    const requiresHeadReview = requiresHeadManualReview(
+      grievance.reopen_count,
+      reopenPolicy,
+    );
 
     // 2. Transition grievance status
     await prisma.grievances.update({
@@ -239,13 +231,19 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Error in POST /api/staff/resolutions:", error);
     try {
-      const fs = require('fs/promises');
-      const path = require('path');
-      await fs.writeFile(path.join(process.cwd(), "error-staff-resolution.log"), String(error.stack || error));
+      const fs = require("fs/promises");
+      const path = require("path");
+      await fs.writeFile(
+        path.join(process.cwd(), "error-staff-resolution.log"),
+        String(error.stack || error),
+      );
     } catch (e) {}
-    
+
     return NextResponse.json(
-      { success: false, message: error.message || "Failed to submit resolution" },
+      {
+        success: false,
+        message: error.message || "Failed to submit resolution",
+      },
       { status: 500 },
     );
   }
