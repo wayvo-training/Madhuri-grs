@@ -119,7 +119,7 @@ export function KnowledgeArticleViewerModal({
               Problem / Scenario:
             </span>
             <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
-              {article.problem}
+              {article.problem || article.solutionSteps || `Standard resolution pattern for ${article.title}.`}
             </div>
           </div>
 

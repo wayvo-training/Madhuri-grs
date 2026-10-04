@@ -335,7 +335,7 @@ export function KnowledgeView() {
                   Problem Pattern:
                 </span>
                 <p className="line-clamp-2 text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  {art.problem}
+                  {art.problem || art.solutionSteps || `Standard redressal procedure and recurring pattern for ${art.title}.`}
                 </p>
               </div>
 

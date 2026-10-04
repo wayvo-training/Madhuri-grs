@@ -19,6 +19,19 @@ export async function GET(request: Request) {
       include: {
         categories: { select: { category_name: true } },
         subcategories: { select: { subcategory_name: true } },
+        resolutions: {
+          select: {
+            problem_summary: true,
+            action_taken: true,
+            findings: true,
+            grievances: {
+              select: {
+                title: true,
+                description: true,
+              },
+            },
+          },
+        },
         users: {
           select: {
             first_name: true,
@@ -58,10 +71,19 @@ export async function GET(request: Request) {
       const keyPointsText =
         parsedContent.keyPoints || parsedContent.considerations || null;
 
+      const problemText =
+        parsedContent.problem?.trim() ||
+        art.resolutions?.problem_summary?.trim() ||
+        art.resolutions?.grievances?.description?.trim() ||
+        art.resolutions?.grievances?.title?.trim() ||
+        (parsedContent.solutionSteps
+          ? `Standard redressal procedure and recurring pattern for ${art.title}.`
+          : "");
+
       return {
         id: art.article_id.toString(),
         title: art.title,
-        problem: parsedContent.problem || "",
+        problem: problemText,
         solutionSteps: resolutionText,
         resolution: resolutionText,
         considerations: keyPointsText,

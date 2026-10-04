@@ -33,13 +33,15 @@ export function StaffPieCharts({
     let closed = 0;
 
     const filteredGrievances = grievances.filter((g) => {
-      if (statusFilter === "Active") return g.status !== "CLOSED";
-      if (statusFilter === "Completed") return g.status === "CLOSED";
+      if (statusFilter === "Active")
+        return g.status !== "CLOSED" && g.status !== "RESOLVED";
+      if (statusFilter === "Completed")
+        return g.status === "CLOSED" || g.status === "RESOLVED";
       return true; // all
     });
 
     filteredGrievances.forEach((g) => {
-      if (g.status === "CLOSED") closed++;
+      if (g.status === "CLOSED" || g.status === "RESOLVED") closed++;
       else if (g.status === "REOPENED" || g.reopenCount > 0) reopened++;
       else if (g.status === "UNDER_REVIEW" || g.status === "REOPEN_REVIEW")
         underReview++;
@@ -90,8 +92,10 @@ export function StaffPieCharts({
     let breached = 0;
 
     const filteredGrievances = grievances.filter((g) => {
-      if (slaFilter === "Active") return g.status !== "CLOSED";
-      if (slaFilter === "Completed") return g.status === "CLOSED";
+      if (slaFilter === "Active")
+        return g.status !== "CLOSED" && g.status !== "RESOLVED";
+      if (slaFilter === "Completed")
+        return g.status === "CLOSED" || g.status === "RESOLVED";
       return true;
     });
 

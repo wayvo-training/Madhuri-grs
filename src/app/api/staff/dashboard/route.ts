@@ -94,6 +94,9 @@ export async function GET(request: Request) {
               take: 5,
               include: {
                 attachments: true,
+                users: {
+                  include: { roles: true },
+                },
                 resolution_reviews: {
                   orderBy: { reviewed_at: "desc" as const },
                   take: 1,
@@ -121,11 +124,11 @@ export async function GET(request: Request) {
       },
     };
 
-    // 3. Fetch active assignments for this staff member
+    // 3. Fetch active and completed assignments for this staff member
     let assignments = await prisma.assignments.findMany({
       where: {
         staff_id: staffId,
-        assignment_status: "ASSIGNED",
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
       },
       ...assignmentQuery,
       orderBy: { assigned_at: "desc" },
@@ -135,7 +138,7 @@ export async function GET(request: Request) {
     if (assignments.length === 0 && isAdmin) {
       assignments = await prisma.assignments.findMany({
         where: {
-          assignment_status: "ASSIGNED",
+          assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
           ...(departmentId
             ? { grievance_departments: { department_id: departmentId } }
             : {}),
@@ -170,6 +173,9 @@ export async function GET(request: Request) {
       if (latestResolution) {
         submittedResolution = {
           id: latestResolution.resolution_id.toString(),
+          submittedByUserId: latestResolution.submitted_by.toString(),
+          submittedByRole:
+            latestResolution.users?.roles?.role_name || undefined,
           problemSummary: latestResolution.problem_summary,
           findings: latestResolution.findings,
           actionTaken: latestResolution.action_taken,
@@ -357,7 +363,10 @@ export async function GET(request: Request) {
     ).length;
 
     const completedCount = grievanceItems.filter(
-      (item) => item.status === "CLOSED" || item.status === "UNDER_REVIEW",
+      (item) =>
+        item.status === "CLOSED" ||
+        item.status === "RESOLVED" ||
+        item.status === "UNDER_REVIEW",
     ).length;
 
     // 6. Attention Grievances (requiring immediate action: breached, at risk, critical, reopened)

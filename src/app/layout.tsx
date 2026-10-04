@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import { NavigationTracker } from "@/components/analytics/navigation-tracker";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -46,16 +45,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} font-sans h-full antialiased`}
     >
-      <head />
+      <head>
+        <script
+          id="theme-script"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
+      </head>
       <body
         className="min-h-full flex flex-col font-sans"
         suppressHydrationWarning
       >
-        <Script
-          id="theme-script"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeScript }}
-        />
         <ThemeProvider>
           <QueryProvider>
             <NavigationTracker />

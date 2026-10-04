@@ -123,7 +123,10 @@ export function GrievanceQueue({
           g.status !== "CLOSED",
       ).length,
       completed: grievances.filter(
-        (g) => g.status === "CLOSED" || g.status === "UNDER_REVIEW",
+        (g) =>
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED" ||
+          g.status === "UNDER_REVIEW",
       ).length,
     };
   }, [grievances]);
@@ -280,7 +283,11 @@ export function GrievanceQueue({
           return false;
         }
       } else if (activeTab === "completed") {
-        if (item.status !== "CLOSED" && item.status !== "UNDER_REVIEW") {
+        if (
+          item.status !== "CLOSED" &&
+          item.status !== "RESOLVED" &&
+          item.status !== "UNDER_REVIEW"
+        ) {
           return false;
         }
       }
@@ -551,6 +558,14 @@ export function GrievanceQueue({
                         <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Waiting on User
+                        </span>
+                      ) : item.status === "CLOSED" ? (
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          Closed
+                        </span>
+                      ) : item.status === "RESOLVED" ? (
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                          Resolved
                         </span>
                       ) : (
                         <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
