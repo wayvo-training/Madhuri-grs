@@ -4,6 +4,7 @@ import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/ui/logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,9 +147,7 @@ export function DashboardSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-700 text-sidebar-primary-foreground shadow-sm">
-                <span className="text-lg font-bold text-white">G</span>
-              </div>
+              <Logo size={32} />
               <div className="flex flex-col gap-0.5 leading-none">
                 <span className="font-semibold text-base">GRS</span>
                 <span className="text-xs text-muted-foreground uppercase tracking-wider">

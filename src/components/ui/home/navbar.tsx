@@ -4,15 +4,15 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+import { Logo } from "@/components/ui/logo";
+
 export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-sm shadow-teal-950/20">
-            G
-          </div>
+          <Logo size={40} />
 
           <div className="hidden sm:block">
             <p className="text-base font-bold tracking-tight text-slate-900">

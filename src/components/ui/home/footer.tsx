@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { Logo } from "@/components/ui/logo";
 
 export default function Footer() {
   return (
@@ -10,9 +11,7 @@ export default function Footer() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           {/* Brand */}
           <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F766E] text-sm font-bold text-white shadow-xs">
-              G
-            </div>
+            <Logo size={32} />
             <div>
               <span className="font-bold tracking-tight text-white text-sm">
                 GRS

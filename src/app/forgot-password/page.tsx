@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { Logo } from "@/components/ui/logo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -66,9 +67,7 @@ export default function ForgotPasswordPage() {
           href="/"
           className="group inline-flex items-center gap-3 transition-transform hover:scale-[1.02]"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25">
-            G
-          </div>
+          <Logo size={44} />
           <div className="text-left">
             <p className="text-lg font-bold tracking-tight text-slate-900">
               GRS
