@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { ResolutionForm } from "@/components/staff/resolution-form";
 import {
   useDepartmentHeadData,
   useDepartmentHeadNavigation,
@@ -17,6 +20,7 @@ import type {
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
+import type { StaffGrievanceItem } from "@/types/staff";
 import { DepartmentHeadViewSwitcher } from "./components";
 import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 import {
@@ -27,10 +31,6 @@ import {
   DocumentViewerModal,
   SmartStaffAssignmentModal,
 } from "./modals";
-import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
-import { ResolutionForm } from "@/components/staff/resolution-form";
-import { toast } from "sonner";
-import type { StaffGrievanceItem } from "@/types/staff";
 import {
   ActivityView,
   KnowledgeView,
@@ -161,9 +161,7 @@ export function DepartmentHeadOverviewInner({
     useState<EscalationBottleneck>("STAFF_CAPACITY");
   const [escalationInterventionType, setEscalationInterventionType] =
     useState<EscalationInterventionType>("REASSIGN");
-  const [escalationTargetStaffId, setEscalationTargetStaffId] = useState("");
-  const [escalationTargetDept, setEscalationTargetDept] =
-    useState("Finance & Accounts");
+  const [escalationTargetDept, setEscalationTargetDept] = useState("");
   const [escalationNote, setEscalationNote] = useState("");
 
   const [resolutionModalGrievance, setResolutionModalGrievance] =
@@ -195,13 +193,22 @@ export function DepartmentHeadOverviewInner({
     [],
   );
 
-  const handleOpenEscalateModal = useCallback((item: GrievanceItem) => {
-    setEscalationModalGrievance(item);
-    setEscalationBottleneck("STAFF_CAPACITY");
-    setEscalationInterventionType("REASSIGN");
-    setEscalationTargetStaffId("");
-    setEscalationNote("");
-  }, []);
+  const handleOpenEscalateModal = useCallback(
+    (item: GrievanceItem) => {
+      setEscalationModalGrievance(item);
+      setEscalationBottleneck("STAFF_CAPACITY");
+      setEscalationInterventionType("REASSIGN");
+      const defaultDept =
+        availableDepartments.find(
+          (d) =>
+            d.name !== currentDepartmentName &&
+            !item.collaboratingDepartments?.includes(d.name),
+        )?.name || "";
+      setEscalationTargetDept(defaultDept);
+      setEscalationNote("");
+    },
+    [availableDepartments, currentDepartmentName],
+  );
 
   const handleOpenResolutionModal = useCallback((item: GrievanceItem) => {
     if (item.isPrimaryDepartment === false) {
@@ -238,7 +245,6 @@ export function DepartmentHeadOverviewInner({
       grievance: escalationModalGrievance,
       bottleneck: escalationBottleneck,
       interventionType: escalationInterventionType,
-      targetStaffId: escalationTargetStaffId,
       targetDept: escalationTargetDept,
       note: escalationNote,
     });
@@ -248,10 +254,10 @@ export function DepartmentHeadOverviewInner({
   const handleResolutionFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resolutionModalGrievance) return;
-    
+
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
-    
+
     const findings = formData.get("findings") as string | null;
     const actionTaken = formData.get("actionTaken") as string | null;
 
@@ -406,17 +412,16 @@ export function DepartmentHeadOverviewInner({
       {escalationModalGrievance && (
         <DepartmentHeadEscalationModal
           grievance={escalationModalGrievance}
-          staffList={staffList}
           bottleneck={escalationBottleneck}
           interventionType={escalationInterventionType}
-          targetStaffId={escalationTargetStaffId}
           targetDept={escalationTargetDept}
           note={escalationNote}
+          availableDepartments={availableDepartments}
+          currentDepartmentName={currentDepartmentName}
           onClose={() => setEscalationModalGrievance(null)}
           onSubmit={handleEscalationFormSubmit}
           onBottleneckChange={setEscalationBottleneck}
           onInterventionTypeChange={setEscalationInterventionType}
-          onTargetStaffIdChange={setEscalationTargetStaffId}
           onTargetDeptChange={setEscalationTargetDept}
           onNoteChange={setEscalationNote}
         />
@@ -442,7 +447,7 @@ export function DepartmentHeadOverviewInner({
                 myInvolvementType: resolutionModalGrievance.myInvolvementType,
               } as StaffGrievanceItem
             }
-            onSubmit={async (id, data) => {
+            onSubmit={async (_id, data) => {
               await executeResolutionSubmit({
                 grievance: resolutionModalGrievance,
                 decision: "APPROVE",

@@ -91,11 +91,13 @@ export function useGrievanceActions({
       grievance: GrievanceItem;
       bottleneck: EscalationBottleneck;
       interventionType: EscalationInterventionType;
-      targetStaffId: string;
+      targetStaffId?: string;
       targetDept: string;
       note: string;
     }) => {
-      const targetStaff = staffList.find((s) => s.id === targetStaffId);
+      const targetStaff = targetStaffId
+        ? staffList.find((s) => s.id === targetStaffId)
+        : undefined;
       const targetStaffName = targetStaff
         ? targetStaff.name
         : grievance.assignedStaffName || "Unassigned";
@@ -248,11 +250,15 @@ export function useGrievanceActions({
           id: `aud-${Date.now()}-11`,
           timestamp: "Just now",
           actor: `${currentHodName} (DEPARTMENT_HEAD)`,
-          action: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ACCEPT_RESOLUTION",
-          details: isDirectResolution 
-            ? "Department Head submitted a direct resolution." 
+          action: isDirectResolution
+            ? "RESOLUTION_SUBMITTED"
+            : "ACCEPT_RESOLUTION",
+          details: isDirectResolution
+            ? "Department Head submitted a direct resolution."
             : "Department Head approved final resolution. Escalation cleared, grievance successfully closed.",
-          stage: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ESCALATION_CLEARED",
+          stage: isDirectResolution
+            ? "RESOLUTION_SUBMITTED"
+            : "ESCALATION_CLEARED",
         };
 
         setGrievances((prev) =>
@@ -262,7 +268,9 @@ export function useGrievanceActions({
                   ...g,
                   status: isDirectResolution ? "RESOLVED" : "CLOSED",
                   slaStatus: "ON_TRACK",
-                  escalationStage: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ESCALATION_CLEARED",
+                  escalationStage: isDirectResolution
+                    ? "RESOLUTION_SUBMITTED"
+                    : "ESCALATION_CLEARED",
                   auditTrail: [...(g.auditTrail || []), finalAudit],
                 }
               : g,

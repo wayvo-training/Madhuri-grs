@@ -106,6 +106,13 @@ export interface GrievanceItem {
     timestamp: string;
     note: string;
   }[];
+  departmentsInvolved?: {
+    id: string;
+    departmentName: string;
+    involvementType: string;
+    status: string;
+    assignedStaff?: string | null;
+  }[];
 }
 
 export interface StaffMember {
@@ -155,7 +162,12 @@ export type DepartmentHeadView =
   | "activity"
   | "knowledge";
 
-export type CaseDrawerTab = "progress" | "statement" | "notes" | "activity";
+export type CaseDrawerTab =
+  | "progress"
+  | "statement"
+  | "notes"
+  | "activity"
+  | "collaboration";
 
 export interface DepartmentHeadOverviewProps {
   departmentName?: string;

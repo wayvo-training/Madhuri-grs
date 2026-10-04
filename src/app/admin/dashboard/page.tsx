@@ -17,85 +17,55 @@ export default async function AdminDashboardPage() {
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
   // 1. Fetch real database metrics and overview records
-  const [
-    totalGrievances,
-    activeGrievances,
-    escalatedCount,
-    closedCount,
-    atRiskSlaCount,
-    routingExceptionsCount,
-    departments,
-    recentGrievances,
-    allGrievances,
-  ] = await Promise.all([
-    prisma.grievances.count(),
-    prisma.grievances.count({
-      where: {
-        status: {
-          in: [
-            "SUBMITTED",
-            "ROUTED",
-            "ASSIGNED",
-            "IN_PROGRESS",
-            "UNDER_REVIEW",
-            "REOPENED",
-            "REOPEN_REVIEW",
-          ],
+  const [routingExceptionsCount, departments, recentGrievances, allGrievances] =
+    await Promise.all([
+      prisma.grievances.count({
+        where: {
+          status: "SUBMITTED",
+          grievance_departments: { is: null },
         },
-      },
-    }),
-    prisma.grievances.count({ where: { status: "ESCALATED" } }),
-    prisma.grievances.count({ where: { status: "CLOSED" } }),
-    prisma.grievances.count({
-      where: { sla_status: { in: ["AT_RISK", "BREACHED"] } },
-    }),
-    prisma.grievances.count({
-      where: {
-        status: "SUBMITTED",
-        grievance_departments: { is: null },
-      },
-    }),
-    prisma.departments.findMany({
-      where: { status: "ACTIVE" },
-      select: {
-        department_id: true,
-        department_name: true,
-        status: true,
-        _count: {
-          select: { grievance_departments: true, users: true },
-        },
-      },
-      orderBy: { department_name: "asc" },
-    }),
-    prisma.grievances.findMany({
-      take: 6,
-      orderBy: { created_at: "desc" },
-      include: {
-        categories: true,
-        subcategories: true,
-        users: {
-          select: {
-            first_name: true,
-            last_name: true,
-            email: true,
+      }),
+      prisma.departments.findMany({
+        where: { status: "ACTIVE" },
+        select: {
+          department_id: true,
+          department_name: true,
+          status: true,
+          _count: {
+            select: { grievance_departments: true, users: true },
           },
         },
-        grievance_departments: {
-          where: { involvement_type: "PRIMARY" },
-          include: {
-            departments: true,
+        orderBy: { department_name: "asc" },
+      }),
+      prisma.grievances.findMany({
+        take: 6,
+        orderBy: { created_at: "desc" },
+        include: {
+          categories: true,
+          subcategories: true,
+          users: {
+            select: {
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+          grievance_departments: {
+            where: { involvement_type: "PRIMARY" },
+            include: {
+              departments: true,
+            },
           },
         },
-      },
-    }),
-    prisma.grievances.findMany({
-      select: {
-        status: true,
-        priority: true,
-        sla_status: true,
-      },
-    }),
-  ]);
+      }),
+      prisma.grievances.findMany({
+        select: {
+          status: true,
+          priority: true,
+          sla_status: true,
+        },
+      }),
+    ]);
 
   let inProgress = 0,
     assigned = 0,

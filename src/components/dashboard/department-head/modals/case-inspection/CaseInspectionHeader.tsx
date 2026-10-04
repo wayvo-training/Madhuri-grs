@@ -2,6 +2,25 @@
 
 import { ArrowLeft, CheckCircle2, X } from "lucide-react";
 
+export interface HodInterventionInfo {
+  actionType?: string;
+  actionLabel?: string;
+  note?: string;
+  intervenedAt?: string;
+  intervenedBy?: string;
+  targetStaffName?: string;
+  targetDepartment?: string;
+  newDeadline?: string;
+}
+
+export interface DepartmentInvolvementInfo {
+  id: string;
+  departmentName: string;
+  involvementType: string;
+  status: string;
+  assignedStaff?: string | null;
+}
+
 interface CaseInspectionHeaderProps {
   ticketCode: string;
   title: string;
@@ -9,7 +28,8 @@ interface CaseInspectionHeaderProps {
   subcategory: string;
   priority: string;
   slaState: "BREACHED" | "SLA_AT_RISK" | "AT_RISK" | "ON_TRACK" | string;
-  hodIntervention?: any;
+  hodIntervention?: HodInterventionInfo | null;
+  departmentsInvolved?: DepartmentInvolvementInfo[];
   onClose: () => void;
 }
 
@@ -21,6 +41,7 @@ export function CaseInspectionHeader({
   priority,
   slaState,
   hodIntervention,
+  departmentsInvolved,
   onClose,
 }: CaseInspectionHeaderProps) {
   const isBreached = slaState === "BREACHED";
@@ -66,6 +87,30 @@ export function CaseInspectionHeader({
               {priority} Priority
             </span>
           </div>
+          {departmentsInvolved && departmentsInvolved.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                Collaborating:
+              </span>
+              {departmentsInvolved.map((dept) => (
+                <span
+                  key={dept.id}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    dept.involvementType === "PRIMARY"
+                      ? "bg-teal-100 text-teal-800 border border-teal-200"
+                      : dept.involvementType === "EQUAL"
+                        ? "bg-blue-100 text-blue-800 border border-blue-200"
+                        : "bg-slate-100 text-slate-700 border border-slate-200"
+                  }`}
+                >
+                  <span>{dept.departmentName}</span>
+                  <span className="text-[9px] opacity-75 font-normal">
+                    ({dept.involvementType})
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
           {hodIntervention && (
             <div className="pt-2">
               <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">

@@ -8,42 +8,44 @@ import type {
   EscalationBottleneck,
   EscalationInterventionType,
   GrievanceItem,
-  StaffMember,
 } from "@/types/department-head";
 
 export interface DepartmentHeadEscalationModalProps {
   grievance: GrievanceItem;
-  staffList: StaffMember[];
   bottleneck: EscalationBottleneck;
   interventionType: EscalationInterventionType;
-  targetStaffId: string;
   targetDept: string;
   note: string;
+  availableDepartments?: { id: string; name: string }[];
+  currentDepartmentName?: string;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onBottleneckChange: (value: EscalationBottleneck) => void;
   onInterventionTypeChange: (value: EscalationInterventionType) => void;
-  onTargetStaffIdChange: (value: string) => void;
   onTargetDeptChange: (value: string) => void;
   onNoteChange: (value: string) => void;
 }
 
 export function DepartmentHeadEscalationModal({
   grievance,
-  staffList,
   bottleneck,
   interventionType,
-  targetStaffId,
   targetDept,
   note,
+  availableDepartments = [],
+  currentDepartmentName,
   onClose,
   onSubmit,
   onBottleneckChange,
   onInterventionTypeChange,
-  onTargetStaffIdChange,
   onTargetDeptChange,
   onNoteChange,
 }: DepartmentHeadEscalationModalProps) {
+  const eligibleDepartments = availableDepartments.filter(
+    (d) =>
+      d.name !== currentDepartmentName &&
+      !grievance.collaboratingDepartments?.includes(d.name),
+  );
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
       <div className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
@@ -216,20 +218,25 @@ export function DepartmentHeadEscalationModal({
                 </label>
                 <select
                   id="escalation-target-dept"
+                  required
                   value={targetDept}
                   onChange={(e) => onTargetDeptChange(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
                 >
-                  <option value="Finance & Accounts">Finance & Accounts</option>
-                  <option value="Medical Superintendent Services">
-                    Medical Superintendent Services
+                  <option value="">
+                    -- Select a Collaborating Department --
                   </option>
-                  <option value="General Administration">
-                    General Administration
-                  </option>
-                  <option value="Human Resources & Legal">
-                    Human Resources & Legal
-                  </option>
+                  {eligibleDepartments.length === 0 ? (
+                    <option value="" disabled>
+                      No other active departments available
+                    </option>
+                  ) : (
+                    eligibleDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             )}
@@ -269,6 +276,7 @@ export function DepartmentHeadEscalationModal({
               </button>
               <button
                 type="submit"
+                disabled={interventionType === "CROSS_DEPT" && !targetDept}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50"
               >
                 <Send className="h-3.5 w-3.5" />

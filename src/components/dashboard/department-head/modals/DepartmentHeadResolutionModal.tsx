@@ -145,7 +145,10 @@ export function DepartmentHeadResolutionModal({
           {isDirectResolution && (
             <>
               <div>
-                <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                <label
+                  htmlFor="direct-findings"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
+                >
                   Findings / Investigation Details
                 </label>
                 <textarea
@@ -158,7 +161,10 @@ export function DepartmentHeadResolutionModal({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+                <label
+                  htmlFor="direct-action"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
+                >
                   Action Taken
                 </label>
                 <textarea
