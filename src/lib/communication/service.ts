@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import type { AuthUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export interface CommunicationParticipant {
   id: string;
@@ -26,7 +26,13 @@ export interface CommunicationMessageItem {
     size?: string;
   }[];
   isStaffOrHead: boolean;
-  type: "SUBMISSION" | "REQUEST" | "RESPONSE" | "RESOLUTION" | "REVIEW" | "MESSAGE";
+  type:
+    | "SUBMISSION"
+    | "REQUEST"
+    | "RESPONSE"
+    | "RESOLUTION"
+    | "REVIEW"
+    | "MESSAGE";
 }
 
 export interface CommunicationConversationSummary {
@@ -61,6 +67,7 @@ export interface GrievanceCommunicationThreadData {
   actionLabel: string;
   userRole: string;
   currentUserId: string;
+  basePath: string;
 }
 
 const TEST_MESSAGE_REGEX = /^(hi|hello|hey|test|testing|asdf|qwerty)$/i;
@@ -74,7 +81,7 @@ function isTestMessage(text: string): boolean {
  */
 export async function getUserGrievanceConversations(
   user: AuthUser,
-  basePath: string,
+  _basePath: string,
 ): Promise<CommunicationConversationSummary[]> {
   const userRole = user.roles.role_name;
   const userId = BigInt(user.user_id);
@@ -212,19 +219,24 @@ export async function getUserGrievanceConversations(
       latestEvent = {
         type: "AUDIT",
         timestamp: g.created_at,
-        sender: endUserName,
-        preview: "Grievance submitted. Initial review is required.",
-        communicationState: isClosed ? "Case Closed" : "Investigation in Progress",
+        sender: "System",
+        preview: "Grievance registered. Awaiting initial staff review.",
+        communicationState: isClosed
+          ? "Case Closed"
+          : "Investigation in Progress",
         filterCategory: "UPDATES",
         hasAttachments: false,
       };
     }
 
-    const formattedDate = new Date(latestEvent.timestamp).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    const formattedDate = new Date(latestEvent.timestamp).toLocaleDateString(
+      "en-IN",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      },
+    );
 
     return {
       id: g.grievance_id.toString(),
@@ -248,7 +260,11 @@ function formatAuditEvent(
     action: string;
     created_at: Date;
     new_value: unknown;
-    users?: { first_name: string; last_name: string | null; roles?: { role_name: string } | null } | null;
+    users?: {
+      first_name: string;
+      last_name: string | null;
+      roles?: { role_name: string } | null;
+    } | null;
   },
   endUserName: string,
   grievanceStatus: string,
@@ -266,7 +282,9 @@ function formatAuditEvent(
     : val?.author || "Participant";
 
   if (audit.action === "ADDITIONAL_INFO_REQUESTED") {
-    const rawMsg = val?.message || "Please provide additional details regarding this grievance.";
+    const rawMsg =
+      val?.message ||
+      "Please provide additional details regarding this grievance.";
     return {
       type: "AUDIT" as const,
       timestamp: audit.created_at,
@@ -286,7 +304,8 @@ function formatAuditEvent(
     audit.action === "USER_INFO_SUBMITTED" ||
     audit.action === "USER_ADDITIONAL_INFO_PROVIDED"
   ) {
-    const rawMsg = val?.response || val?.message || "Additional information submitted.";
+    const rawMsg =
+      val?.response || val?.message || "Additional information submitted.";
     return {
       type: "AUDIT" as const,
       timestamp: audit.created_at,
@@ -307,7 +326,9 @@ function formatAuditEvent(
       type: "AUDIT" as const,
       timestamp: audit.created_at,
       sender: actorName,
-      preview: isTestMessage(rawMsg) ? "Update posted regarding this grievance." : rawMsg,
+      preview: isTestMessage(rawMsg)
+        ? "Update posted regarding this grievance."
+        : rawMsg,
       communicationState: "Update Posted",
       filterCategory: "UPDATES" as const,
       hasAttachments: false,
@@ -320,7 +341,8 @@ function formatAuditEvent(
       type: "AUDIT" as const,
       timestamp: audit.created_at,
       sender: endUserName,
-      preview: "Resolution accepted by citizen. The case is now officially closed.",
+      preview:
+        "Resolution accepted by citizen. The case is now officially closed.",
       communicationState: "Case Closed",
       filterCategory: "UPDATES" as const,
       hasAttachments: false,
@@ -361,7 +383,9 @@ function formatResolutionEvent(
     sender: staffName,
     preview:
       "Investigation has been completed and the resolution has been submitted for your review.",
-    communicationState: isClosed ? "Case Closed" : "Resolution Ready for Review",
+    communicationState: isClosed
+      ? "Case Closed"
+      : "Resolution Ready for Review",
     filterCategory: "UPDATES" as const,
     hasAttachments: false,
   };
@@ -492,7 +516,9 @@ export async function getGrievanceCommunicationThread(
 
   // 2. Enforce RBAC visibility strictly
   const isSubmitter = grievance.submitted_by === userId;
-  const isAssignedStaff = grievance.assignments.some((a) => a.staff_id === userId);
+  const isAssignedStaff = grievance.assignments.some(
+    (a) => a.staff_id === userId,
+  );
   const isInvolvedDepartment = deptId
     ? involvedDepartments.some((gd) => gd.department_id === deptId)
     : false;
@@ -501,7 +527,12 @@ export async function getGrievanceCommunicationThread(
   if (userRole === "END_USER" && !isSubmitter) {
     return null;
   }
-  if (userRole === "STAFF" && !isAssignedStaff && !isInvolvedDepartment && !isAdmin) {
+  if (
+    userRole === "STAFF" &&
+    !isAssignedStaff &&
+    !isInvolvedDepartment &&
+    !isAdmin
+  ) {
     return null;
   }
   if (userRole === "DEPARTMENT_HEAD" && !isInvolvedDepartment && !isAdmin) {
@@ -513,7 +544,8 @@ export async function getGrievanceCommunicationThread(
 
   // End User
   if (grievance.users) {
-    const endUserName = `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim();
+    const endUserName =
+      `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim();
     participantsMap.set(grievance.users.user_id.toString(), {
       id: grievance.users.user_id.toString(),
       name: endUserName,
@@ -578,15 +610,15 @@ export async function getGrievanceCommunicationThread(
 
   const timeline: CommunicationMessageItem[] = [];
 
-  // Milestone 1: Grievance Submission
+  // Milestone 1: Grievance Submission System Event
   timeline.push({
     id: `submission-${grievance.grievance_id}`,
-    author: endUserName,
-    authorUserId: grievance.users?.user_id.toString(),
-    role: "End User",
-    department: grievance.users?.departments?.department_name,
+    author: "System",
+    authorUserId: undefined,
+    role: "System",
+    department: undefined,
     timestamp: grievance.created_at.toISOString(),
-    message: "Grievance submitted. Initial review is required.",
+    message: `Grievance registered by ${endUserName}. Case opened for investigation.`,
     attachments: [],
     isStaffOrHead: false,
     type: "SUBMISSION",
@@ -613,7 +645,8 @@ export async function getGrievanceCommunicationThread(
 
     const actorName = actor
       ? `${actor.first_name} ${actor.last_name || ""}`.trim()
-      : val?.author || (log.action === "USER_INFO_SUBMITTED" ? endUserName : "Staff Member");
+      : val?.author ||
+        (log.action === "USER_INFO_SUBMITTED" ? endUserName : "Staff Member");
 
     let rawMessage = val?.message || val?.response || "";
     if (isTestMessage(rawMessage)) {
@@ -704,7 +737,9 @@ export async function getGrievanceCommunicationThread(
         role: "End User",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
-        message: rawMessage || "Resolution rejected by employee. Grievance has been reopened for reinvestigation.",
+        message:
+          rawMessage ||
+          "Resolution rejected by employee. Grievance has been reopened for reinvestigation.",
         attachments: [],
         isStaffOrHead: false,
         type: "RESPONSE",
@@ -747,7 +782,8 @@ export async function getGrievanceCommunicationThread(
         timestamp: review.reviewed_at.toISOString(),
         message:
           review.decision === "REJECTED"
-            ? review.rejection_reason || "Rework required for the submitted resolution."
+            ? review.rejection_reason ||
+              "Rework required for the submitted resolution."
             : "The resolution has been reviewed and is available for your response.",
         attachments: [],
         isStaffOrHead: true,
@@ -757,7 +793,9 @@ export async function getGrievanceCommunicationThread(
   }
 
   // Sort timeline chronologically
-  timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  timeline.sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
 
   const isClosed = grievance.status === "CLOSED";
 
@@ -767,25 +805,37 @@ export async function getGrievanceCommunicationThread(
 
   if (isClosed) {
     canSend = false;
-    closureNote = "This grievance is closed. Historical communication remains available for reference.";
+    closureNote =
+      "This grievance is closed. Historical communication remains available for reference.";
   } else if (isAdmin) {
     canSend = false;
-    closureNote = "You have governance read-only visibility for this grievance communication.";
+    closureNote =
+      "You have governance read-only visibility for this grievance communication.";
   } else if (userRole === "END_USER") {
     // Turn-based policy: End user can only submit info/docs if status is WAITING_ON_USER or the latest message/action is from Staff/Head
-    const communicationEvents = timeline.filter((t) => t.id !== `submission-${grievance.grievance_id}`);
-    const lastEvent = communicationEvents.length > 0 ? communicationEvents[communicationEvents.length - 1] : null;
+    const communicationEvents = timeline.filter(
+      (t) => t.id !== `submission-${grievance.grievance_id}`,
+    );
+    const lastEvent =
+      communicationEvents.length > 0
+        ? communicationEvents[communicationEvents.length - 1]
+        : null;
 
-    if (grievance.status === "WAITING_ON_USER" || grievance.status === "WAITING_ON_EMPLOYEE") {
+    if (
+      grievance.status === "WAITING_ON_USER" ||
+      grievance.status === "WAITING_ON_EMPLOYEE"
+    ) {
       canSend = true;
-    } else if (lastEvent && lastEvent.isStaffOrHead) {
+    } else if (lastEvent?.isStaffOrHead) {
       canSend = true;
     } else if (!lastEvent) {
       canSend = false;
-      closureNote = "You will be able to submit additional documents or messages once an assigned staff member or department head contacts you.";
+      closureNote =
+        "You will be able to submit additional documents or messages once an assigned staff member or department head contacts you.";
     } else {
       canSend = false;
-      closureNote = "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.";
+      closureNote =
+        "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.";
     }
   } else if (isSubmitter || isAssignedStaff || isInvolvedDepartment) {
     canSend = true;
@@ -823,6 +873,7 @@ export async function getGrievanceCommunicationThread(
     actionLabel,
     userRole,
     currentUserId: userId.toString(),
+    basePath,
   };
 }
 
@@ -874,11 +925,15 @@ export async function canEndUserSubmitCommunication(
   if (grievance.status === "CLOSED") {
     return {
       allowed: false,
-      reason: "This grievance is closed. Historical communication remains available for reference.",
+      reason:
+        "This grievance is closed. Historical communication remains available for reference.",
     };
   }
 
-  if (grievance.status === "WAITING_ON_USER" || grievance.status === "WAITING_ON_EMPLOYEE") {
+  if (
+    grievance.status === "WAITING_ON_USER" ||
+    grievance.status === "WAITING_ON_EMPLOYEE"
+  ) {
     return { allowed: true };
   }
 
@@ -888,12 +943,16 @@ export async function canEndUserSubmitCommunication(
   if (!latestAudit && !latestResolution) {
     return {
       allowed: false,
-      reason: "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
+      reason:
+        "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
     };
   }
 
   let isLatestFromStaffOrHead = false;
-  if (latestResolution && (!latestAudit || latestResolution.submitted_at > latestAudit.created_at)) {
+  if (
+    latestResolution &&
+    (!latestAudit || latestResolution.submitted_at > latestAudit.created_at)
+  ) {
     isLatestFromStaffOrHead = true;
   } else if (latestAudit) {
     const role = latestAudit.users?.roles?.role_name;
@@ -912,6 +971,7 @@ export async function canEndUserSubmitCommunication(
 
   return {
     allowed: false,
-    reason: "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.",
+    reason:
+      "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.",
   };
 }

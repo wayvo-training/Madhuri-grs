@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import { Paperclip, Send, X, FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Paperclip, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type React from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface GrievanceCommunicationComposerProps {
   grievanceId: string;
+}
+
+interface AttachedFileItem {
+  id: string;
+  file: File;
 }
 
 export function GrievanceCommunicationComposer({
@@ -16,19 +22,28 @@ export function GrievanceCommunicationComposer({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [message, setMessage] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<AttachedFileItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles((prev) => [...prev, ...files]);
+      const newFiles: AttachedFileItem[] = Array.from(e.target.files).map(
+        (file) => ({
+          id:
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 9)}`,
+          file,
+        }),
+      );
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      e.target.value = "";
     }
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== index));
+  const removeFile = (id: string) => {
+    setSelectedFiles((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -39,11 +54,11 @@ export function GrievanceCommunicationComposer({
     setIsSubmitting(true);
 
     try {
-      const attachmentsPayload = selectedFiles.map((f) => ({
-        fileName: f.name,
-        fileType: f.type || "application/octet-stream",
-        fileSize: f.size,
-        filePath: `/uploads/${f.name}`,
+      const attachmentsPayload = selectedFiles.map(({ file }) => ({
+        fileName: file.name,
+        fileType: file.type || "application/octet-stream",
+        fileSize: file.size,
+        filePath: `/uploads/${file.name}`,
       }));
 
       const res = await fetch(`/api/grievances/${grievanceId}/communicate`, {
@@ -61,7 +76,8 @@ export function GrievanceCommunicationComposer({
       }
 
       toast.success("Message Sent", {
-        description: "Your communication has been posted to the grievance thread.",
+        description:
+          "Your communication has been posted to the grievance thread.",
       });
 
       setMessage("");
@@ -84,16 +100,16 @@ export function GrievanceCommunicationComposer({
       {/* File chips if attached */}
       {selectedFiles.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">
-          {selectedFiles.map((f, idx) => (
+          {selectedFiles.map(({ id, file }) => (
             <span
-              key={idx}
+              key={id}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 text-[#0F766E] border border-teal-200 text-xs font-medium"
             >
               <FileText className="h-3 w-3" />
-              <span className="truncate max-w-[200px]">{f.name}</span>
+              <span className="truncate max-w-[200px]">{file.name}</span>
               <button
                 type="button"
-                onClick={() => removeFile(idx)}
+                onClick={() => removeFile(id)}
                 className="text-slate-400 hover:text-slate-600 ml-0.5 cursor-pointer"
               >
                 <X className="h-3 w-3" />

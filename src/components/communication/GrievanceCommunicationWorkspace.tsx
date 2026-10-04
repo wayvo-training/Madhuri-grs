@@ -1,20 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
 import {
-  ExternalLink,
-  Users,
+  ArrowLeft,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
+  Info,
   MessageSquare,
   Paperclip,
-  CheckCircle2,
-  Clock,
-  Building2,
-  FileCheck2,
-  Info,
+  Users,
 } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 import type { GrievanceCommunicationThreadData } from "@/lib/communication/service";
 import { GrievanceCommunicationComposer } from "./GrievanceCommunicationComposer";
 
@@ -33,6 +30,15 @@ export function GrievanceCommunicationWorkspace({
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 overflow-hidden relative select-text">
       {/* 1. RIGHT PANEL HEADER */}
       <div className="flex-none p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 z-10 shadow-2xs space-y-2">
+        {data.basePath && (
+          <Link
+            href={data.basePath}
+            className="md:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#0F766E] transition mb-1"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Conversations</span>
+          </Link>
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           {/* Grievance Identity */}
           <div className="space-y-0.5">
@@ -147,7 +153,8 @@ export function GrievanceCommunicationWorkspace({
             </h3>
           </div>
           <span className="text-[11px] text-slate-400 font-medium">
-            {data.timeline.length} milestone{data.timeline.length !== 1 ? "s" : ""}
+            {data.timeline.length} milestone
+            {data.timeline.length !== 1 ? "s" : ""}
           </span>
         </div>
 
@@ -174,6 +181,23 @@ export function GrievanceCommunicationWorkspace({
                   month: "short",
                 },
               );
+
+              if (msg.type === "SUBMISSION" || msg.role === "System") {
+                return (
+                  <div key={msg.id} className="flex justify-center my-2 w-full">
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-[11px] text-slate-600 dark:text-slate-300 shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0F766E]" />
+                      <span className="font-semibold text-slate-800 dark:text-slate-100">
+                        System Event:
+                      </span>
+                      <span>{msg.message}</span>
+                      <span className="text-[10px] text-slate-400">
+                        • {formattedDate}, {formattedTime}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div
@@ -220,9 +244,9 @@ export function GrievanceCommunicationWorkspace({
                           Attachments ({msg.attachments.length}):
                         </span>
                         <ul className="flex flex-wrap gap-1.5 pt-0.5">
-                          {msg.attachments.map((att, idx) => (
+                          {msg.attachments.map((att) => (
                             <li
-                              key={idx}
+                              key={`${msg.id}-${att.path || att.name}`}
                               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium"
                             >
                               <Paperclip className="h-3 w-3 text-slate-400" />

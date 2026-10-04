@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { requirePageRole } from "@/lib/permissions";
-import { getGrievanceCommunicationThread } from "@/lib/communication/service";
 import { GrievanceCommunicationWorkspace } from "@/components/communication/GrievanceCommunicationWorkspace";
+import { getGrievanceCommunicationThread } from "@/lib/communication/service";
+import { requirePageRole } from "@/lib/permissions";
 
 interface PageProps {
   params: Promise<{
@@ -16,7 +16,7 @@ export default async function EndUserGrievanceMessagesPage({
   const { id } = await params;
 
   const grievanceId = parseInt(id, 10);
-  if (isNaN(grievanceId)) return notFound();
+  if (Number.isNaN(grievanceId)) return notFound();
 
   const threadData = await getGrievanceCommunicationThread(
     grievanceId,

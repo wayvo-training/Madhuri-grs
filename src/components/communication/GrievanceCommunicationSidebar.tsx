@@ -1,17 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { MessageSquare, Paperclip, Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Search,
-  MessageSquare,
-  Clock,
-  Paperclip,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 import type { CommunicationConversationSummary } from "@/lib/communication/service";
 
 interface GrievanceCommunicationSidebarProps {
@@ -224,9 +216,7 @@ export function GrievanceCommunicationSidebar({
 
                 {/* Footer: Sender & Attachment Indicator */}
                 <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-                  <span className="truncate max-w-[180px]">
-                    {c.sender}
-                  </span>
+                  <span className="truncate max-w-[180px]">{c.sender}</span>
                   {c.hasAttachments && (
                     <span className="inline-flex items-center gap-1 text-slate-400">
                       <Paperclip className="h-3 w-3" />
