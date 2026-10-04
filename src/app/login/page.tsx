@@ -12,8 +12,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
+import { Logo } from "@/components/ui/logo";
 
 export default function LoginPage() {
   const _router = useRouter();
@@ -22,6 +23,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    const redirect = params.get("redirect");
+    if (ref) {
+      setRedirectNotice(`Please sign in to track grievance "${ref}".`);
+    } else if (redirect) {
+      setRedirectNotice("Please sign in to continue to your requested page.");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,7 +58,14 @@ export default function LoginPage() {
         return;
       }
 
-      const targetPath = getRoleDashboardPath(data.user?.role);
+      const params = new URLSearchParams(window.location.search);
+      const redirectUrl = params.get("redirect");
+      const defaultPath = getRoleDashboardPath(data.user?.role);
+      const targetPath =
+        redirectUrl && redirectUrl.startsWith("/") && data.user?.role === "END_USER"
+          ? redirectUrl
+          : defaultPath;
+
       window.location.href = targetPath;
     } catch (err) {
       console.error("Login failed:", err);
@@ -67,9 +87,7 @@ export default function LoginPage() {
           href="/"
           className="group inline-flex items-center gap-3 transition-transform hover:scale-[1.02]"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0F766E] text-lg font-bold text-white shadow-md shadow-teal-950/25">
-            G
-          </div>
+          <Logo size={44} />
           <div className="text-left">
             <p className="text-lg font-bold tracking-tight text-slate-900">
               GRS
@@ -96,6 +114,13 @@ export default function LoginPage() {
               Sign in with your organizational credentials
             </p>
           </div>
+
+          {redirectNotice && (
+            <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2.5 text-xs font-semibold text-teal-800 animate-in fade-in-50">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-600" />
+              <span>{redirectNotice}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (

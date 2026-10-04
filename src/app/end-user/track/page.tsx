@@ -57,9 +57,15 @@ export default async function EndUserTrackPage(props: PageProps) {
   let rawEvents: any[] = [];
 
   if (trackId) {
+    const trimmed = trackId.trim();
+    const isNumeric = /^\d+$/.test(trimmed);
+
     grievance = await prisma.grievances.findFirst({
       where: {
-        grievance_number: trackId,
+        OR: [
+          { grievance_number: { equals: trimmed, mode: "insensitive" } },
+          ...(isNumeric ? [{ grievance_id: BigInt(trimmed) }] : []),
+        ],
         submitted_by: user.user_id,
       },
       include: {
