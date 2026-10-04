@@ -373,13 +373,13 @@ export async function evaluateGrievanceSla(
       status: grievance.status,
       notificationsSent,
       escalated: false,
-      message: `75% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Department Heads notified for review without auto-reassignment.`,
+      message: `75% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Both Department Heads and Assigned Staff alerted for review without auto-reassignment.`,
     };
   }
 
   // =========================================================================
   // RULE 3.5: At 90% SLA consumption (>= 90% and < 100%)
-  // Automatically notify Department Heads that the grievance is Urgent.
+  // Automatically notify Department Heads and Assigned Staff that the grievance is Urgent.
   // =========================================================================
   if (consumptionPercent >= 90 && consumptionPercent < 100) {
     updatedSlaStatus = "AT_RISK";
@@ -388,7 +388,13 @@ export async function evaluateGrievanceSla(
       (head) => !hasSentToUser(head.user_id, "SLA_URGENT")
     );
 
-    if (unnotifiedUrgentHeads.length > 0) {
+    const unnotifiedUrgentStaff = assignedStaffList.filter(
+      (staff) =>
+        !hasSentToUser(staff.user_id, "SLA_URGENT") &&
+        !hasSentToUser(staff.user_id, "SLA_90_STAFF_WARNING")
+    );
+
+    if (unnotifiedUrgentHeads.length > 0 || unnotifiedUrgentStaff.length > 0) {
       await prisma.$transaction(async (tx) => {
         for (const head of unnotifiedUrgentHeads) {
           await tx.notifications.create({
@@ -398,14 +404,53 @@ export async function evaluateGrievanceSla(
               notification_type: "SLA_URGENT",
               channel: "IN_APP",
               title: `SLA Urgent: 90% Consumed (${grievance.grievance_number})`,
-              message: `Grievance ${grievance.grievance_number} has reached 90% of its resolution SLA (${consumptionPercent}% consumed). Immediate action is required.`,
+              message: `Grievance ${grievance.grievance_number} has reached 90% of its resolution SLA (${consumptionPercent}% consumed). Immediate action is required before breach.`,
               status: "PENDING",
               created_at: evaluationDate,
             },
           });
         }
+
+        for (const staff of unnotifiedUrgentStaff) {
+          await tx.notifications.create({
+            data: {
+              user_id: staff.user_id,
+              grievance_id: grievanceId,
+              notification_type: "SLA_URGENT",
+              channel: "IN_APP",
+              title: `Critical SLA Warning: 90% Consumed (${grievance.grievance_number})`,
+              message: `Grievance ${grievance.grievance_number} has consumed 90% of its SLA deadline (${consumptionPercent}% consumed). Only 10% time remains before breach and formal escalation. Please finalize resolution immediately.`,
+              status: "PENDING",
+              created_at: evaluationDate,
+            },
+          });
+        }
+
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: null,
+            action: "SLA_90_PERCENT_URGENT_ALERT",
+            entity_type: "grievance",
+            entity_id: grievanceId,
+            new_value: {
+              consumptionPercent,
+              threshold: "90%",
+              slaStatus: "AT_RISK",
+              departmentHeads: unnotifiedUrgentHeads
+                .map((h) => `${h.first_name} ${h.last_name || ""}`.trim())
+                .join(", "),
+              assignedStaff: unnotifiedUrgentStaff
+                .map((s) => `${s.first_name} ${s.last_name || ""}`.trim())
+                .join(", "),
+              note: "90% SLA urgent warning: Both Department Heads and Assigned Staff alerted.",
+            },
+          },
+        });
       });
-      notificationsSent.push("SLA_URGENT");
+
+      if (unnotifiedUrgentHeads.length > 0) notificationsSent.push("SLA_URGENT");
+      if (unnotifiedUrgentStaff.length > 0) notificationsSent.push("SLA_90_STAFF_WARNING");
     }
 
     return {
@@ -417,7 +462,7 @@ export async function evaluateGrievanceSla(
       status: grievance.status,
       notificationsSent,
       escalated: false,
-      message: `90% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Department Heads notified with URGENT priority.`,
+      message: `90% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Both Department Heads and Assigned Staff alerted with URGENT priority.`,
     };
   }
 
@@ -504,7 +549,9 @@ export async function evaluateGrievanceSla(
 
       // 5. Send Notification to ALL Assigned Staff Members
       const unnotifiedStaffBreach = assignedStaffList.filter(
-        (staff) => !hasSentToUser(staff.user_id, "SLA_100_BREACH_STAFF")
+        (staff) =>
+          !hasSentToUser(staff.user_id, "SLA_100_BREACH_STAFF") &&
+          !hasSentToUser(staff.user_id, "SLA_BREACHED")
       );
 
       for (const staff of unnotifiedStaffBreach) {

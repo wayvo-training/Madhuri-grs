@@ -9,7 +9,7 @@ export interface RoutingCalculationInput {
 export interface RoutingCalculationResult {
   departmentId: bigint;
   departmentName?: string;
-  involvementType: "PRIMARY" | "SUPPORTING";
+  involvementType: "PRIMARY" | "SUPPORTING" | "EQUAL";
   supportingDepartments: string[];
   supportingDepartmentIds: bigint[];
   routingRuleId: bigint;
@@ -119,7 +119,11 @@ export async function determineDepartmentRouting(
     return {
       departmentId: exactMatch.department_id,
       departmentName: exactMatch.departments.department_name,
-      involvementType: exactMatch.involvement_type as "PRIMARY" | "SUPPORTING",
+      involvementType:
+        (exactMatch.involvement_type as
+          | "PRIMARY"
+          | "SUPPORTING"
+          | "EQUAL") || "PRIMARY",
       supportingDepartments: suppNames,
       supportingDepartmentIds: suppIds,
       routingRuleId: exactMatch.routing_rule_id,
@@ -143,9 +147,11 @@ export async function determineDepartmentRouting(
     return {
       departmentId: categoryMatch.department_id,
       departmentName: categoryMatch.departments.department_name,
-      involvementType: categoryMatch.involvement_type as
-        | "PRIMARY"
-        | "SUPPORTING",
+      involvementType:
+        (categoryMatch.involvement_type as
+          | "PRIMARY"
+          | "SUPPORTING"
+          | "EQUAL") || "PRIMARY",
       supportingDepartments: suppNames,
       supportingDepartmentIds: suppIds,
       routingRuleId: categoryMatch.routing_rule_id,
@@ -159,8 +165,8 @@ export async function determineDepartmentRouting(
 }
 
 /**
- * Automatically populates grievance_departments in PostgreSQL with 1 PRIMARY
- * entry and multiple SUPPORTING entries based on taxonomy rules.
+ * Automatically populates grievance_departments in PostgreSQL with PRIMARY/EQUAL
+ * entry and multiple SUPPORTING/EQUAL entries based on taxonomy rules.
  */
 export async function populateGrievanceDepartments(
   grievanceId: bigint | number | string,
@@ -170,23 +176,27 @@ export async function populateGrievanceDepartments(
   const gId = BigInt(grievanceId);
   const primaryDeptId = routing.departmentId;
   const supportingDeptIds = routing.supportingDepartmentIds || [];
+  const mainInvolvement = routing.involvementType || "PRIMARY";
+  const partnerInvolvement =
+    mainInvolvement === "EQUAL" ? "EQUAL" : "SUPPORTING";
 
   const executeInTx = async (client: Prisma.TransactionClient) => {
-    // 1. Primary department: upsert in grievance_departments
-    const existingPrimary = await client.grievance_departments.findFirst({
+    // 1. Main department (Primary or Equal co-lead): upsert in grievance_departments
+    const existingMain = await client.grievance_departments.findFirst({
       where: {
         grievance_id: gId,
-        involvement_type: "PRIMARY",
+        involvement_type: { in: ["PRIMARY", "EQUAL"] },
       },
     });
 
-    if (existingPrimary) {
+    if (existingMain) {
       await client.grievance_departments.update({
         where: {
-          grievance_department_id: existingPrimary.grievance_department_id,
+          grievance_department_id: existingMain.grievance_department_id,
         },
         data: {
           department_id: primaryDeptId,
+          involvement_type: mainInvolvement,
           status: "PENDING_ASSIGNMENT",
           assigned_at: new Date(),
         },
@@ -196,29 +206,30 @@ export async function populateGrievanceDepartments(
         data: {
           grievance_id: gId,
           department_id: primaryDeptId,
-          involvement_type: "PRIMARY",
+          involvement_type: mainInvolvement,
           status: "PENDING_ASSIGNMENT",
           assigned_at: new Date(),
         },
       });
     }
 
-    // 2. Clear old SUPPORTING entries for this ticket
+    // 2. Clear old partner entries for this ticket
     await client.grievance_departments.deleteMany({
       where: {
         grievance_id: gId,
-        involvement_type: "SUPPORTING",
+        involvement_type: { in: ["SUPPORTING", "EQUAL"] },
+        department_id: { not: primaryDeptId },
       },
     });
 
-    // 3. Insert fresh SUPPORTING entries
+    // 3. Insert fresh partner entries (SUPPORTING or EQUAL)
     for (const suppId of supportingDeptIds) {
       if (suppId !== primaryDeptId) {
         await client.grievance_departments.create({
           data: {
             grievance_id: gId,
             department_id: suppId,
-            involvement_type: "SUPPORTING",
+            involvement_type: partnerInvolvement,
             status: "PENDING_ASSIGNMENT",
             assigned_at: new Date(),
           },
