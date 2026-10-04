@@ -145,21 +145,30 @@ export async function POST(request: Request) {
       message: `Your grievance ${newGrievance.grievance_number} has been submitted successfully and is being processed.`,
     });
 
-    // If there is a routing rule, assign it to a department
+    // If there is a routing rule, assign it to department(s)
     if (activeRule && activeRule.department_id) {
+      const mainInvolvement =
+        (activeRule.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+        "PRIMARY";
+      const supportingInvolvement =
+        mainInvolvement === "EQUAL" ? "EQUAL" : "SUPPORTING";
+
       await prisma.grievance_departments.create({
         data: {
           grievance_id: newGrievance.grievance_id,
           department_id: activeRule.department_id,
-          involvement_type: "PRIMARY",
+          involvement_type: mainInvolvement,
           status: "ASSIGNED",
-        }
+        },
       });
       const departmentIdsToNotify = new Set<bigint>();
       departmentIdsToNotify.add(activeRule.department_id);
 
-      // also if multiple support departments exist:
-      if (activeRule.supporting_departments && Array.isArray(activeRule.supporting_departments)) {
+      // Also attach supporting or co-equal departments:
+      if (
+        activeRule.supporting_departments &&
+        Array.isArray(activeRule.supporting_departments)
+      ) {
         for (const suppName of activeRule.supporting_departments) {
           const suppDept = await prisma.departments.findFirst({
             where: { department_name: suppName as string },
@@ -170,9 +179,9 @@ export async function POST(request: Request) {
               data: {
                 grievance_id: newGrievance.grievance_id,
                 department_id: suppDept.department_id,
-                involvement_type: "SUPPORTING",
+                involvement_type: supportingInvolvement,
                 status: "PENDING_ASSIGNMENT",
-              }
+              },
             });
             departmentIdsToNotify.add(suppDept.department_id);
           }

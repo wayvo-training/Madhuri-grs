@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -103,6 +104,21 @@ export async function POST(
         { success: false, message: "Forbidden: You are not a permitted participant for this grievance." },
         { status: 403 },
       );
+    }
+
+    if (userRole === "END_USER") {
+      const check = await canEndUserSubmitCommunication(grievanceId);
+      if (!check.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              check.reason ||
+              "You can only submit messages or documents when requested by staff or department head.",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const senderFullName = `${user.first_name} ${user.last_name || ""}`.trim();

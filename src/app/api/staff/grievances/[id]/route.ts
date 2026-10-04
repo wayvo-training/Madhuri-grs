@@ -253,31 +253,40 @@ export async function GET(
       },
     );
 
-    // Fetch involved departments dynamically directly from grievance_departments since schema treats grievance_departments relation as 1-1
+    // Fetch involved departments dynamically directly from grievance_departments
     const rawDepartments = await prisma.grievance_departments.findMany({
       where: { grievance_id: grievanceId },
       include: {
         departments: true,
-        assignments: {
-          include: {
-            users_assignments_staff_idTousers: {
-              select: { first_name: true, last_name: true },
-            },
-          },
-        },
       },
       orderBy: { involvement_type: "asc" },
     });
 
+    // Fetch assignments directly from assignments table so staff is retained even after completion
+    const allDeptAssignments = await prisma.assignments.findMany({
+      where: {
+        grievance_id: grievanceId,
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+      },
+      include: {
+        users_assignments_staff_idTousers: {
+          select: { first_name: true, last_name: true },
+        },
+      },
+      orderBy: { assigned_at: "desc" },
+    });
+
     const departmentsInvolved = rawDepartments.map((rawD) => {
-      const d = rawD as any;
-      const activeAssignment = d.assignments;
-      const staffUser = activeAssignment?.users_assignments_staff_idTousers;
+      const d = rawD;
+      const deptAssignment = allDeptAssignments.find(
+        (a) => a.grievance_department_id === d.grievance_department_id,
+      );
+      const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaff = staffUser
         ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
         : null;
 
-      const isMyAssignment = activeAssignment?.staff_id === staffId;
+      const isMyAssignment = deptAssignment?.staff_id === staffId;
 
       return {
         id: d.grievance_department_id.toString(),
@@ -294,7 +303,10 @@ export async function GET(
 
     const myDept = departmentsInvolved.find((d) => d.isMyAssignment);
     const myInvolvementType = myDept?.involvementType || (isAdmin ? "PRIMARY" : "PRIMARY");
-    const isPrimaryOwner = myInvolvementType === "PRIMARY" || isAdmin;
+    const isPrimaryOwner =
+      myInvolvementType === "PRIMARY" ||
+      myInvolvementType === "EQUAL" ||
+      isAdmin;
 
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),

@@ -273,9 +273,16 @@ export function GrievanceTableList({
                   <TableCell className="whitespace-nowrap px-2 py-2.5">
                     {g.department_name ? (
                       <div className="flex flex-col items-start gap-1">
-                        <span className="text-xs text-slate-700">
-                          {g.department_name}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-medium text-slate-800">
+                            {g.department_name}
+                          </span>
+                          {g.involvement_type === "EQUAL" && (
+                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                              EQUAL
+                            </span>
+                          )}
+                        </div>
                         {g.supporting_departments &&
                           g.supporting_departments.length > 0 && (
                             <SupportingDeptsPopover

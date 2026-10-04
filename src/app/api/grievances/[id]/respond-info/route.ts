@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -90,6 +91,21 @@ export async function POST(
         },
         { status: 403 },
       );
+    }
+
+    if (!user || userRole === "END_USER") {
+      const check = await canEndUserSubmitCommunication(targetGrievanceId);
+      if (!check.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              check.reason ||
+              "You can only respond when clarification has been requested by staff or department head.",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const complainantName = grievance.users

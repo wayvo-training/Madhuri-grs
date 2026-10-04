@@ -72,7 +72,7 @@ export async function evaluateGrievanceSla(
     where: { grievance_id: grievanceId },
     include: {
       assignments: {
-        where: { assignment_status: "ASSIGNED" },
+        where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
         include: {
           users_assignments_staff_idTousers: true,
         },
@@ -308,6 +308,37 @@ export async function evaluateGrievanceSla(
       }
 
       if (unnotifiedHeads.length > 0) {
+        notificationsSent.push("SLA_75_HOD_WARNING");
+      }
+
+      // 3. Dispatch Notification to ALL Assigned Staff Members
+      const unnotifiedStaffAtRisk = assignedStaffList.filter(
+        (staff) =>
+          !hasSentToUser(staff.user_id, "SLA_75_STAFF_WARNING") &&
+          !hasSentToUser(staff.user_id, "SLA_AT_RISK") &&
+          !hasSentToUser(staff.user_id, "SLA_WARNING")
+      );
+
+      for (const staff of unnotifiedStaffAtRisk) {
+        await tx.notifications.create({
+          data: {
+            user_id: staff.user_id,
+            grievance_id: grievanceId,
+            notification_type: "SLA_AT_RISK",
+            channel: "IN_APP",
+            title: `SLA Warning: 75% Consumed (${grievance.grievance_number})`,
+            message: `Grievance ${grievance.grievance_number} has consumed 75% of its resolution SLA (${consumptionPercent}% consumed) and is now marked AT RISK. Your Department Head has been alerted. Please expedite investigation and resolution.`,
+            status: "PENDING",
+            created_at: evaluationDate,
+          },
+        });
+      }
+
+      if (unnotifiedStaffAtRisk.length > 0) {
+        notificationsSent.push("SLA_75_STAFF_WARNING");
+      }
+
+      if (unnotifiedHeads.length > 0 || unnotifiedStaffAtRisk.length > 0) {
         await tx.audit_logs.create({
           data: {
             grievance_id: grievanceId,
@@ -322,13 +353,14 @@ export async function evaluateGrievanceSla(
               departmentHeads: unnotifiedHeads
                 .map((h) => `${h.first_name} ${h.last_name || ""}`.trim())
                 .join(", "),
+              assignedStaff: unnotifiedStaffAtRisk
+                .map((s) => `${s.first_name} ${s.last_name || ""}`.trim())
+                .join(", "),
               reassignedAutomatically: false,
-              note: "75% SLA warning: Marked AT_RISK. Department Head manual review required.",
+              note: "75% SLA warning: Marked AT_RISK. Both Department Heads and Assigned Staff alerted.",
             },
           },
         });
-
-        notificationsSent.push("SLA_75_HOD_WARNING");
       }
     });
 

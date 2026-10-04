@@ -161,10 +161,7 @@ export async function GET(request: Request) {
         prisma.grievances.count(),
         prisma.grievances.count({
           where: {
-            OR: [
-              { status: "SUBMITTED" },
-              { grievance_departments: { is: null } },
-            ],
+            status: "SUBMITTED",
           },
         }),
         prisma.grievances.count({
@@ -215,9 +212,29 @@ export async function GET(request: Request) {
       const primaryLink = ticketLinks.find(
         (l) => l.involvement_type === "PRIMARY",
       );
+      const equalLinks = ticketLinks.filter(
+        (l) => l.involvement_type === "EQUAL",
+      );
       const supportingLinks = ticketLinks.filter(
         (l) => l.involvement_type === "SUPPORTING",
       );
+
+      const isEqualInvolvement = equalLinks.length > 0;
+      const primaryDeptName =
+        primaryLink?.departments?.department_name ||
+        equalLinks[0]?.departments?.department_name ||
+        g.grievance_departments?.departments?.department_name ||
+        null;
+
+      const otherEqualDepts = equalLinks.slice(1).map((s) => ({
+        department_id: s.department_id.toString(),
+        department_name: `${s.departments.department_name} (Joint Co-Lead)`,
+      }));
+
+      const normalSupporting = supportingLinks.map((s) => ({
+        department_id: s.department_id.toString(),
+        department_name: s.departments.department_name,
+      }));
 
       return {
         grievance_id: g.grievance_id.toString(),
@@ -234,14 +251,13 @@ export async function GET(request: Request) {
         submitted_by_name:
           `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
         submitted_by_email: g.users.email,
-        department_name:
-          primaryLink?.departments?.department_name ||
-          g.grievance_departments?.departments?.department_name ||
-          null,
-        supporting_departments: supportingLinks.map((s) => ({
-          department_id: s.department_id.toString(),
-          department_name: s.departments.department_name,
-        })),
+        department_name: primaryDeptName,
+        involvement_type: isEqualInvolvement
+          ? "EQUAL"
+          : primaryLink
+            ? "PRIMARY"
+            : null,
+        supporting_departments: [...otherEqualDepts, ...normalSupporting],
         reopen_count: g.reopen_count,
         manual_review_count: g.manual_review_count,
       };

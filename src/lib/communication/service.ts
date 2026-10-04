@@ -771,6 +771,22 @@ export async function getGrievanceCommunicationThread(
   } else if (isAdmin) {
     canSend = false;
     closureNote = "You have governance read-only visibility for this grievance communication.";
+  } else if (userRole === "END_USER") {
+    // Turn-based policy: End user can only submit info/docs if status is WAITING_ON_USER or the latest message/action is from Staff/Head
+    const communicationEvents = timeline.filter((t) => t.id !== `submission-${grievance.grievance_id}`);
+    const lastEvent = communicationEvents.length > 0 ? communicationEvents[communicationEvents.length - 1] : null;
+
+    if (grievance.status === "WAITING_ON_USER" || grievance.status === "WAITING_ON_EMPLOYEE") {
+      canSend = true;
+    } else if (lastEvent && lastEvent.isStaffOrHead) {
+      canSend = true;
+    } else if (!lastEvent) {
+      canSend = false;
+      closureNote = "You will be able to submit additional documents or messages once an assigned staff member or department head contacts you.";
+    } else {
+      canSend = false;
+      closureNote = "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.";
+    }
   } else if (isSubmitter || isAssignedStaff || isInvolvedDepartment) {
     canSend = true;
   }
@@ -807,5 +823,95 @@ export async function getGrievanceCommunicationThread(
     actionLabel,
     userRole,
     currentUserId: userId.toString(),
+  };
+}
+
+export async function canEndUserSubmitCommunication(
+  grievanceId: bigint | number,
+): Promise<{ allowed: boolean; reason?: string }> {
+  const gId = BigInt(grievanceId);
+  const grievance = await prisma.grievances.findUnique({
+    where: { grievance_id: gId },
+    select: {
+      status: true,
+      audit_logs: {
+        where: {
+          action: {
+            in: [
+              "ADDITIONAL_INFO_REQUESTED",
+              "USER_INFO_SUBMITTED",
+              "USER_ADDITIONAL_INFO_PROVIDED",
+              "COMMUNICATION_MESSAGE",
+              "RESOLUTION_ACCEPTED",
+              "GRIEVANCE_REOPENED",
+            ],
+          },
+        },
+        orderBy: { created_at: "desc" },
+        take: 1,
+        include: {
+          users: {
+            select: {
+              roles: { select: { role_name: true } },
+            },
+          },
+        },
+      },
+      resolutions: {
+        orderBy: { submitted_at: "desc" },
+        take: 1,
+        select: {
+          submitted_at: true,
+        },
+      },
+    },
+  });
+
+  if (!grievance) {
+    return { allowed: false, reason: "Grievance not found." };
+  }
+
+  if (grievance.status === "CLOSED") {
+    return {
+      allowed: false,
+      reason: "This grievance is closed. Historical communication remains available for reference.",
+    };
+  }
+
+  if (grievance.status === "WAITING_ON_USER" || grievance.status === "WAITING_ON_EMPLOYEE") {
+    return { allowed: true };
+  }
+
+  const latestAudit = grievance.audit_logs[0];
+  const latestResolution = grievance.resolutions[0];
+
+  if (!latestAudit && !latestResolution) {
+    return {
+      allowed: false,
+      reason: "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
+    };
+  }
+
+  let isLatestFromStaffOrHead = false;
+  if (latestResolution && (!latestAudit || latestResolution.submitted_at > latestAudit.created_at)) {
+    isLatestFromStaffOrHead = true;
+  } else if (latestAudit) {
+    const role = latestAudit.users?.roles?.role_name;
+    if (
+      latestAudit.action === "ADDITIONAL_INFO_REQUESTED" ||
+      role === "STAFF" ||
+      role === "DEPARTMENT_HEAD"
+    ) {
+      isLatestFromStaffOrHead = true;
+    }
+  }
+
+  if (isLatestFromStaffOrHead) {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    reason: "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.",
   };
 }

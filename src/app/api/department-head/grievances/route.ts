@@ -240,7 +240,7 @@ export async function GET(request: Request) {
             include: {
               departments: true,
               assignments: {
-                where: { assignment_status: "ASSIGNED" },
+                where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
                 include: {
                   users_assignments_staff_idTousers: true,
                 },
@@ -249,12 +249,13 @@ export async function GET(request: Request) {
           },
           assignments: {
             where: {
-              assignment_status: "ASSIGNED",
+              assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
               grievance_departments: { department_id: departmentId },
             },
             include: {
               users_assignments_staff_idTousers: true,
             },
+            orderBy: { assigned_at: "desc" },
             take: 1,
           },
           escalations: {
@@ -290,17 +291,83 @@ export async function GET(request: Request) {
       prisma.grievances.count({ where }),
     ]);
 
-    // Fetch all involved departments across grievances to determine involvement types
+    // Fetch all involved departments and their assignments across grievances
     const gIds = rawGrievances.map((g) => g.grievance_id);
-    const allDeptRecords = await prisma.grievance_departments.findMany({
-      where: { grievance_id: { in: gIds } },
-      include: { departments: true },
-    });
+    const [allDeptRecords, allAssignments] = await Promise.all([
+      prisma.grievance_departments.findMany({
+        where: { grievance_id: { in: gIds } },
+        include: { departments: true },
+      }),
+      prisma.assignments.findMany({
+        where: {
+          grievance_id: { in: gIds },
+          assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        },
+        include: {
+          users_assignments_staff_idTousers: true,
+          grievance_departments: { include: { departments: true } },
+        },
+        orderBy: { assigned_at: "desc" },
+      }),
+    ]);
 
     // Format into frontend GrievanceItem shape
     const items = rawGrievances.map((g) => {
-      const activeAssignment = g.assignments[0];
+      const grievanceAssignments = allAssignments.filter(
+        (a) => a.grievance_id === g.grievance_id,
+      );
+
+      // Find assignment in this head's department
+      const myDeptAssignment = departmentId
+        ? grievanceAssignments.find(
+            (a) => a.grievance_departments?.department_id === departmentId,
+          )
+        : null;
+
+      // Find partner co-lead assignment (for EQUAL involvement)
+      const otherCoLeadAssignment = departmentId
+        ? grievanceAssignments.find(
+            (a) =>
+              a.grievance_departments?.department_id !== departmentId &&
+              a.grievance_departments?.involvement_type === "EQUAL",
+          )
+        : null;
+
+      const activeAssignment =
+        myDeptAssignment || g.assignments[0] || grievanceAssignments[0];
       const assignedStaff = activeAssignment?.users_assignments_staff_idTousers;
+
+      // Compute display name for Assigned To column
+      let resolvedAssignedStaffName: string | null = null;
+      if (myDeptAssignment) {
+        const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
+        const myStaffName = `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
+        if (otherCoLeadAssignment) {
+          const partnerStaff = otherCoLeadAssignment.users_assignments_staff_idTousers;
+          const partnerDept =
+            otherCoLeadAssignment.grievance_departments?.departments
+              ?.department_name || "Partner";
+          resolvedAssignedStaffName = `${myStaffName} (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() + ")";
+        } else {
+          resolvedAssignedStaffName = myStaffName;
+        }
+      } else if (otherCoLeadAssignment) {
+        const partnerStaff = otherCoLeadAssignment.users_assignments_staff_idTousers;
+        const partnerDept =
+          otherCoLeadAssignment.grievance_departments?.departments
+            ?.department_name || "Partner";
+        resolvedAssignedStaffName = `Unassigned (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() + ")";
+      } else if (!departmentId && grievanceAssignments.length > 0) {
+        resolvedAssignedStaffName = grievanceAssignments
+          .map(
+            (a) =>
+              `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
+          )
+          .join(", ");
+      } else if (assignedStaff) {
+        resolvedAssignedStaffName = `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+      }
+
       const latestEscalation = g.escalations[0];
       const latestResolution = g.resolutions[0];
 
@@ -448,7 +515,9 @@ export async function GET(request: Request) {
         (myDeptRecord?.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
         "PRIMARY";
       const isPrimaryDepartment =
-        myInvolvementType === "PRIMARY" || !departmentId;
+        myInvolvementType === "PRIMARY" ||
+        myInvolvementType === "EQUAL" ||
+        !departmentId;
 
       return {
         id: g.grievance_id.toString(),
@@ -492,9 +561,7 @@ export async function GET(request: Request) {
         assignedStaffId: assignedStaff
           ? assignedStaff.user_id.toString()
           : null,
-        assignedStaffName: assignedStaff
-          ? `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim()
-          : null,
+        assignedStaffName: resolvedAssignedStaffName,
         createdAt: formatFriendlyDate(g.created_at),
         isReopened: g.reopen_count > 0 || g.status === "REOPENED",
         reopenCount: g.reopen_count,

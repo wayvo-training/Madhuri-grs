@@ -3,11 +3,12 @@ import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { StatusBadge, PriorityBadge } from "@/components/dashboard/badges";
-import { FileText, Paperclip, MessageSquare, Send, Eye } from "lucide-react";
+import { FileText, Paperclip, MessageSquare, Send, Eye, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PrintButton } from "@/components/end-user/print-button";
 import { AdditionalInfoModal } from "@/components/end-user/additional-info-modal";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface PageProps {
   params: Promise<{
@@ -59,6 +60,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
 
   const eligibleStatuses = ["PENDING", "SUBMITTED", "ROUTED", "ASSIGNED", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_EMPLOYEE", "REOPENED"];
   const canProvideAdditionalInfo = eligibleStatuses.includes(grievance.status);
+  const submissionCheck = await canEndUserSubmitCommunication(grievance.grievance_id);
   
   // Calculate messages count (1 submission message + audit logs + resolutions)
   const messagesCount = 1 + grievance.audit_logs.length + (grievance.resolutions?.length || 0);
@@ -137,7 +139,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
                   
                   {grievance.attachments && grievance.attachments.length > 0 ? (
                     <div className="space-y-3 max-h-[320px] overflow-y-auto pr-2 custom-scrollbar">
-                      {grievance.attachments.map((doc: any, i: number) => {
+                      {grievance.attachments.map((doc: { file_name: string; file_size: bigint | number | null; file_path: string }, i: number) => {
                         const fileExt = doc.file_name.split('.').pop() || "unknown";
                         return (
                           <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition hover:shadow-sm gap-4">
@@ -148,7 +150,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{doc.file_name}</span>
                                 <span className="text-xs text-slate-500 mt-0.5">
-                                  {(Number(doc.file_size) / 1024).toFixed(0)} KB • {fileExt === 'pdf' ? 'application/pdf' : `image/${fileExt}`}
+                                  {(Number(doc.file_size || 0) / 1024).toFixed(0)} KB • {fileExt === 'pdf' ? 'application/pdf' : `image/${fileExt}`}
                                 </span>
                               </div>
                             </div>
@@ -172,15 +174,38 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
                 {canProvideAdditionalInfo && (
                   <div className="border-t border-slate-200 dark:border-slate-800 pt-8 print:hidden">
                     <h3 className="text-xs font-bold text-slate-500 tracking-wider mb-3 uppercase">Additional Information</h3>
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Need to provide additional clarification or documents?</h4>
-                        <p className="text-xs text-slate-500 mt-1">You can provide additional information related to this grievance without changing your original submission.</p>
+                    {submissionCheck.allowed ? (
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Need to provide additional clarification or documents?</h4>
+                          <p className="text-xs text-slate-500 mt-1">Staff or department head has requested clarification. You can upload relevant documents or provide explanations.</p>
+                        </div>
+                        <div className="shrink-0">
+                          <AdditionalInfoModal grievanceId={grievance.grievance_id.toString()} />
+                        </div>
                       </div>
-                      <div className="shrink-0">
-                        <AdditionalInfoModal grievanceId={grievance.grievance_id.toString()} />
+                    ) : (
+                      <div className="bg-slate-50/80 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5">
+                            <Lock className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Submission Locked</h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                              {submissionCheck.reason || "You can submit additional documents or information once an assigned staff member or department head contacts you."}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          <Link href={`/end-user/messages/${grievance.grievance_id}`}>
+                            <Button variant="outline" className="rounded-xl text-xs font-medium h-8 px-3">
+                              View Messages
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 

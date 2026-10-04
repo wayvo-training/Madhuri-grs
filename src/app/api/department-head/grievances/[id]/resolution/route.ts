@@ -50,14 +50,16 @@ export async function POST(
       where: { grievance_id: grievanceId },
     });
     const hasMultipleDepts = allInvolvedDepts.length > 1;
-    const isPrimaryDept = grievanceDept.involvement_type === "PRIMARY";
+    const isLeadOrEqualDept =
+      grievanceDept.involvement_type === "PRIMARY" ||
+      grievanceDept.involvement_type === "EQUAL";
 
-    if (!isAdmin && hasMultipleDepts && !isPrimaryDept) {
+    if (!isAdmin && hasMultipleDepts && !isLeadOrEqualDept) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Forbidden: As a supporting department, only the Lead Primary Department Head can approve or submit the final resolution. Please provide directives or notes via the Case File inspection.",
+            "Forbidden: As a supporting department, only Primary Lead or Equal Co-Lead Department Heads can approve or submit the final resolution. Please provide directives or notes via the Case File inspection.",
         },
         { status: 403 },
       );

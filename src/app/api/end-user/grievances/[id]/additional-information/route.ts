@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -84,6 +85,19 @@ export async function POST(
     const eligibleStatuses = ["PENDING", "SUBMITTED", "ROUTED", "ASSIGNED", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_EMPLOYEE", "REOPENED"];
     if (!eligibleStatuses.includes(grievance.status)) {
       return NextResponse.json({ success: false, error: "Grievance is not eligible for additional information." }, { status: 400 });
+    }
+
+    const check = await canEndUserSubmitCommunication(grievance.grievance_id);
+    if (!check.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            check.reason ||
+            "You can only submit additional information or documents when requested by staff or department head.",
+        },
+        { status: 403 },
+      );
     }
 
     const targetGrievanceId = grievance.grievance_id;

@@ -18,6 +18,7 @@ export interface SerializedGrievance {
   submitted_by_name: string;
   submitted_by_email: string;
   department_name: string | null;
+  involvement_type?: string | null;
   supporting_departments?: SupportingDepartment[];
   reopen_count: number;
   manual_review_count: number;

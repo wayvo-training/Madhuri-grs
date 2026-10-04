@@ -12,7 +12,7 @@ import {
   validateStatus,
 } from "@/lib/validations/rules";
 
-const ALLOWED_INVOLVEMENT_TYPES = ["PRIMARY", "SUPPORTING"] as const;
+const ALLOWED_INVOLVEMENT_TYPES = ["PRIMARY", "SUPPORTING", "EQUAL"] as const;
 
 /**
  * Normalizes and validates supporting departments against existing active departments.

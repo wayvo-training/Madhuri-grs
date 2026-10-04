@@ -146,24 +146,46 @@ export function AdminGrievanceModal({
 
           <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-100 p-4">
             <div>
-              <p className="text-slate-400">Primary Department</p>
-              <p className="mt-0.5 font-semibold text-slate-800">
-                {grievance.department_name || "Pending Manual Routing"}
+              <p className="text-slate-400">
+                {grievance.involvement_type === "EQUAL"
+                  ? "Department (Joint Co-Lead)"
+                  : "Primary Department"}
               </p>
+              <div className="mt-0.5 flex items-center gap-2">
+                <p className="font-semibold text-slate-800">
+                  {grievance.department_name || "Pending Manual Routing"}
+                </p>
+                {grievance.involvement_type === "EQUAL" && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                    EQUAL
+                  </span>
+                )}
+              </div>
             </div>
             <div>
-              <p className="text-slate-400">Supporting Departments</p>
+              <p className="text-slate-400">
+                {grievance.involvement_type === "EQUAL"
+                  ? "Collaborating Co-Leads / Supporting"
+                  : "Supporting Departments"}
+              </p>
               <div className="mt-0.5 flex flex-wrap gap-1">
                 {grievance.supporting_departments &&
                 grievance.supporting_departments.length > 0 ? (
-                  grievance.supporting_departments.map((sd) => (
-                    <span
-                      key={sd.department_id}
-                      className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700"
-                    >
-                      {sd.department_name}
-                    </span>
-                  ))
+                  grievance.supporting_departments.map((sd) => {
+                    const isCoLead = sd.department_name.includes("Joint Co-Lead");
+                    return (
+                      <span
+                        key={sd.department_id}
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
+                          isCoLead
+                            ? "border-teal-200 bg-teal-50 text-teal-800 font-semibold"
+                            : "border-slate-200 bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        {sd.department_name}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className="text-slate-400 italic font-normal">
                     None configured

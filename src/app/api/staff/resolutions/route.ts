@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       where: { grievance_id: gId },
       include: {
         assignments: {
-          where: { assignment_status: "ASSIGNED" },
+          where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
           include: {
             grievance_departments: true,
           },
@@ -85,20 +85,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // In a multi-department collaboration, verify primary lead responsibility
+    // In a multi-department collaboration, verify primary or equal co-lead responsibility
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: gId },
     });
     const hasMultipleDepts = allInvolvedDepts.length > 1;
-    const isPrimaryStaff =
-      myAssignment?.grievance_departments?.involvement_type === "PRIMARY";
+    const myInvolvement = myAssignment?.grievance_departments?.involvement_type;
+    const isAuthorizedLeadStaff =
+      myInvolvement === "PRIMARY" || myInvolvement === "EQUAL";
 
-    if (!isAdmin && hasMultipleDepts && !isPrimaryStaff) {
+    if (!isAdmin && hasMultipleDepts && !isAuthorizedLeadStaff) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Forbidden: As a supporting department contributor, please submit your department findings via the Collaboration tab. Only the Primary Lead department officer can submit the final customer resolution.",
+            "Forbidden: As a supporting department contributor, please submit your department findings via the Collaboration tab. Only Primary Lead or Equal Co-Lead department officers can submit the final customer resolution.",
         },
         { status: 403 },
       );
@@ -193,17 +194,22 @@ export async function POST(request: Request) {
     });
 
     // 4. Notification
-    if (requiresHeadReview && departmentId) {
-      const hod = await prisma.users.findFirst({
+    if (requiresHeadReview) {
+      const targetDeptIds = allInvolvedDepts.map((d) => d.department_id);
+      if (departmentId && !targetDeptIds.includes(departmentId)) {
+        targetDeptIds.push(departmentId);
+      }
+
+      const hods = await prisma.users.findMany({
         where: {
-          department_id: departmentId,
+          department_id: { in: targetDeptIds },
           roles: { role_name: "DEPARTMENT_HEAD" },
           status: "ACTIVE",
         },
         select: { user_id: true },
       });
 
-      if (hod) {
+      for (const hod of hods) {
         await NotificationService.send({
           userId: hod.user_id,
           grievanceId: gId,

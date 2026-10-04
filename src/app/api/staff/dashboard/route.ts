@@ -162,7 +162,10 @@ export async function GET(request: Request) {
           | "PRIMARY"
           | "SUPPORTING"
           | "EQUAL") || "PRIMARY";
-      const isPrimaryOwner = myInvolvementType === "PRIMARY" || isAdmin;
+      const isPrimaryOwner =
+        myInvolvementType === "PRIMARY" ||
+        myInvolvementType === "EQUAL" ||
+        isAdmin;
 
       const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
 

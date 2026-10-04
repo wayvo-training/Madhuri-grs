@@ -444,6 +444,7 @@ export function AdminRuleConfigModal({
                     <option value="SUPPORTING">
                       SUPPORTING (Collaborator)
                     </option>
+                    <option value="EQUAL">EQUAL (Joint Co-Lead)</option>
                   </select>
                 </div>
               </div>

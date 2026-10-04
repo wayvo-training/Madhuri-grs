@@ -66,7 +66,8 @@ export async function GET(
         },
 
         assignments: {
-          where: { assignment_status: "ASSIGNED" },
+          where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
+          orderBy: { assigned_at: "desc" },
           include: {
             users_assignments_staff_idTousers: {
               select: {
@@ -135,22 +136,29 @@ export async function GET(
       where: { grievance_id: grievanceId },
       include: {
         departments: true,
-        assignments: {
-          include: {
-            users_assignments_staff_idTousers: {
-              select: {
-                user_id: true,
-                first_name: true,
-                last_name: true,
-                email: true,
-                status: true,
-                roles: true,
-              },
-            },
+      },
+      orderBy: { involvement_type: "asc" },
+    });
+
+    // Fetch all assignments directly from assignments table so staff names persist whether status is ASSIGNED or COMPLETED
+    const allDeptAssignments = await prisma.assignments.findMany({
+      where: {
+        grievance_id: grievanceId,
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+      },
+      include: {
+        users_assignments_staff_idTousers: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            status: true,
+            roles: true,
           },
         },
       },
-      orderBy: { involvement_type: "asc" },
+      orderBy: { assigned_at: "desc" },
     });
 
     // Security check: belongs to head's department unless admin preview
@@ -167,9 +175,11 @@ export async function GET(
     }
 
     const departmentsInvolved = rawDepartments.map((rawD) => {
-      const d = rawD as any;
-      const activeAssignment = d.assignments;
-      const staffUser = activeAssignment?.users_assignments_staff_idTousers;
+      const d = rawD;
+      const deptAssignment = allDeptAssignments.find(
+        (a) => a.grievance_department_id === d.grievance_department_id,
+      );
+      const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaff = staffUser
         ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
         : null;
@@ -187,7 +197,16 @@ export async function GET(
     });
 
     // 1. Assignment details
-    const primaryAssignment = grievance.assignments?.[0];
+    const myDeptRecord = rawDepartments.find((d) => d.department_id === departmentId);
+    const primaryAssignment =
+      (myDeptRecord
+        ? allDeptAssignments.find(
+            (a) => a.grievance_department_id === myDeptRecord.grievance_department_id,
+          )
+        : null) ||
+      allDeptAssignments[0] ||
+      grievance.assignments?.[0];
+
     const assignedUser = primaryAssignment?.users_assignments_staff_idTousers;
     const assignment = {
       isAssigned: !!assignedUser,
