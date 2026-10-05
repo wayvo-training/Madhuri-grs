@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
   if (!user || user.roles?.role_name !== "END_USER") {
@@ -16,7 +16,7 @@ export async function POST(
 
   try {
     const grievanceId = BigInt(id);
-    
+
     // Find the grievance
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
@@ -24,17 +24,23 @@ export async function POST(
         grievance_departments: true,
         assignments: {
           where: { assignment_status: "ASSIGNED" },
-          take: 1
-        }
-      }
+          take: 1,
+        },
+      },
     });
 
     if (!grievance || grievance.submitted_by !== user.user_id) {
-      return NextResponse.json({ success: false, message: "Grievance not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Grievance not found" },
+        { status: 404 },
+      );
     }
 
     if (grievance.status !== "RESOLVED") {
-      return NextResponse.json({ success: false, message: "Only resolved grievances can be accepted" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Only resolved grievances can be accepted" },
+        { status: 400 },
+      );
     }
 
     // Update grievance to CLOSED
@@ -66,7 +72,9 @@ export async function POST(
         action: "CLOSED",
         entity_type: "GRIEVANCE",
         entity_id: grievanceId,
-        new_value: { details: "Grievance resolution accepted and closed by the end user." },
+        new_value: {
+          details: "Grievance resolution accepted and closed by the end user.",
+        },
       },
     });
 
@@ -158,9 +166,24 @@ export async function POST(
       });
     }
 
-    return NextResponse.json({ success: true, message: "Resolution accepted successfully" });
+    // 4. Notify the End User confirming their acceptance
+    await NotificationService.send({
+      userId: user.user_id,
+      grievanceId: grievanceId,
+      type: "RESOLUTION_ACCEPTED",
+      title: `Resolution Accepted: ${grievance.grievance_number}`,
+      message: `You have accepted the resolution for grievance ${grievance.grievance_number}. The case is now officially closed. Thank you for your feedback.`,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Resolution accepted successfully",
+    });
   } catch (error) {
     console.error("Error accepting resolution:", error);
-    return NextResponse.json({ success: false, message: "Failed to accept resolution" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Failed to accept resolution" },
+      { status: 500 },
+    );
   }
 }

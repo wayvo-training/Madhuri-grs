@@ -2,31 +2,31 @@
 
 import {
   AlertCircle,
+  ArrowRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
+  Eye,
+  FilePlus,
   FileText,
+  Filter,
   Paperclip,
-  Send,
-  UploadCloud,
-  X,
   Plus,
   RefreshCw,
   Search,
-  Filter,
-  FilePlus,
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Eye
+  Send,
+  UploadCloud,
+  X,
 } from "lucide-react";
-import type React from "react";
-import { useState, useMemo, useEffect } from "react";
-import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
-import { GrievanceList } from "./grievance-list";
-import { Pagination } from "@/components/ui/pagination";
-import { ActionMenu } from "@/components/ui/action-menu";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import { ActionMenu } from "@/components/ui/action-menu";
+import { Pagination } from "@/components/ui/pagination";
+import { GrievanceList } from "./grievance-list";
 
 export interface UserGrievanceItem {
   id: string;
@@ -96,9 +96,15 @@ export function EndUserPortal({
 
   // Stats
   const totalCases = grievances.length;
-  const waitingOnUserCases = grievances.filter((g) => g.status === "WAITING_ON_USER");
-  const inProgressCases = grievances.filter((g) => g.status === "IN_PROGRESS" || g.status === "ASSIGNED");
-  const closedCases = grievances.filter((g) => g.status === "CLOSED" || g.status === "RESOLVED");
+  const waitingOnUserCases = grievances.filter(
+    (g) => g.status === "WAITING_ON_USER",
+  );
+  const inProgressCases = grievances.filter(
+    (g) => g.status === "IN_PROGRESS" || g.status === "ASSIGNED",
+  );
+  const closedCases = grievances.filter(
+    (g) => g.status === "CLOSED" || g.status === "RESOLVED",
+  );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -127,15 +133,18 @@ export function EndUserPortal({
         filePath: `/uploads/${f.name}`,
       }));
 
-      const res = await fetch(`/api/grievances/${isRespondingTo.id}/respond-info`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          responseMessage: responseText.trim(),
-          attachments: attachmentPayloads,
-          email: userEmail,
-        }),
-      });
+      const res = await fetch(
+        `/api/grievances/${isRespondingTo.id}/respond-info`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            responseMessage: responseText.trim(),
+            attachments: attachmentPayloads,
+            email: userEmail,
+          }),
+        },
+      );
 
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -143,7 +152,7 @@ export function EndUserPortal({
       }
 
       setSubmitSuccess(
-        "Response and documents submitted successfully. The investigating staff has been notified and status has returned to In Progress."
+        "Response and documents submitted successfully. The investigating staff has been notified and status has returned to In Progress.",
       );
 
       setGrievances((prev) =>
@@ -163,8 +172,8 @@ export function EndUserPortal({
                   })),
                 ],
               }
-            : g
-        )
+            : g,
+        ),
       );
 
       setResponseText("");
@@ -172,7 +181,9 @@ export function EndUserPortal({
       setIsRespondingTo(null);
     } catch (err: unknown) {
       console.error(err);
-      setSubmitError(err instanceof Error ? err.message : "Failed to submit response");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to submit response",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -190,12 +201,16 @@ export function EndUserPortal({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Filed</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Total Filed
+            </span>
             <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <FileText className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">{totalCases}</div>
+          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+            {totalCases}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-amber-200/80 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 p-5 shadow-2xs">
@@ -211,27 +226,37 @@ export function EndUserPortal({
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-amber-900 dark:text-amber-100">{waitingOnUserCases.length}</div>
+          <div className="mt-4 text-3xl font-bold text-amber-900 dark:text-amber-100">
+            {waitingOnUserCases.length}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-blue-200/80 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-500">In Progress</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-500">
+              In Progress
+            </span>
             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
               <RefreshCw className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-blue-900 dark:text-blue-100">{inProgressCases.length}</div>
+          <div className="mt-4 text-3xl font-bold text-blue-900 dark:text-blue-100">
+            {inProgressCases.length}
+          </div>
         </div>
 
         <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-500">Resolved</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-500">
+              Resolved
+            </span>
             <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-emerald-900 dark:text-emerald-100">{closedCases.length}</div>
+          <div className="mt-4 text-3xl font-bold text-emerald-900 dark:text-emerald-100">
+            {closedCases.length}
+          </div>
         </div>
       </div>
 
@@ -244,7 +269,9 @@ export function EndUserPortal({
               <Search className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Track a Grievance</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Track a Grievance
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Enter grievance number to view current status.
               </p>
@@ -261,10 +288,11 @@ export function EndUserPortal({
               placeholder="e.g. GRS-2026-0007"
               className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition"
             />
-            <button 
+            <button
+              type="button"
               onClick={handleTrack}
               disabled={!trackSearchId.trim()}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-950 hover:bg-teal-900 dark:bg-teal-900 dark:hover:bg-teal-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" 
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-950 hover:bg-teal-900 dark:bg-teal-900 dark:hover:bg-teal-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               title="Track grievance"
             >
               <Search className="w-4 h-4" />
@@ -280,13 +308,18 @@ export function EndUserPortal({
               <FilePlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">Need to raise a new grievance?</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                Need to raise a new grievance?
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Submit a new grievance regarding any workplace issue.
               </p>
             </div>
           </div>
-          <Link href="/end-user/submit" className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition">
+          <Link
+            href="/end-user/submit"
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition"
+          >
             <Plus className="w-4 h-4" />
             <span>File New Grievance</span>
           </Link>
@@ -322,7 +355,8 @@ export function EndUserPortal({
                 Action Required on {waitingOnUserCases.length} Grievance(s)
               </h3>
               <p className="text-sm text-amber-900/90 dark:text-amber-200/80 mt-1">
-                The investigating staff has requested additional details or documents to proceed.
+                The investigating staff has requested additional details or
+                documents to proceed.
               </p>
             </div>
           </div>
@@ -344,7 +378,10 @@ export function EndUserPortal({
                   </div>
                   {item.latestInquiry && (
                     <div className="text-xs text-slate-600 dark:text-slate-400 bg-amber-50/50 dark:bg-amber-900/30 p-2.5 rounded-lg border border-amber-100 dark:border-amber-800 mt-2">
-                      <strong className="text-amber-900 dark:text-amber-300">Staff Note:</strong> {item.latestInquiry.message || item.latestInquiry.subject}
+                      <strong className="text-amber-900 dark:text-amber-300">
+                        Staff Note:
+                      </strong>{" "}
+                      {item.latestInquiry.message || item.latestInquiry.subject}
                     </div>
                   )}
                 </div>
@@ -391,13 +428,27 @@ export function EndUserPortal({
           <table className="w-full text-left border-collapse text-sm">
             <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
               <tr>
-                <th className="py-2.5 pl-4 pr-2 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Grievance ID</th>
-                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Title</th>
-                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Category</th>
-                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Priority</th>
-                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Status</th>
-                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Submitted</th>
-                <th className="py-2.5 px-4 text-right font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">Actions</th>
+                <th className="py-2.5 pl-4 pr-2 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Grievance ID
+                </th>
+                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Title
+                </th>
+                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Priority
+                </th>
+                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-2 py-2.5 font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Submitted
+                </th>
+                <th className="py-2.5 px-4 text-right font-semibold text-slate-600 dark:text-slate-400 text-[11px] uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -409,7 +460,10 @@ export function EndUserPortal({
                 </tr>
               ) : (
                 paginatedRecentGrievances.map((g) => (
-                  <tr key={g.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition">
+                  <tr
+                    key={g.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
+                  >
                     <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                       {g.grievanceNumber}
                     </td>
@@ -440,8 +494,17 @@ export function EndUserPortal({
                           {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
-                            onClick: () => router.push(`/end-user/grievances/${g.id}`)
-                          }
+                            onClick: () =>
+                              router.push(`/end-user/grievances/${g.id}`),
+                          },
+                          {
+                            label: "Track",
+                            icon: <Search className="h-4 w-4" />,
+                            onClick: () =>
+                              router.push(
+                                `/end-user/grievances/${g.id}?tab=tracking`,
+                              ),
+                          },
                         ]}
                       />
                     </td>
@@ -451,7 +514,7 @@ export function EndUserPortal({
             </tbody>
           </table>
         </div>
-        
+
         {grievances.length > 0 && (
           <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4 shrink-0">
             <Pagination
@@ -475,7 +538,8 @@ export function EndUserPortal({
           <div className="relative flex flex-col w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-900">
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Respond to Staff Inquiry &mdash; {isRespondingTo.grievanceNumber}
+                Respond to Staff Inquiry &mdash;{" "}
+                {isRespondingTo.grievanceNumber}
               </h2>
               <button
                 type="button"
@@ -486,7 +550,10 @@ export function EndUserPortal({
               </button>
             </div>
 
-            <form onSubmit={handleSubmitResponse} className="flex-1 overflow-y-auto p-5 space-y-5 text-sm">
+            <form
+              onSubmit={handleSubmitResponse}
+              className="flex-1 overflow-y-auto p-5 space-y-5 text-sm"
+            >
               {submitError && (
                 <div className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-rose-800 flex items-center gap-2">
                   <AlertCircle className="h-5 w-5 shrink-0" />
@@ -497,25 +564,35 @@ export function EndUserPortal({
               <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
                 <div className="flex items-center gap-2 text-blue-900 mb-2">
                   <AlertCircle className="h-4 w-4" />
-                  <span className="font-bold text-xs uppercase tracking-wider">Staff Request</span>
+                  <span className="font-bold text-xs uppercase tracking-wider">
+                    Staff Request
+                  </span>
                 </div>
                 <p className="text-sm text-blue-950">
-                  {isRespondingTo.latestInquiry?.message || isRespondingTo.latestInquiry?.subject}
+                  {isRespondingTo.latestInquiry?.message ||
+                    isRespondingTo.latestInquiry?.subject}
                 </p>
-                {isRespondingTo.latestInquiry?.requestedDocs && isRespondingTo.latestInquiry.requestedDocs.length > 0 && (
-                  <div className="mt-3 p-3 bg-white/60 rounded-lg border border-blue-100">
-                    <span className="block text-xs font-bold text-blue-900 mb-1">Requested Proof / Documents:</span>
-                    <ul className="list-disc pl-5 text-xs text-blue-800 space-y-1">
-                      {isRespondingTo.latestInquiry.requestedDocs.map((doc, i) => (
-                        <li key={i}>{doc}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {isRespondingTo.latestInquiry?.requestedDocs &&
+                  isRespondingTo.latestInquiry.requestedDocs.length > 0 && (
+                    <div className="mt-3 p-3 bg-white/60 rounded-lg border border-blue-100">
+                      <span className="block text-xs font-bold text-blue-900 mb-1">
+                        Requested Proof / Documents:
+                      </span>
+                      <ul className="list-disc pl-5 text-xs text-blue-800 space-y-1">
+                        {isRespondingTo.latestInquiry.requestedDocs.map(
+                          (doc) => (
+                            <li key={doc}>{doc}</li>
+                          ),
+                        )}
+                      </ul>
+                    </div>
+                  )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Your Response Statement</label>
+                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Your Response Statement
+                </span>
                 <textarea
                   value={responseText}
                   onChange={(e) => setResponseText(e.target.value)}
@@ -526,7 +603,9 @@ export function EndUserPortal({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attach Documents</label>
+                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Attach Documents
+                </span>
                 <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 bg-slate-50 dark:bg-slate-800/50 p-6 transition">
                   <input
                     type="file"
@@ -547,13 +626,20 @@ export function EndUserPortal({
 
                 {filesToUpload.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">Files Selected:</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
+                      Files Selected:
+                    </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {filesToUpload.map((f, idx) => (
-                        <div key={idx} className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs">
+                        <div
+                          key={`${f.name}-${f.size}-${f.lastModified}`}
+                          className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs"
+                        >
                           <div className="flex items-center gap-2 overflow-hidden">
                             <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{f.name}</span>
+                            <span className="truncate text-slate-700 dark:text-slate-300 font-medium">
+                              {f.name}
+                            </span>
                           </div>
                           <button
                             type="button"
@@ -583,7 +669,9 @@ export function EndUserPortal({
                   className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-700 disabled:opacity-50 transition cursor-pointer"
                 >
                   <Send className="h-4 w-4" />
-                  <span>{isSubmitting ? "Submitting..." : "Submit Response"}</span>
+                  <span>
+                    {isSubmitting ? "Submitting..." : "Submit Response"}
+                  </span>
                 </button>
               </div>
             </form>
@@ -611,7 +699,9 @@ export function EndUserPortal({
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-bold text-teal-700 dark:text-teal-400">{selectedGrievance.grievanceNumber}</span>
+                  <span className="font-mono text-sm font-bold text-teal-700 dark:text-teal-400">
+                    {selectedGrievance.grievanceNumber}
+                  </span>
                   <StatusBadge status={selectedGrievance.status} />
                   <PriorityBadge priority={selectedGrievance.priority} />
                 </div>
@@ -619,34 +709,55 @@ export function EndUserPortal({
                   {selectedGrievance.title}
                 </h3>
                 <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Filed: {new Date(selectedGrievance.createdAt).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> Filed:{" "}
+                    {new Date(selectedGrievance.createdAt).toLocaleDateString()}
+                  </span>
                   <span>&bull;</span>
-                  <span>Category: <strong>{selectedGrievance.category} / {selectedGrievance.subcategory}</strong></span>
+                  <span>
+                    Category:{" "}
+                    <strong>
+                      {selectedGrievance.category} /{" "}
+                      {selectedGrievance.subcategory}
+                    </strong>
+                  </span>
                 </div>
               </div>
 
               <div className="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                <p className="whitespace-pre-wrap leading-relaxed">{selectedGrievance.description}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">
+                  {selectedGrievance.description}
+                </p>
               </div>
 
-              {selectedGrievance.attachments && selectedGrievance.attachments.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Attached Evidence</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedGrievance.attachments.map((file) => (
-                      <div key={file.id} className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800">
-                        <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg text-teal-600 dark:text-teal-400">
-                          <Paperclip className="w-4 h-4" />
+              {selectedGrievance.attachments &&
+                selectedGrievance.attachments.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Attached Evidence
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {selectedGrievance.attachments.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800"
+                        >
+                          <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg text-teal-600 dark:text-teal-400">
+                            <Paperclip className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {file.size}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{file.name}</p>
-                          <p className="text-[10px] text-slate-500">{file.size}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex justify-end">

@@ -18,9 +18,17 @@ export async function POST(request: Request) {
     const problemStatement = formData.get("problemStatement") as string;
     const files = formData.getAll("files") as File[];
 
-    if (!categoryId || !subcategoryId || !problemStatement) {
+    if (
+      !categoryId ||
+      !subcategoryId ||
+      !problemStatement ||
+      problemStatement.trim().length < 100
+    ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        {
+          error:
+            "Problem Statement is mandatory and must be at least 100 characters long",
+        },
         { status: 400 },
       );
     }
@@ -147,8 +155,19 @@ export async function POST(request: Request) {
       message: `Your grievance ${newGrievance.grievance_number} has been submitted successfully and is being processed.`,
     });
 
-    // If there is a routing rule, assign it to department(s)
+    // 1. Resolve primary department if routing rule exists
+    let primaryDept = null;
     if (activeRule && activeRule.department_id) {
+      primaryDept = await prisma.departments.findFirst({
+        where: {
+          department_id: activeRule.department_id,
+          status: "ACTIVE",
+        },
+      });
+    }
+
+    // If there is an active routing rule and active department, assign it
+    if (activeRule && primaryDept) {
       const mainInvolvement =
         (activeRule.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
         "PRIMARY";
@@ -158,13 +177,35 @@ export async function POST(request: Request) {
       await prisma.grievance_departments.create({
         data: {
           grievance_id: newGrievance.grievance_id,
-          department_id: activeRule.department_id,
+          department_id: primaryDept.department_id,
           involvement_type: mainInvolvement,
           status: "ASSIGNED",
         },
       });
+
+      // Log SUBMITTED and ROUTED in status history
+      await prisma.grievance_status_history.create({
+        data: {
+          grievance_id: newGrievance.grievance_id,
+          old_status: null,
+          new_status: "SUBMITTED",
+          changed_by: user.user_id,
+          remarks: "Grievance submitted by complainant",
+        },
+      });
+
+      await prisma.grievance_status_history.create({
+        data: {
+          grievance_id: newGrievance.grievance_id,
+          old_status: "SUBMITTED",
+          new_status: "ROUTED",
+          changed_by: user.user_id,
+          remarks: `Auto-routed to ${primaryDept.department_name}`,
+        },
+      });
+
       const departmentIdsToNotify = new Set<bigint>();
-      departmentIdsToNotify.add(activeRule.department_id);
+      departmentIdsToNotify.add(primaryDept.department_id);
 
       // Also attach supporting or co-equal departments:
       if (
@@ -173,7 +214,10 @@ export async function POST(request: Request) {
       ) {
         for (const suppName of activeRule.supporting_departments) {
           const suppDept = await prisma.departments.findFirst({
-            where: { department_name: suppName as string },
+            where: {
+              department_name: suppName as string,
+              status: "ACTIVE",
+            },
           });
 
           if (suppDept) {
@@ -212,10 +256,45 @@ export async function POST(request: Request) {
       }
     } else {
       // Manual Routing Fallback
+      // Ensure status is explicitly SUBMITTED if not already
+      if (newGrievance.status !== "SUBMITTED") {
+        await prisma.grievances.update({
+          where: { grievance_id: newGrievance.grievance_id },
+          data: { status: "SUBMITTED" },
+        });
+      }
+
+      await prisma.grievance_status_history.create({
+        data: {
+          grievance_id: newGrievance.grievance_id,
+          old_status: null,
+          new_status: "SUBMITTED",
+          changed_by: user.user_id,
+          remarks:
+            "Grievance submitted by complainant (Pending manual routing)",
+        },
+      });
+
+      // Record audit log for manual routing exception
+      await prisma.audit_logs.create({
+        data: {
+          user_id: user.user_id,
+          grievance_id: newGrievance.grievance_id,
+          action: "ROUTING_EXCEPTION",
+          entity_type: "GRIEVANCE",
+          entity_id: newGrievance.grievance_id,
+          new_value: {
+            reason:
+              "No active automated routing rule matched. Placed in Admin Manual Routing Queue.",
+            stage: "SUBMITTED",
+          },
+        },
+      });
+
       // Notify all active Admins that a grievance needs manual routing
       const admins = await prisma.users.findMany({
         where: {
-          roles: { role_name: "ADMIN" },
+          roles: { role_name: { in: ["ADMIN", "SUPER_ADMIN"] } },
           status: "ACTIVE",
         },
       });
@@ -225,8 +304,9 @@ export async function POST(request: Request) {
           userId: admin.user_id,
           grievanceId: newGrievance.grievance_id,
           type: "ROUTING_EXCEPTION",
-          title: "Manual Routing Required",
-          message: `Grievance ${newGrievance.grievance_number} matched no active routing rules and requires manual routing.`,
+          channel: "IN_APP",
+          title: `Manual Routing Required: ${newGrievance.grievance_number}`,
+          message: `Grievance ${newGrievance.grievance_number} (${newGrievance.title}) matched no automated routing rule and requires manual department assignment.`,
         });
       }
     }
@@ -265,16 +345,20 @@ export async function POST(request: Request) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error submitting grievance:", error);
+    const errMessage =
+      error instanceof Error ? error.message : "Failed to submit grievance";
+    const errStack = error instanceof Error ? error.stack : String(error);
+
     try {
       await fs.writeFile(
         path.join(process.cwd(), "error.log"),
-        String(error.stack || error),
+        String(errStack || error),
       );
-    } catch (e) {}
+    } catch (_e) {}
     return NextResponse.json(
-      { error: "Failed to submit grievance", details: error.message },
+      { error: "Failed to submit grievance", details: errMessage },
       { status: 500 },
     );
   }

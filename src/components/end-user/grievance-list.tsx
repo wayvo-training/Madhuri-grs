@@ -1,44 +1,87 @@
 "use client";
 
-import { Clock, FileText, Paperclip, Send, X, AlertCircle, Eye } from "lucide-react";
+import {
+  AlertCircle,
+  Clock,
+  Eye,
+  FileText,
+  Paperclip,
+  Search,
+  Send,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type React from "react";
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
-  type SearchCondition,
   type FilterMode,
+  type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
-import { useTableSort } from "@/hooks/useTableSort";
-import { usePagination } from "@/hooks/usePagination";
 import { Pagination } from "@/components/ui/pagination";
-import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import { SortableTh } from "@/components/ui/sortable-table-head";
-import { ActionMenu } from "@/components/ui/action-menu";
-import Link from "next/link";
-import { type EndUserGrievance } from "@/types/end-user";
-import { useRouter } from "next/navigation";
+import { usePagination } from "@/hooks/usePagination";
+import { useTableSort } from "@/hooks/useTableSort";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
+import type { EndUserGrievance } from "@/types/end-user";
 
 interface GrievanceListProps {
   initialGrievances: EndUserGrievance[];
 }
 
 export function GrievanceList({ initialGrievances }: GrievanceListProps) {
-  const [grievances, setGrievances] = useState<EndUserGrievance[]>(initialGrievances);
+  const [grievances, setGrievances] =
+    useState<EndUserGrievance[]>(initialGrievances);
   const router = useRouter();
 
   // Advanced Search State
   const [advancedSearch, setAdvancedSearch] = useState<SearchCondition[]>([]);
   const [filterMode, setFilterMode] = useState<FilterMode>("AND");
 
-  const searchFields: SearchFieldDef[] = useMemo(() => [
-    { id: "grievanceNumber", key: "grievanceNumber", label: "Grievance ID", type: "text" },
-    { id: "title", key: "title", label: "Title", type: "text" },
-    { id: "category", key: "category", label: "Category", type: "select", options: Array.from(new Set(grievances.map(g => g.category))).map(c => ({ value: c, label: c })) },
-    { id: "priority", key: "priority", label: "Priority", type: "select", options: ["LOW", "MEDIUM", "HIGH", "URGENT"].map(p => ({ value: p, label: p })) },
-    { id: "status", key: "status", label: "Status", type: "select", options: Array.from(new Set(grievances.map(g => g.status))).map(s => ({ value: s, label: s })) },
-  ], [grievances]);
+  const searchFields: SearchFieldDef[] = useMemo(
+    () => [
+      {
+        id: "grievanceNumber",
+        key: "grievanceNumber",
+        label: "Grievance ID",
+        type: "text",
+      },
+      { id: "title", key: "title", label: "Title", type: "text" },
+      {
+        id: "category",
+        key: "category",
+        label: "Category",
+        type: "select",
+        options: Array.from(new Set(grievances.map((g) => g.category))).map(
+          (c) => ({ value: c, label: c }),
+        ),
+      },
+      {
+        id: "priority",
+        key: "priority",
+        label: "Priority",
+        type: "select",
+        options: ["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => ({
+          value: p,
+          label: p,
+        })),
+      },
+      {
+        id: "status",
+        key: "status",
+        label: "Status",
+        type: "select",
+        options: Array.from(new Set(grievances.map((g) => g.status))).map(
+          (s) => ({ value: s, label: s }),
+        ),
+      },
+    ],
+    [grievances],
+  );
 
   // Sorting
   const { sortState, handleSort, sortedItems } = useTableSort(grievances, {
@@ -48,7 +91,9 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
 
   // Filtering
   const filteredGrievances = useMemo(() => {
-    return sortedItems.filter((item: EndUserGrievance) => evaluateSearchConditions(item, advancedSearch, filterMode));
+    return sortedItems.filter((item: EndUserGrievance) =>
+      evaluateSearchConditions(item, advancedSearch, filterMode),
+    );
   }, [sortedItems, advancedSearch, filterMode]);
 
   // Pagination
@@ -59,7 +104,9 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
 
   // Reset pagination on filter/sort changes
   useEffect(() => {
-    pagination.resetPage();
+    if (advancedSearch || filterMode || sortState) {
+      pagination.resetPage();
+    }
   }, [advancedSearch, filterMode, sortState, pagination.resetPage]);
 
   return (
@@ -69,7 +116,10 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
           <div className="flex-1 min-w-0 w-full lg:w-1/2">
             <AdvancedTableSearch
               fields={searchFields}
-              onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+              onSearch={(conds, mode) => {
+                setAdvancedSearch(conds);
+                setFilterMode(mode);
+              }}
               className="w-full"
             />
           </div>
@@ -89,7 +139,9 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
             No grievances found.
           </p>
           <p className="text-xs">
-            {advancedSearch.length > 0 ? "Try adjusting your search filters." : "You have not registered any grievances yet."}
+            {advancedSearch.length > 0
+              ? "Try adjusting your search filters."
+              : "You have not registered any grievances yet."}
           </p>
         </div>
       ) : (
@@ -98,13 +150,57 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
                 <tr>
-                  <SortableTh field="grievanceNumber" currentSort={sortState} onSort={handleSort} className="py-3.5 px-5">Grievance ID</SortableTh>
-                  <SortableTh field="title" currentSort={sortState} onSort={handleSort} className="py-3.5 px-4">Title</SortableTh>
-                  <SortableTh field="category" currentSort={sortState} onSort={handleSort} className="py-3.5 px-4">Category</SortableTh>
-                  <SortableTh field="priority" currentSort={sortState} onSort={handleSort} className="py-3.5 px-4">Priority</SortableTh>
-                  <SortableTh field="status" currentSort={sortState} onSort={handleSort} className="py-3.5 px-4">Status</SortableTh>
-                  <SortableTh field="createdAt" currentSort={sortState} onSort={handleSort} className="py-3.5 px-4 whitespace-nowrap">Submitted</SortableTh>
-                  <th className="py-3.5 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">Actions</th>
+                  <SortableTh
+                    field="grievanceNumber"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-5"
+                  >
+                    Grievance ID
+                  </SortableTh>
+                  <SortableTh
+                    field="title"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Title
+                  </SortableTh>
+                  <SortableTh
+                    field="category"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Category
+                  </SortableTh>
+                  <SortableTh
+                    field="priority"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Priority
+                  </SortableTh>
+                  <SortableTh
+                    field="status"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Status
+                  </SortableTh>
+                  <SortableTh
+                    field="createdAt"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4 whitespace-nowrap"
+                  >
+                    Submitted
+                  </SortableTh>
+                  <th className="py-3.5 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -145,8 +241,17 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                           {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
-                            onClick: () => router.push(`/end-user/grievances/${item.id}`)
-                          }
+                            onClick: () =>
+                              router.push(`/end-user/grievances/${item.id}`),
+                          },
+                          {
+                            label: "Track",
+                            icon: <Search className="h-4 w-4" />,
+                            onClick: () =>
+                              router.push(
+                                `/end-user/grievances/${item.id}?tab=tracking`,
+                              ),
+                          },
                         ]}
                       />
                     </td>
@@ -155,7 +260,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination Controls */}
           {pagination.totalCount > 0 && (
             <div className="shrink-0">

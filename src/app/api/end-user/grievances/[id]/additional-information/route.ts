@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
-import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -23,11 +23,16 @@ export async function POST(
     };
 
     const message = body.message?.trim();
-    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments) ? body.attachments : [];
+    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
+      ? body.attachments
+      : [];
 
     if (!message && incomingFiles.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Must provide a message or at least one document." },
+        {
+          success: false,
+          error: "Must provide a message or at least one document.",
+        },
         { status: 400 },
       );
     }
@@ -75,16 +80,37 @@ export async function POST(
 
     const user = await getCurrentUser();
     if (!user || user.roles?.role_name !== "END_USER") {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
     }
 
     if (user.user_id !== grievance.submitted_by) {
-      return NextResponse.json({ success: false, error: "Forbidden: Not your grievance" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Not your grievance" },
+        { status: 403 },
+      );
     }
 
-    const eligibleStatuses = ["PENDING", "SUBMITTED", "ROUTED", "ASSIGNED", "IN_PROGRESS", "WAITING_ON_USER", "WAITING_ON_EMPLOYEE", "REOPENED"];
+    const eligibleStatuses = [
+      "PENDING",
+      "SUBMITTED",
+      "ROUTED",
+      "ASSIGNED",
+      "IN_PROGRESS",
+      "WAITING_ON_USER",
+      "WAITING_ON_EMPLOYEE",
+      "REOPENED",
+    ];
     if (!eligibleStatuses.includes(grievance.status)) {
-      return NextResponse.json({ success: false, error: "Grievance is not eligible for additional information." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Grievance is not eligible for additional information.",
+        },
+        { status: 400 },
+      );
     }
 
     const check = await canEndUserSubmitCommunication(grievance.grievance_id);
@@ -101,7 +127,8 @@ export async function POST(
     }
 
     const targetGrievanceId = grievance.grievance_id;
-    const complainantName = `${grievance.users?.first_name} ${grievance.users?.last_name || ""}`.trim();
+    const complainantName =
+      `${grievance.users?.first_name} ${grievance.users?.last_name || ""}`.trim();
 
     await prisma.$transaction(async (tx) => {
       // 1. Save attachments
@@ -152,6 +179,16 @@ export async function POST(
         message: `${complainantName} has provided additional information/documents voluntarily.`,
       });
     }
+
+    // Confirm to complainant
+    await NotificationService.send({
+      userId: grievance.submitted_by,
+      grievanceId: targetGrievanceId,
+      type: "ADDITIONAL_INFO_SUBMITTED",
+      channel: "IN_APP",
+      title: `Information Submitted: ${grievance.grievance_number}`,
+      message: `Your additional information/documents for grievance ${grievance.grievance_number} were submitted successfully.`,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,9 +1,9 @@
 import { User } from "lucide-react";
+import { DashboardShell } from "@/components/dashboard/shell";
 import {
   EndUserPortal,
   type UserGrievanceItem,
 } from "@/components/end-user/end-user-dashboard";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -75,6 +75,8 @@ export default async function UserDashboardPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="Employee"
+      departmentName={user.departments?.department_name || "Employee"}
       title="End User Grievance Portal"
       subtitle="Corporate grievance registration & resolution tracking"
     >

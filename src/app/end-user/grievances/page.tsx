@@ -1,7 +1,7 @@
 import { DashboardShell } from "@/components/dashboard/shell";
+import { GrievanceList } from "@/components/end-user/grievance-list";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { GrievanceList } from "@/components/end-user/grievance-list";
 import type { EndUserGrievance } from "@/types/end-user";
 
 export default async function EndUserGrievancesPage() {
@@ -72,6 +72,8 @@ export default async function EndUserGrievancesPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="Employee"
+      departmentName={user.departments?.department_name || "General Public"}
       title="My Grievances"
       subtitle="Track all grievances you have submitted"
     >
