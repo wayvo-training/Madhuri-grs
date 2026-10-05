@@ -214,6 +214,10 @@ export default async function AdminDashboardPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Admin Control Center"
       subtitle="Executive system oversight, operational health & enterprise governance"
     >

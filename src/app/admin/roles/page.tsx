@@ -60,6 +60,10 @@ export default async function AdminRolesPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Roles & Security Permissions"
       subtitle="Role-based access matrix, security authorization levels & custom roles"
     >

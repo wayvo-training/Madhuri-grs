@@ -6,6 +6,8 @@ export default function AdminDashboardLoading() {
     <DashboardShell
       userRole="ADMIN"
       userName="Loading..."
+      designation="System Administrator"
+      departmentName="Central Administration"
       title="Admin Control Center"
       subtitle="Executive system oversight, operational health & enterprise governance"
     >

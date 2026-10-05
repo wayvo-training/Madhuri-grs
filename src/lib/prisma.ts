@@ -8,38 +8,45 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
+const POOL_VERSION = 2;
+
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
   pgPool?: Pool;
+  poolVersion?: number;
 };
 
 // Singleton connection pool across hot reloads and server route invocations
-export const pool =
-  globalForPrisma.pgPool ??
-  new Pool({
+if (!globalForPrisma.pgPool || globalForPrisma.poolVersion !== POOL_VERSION) {
+  if (globalForPrisma.pgPool) {
+    try {
+      globalForPrisma.pgPool.end();
+    } catch {
+      // ignore
+    }
+  }
+
+  const newPool = new Pool({
     connectionString,
-    max: 10,
+    max: 25,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 20000,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
   });
 
-pool.on("error", (err) => {
-  console.error("Unexpected error on idle pg client pool:", err);
-});
+  newPool.on("error", (err) => {
+    console.error("Unexpected error on pg client pool:", err);
+  });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.pgPool = pool;
-}
+  globalForPrisma.pgPool = newPool;
+  globalForPrisma.poolVersion = POOL_VERSION;
 
-const adapter = new PrismaPg(pool);
-
-// Re-use existing client instance to avoid connection exhaustion in Next.js
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+  const adapter = new PrismaPg(newPool);
+  globalForPrisma.prisma = new PrismaClient({
     adapter,
   });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
 }
+
+export const pool = globalForPrisma.pgPool as Pool;
+export const prisma = globalForPrisma.prisma as PrismaClient;

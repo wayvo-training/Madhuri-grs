@@ -1,9 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { ChevronDown, Search, X, Plus, Check } from "lucide-react";
+import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Popover } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -11,21 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
-import { Popover } from "@/components/ui/popover";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-} from "@/components/ui/command";
 
 export type SearchFieldType = "text" | "select" | "date" | "number";
 export type FilterMode = "AND" | "OR" | "NOT";
@@ -122,7 +122,9 @@ const ConditionPill = ({
 }) => {
   const fieldDef = fields.find((f) => f.id === condition.field);
   const ops = getOperators(fieldDef?.type || "text");
-  const noValueRequired = ["is_empty", "is_not_empty"].includes(condition.operator);
+  const noValueRequired = ["is_empty", "is_not_empty"].includes(
+    condition.operator,
+  );
 
   const renderValueControl = () => {
     if (noValueRequired) return null;
@@ -140,7 +142,11 @@ const ConditionPill = ({
             <span className="truncate flex-1 text-left font-medium">
               {selectedArray.length > 0
                 ? selectedArray
-                    .map((v) => fieldDef.options?.find((o) => o.value === v)?.label || v)
+                    .map(
+                      (v) =>
+                        fieldDef.options?.find((o) => o.value === v)?.label ||
+                        v,
+                    )
                     .join(", ")
                 : "Select value..."}
             </span>
@@ -168,7 +174,13 @@ const ConditionPill = ({
 
     return (
       <input
-        type={fieldDef?.type === "number" ? "number" : fieldDef?.type === "date" ? "date" : "text"}
+        type={
+          fieldDef?.type === "number"
+            ? "number"
+            : fieldDef?.type === "date"
+              ? "date"
+              : "text"
+        }
         className="h-full bg-transparent outline-none px-3 text-xs min-w-[120px] w-[120px] font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors"
         value={condition.value as string}
         onChange={(e) => onChange({ value: e.target.value })}
@@ -187,7 +199,10 @@ const ConditionPill = ({
         <Select
           value={condition.operator}
           onValueChange={(val) =>
-            onChange({ operator: val as string, value: fieldDef?.type === "select" ? [] : "" })
+            onChange({
+              operator: val as string,
+              value: fieldDef?.type === "select" ? [] : "",
+            })
           }
         >
           <SelectTrigger className="h-full border-0 shadow-none focus:ring-0 bg-transparent rounded-none px-3 w-auto min-w-[110px] text-xs font-medium hover:bg-slate-50">
@@ -208,6 +223,7 @@ const ConditionPill = ({
       <div className="flex items-center h-full">{renderValueControl()}</div>
 
       <button
+        type="button"
         onClick={onRemove}
         className="flex items-center justify-center h-full px-2.5 hover:bg-red-50 hover:text-red-600 border-l border-slate-200 text-slate-400 transition-colors"
       >
@@ -222,14 +238,19 @@ export function AdvancedTableSearch({
   onSearch,
   className = "",
 }: AdvancedTableSearchProps) {
-  const [conditions, setConditions] = useState<(SearchCondition & { internalId: string })[]>([]);
+  const [conditions, setConditions] = useState<
+    (SearchCondition & { internalId: string })[]
+  >([]);
   const [filterMode, setFilterMode] = useState<FilterMode>("AND");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [quickSearch, setQuickSearch] = useState("");
 
   const triggerApply = useCallback(
-    (currentConditions: (SearchCondition & { internalId: string })[], currentMode: FilterMode) => {
+    (
+      currentConditions: (SearchCondition & { internalId: string })[],
+      currentMode: FilterMode,
+    ) => {
       // Map conditions and apply the inversion hack for legacy table support
       const mapped = currentConditions.map((c) => {
         let val = c.value;
@@ -253,7 +274,7 @@ export function AdvancedTableSearch({
       });
       onSearch(mapped, currentMode);
     },
-    [fields, onSearch]
+    [fields, onSearch],
   );
 
   const addCondition = (fieldId: string) => {
@@ -274,9 +295,12 @@ export function AdvancedTableSearch({
     setPopoverOpen(false);
   };
 
-  const updateCondition = (internalId: string, updates: Partial<SearchCondition>) => {
+  const updateCondition = (
+    internalId: string,
+    updates: Partial<SearchCondition>,
+  ) => {
     const newConditions = conditions.map((c) =>
-      c.internalId === internalId ? { ...c, ...updates } : c
+      c.internalId === internalId ? { ...c, ...updates } : c,
     );
     setConditions(newConditions);
   };
@@ -303,7 +327,12 @@ export function AdvancedTableSearch({
 
   const handleQuickSearch = () => {
     if (!quickSearch.trim()) return;
-    const searchField = fields.find((f) => f.id === "search" || f.label.toLowerCase().includes("search")) || fields.find((f) => f.type === "text") || fields[0];
+    const searchField =
+      fields.find(
+        (f) => f.id === "search" || f.label.toLowerCase().includes("search"),
+      ) ||
+      fields.find((f) => f.type === "text") ||
+      fields[0];
     if (searchField) {
       const newConditions = [
         ...conditions,
@@ -321,40 +350,150 @@ export function AdvancedTableSearch({
     }
   };
 
+  const handleSelectFieldAndSearch = (fieldId: string) => {
+    setPopoverOpen(false);
+    const fieldDef = fields.find((f) => f.id === fieldId);
+    if (!fieldDef) return;
+
+    const trimmed = quickSearch.trim();
+    if (trimmed) {
+      const defaultOp =
+        fieldDef.type === "select"
+          ? "equals"
+          : getOperators(fieldDef.type)[0]?.value || "contains";
+
+      let filterValue: string | string[] = trimmed;
+      if (fieldDef.type === "select" && fieldDef.options) {
+        const matched = fieldDef.options.find(
+          (o) =>
+            o.label.toLowerCase() === trimmed.toLowerCase() ||
+            o.value.toLowerCase() === trimmed.toLowerCase(),
+        );
+        if (matched) {
+          filterValue = [matched.value];
+        }
+      }
+
+      const newConditions = [
+        ...conditions,
+        {
+          internalId: Math.random().toString(36).substring(2, 9),
+          field: fieldDef.id,
+          operator: defaultOp,
+          value: filterValue,
+        },
+      ];
+      setConditions(newConditions);
+      setIsSearching(true);
+      triggerApply(newConditions, filterMode);
+      setQuickSearch("");
+    } else {
+      addCondition(fieldId);
+      setIsSearching(true);
+    }
+  };
+
   if (!isSearching && conditions.length === 0) {
     return (
-      <div className={"relative w-full " + className}>
-        <Input
-          placeholder="Search..."
-          className="w-full h-9 pl-3 pr-16 rounded-lg border-slate-200 bg-white shadow-sm transition-colors"
-          value={quickSearch}
-          onChange={(e) => setQuickSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleQuickSearch();
-          }}
-        />
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={() => {
-              setIsSearching(true);
-              setPopoverOpen(true);
-            }}
-            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            title="Advanced Filters"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleQuickSearch}
-            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            title="Search"
-          >
-            <Search className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+      <Popover
+        isOpen={popoverOpen}
+        onOpenChange={setPopoverOpen}
+        align="left"
+        widthClass="w-64 p-0 shadow-lg"
+        className={"relative w-full " + className}
+        trigger={
+          <div className="relative w-full">
+            <Input
+              placeholder="Search..."
+              className="w-full h-9 pl-3 pr-9 rounded-lg border-slate-200 bg-white shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500 cursor-pointer"
+              value={quickSearch}
+              onClick={() => setPopoverOpen(true)}
+              onFocus={() => setPopoverOpen(true)}
+              onChange={(e) => {
+                setQuickSearch(e.target.value);
+                setPopoverOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setPopoverOpen(false);
+                  handleQuickSearch();
+                } else if (e.key === "Escape") {
+                  setPopoverOpen(false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setPopoverOpen((prev) => !prev)}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="Search"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+          </div>
+        }
+      >
+        <Command className="w-full">
+          <CommandInput
+            placeholder="Search for a field..."
+            className="text-xs"
+          />
+          <CommandList>
+            <CommandEmpty className="text-xs p-4 text-center">
+              No fields found.
+            </CommandEmpty>
+            <CommandGroup heading="Fields">
+              {fields.map((f) => (
+                <CommandItem
+                  key={f.id}
+                  onSelect={() => handleSelectFieldAndSearch(f.id)}
+                  className="text-xs cursor-pointer"
+                >
+                  {f.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandGroup heading="Nested filters">
+              <CommandItem
+                onSelect={() => handleModeChange("OR")}
+                className="text-xs cursor-pointer"
+              >
+                Any of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  OR
+                </span>
+                {filterMode === "OR" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+              <CommandItem
+                onSelect={() => handleModeChange("AND")}
+                className="text-xs cursor-pointer"
+              >
+                All of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  AND
+                </span>
+                {filterMode === "AND" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+              <CommandItem
+                onSelect={() => handleModeChange("NOT")}
+                className="text-xs cursor-pointer"
+              >
+                None of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  NOT
+                </span>
+                {filterMode === "NOT" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </Popover>
     );
   }
 
@@ -372,8 +511,8 @@ export function AdvancedTableSearch({
         />
       ))}
 
-      <Popover 
-        isOpen={popoverOpen} 
+      <Popover
+        isOpen={popoverOpen}
         onOpenChange={setPopoverOpen}
         align="left"
         widthClass="w-64 p-0 shadow-lg"
@@ -388,37 +527,66 @@ export function AdvancedTableSearch({
           </Button>
         }
       >
-          <Command className="w-full">
-            <CommandInput placeholder="Search for a field..." className="text-xs" />
-            <CommandList>
-              <CommandEmpty className="text-xs p-4 text-center">No fields found.</CommandEmpty>
-              <CommandGroup heading="Fields">
-                {fields.map((f) => (
-                  <CommandItem
-                    key={f.id}
-                    onSelect={() => addCondition(f.id)}
-                    className="text-xs cursor-pointer"
-                  >
-                    {f.label}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-              <CommandGroup heading="Nested filters">
-                <CommandItem onSelect={() => handleModeChange("OR")} className="text-xs cursor-pointer">
-                  Any of <span className="ml-auto text-[10px] font-bold text-slate-400">OR</span>
-                  {filterMode === "OR" && <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />}
+        <Command className="w-full">
+          <CommandInput
+            placeholder="Search for a field..."
+            className="text-xs"
+          />
+          <CommandList>
+            <CommandEmpty className="text-xs p-4 text-center">
+              No fields found.
+            </CommandEmpty>
+            <CommandGroup heading="Fields">
+              {fields.map((f) => (
+                <CommandItem
+                  key={f.id}
+                  onSelect={() => addCondition(f.id)}
+                  className="text-xs cursor-pointer"
+                >
+                  {f.label}
                 </CommandItem>
-                <CommandItem onSelect={() => handleModeChange("AND")} className="text-xs cursor-pointer">
-                  All of <span className="ml-auto text-[10px] font-bold text-slate-400">AND</span>
-                  {filterMode === "AND" && <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />}
-                </CommandItem>
-                <CommandItem onSelect={() => handleModeChange("NOT")} className="text-xs cursor-pointer">
-                  None of <span className="ml-auto text-[10px] font-bold text-slate-400">NOT</span>
-                  {filterMode === "NOT" && <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />}
-                </CommandItem>
-              </CommandGroup>
-            </CommandList>
-          </Command>
+              ))}
+            </CommandGroup>
+            <CommandGroup heading="Nested filters">
+              <CommandItem
+                onSelect={() => handleModeChange("OR")}
+                className="text-xs cursor-pointer"
+              >
+                Any of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  OR
+                </span>
+                {filterMode === "OR" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+              <CommandItem
+                onSelect={() => handleModeChange("AND")}
+                className="text-xs cursor-pointer"
+              >
+                All of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  AND
+                </span>
+                {filterMode === "AND" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+              <CommandItem
+                onSelect={() => handleModeChange("NOT")}
+                className="text-xs cursor-pointer"
+              >
+                None of{" "}
+                <span className="ml-auto text-[10px] font-bold text-slate-400">
+                  NOT
+                </span>
+                {filterMode === "NOT" && (
+                  <Check className="ml-2 w-3.5 h-3.5 text-teal-600" />
+                )}
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </Popover>
 
       <div className="ml-auto flex items-center gap-1.5">

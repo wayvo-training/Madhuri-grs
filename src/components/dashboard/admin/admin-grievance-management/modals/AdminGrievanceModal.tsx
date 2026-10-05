@@ -111,18 +111,18 @@ export function AdminGrievanceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl">
-        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-emerald-800">
+              <span className="font-mono text-sm font-bold text-emerald-800 dark:text-emerald-400">
                 {grievance.grievance_number}
               </span>
               <PriorityBadge priority={grievance.priority} />
               <StatusBadge status={grievance.status} />
             </div>
-            <h3 className="mt-2 text-lg font-bold text-slate-900">
+            <h3 className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
               {grievance.title}
             </h3>
           </div>
@@ -130,33 +130,35 @@ export function AdminGrievanceModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-5 space-y-4 text-xs text-slate-600">
+        <div className="mt-5 space-y-4 text-xs text-slate-600 dark:text-slate-300">
           <div>
-            <p className="font-semibold text-slate-700">Description</p>
-            <p className="mt-1 rounded-xl bg-slate-50 p-3.5 leading-relaxed text-slate-800">
+            <p className="font-semibold text-slate-700 dark:text-slate-300">
+              Description
+            </p>
+            <p className="mt-1 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-transparent dark:border-slate-700/50 p-3.5 leading-relaxed text-slate-800 dark:text-slate-200">
               {grievance.description}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-100 p-4">
+          <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-100 dark:border-slate-800 dark:bg-slate-800/30 p-4">
             <div>
-              <p className="text-slate-400">
+              <p className="text-slate-400 dark:text-slate-400">
                 {grievance.involvement_type === "EQUAL"
                   ? "Department (Joint Co-Lead)"
                   : "Primary Department"}
               </p>
               <div className="mt-0.5 flex items-center gap-2">
-                <p className="font-semibold text-slate-800">
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
                   {grievance.department_name || "Pending Manual Routing"}
                 </p>
                 {grievance.involvement_type === "EQUAL" && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-700/60">
                     EQUAL
                   </span>
                 )}
@@ -172,14 +174,15 @@ export function AdminGrievanceModal({
                 {grievance.supporting_departments &&
                 grievance.supporting_departments.length > 0 ? (
                   grievance.supporting_departments.map((sd) => {
-                    const isCoLead = sd.department_name.includes("Joint Co-Lead");
+                    const isCoLead =
+                      sd.department_name.includes("Joint Co-Lead");
                     return (
                       <span
                         key={sd.department_id}
                         className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
                           isCoLead
-                            ? "border-teal-200 bg-teal-50 text-teal-800 font-semibold"
-                            : "border-slate-200 bg-slate-50 text-slate-700"
+                            ? "border-teal-200 dark:border-teal-700/60 bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 font-semibold"
+                            : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                         }`}
                       >
                         {sd.department_name}
@@ -195,19 +198,19 @@ export function AdminGrievanceModal({
             </div>
             <div>
               <p className="text-slate-400">Category & Subcategory</p>
-              <p className="mt-0.5 font-semibold text-slate-800">
+              <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-200">
                 {grievance.category_name} &bull; {grievance.subcategory_name}
               </p>
             </div>
             <div>
               <p className="text-slate-400">Submitted By</p>
-              <p className="mt-0.5 font-semibold text-slate-800">
+              <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-200">
                 {grievance.submitted_by_name} ({grievance.submitted_by_email})
               </p>
             </div>
             <div>
               <p className="text-slate-400">Submission Date</p>
-              <p className="mt-0.5 font-semibold text-slate-800">
+              <p className="mt-0.5 font-semibold text-slate-800 dark:text-slate-200">
                 {new Date(grievance.created_at).toLocaleString()}
               </p>
             </div>
@@ -352,11 +355,11 @@ export function AdminGrievanceModal({
           )}
         </div>
 
-        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
           >
             Close
           </button>

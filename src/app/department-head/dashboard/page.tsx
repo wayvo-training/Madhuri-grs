@@ -50,6 +50,8 @@ export default async function DepartmentHeadDashboardPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="Department Head"
+      departmentName={finalDeptName}
       title="Department Head Portal"
       subtitle={`Operational queue, staff assignment & SLA oversight for ${finalDeptName}`}
     >

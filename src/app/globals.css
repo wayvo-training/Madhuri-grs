@@ -368,8 +368,6 @@
     color: #f8fafc;
   }
 
-
-
   .dark .bg-slate-100 {
     background-color: #111c2e;
   }
@@ -445,8 +443,6 @@
     border-color: #0f766e;
     box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
   }
-
-
 
   .dark td {
     border-color: #243449;
@@ -581,6 +577,60 @@
   .dark aside .hover\:text-slate-900:hover,
   .dark aside .hover\:text-teal-700:hover {
     color: #f8fafc;
+  }
+
+  /* Global Dark Mode Adaptation for Embedded Surfaces & Modals */
+  .dark .bg-slate-50:not([class*="dark:bg-"]),
+  .dark .bg-slate-50\/50:not([class*="dark:bg-"]),
+  .dark .bg-slate-50\/70:not([class*="dark:bg-"]),
+  .dark .bg-slate-50\/80:not([class*="dark:bg-"]) {
+    background-color: rgba(30, 41, 59, 0.5);
+  }
+
+  .dark .bg-slate-100:not([class*="dark:bg-"]),
+  .dark .bg-slate-100\/70:not([class*="dark:bg-"]),
+  .dark .bg-slate-100\/80:not([class*="dark:bg-"]) {
+    background-color: rgba(30, 41, 59, 0.7);
+  }
+
+  /* Modal Cards without dark:bg */
+  .dark .fixed.inset-0 .bg-white:not([class*="dark:bg-"]),
+  .dark [role="dialog"] .bg-white:not([class*="dark:bg-"]) {
+    background-color: #0f172a;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  /* Text Contrast Fallbacks within dark mode */
+  .dark .text-slate-900:not([class*="dark:text-"]) {
+    color: #f8fafc;
+  }
+  .dark .text-slate-800:not([class*="dark:text-"]) {
+    color: #f1f5f9;
+  }
+  .dark .text-slate-700:not([class*="dark:text-"]) {
+    color: #cbd5e1;
+  }
+  .dark .text-slate-600:not([class*="dark:text-"]) {
+    color: #94a3b8;
+  }
+
+  /* Modal Form Inputs / Selects without dark:bg */
+  .dark
+    .fixed.inset-0
+    input:not([type="checkbox"]):not([type="radio"]):not([class*="dark:bg-"]),
+  .dark .fixed.inset-0 select:not([class*="dark:bg-"]),
+  .dark .fixed.inset-0 textarea:not([class*="dark:bg-"]) {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+  }
+
+  /* Borders */
+  .dark .border-slate-100:not([class*="dark:border-"]),
+  .dark .border-slate-200:not([class*="dark:border-"]),
+  .dark .border-slate-200\/80:not([class*="dark:border-"]) {
+    border-color: rgba(51, 65, 85, 0.6);
   }
 
   /* Tabs */

@@ -66,6 +66,10 @@ export default async function AdminDepartmentsPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Department & Organization Management"
       subtitle="Enterprise divisions, workload distribution, and resolution mandates"
     >

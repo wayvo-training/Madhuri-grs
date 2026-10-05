@@ -120,10 +120,8 @@ export async function determineDepartmentRouting(
       departmentId: exactMatch.department_id,
       departmentName: exactMatch.departments.department_name,
       involvementType:
-        (exactMatch.involvement_type as
-          | "PRIMARY"
-          | "SUPPORTING"
-          | "EQUAL") || "PRIMARY",
+        (exactMatch.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+        "PRIMARY",
       supportingDepartments: suppNames,
       supportingDepartmentIds: suppIds,
       routingRuleId: exactMatch.routing_rule_id,
@@ -259,7 +257,46 @@ export async function autoRouteGrievance(
   tx?: Prisma.TransactionClient,
 ): Promise<RoutingCalculationResult | null> {
   const routing = await determineDepartmentRouting(input);
-  if (!routing) return null;
+  if (!routing) {
+    try {
+      const { NotificationService } = await import(
+        "@/lib/services/notification.service"
+      );
+      const client = tx || prisma;
+      const gId = BigInt(grievanceId);
+      const grievance = await client.grievances.findUnique({
+        where: { grievance_id: gId },
+        select: { grievance_id: true, grievance_number: true, title: true },
+      });
+
+      if (grievance) {
+        const admins = await client.users.findMany({
+          where: {
+            roles: { role_name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+            status: "ACTIVE",
+          },
+          select: { user_id: true },
+        });
+
+        for (const admin of admins) {
+          await NotificationService.send({
+            userId: admin.user_id,
+            grievanceId: grievance.grievance_id,
+            type: "ROUTING_EXCEPTION",
+            channel: "IN_APP",
+            title: `Manual Routing Required: ${grievance.grievance_number}`,
+            message: `Grievance ${grievance.grievance_number} (${grievance.title}) matched no automated routing rule and requires manual department assignment.`,
+          });
+        }
+      }
+    } catch (err) {
+      console.error(
+        "Non-fatal: Failed to send manual routing notification to admins:",
+        err,
+      );
+    }
+    return null;
+  }
 
   await populateGrievanceDepartments(grievanceId, routing, tx);
   return routing;

@@ -38,7 +38,13 @@ function getRelativeTime(dateStr: string) {
   return `${days}d ago`;
 }
 
-export function NotificationDrawer({ userId, userRole }: { userId?: string, userRole?: string }) {
+export function NotificationDrawer({
+  userId,
+  userRole,
+}: {
+  userId?: string;
+  userRole?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,14 +73,15 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
   // Fetch on mount and set up polling
   useEffect(() => {
     fetchNotifications();
-    
+
     // Poll every 30 seconds for new notifications
     const intervalId = setInterval(() => {
-      if (!isOpen) { // only poll if closed to avoid jitter while reading
+      if (!isOpen) {
+        // only poll if closed to avoid jitter while reading
         fetchNotifications();
       }
     }, 30000);
-    
+
     return () => clearInterval(intervalId);
   }, [fetchNotifications, isOpen]);
 
@@ -124,13 +131,28 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
     }
     if (notification.grievanceId) {
       if (userRole === "END_USER") {
-        if (notification.type === "ADDITIONAL_INFO_REQUESTED" || notification.title.toLowerCase().includes("additional info") || notification.title.toLowerCase().includes("action required")) {
+        if (
+          notification.type === "ADDITIONAL_INFO_REQUESTED" ||
+          notification.title.toLowerCase().includes("additional info") ||
+          notification.title.toLowerCase().includes("action required")
+        ) {
           router.push(`/end-user/messages/${notification.grievanceId}`);
         } else {
           router.push(`/end-user/grievances/${notification.grievanceId}`);
         }
       } else if (userRole === "STAFF") {
         router.push(`/staff/dashboard?grievance=${notification.grievanceId}`);
+      } else if (userRole === "ADMIN") {
+        if (
+          notification.type === "ROUTING_EXCEPTION" ||
+          notification.title.toLowerCase().includes("manual routing")
+        ) {
+          router.push(
+            `/admin/grievances?tab=EXCEPTIONS&id=${notification.grievanceId}`,
+          );
+        } else {
+          router.push(`/admin/grievances?id=${notification.grievanceId}`);
+        }
       } else {
         router.push(
           `/department-head/dashboard?grievance=${notification.grievanceId}`,
@@ -150,7 +172,10 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
 
   const getIcon = (type: string, title: string = "") => {
     const t = title.toLowerCase();
-    if (type.startsWith("KNOWLEDGE_ARTICLE") || t.includes("knowledge article")) {
+    if (
+      type.startsWith("KNOWLEDGE_ARTICLE") ||
+      t.includes("knowledge article")
+    ) {
       return <BookOpen className="h-4 w-4 text-[#0F766E]" />;
     }
     if (type === "SLA_BREACH" || t.includes("breach")) {
@@ -169,6 +194,15 @@ export function NotificationDrawer({ userId, userRole }: { userId?: string, user
     }
     if (type === "GRIEVANCE_UPDATE" || t.includes("internal note")) {
       return <Info className="h-4 w-4 text-blue-500" />;
+    }
+    if (
+      type === "ROUTING_EXCEPTION" ||
+      t.includes("manual routing") ||
+      t.includes("routing exception")
+    ) {
+      return (
+        <CircleAlert className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+      );
     }
     if (
       type === "ADDITIONAL_INFO_REQUESTED" ||

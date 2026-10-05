@@ -42,7 +42,7 @@ export function SortableTableHead({
   return (
     <TableHead
       className={cn(
-        "cursor-pointer select-none bg-transparent hover:bg-slate-100/70 transition-colors group",
+        "cursor-pointer select-none bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors duration-150 group",
         className,
       )}
       onClick={handleToggle}
@@ -52,11 +52,11 @@ export function SortableTableHead({
         <span>{children}</span>
         <span className="flex flex-col items-center justify-center shrink-0">
           {direction === "asc" ? (
-            <ArrowUp className="h-3.5 w-3.5 text-emerald-600 font-bold" />
+            <ArrowUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 font-bold" />
           ) : direction === "desc" ? (
-            <ArrowDown className="h-3.5 w-3.5 text-emerald-600 font-bold" />
+            <ArrowDown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 font-bold" />
           ) : (
-            <ArrowUpDown className="h-3 w-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-all duration-150" />
           )}
         </span>
       </div>
@@ -88,7 +88,7 @@ export function SortableTh({
   return (
     <th
       className={cn(
-        "cursor-pointer select-none bg-transparent hover:bg-slate-100/70 transition-colors group",
+        "cursor-pointer select-none bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors duration-150 group",
         className,
       )}
       onClick={handleToggle}
@@ -98,11 +98,11 @@ export function SortableTh({
         <span>{children}</span>
         <span className="flex flex-col items-center justify-center shrink-0">
           {direction === "asc" ? (
-            <ArrowUp className="h-3.5 w-3.5 text-emerald-600 font-bold" />
+            <ArrowUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 font-bold" />
           ) : direction === "desc" ? (
-            <ArrowDown className="h-3.5 w-3.5 text-emerald-600 font-bold" />
+            <ArrowDown className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 font-bold" />
           ) : (
-            <ArrowUpDown className="h-3 w-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-all duration-150" />
           )}
         </span>
       </div>

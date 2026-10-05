@@ -169,6 +169,10 @@ export default async function AdminGrievancesPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Grievance Central & Routing Exceptions"
       subtitle="Complete organizational ticket log, SLA tracking & manual assignment exceptions"
     >
@@ -187,7 +191,7 @@ export default async function AdminGrievancesPage() {
           closed: closedCount,
         }}
         departments={serializedDepartments}
-        categories={categoriesData.map(c => c.category_name)}
+        categories={categoriesData.map((c) => c.category_name)}
       />
     </DashboardShell>
   );

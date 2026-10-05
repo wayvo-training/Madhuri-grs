@@ -216,7 +216,7 @@ export async function POST(
         department_id: primaryDepartmentId,
         roles: { role_name: "DEPARTMENT_HEAD" },
         status: "ACTIVE",
-      }
+      },
     });
 
     if (primaryHead) {
@@ -226,7 +226,7 @@ export async function POST(
         type: "ASSIGNMENT",
         channel: "IN_APP",
         title: "New Case Assigned",
-        message: `Grievance ${grievance.grievance_number} has been routed to your department for review by Admin.`
+        message: `Grievance ${grievance.grievance_number} has been routed to your department for review by Admin.`,
       });
     }
 
@@ -234,6 +234,16 @@ export async function POST(
       validSupportingDepts.length > 0
         ? ` with supporting departments: ${validSupportingDepts.map((d) => d.department_name).join(", ")}`
         : "";
+
+    // Confirmation notification for the routing Admin
+    await NotificationService.send({
+      userId: user.user_id,
+      grievanceId: grievanceId,
+      type: "ASSIGNMENT",
+      channel: "IN_APP",
+      title: `Routing Confirmed: ${grievance.grievance_number}`,
+      message: `You successfully routed grievance ${grievance.grievance_number} to ${primaryDept.department_name}${suppSummaryMsg}.`,
+    });
 
     return NextResponse.json({
       success: true,

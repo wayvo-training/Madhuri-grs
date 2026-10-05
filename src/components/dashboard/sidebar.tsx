@@ -4,7 +4,10 @@ import { ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/ui/logo";
+import {
+  ROLE_NAVIGATION,
+  type UserRole,
+} from "@/components/dashboard/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,10 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  ROLE_NAVIGATION,
-  type UserRole,
-} from "@/components/dashboard/navigation";
+import { Logo } from "@/components/ui/logo";
 import {
   Sidebar,
   SidebarContent,
@@ -36,26 +36,105 @@ interface DashboardSidebarProps {
   userName: string;
   userEmail?: string;
   permissions?: string[];
+  designation?: string;
+  departmentName?: string;
 }
 
-const roleDisplayLabels: Record<UserRole, string> = {
-  ADMIN: "System Admin",
-  DEPARTMENT_HEAD: "Department Head",
-  STAFF: "Staff Member",
-  END_USER: "End User",
-};
+function getDefaultDesignation(role: UserRole): string {
+  switch (role) {
+    case "ADMIN":
+      return "System Administrator";
+    case "DEPARTMENT_HEAD":
+      return "Department Head";
+    case "STAFF":
+      return "Grievance Staff";
+    case "END_USER":
+      return "Employee";
+    default:
+      return "Staff";
+  }
+}
+
+function getDefaultDepartment(role: UserRole): string {
+  switch (role) {
+    case "ADMIN":
+      return "Central Administration";
+    case "DEPARTMENT_HEAD":
+      return "Department Queue";
+    case "STAFF":
+      return "Operations";
+    case "END_USER":
+      return "General Public";
+    default:
+      return "General";
+  }
+}
 
 export function DashboardSidebar({
   userRole,
   userName,
   userEmail,
   permissions = [],
+  designation,
+  departmentName,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [currentHash, setCurrentHash] = useState<string>("");
   const { isMobile, setOpenMobile } = useSidebar();
+
+  const [profileEmail, setProfileEmail] = useState<string | undefined>(
+    userEmail,
+  );
+  const [profileInfo, setProfileInfo] = useState<{
+    designation: string;
+    departmentName: string;
+  }>({
+    designation: designation || getDefaultDesignation(userRole),
+    departmentName: departmentName || getDefaultDepartment(userRole),
+  });
+
+  useEffect(() => {
+    if (userEmail) {
+      setProfileEmail(userEmail);
+    }
+  }, [userEmail]);
+
+  useEffect(() => {
+    setProfileInfo({
+      designation: designation || getDefaultDesignation(userRole),
+      departmentName: departmentName || getDefaultDepartment(userRole),
+    });
+
+    if (!designation || !departmentName || !userEmail) {
+      let isMounted = true;
+      fetch("/api/auth/me")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (isMounted && data?.success && data?.user) {
+            setProfileInfo({
+              designation:
+                designation ||
+                data.user.designation ||
+                getDefaultDesignation(userRole),
+              departmentName:
+                departmentName ||
+                data.user.departmentName ||
+                data.user.department_name ||
+                getDefaultDepartment(userRole),
+            });
+            if (!userEmail && data.user.email) {
+              setProfileEmail(data.user.email);
+            }
+          }
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [designation, departmentName, userEmail, userRole]);
 
   useEffect(() => {
     const updateHash = () => {
@@ -213,21 +292,31 @@ export function DashboardSidebar({
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-between hover:bg-sidebar-accent cursor-pointer"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-between hover:bg-sidebar-accent cursor-pointer h-auto min-h-[3.25rem] py-2 px-2.5 group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:size-8!"
                   />
                 }
               >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
-                      {userName.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
-                      <span className="font-semibold text-sm truncate text-sidebar-foreground">
-                        {userName}
-                      </span>
-                    </div>
+                <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
+                    {userName.charAt(0).toUpperCase()}
                   </div>
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-sidebar-foreground ml-auto" />
+                  <div className="flex flex-col gap-0.5 leading-tight overflow-hidden min-w-0 text-left group-data-[collapsible=icon]:hidden">
+                    <span className="font-semibold text-sm truncate text-sidebar-foreground">
+                      {userName}
+                    </span>
+                    {profileInfo.designation && (
+                      <span className="text-[11px] font-medium text-muted-foreground truncate">
+                        {profileInfo.designation}
+                      </span>
+                    )}
+                    {profileInfo.departmentName && (
+                      <span className="text-[10px] text-teal-600 dark:text-teal-400 font-medium truncate">
+                        {profileInfo.departmentName}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-sidebar-foreground ml-auto group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -235,14 +324,19 @@ export function DashboardSidebar({
                 align="end"
                 sideOffset={4}
               >
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none overflow-hidden">
+                <div className="flex items-center justify-start gap-2.5 p-2.5">
+                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col space-y-0.5 leading-tight overflow-hidden min-w-0">
                     {userName && (
-                      <p className="font-medium text-sm truncate">{userName}</p>
+                      <p className="font-semibold text-sm truncate text-sidebar-foreground">
+                        {userName}
+                      </p>
                     )}
-                    {userEmail && (
+                    {(userEmail || profileEmail) && (
                       <p className="truncate text-xs text-muted-foreground">
-                        {userEmail}
+                        {userEmail || profileEmail}
                       </p>
                     )}
                   </div>

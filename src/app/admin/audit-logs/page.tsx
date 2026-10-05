@@ -119,6 +119,10 @@ export default async function AdminAuditLogsPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Enterprise Audit Trail & Observability Logs"
       subtitle="Comprehensive ledger of user sessions, API calls, errors, navigation, and administrative governance"
     >

@@ -51,8 +51,9 @@ export class NotificationService {
    * Duplicate prevention: if an unread/pending notification of the exact same type and grievance exists, it will not insert a duplicate.
    */
   static async send(params: SendNotificationParams) {
-    // Basic deduplication check
-    if (params.grievanceId) {
+    // Deduplicate repetitive SLA alerts while unread/pending
+    const isSlaType = params.type.startsWith("SLA_");
+    if (params.grievanceId && isSlaType) {
       const existing = await prisma.notifications.findFirst({
         where: {
           user_id: params.userId,
@@ -61,7 +62,7 @@ export class NotificationService {
           status: "PENDING",
         },
       });
-      if (existing) return existing; // Skip duplicate
+      if (existing) return existing; // Skip duplicate SLA alert
     }
 
     return prisma.notifications.create({

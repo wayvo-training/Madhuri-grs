@@ -11,6 +11,8 @@ interface DashboardShellProps {
   userName: string;
   userEmail?: string;
   permissions?: string[];
+  designation?: string;
+  departmentName?: string;
   title: string;
   subtitle?: string;
   children: ReactNode;
@@ -24,6 +26,8 @@ export function DashboardShell({
   userName,
   userEmail,
   permissions = [],
+  designation,
+  departmentName,
   title,
   subtitle,
   children,
@@ -39,6 +43,8 @@ export function DashboardShell({
           userName={userName}
           userEmail={userEmail}
           permissions={permissions}
+          designation={designation}
+          departmentName={departmentName}
         />
         <SidebarInset className="flex flex-1 flex-col min-w-0 overflow-hidden bg-background">
           <DashboardHeader

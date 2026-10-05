@@ -114,13 +114,13 @@ export function buildStaffComplainantInquiryEmail({
     subject: `Update regarding your grievance ${grievance.ticketCode}: ${grievance.title}`,
     body: `Dear ${complainantName},
 
-I have been assigned as the investigating officer for your grievance (Ticket ID: ${grievance.ticketCode} - "${grievance.title}").
+I have been assigned as the investigating staff for your grievance (Ticket ID: ${grievance.ticketCode} - "${grievance.title}").
 
 To assist in resolving this matter, please feel free to reply with any additional documents, timeline details, or clarifications.
 
 Best regards,
 ${staffName}
-${staffDesignation || "Investigating Officer"}
+${staffDesignation || "Investigating Staff"}
 Department Grievance Redressal Team`,
   };
 }

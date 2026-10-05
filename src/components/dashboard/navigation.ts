@@ -7,12 +7,12 @@ import {
   CheckCircle2,
   FileText,
   LayoutDashboard,
+  MessageSquare,
   Search,
   ShieldCheck,
   Sliders,
   User,
   Users,
-  MessageSquare,
 } from "lucide-react";
 import type { ElementType } from "react";
 import type { PermissionCode } from "@/lib/permissions";
@@ -198,11 +198,6 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           href: "/end-user/grievances",
           icon: FileText,
         },
-        {
-          title: "Track Grievance",
-          href: "/end-user/track",
-          icon: Search,
-        }
       ],
     },
     {
@@ -212,8 +207,8 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Messages",
           href: "/end-user/messages",
           icon: MessageSquare,
-        }
-      ]
-    }
+        },
+      ],
+    },
   ],
 };
