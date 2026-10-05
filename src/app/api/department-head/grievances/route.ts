@@ -489,9 +489,12 @@ export async function GET(request: Request) {
           actionType:
             (iv.actionType as
               | "MONITOR"
+              | "REQUEST_STATUS_UPDATE"
               | "NOTIFY_STAFF"
               | "REASSIGN"
               | "CROSS_DEPT"
+              | "DIRECT_OVERSIGHT"
+              | "EXTEND_SLA"
               | "EXPEDITE"
               | "OVERRIDE"
               | "SLA_EXTENSION") || "REASSIGN",

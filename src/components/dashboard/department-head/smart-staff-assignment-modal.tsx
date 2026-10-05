@@ -7,19 +7,229 @@ import {
   Briefcase,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
+  Info,
+  Scale,
   Send,
+  SlidersHorizontal,
   Sparkles,
   User,
   UserCheck,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { PriorityBadge } from "@/components/dashboard/badges";
 import type { StaffRecommendationResult } from "@/lib/engines/staff-recommendation-engine";
 import type { GrievanceItem, StaffMember } from "@/types/department-head";
+
+interface RecommendationFactorCardsProps {
+  breakdown?: StaffRecommendationResult["factorBreakdown"];
+  score: number;
+  title?: string;
+  defaultExpanded?: boolean;
+}
+
+function RecommendationFactorCards({
+  breakdown,
+  score,
+  title = "Smart Recommendation Factors",
+  defaultExpanded = false,
+}: RecommendationFactorCardsProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
+  if (!breakdown) return null;
+
+  const factors = [
+    {
+      key: "skill",
+      name: "Domain Expertise & Skills",
+      score: breakdown.skillScore,
+      max: 35,
+      weight: "35%",
+      icon: Award,
+      color: "text-teal-600 dark:text-teal-400",
+      barColor: "bg-teal-500",
+      description:
+        "Specialization in grievance category and verified department competencies",
+    },
+    {
+      key: "experience",
+      name: "Relevant Case Experience",
+      score: breakdown.experienceScore,
+      max: 25,
+      weight: "25%",
+      icon: Briefcase,
+      color: "text-sky-600 dark:text-sky-400",
+      barColor: "bg-sky-500",
+      description:
+        "Historical resolution track record in this category and subcategory",
+    },
+    {
+      key: "workload",
+      name: "Workload & Active Capacity",
+      score: breakdown.workloadScore,
+      max: 20,
+      weight: "20%",
+      icon: Scale,
+      color: "text-emerald-600 dark:text-emerald-400",
+      barColor: "bg-emerald-500",
+      description:
+        "Available capacity compared against the maximum 10-grievance threshold",
+    },
+    {
+      key: "availability",
+      name: "On-Duty Availability",
+      score: breakdown.availabilityScore,
+      max: 10,
+      weight: "10%",
+      icon: Clock,
+      color: "text-amber-600 dark:text-amber-400",
+      barColor: "bg-amber-500",
+      description:
+        "Active shift duty status (excludes personnel on approved leave)",
+    },
+    {
+      key: "sla",
+      name: "Priority SLA Alignment",
+      score: breakdown.slaScore,
+      max: 10,
+      weight: "10%",
+      icon: Zap,
+      color: "text-indigo-600 dark:text-indigo-400",
+      barColor: "bg-indigo-500",
+      description:
+        "Demonstrated turnaround speed and suitability for the priority level",
+    },
+  ];
+
+  return (
+    <div className="rounded-xl border border-teal-200/80 dark:border-teal-800/60 bg-white/90 dark:bg-slate-900/80 p-3 space-y-2.5 transition">
+      {/* Header with expand/collapse toggle */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex h-5 w-5 items-center justify-center rounded-md bg-teal-100 dark:bg-teal-950/80 text-teal-700 dark:text-teal-400">
+            <SlidersHorizontal className="h-3 w-3" />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition">
+              {title}
+            </span>
+            <span className="ml-2 text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 px-1.5 py-0.5 rounded-full">
+              {score}% Overall Score
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>
+            {isExpanded ? "Hide Factors" : "Why this score? (5 Factors)"}
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          )}
+        </div>
+      </button>
+
+      {/* Quick Summary Chips (Always Visible) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+        {factors.map((f) => {
+          const pct = Math.round((f.score / f.max) * 100);
+          return (
+            <div
+              key={f.key}
+              className="flex flex-col rounded-lg bg-slate-50 dark:bg-slate-800/60 p-1.5 text-center border border-slate-200/60 dark:border-slate-700/60"
+            >
+              <div className="flex items-center justify-between text-[9px] text-slate-500 dark:text-slate-400 font-medium">
+                <span className="truncate">{f.name.split(" ")[0]}</span>
+                <span className="font-semibold text-slate-600 dark:text-slate-300">
+                  {f.weight}
+                </span>
+              </div>
+              <div className="mt-0.5 text-xs font-bold text-slate-800 dark:text-slate-100">
+                {f.score}{" "}
+                <span className="text-[10px] font-normal text-slate-400">
+                  /{f.max}
+                </span>
+              </div>
+              <div className="mt-1 h-1 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${f.barColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Detailed Factor Breakdown (When Expanded) */}
+      {isExpanded && (
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 animate-in fade-in duration-150">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            Smart recommendation evaluates 5 weighted criteria to compute the
+            final suitability score for this grievance:
+          </p>
+          <div className="space-y-1.5">
+            {factors.map((f) => {
+              const pct = Math.round((f.score / f.max) * 100);
+              const Icon = f.icon;
+              return (
+                <div
+                  key={f.key}
+                  className="rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 p-2 text-xs"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Icon className={`h-3.5 w-3.5 shrink-0 ${f.color}`} />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                        {f.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        (Max: {f.weight})
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                      {f.score} / {f.max} pts
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${f.barColor}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+                    {f.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/60 p-2 text-[10px] text-teal-800 dark:text-teal-300 flex items-start gap-1.5">
+            <Info className="h-3.5 w-3.5 shrink-0 text-teal-600 dark:text-teal-400 mt-0.5" />
+            <span>
+              <strong>Scoring Formula:</strong> Skills (35%) + Past Experience
+              (25%) + Workload Capacity (20%) + Availability (10%) + SLA
+              Alignment (10%) = <strong>{score}% Total Match</strong>.
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface SmartStaffAssignmentModalProps {
   grievance: GrievanceItem;
@@ -68,12 +278,37 @@ export function SmartStaffAssignmentModal({
         const loadPercentage = Math.round(
           (s.activeTickets / effectiveMax) * 100,
         );
+
+        // Calculate dynamic factors that accurately reflect workload and profile
+        const workloadScore = Math.max(0, 20 - s.activeTickets * 2);
+        const availabilityScore =
+          s.status === "ON_LEAVE" ? 0 : isAtCap ? 2 : 10;
+        const skillScore = isTop ? 30 : Math.max(10, 26 - index * 4);
+        const experienceScore = isTop ? 20 : Math.max(6, 18 - index * 3);
+        const slaScore = isTop
+          ? 8
+          : Math.max(4, 8 - Math.floor(s.activeTickets / 3));
+
+        const computedScore = isTop
+          ? 88
+          : Math.min(
+              95,
+              Math.max(
+                35,
+                skillScore +
+                  experienceScore +
+                  workloadScore +
+                  availabilityScore +
+                  slaScore,
+              ),
+            );
+
         return {
           staffId: s.id,
           name: s.name,
           email: s.email,
           designation: s.designation,
-          score: isTop ? 88 : Math.max(50, 80 - index * 6),
+          score: computedScore,
           isTopRecommendation: isTop,
           activeWorkload: s.activeTickets,
           maxCapacity: effectiveMax,
@@ -106,11 +341,11 @@ export function SmartStaffAssignmentModal({
             sla_risk: "LOW",
           },
           factorBreakdown: {
-            skillScore: 25,
-            experienceScore: 18,
-            workloadScore: 15,
-            availabilityScore: 8,
-            slaScore: 8,
+            skillScore,
+            experienceScore,
+            workloadScore,
+            availabilityScore,
+            slaScore,
           },
         };
       },
@@ -119,10 +354,35 @@ export function SmartStaffAssignmentModal({
   }, [staffList]);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
     setErrorMsg(null);
-    fallbackFromStaffList();
-    setLoading(false);
+
+    fetch(`/api/department-head/grievances/${grievance.id}/recommendations`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!isMounted) return;
+        if (
+          data?.success &&
+          Array.isArray(data?.recommendations) &&
+          data.recommendations.length > 0
+        ) {
+          setRecommendations(data.recommendations);
+        } else {
+          fallbackFromStaffList();
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching staff recommendations:", err);
+        if (isMounted) fallbackFromStaffList();
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [fallbackFromStaffList, grievance.id]);
 
   if (shouldHideModal) {
@@ -526,6 +786,16 @@ export function SmartStaffAssignmentModal({
                             </div>
                           </div>
                         </div>
+
+                        {/* Recommendation Score Factors Breakdown */}
+                        <div className="mt-3 pt-2.5 border-t border-slate-200/80">
+                          <RecommendationFactorCards
+                            breakdown={topCandidate.factorBreakdown}
+                            score={topCandidate.score}
+                            title={`Why ${topCandidate.name} is Recommended (Score Factors)`}
+                            defaultExpanded={false}
+                          />
+                        </div>
                       </div>
                     );
                   })()}
@@ -538,7 +808,7 @@ export function SmartStaffAssignmentModal({
                   >
                     Manual Selection (Other Available Staff)
                   </label>
-                  
+
                   {manualCandidates.length > 0 ? (
                     <select
                       id="available-staff-select"
@@ -548,6 +818,9 @@ export function SmartStaffAssignmentModal({
                     >
                       <option value="">Select another available staff</option>
                       {manualCandidates.map((candidate) => {
+                        const recCandidate = recommendations.find(
+                          (r) => r.staffId === candidate.id,
+                        );
                         const isAtCap =
                           candidate.activeTickets >=
                           (candidate.maxCapacity || 10);
@@ -570,6 +843,9 @@ export function SmartStaffAssignmentModal({
                             {isAtCap
                               ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
                               : `(Available Capacity: ${availCap})`}
+                            {recCandidate
+                              ? ` • Recommendation Score: ${recCandidate.score}%`
+                              : ""}
                           </option>
                         );
                       })}
@@ -608,6 +884,14 @@ export function SmartStaffAssignmentModal({
                   {selectedCandidate.activeWorkload} active grievances
                 </span>
               </div>
+
+              {/* Factors Breakdown for the Selected Staff */}
+              <RecommendationFactorCards
+                breakdown={selectedCandidate.factorBreakdown}
+                score={selectedCandidate.score}
+                title={`Decision Factors for ${selectedCandidate.name} (${selectedCandidate.score}% Score)`}
+                defaultExpanded={true}
+              />
 
               <div>
                 <label

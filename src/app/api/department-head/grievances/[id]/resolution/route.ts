@@ -17,7 +17,13 @@ export async function POST(
   try {
     const grievanceId = BigInt(id);
     const body = await request.json();
-    const { decision = "APPROVE", feedback = "", findings = "", actionTaken = "", outcome = "RESOLVED" } = body;
+    const {
+      decision = "APPROVE",
+      feedback = "",
+      findings = "",
+      actionTaken = "",
+      outcome = "RESOLVED",
+    } = body;
 
     const grievanceDept = await prisma.grievance_departments.findFirst({
       where: {
@@ -81,11 +87,13 @@ export async function POST(
           data: {
             grievance_id: grievanceId,
             submitted_by: user.user_id,
-            problem_summary: feedback || "Direct Resolution by Department Head after maximum reopens reached",
+            problem_summary:
+              feedback ||
+              "Direct Resolution by Department Head after maximum reopens reached",
             findings: findings || "Resolved directly by Department Head",
             action_taken: actionTaken || "Resolved directly by Department Head",
             outcome: outcome,
-          }
+          },
         });
       } else if (latestResolution) {
         // Standard Staff Resolution Review
@@ -154,7 +162,9 @@ export async function POST(
           data: {
             grievance_id: grievanceId,
             user_id: user.user_id,
-            action: isDirectResolution ? "RESOLUTION_SUBMITTED" : "ACCEPT_RESOLUTION",
+            action: isDirectResolution
+              ? "RESOLUTION_SUBMITTED"
+              : "ACCEPT_RESOLUTION",
             entity_type: "grievance",
             entity_id: grievanceId,
             new_value: {
@@ -219,21 +229,78 @@ export async function POST(
       }
     });
 
-    if (isDirectResolution && isApproved) {
-      const { NotificationService } = await import("@/lib/services/notification.service");
-      await NotificationService.send({
-        userId: grievance.submitted_by,
-        grievanceId: grievanceId,
-        type: "RESOLUTION_SUBMITTED",
-        title: `Resolution Submitted: ${grievance.grievance_number}`,
-        message: `Your grievance ${grievance.grievance_number} has been directly resolved by the Department Head. Please review it.`,
-      });
+    const { NotificationService } = await import(
+      "@/lib/services/notification.service"
+    );
+
+    if (isApproved) {
+      if (isDirectResolution) {
+        // Direct resolution by Department Head
+        await NotificationService.send({
+          userId: grievance.submitted_by,
+          grievanceId: grievanceId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `Resolution Submitted: ${grievance.grievance_number}`,
+          message: `Your grievance ${grievance.grievance_number} has been directly resolved by the Department Head. Please review it.`,
+        });
+        await NotificationService.send({
+          userId: user.user_id,
+          grievanceId: grievanceId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `Resolution Submitted: ${grievance.grievance_number}`,
+          message: `You successfully submitted a direct resolution for grievance ${grievance.grievance_number}.`,
+        });
+      } else {
+        // Standard Staff Resolution Approved by Department Head
+        await NotificationService.send({
+          userId: grievance.submitted_by,
+          grievanceId: grievanceId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `Resolution Approved: ${grievance.grievance_number}`,
+          message: `The resolution for your grievance ${grievance.grievance_number} has been approved by the Department Head and the case is closed.`,
+        });
+
+        if (
+          latestResolution?.submitted_by &&
+          latestResolution.submitted_by !== user.user_id
+        ) {
+          await NotificationService.send({
+            userId: latestResolution.submitted_by,
+            grievanceId: grievanceId,
+            type: "RESOLUTION_ACCEPTED",
+            title: `Resolution Approved: ${grievance.grievance_number}`,
+            message: `Your resolution for grievance ${grievance.grievance_number} was approved by the Department Head.`,
+          });
+        }
+
+        // Confirmation to Department Head
+        await NotificationService.send({
+          userId: user.user_id,
+          grievanceId: grievanceId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `Resolution Approved: ${grievance.grievance_number}`,
+          message: `You approved the resolution for grievance ${grievance.grievance_number}. The case is now closed.`,
+        });
+      }
+    } else {
+      // Resolution Returned to staff for clarification / rework
+      if (latestResolution?.submitted_by) {
+        await NotificationService.send({
+          userId: latestResolution.submitted_by,
+          grievanceId: grievanceId,
+          type: "REWORK_REQUIRED",
+          title: `Clarification Required: ${grievance.grievance_number}`,
+          message: `Department Head returned resolution for grievance ${grievance.grievance_number}. Feedback: "${feedback || "Additional verification required."}"`,
+        });
+      }
+
+      // Confirmation to Department Head
       await NotificationService.send({
         userId: user.user_id,
         grievanceId: grievanceId,
-        type: "RESOLUTION_SUBMITTED",
-        title: `Resolution Submitted: ${grievance.grievance_number}`,
-        message: `You successfully submitted a direct resolution for grievance ${grievance.grievance_number}.`,
+        type: "REWORK_REQUIRED",
+        title: `Resolution Returned: ${grievance.grievance_number}`,
+        message: `You returned the resolution for grievance ${grievance.grievance_number} to staff for clarification.`,
       });
     }
 

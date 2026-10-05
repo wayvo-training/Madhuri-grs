@@ -73,7 +73,9 @@ export async function POST(
     let grievanceDept = await prisma.grievance_departments.findFirst({
       where: {
         grievance_id: grievanceId,
-        department_id: staff.department_id ? BigInt(staff.department_id) : departmentId,
+        department_id: staff.department_id
+          ? BigInt(staff.department_id)
+          : departmentId,
       },
       include: { grievances: true },
     });
@@ -159,6 +161,22 @@ export async function POST(
           created_at: new Date(),
         },
       });
+
+      // Insert confirmation notification for the assigner (Department Head / Admin)
+      if (user.user_id !== targetStaffId) {
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: grievanceId,
+            notification_type: "ASSIGNMENT",
+            channel: "IN_APP",
+            title: `Assignment Confirmed: ${grievance.grievance_number}`,
+            message: `You assigned grievance ${grievance.grievance_number} (${grievance.title}) to ${staffName}.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+      }
 
       // Update grievance_departments status
       await tx.grievance_departments.update({

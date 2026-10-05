@@ -74,10 +74,7 @@ export interface GrievanceItem {
   identifiedBottleneck?: string;
   hodIntervention?: {
     actionType:
-      | "MONITOR"
-      | "NOTIFY_STAFF"
-      | "REASSIGN"
-      | "CROSS_DEPT"
+      | EscalationInterventionType
       | "EXPEDITE"
       | "OVERRIDE"
       | "SLA_EXTENSION";
@@ -140,9 +137,12 @@ export type EscalationBottleneck =
 
 export type EscalationInterventionType =
   | "MONITOR"
+  | "REQUEST_STATUS_UPDATE"
   | "NOTIFY_STAFF"
+  | "CROSS_DEPT"
   | "REASSIGN"
-  | "CROSS_DEPT";
+  | "DIRECT_OVERSIGHT"
+  | "EXTEND_SLA";
 
 export type DepartmentHeadTab =
   | "ALL"

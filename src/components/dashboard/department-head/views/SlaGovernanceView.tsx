@@ -15,21 +15,21 @@ import { useEffect, useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
 import {
-  AdvancedTableSearch,
-  type SearchCondition,
-  type SearchFieldDef,
-} from "@/components/ui/advanced-table-search";
-import { evaluateSearchConditions } from "@/lib/search-evaluator";
-import {
   canHeadProposeKnowledge,
   requiresHeadResolutionReview,
 } from "@/lib/department-head/filters";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -72,11 +72,15 @@ export function SlaGovernanceView({
     direction: null,
   });
 
-  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedConditions, setAdvancedConditions] = useState<
+    SearchCondition[]
+  >([]);
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   useEffect(() => {
-    setCurrentPage(1);
+    if (advancedConditions || advancedMode) {
+      setCurrentPage(1);
+    }
   }, [advancedConditions, advancedMode]);
 
   const handleSort = (field: string, direction: "asc" | "desc" | null) => {
@@ -88,7 +92,9 @@ export function SlaGovernanceView({
     grievances.forEach((g) => {
       if (g.category) set.add(g.category);
     });
-    return Array.from(set).sort().map((c) => ({ label: c, value: c }));
+    return Array.from(set)
+      .sort()
+      .map((c) => ({ label: c, value: c }));
   }, [grievances]);
 
   const subcategoryOptions = useMemo(() => {
@@ -96,66 +102,71 @@ export function SlaGovernanceView({
     grievances.forEach((g) => {
       if (g.subcategory) set.add(g.subcategory);
     });
-    return Array.from(set).sort().map((c) => ({ label: c, value: c }));
+    return Array.from(set)
+      .sort()
+      .map((c) => ({ label: c, value: c }));
   }, [grievances]);
 
-  const filterFields: SearchFieldDef[] = useMemo(() => [
-    { id: "ticketCode", label: "Grievance ID", type: "text" },
-    {
-      id: "category",
-      label: "Category",
-      type: "select",
-      options: categoryOptions,
-    },
-    {
-      id: "subCategory",
-      label: "Sub Category",
-      type: "select",
-      options: subcategoryOptions,
-    },
-    {
-      id: "sla",
-      label: "SLA Status",
-      type: "select",
-      options: [
-        { label: "On Track", value: "ON_TRACK" },
-        { label: "At Risk", value: "AT_RISK" },
-        { label: "Breached", value: "BREACHED" },
-      ],
-    },
-    {
-      id: "escalationStage",
-      label: "Escalation",
-      type: "select",
-      options: [
-        { label: "SLA Threshold Reached", value: "SLA_THRESHOLD_REACHED" },
-        { label: "Grievance Escalated", value: "GRIEVANCE_ESCALATED" },
-        { label: "HOD Notified", value: "HOD_NOTIFIED" },
-        { label: "Under Review", value: "UNDER_REVIEW" },
-        { label: "Bottleneck Identified", value: "BOTTLENECK_IDENTIFIED" },
-        { label: "Intervention Taken", value: "INTERVENTION_TAKEN" },
-        { label: "Audit Logged", value: "AUDIT_LOGGED" },
-        { label: "Staff Notified", value: "STAFF_NOTIFIED" },
-        { label: "In Progress", value: "IN_PROGRESS" },
-        { label: "Resolution Submitted", value: "RESOLUTION_SUBMITTED" },
-        { label: "Escalation Cleared", value: "ESCALATION_CLEARED" }
-      ],
-    },
-    { id: "assignedStaffName", label: "Assigned Staff", type: "text" },
-    {
-      id: "status",
-      label: "Status",
-      type: "select",
-      options: [
-        { label: "Escalated", value: "ESCALATED" },
-        { label: "Under Review", value: "UNDER_REVIEW" },
-        { label: "In Progress", value: "IN_PROGRESS" },
-        { label: "Resolved", value: "RESOLVED" },
-        { label: "Closed", value: "CLOSED" },
-      ],
-    },
-    { id: "search", label: "Global Search", type: "text" }
-  ], [categoryOptions, subcategoryOptions]);
+  const filterFields: SearchFieldDef[] = useMemo(
+    () => [
+      { id: "ticketCode", label: "Grievance ID", type: "text" },
+      {
+        id: "category",
+        label: "Category",
+        type: "select",
+        options: categoryOptions,
+      },
+      {
+        id: "subCategory",
+        label: "Sub Category",
+        type: "select",
+        options: subcategoryOptions,
+      },
+      {
+        id: "sla",
+        label: "SLA Status",
+        type: "select",
+        options: [
+          { label: "On Track", value: "ON_TRACK" },
+          { label: "At Risk", value: "AT_RISK" },
+          { label: "Breached", value: "BREACHED" },
+        ],
+      },
+      {
+        id: "escalationStage",
+        label: "Escalation",
+        type: "select",
+        options: [
+          { label: "SLA Threshold Reached", value: "SLA_THRESHOLD_REACHED" },
+          { label: "Grievance Escalated", value: "GRIEVANCE_ESCALATED" },
+          { label: "HOD Notified", value: "HOD_NOTIFIED" },
+          { label: "Under Review", value: "UNDER_REVIEW" },
+          { label: "Bottleneck Identified", value: "BOTTLENECK_IDENTIFIED" },
+          { label: "Intervention Taken", value: "INTERVENTION_TAKEN" },
+          { label: "Audit Logged", value: "AUDIT_LOGGED" },
+          { label: "Staff Notified", value: "STAFF_NOTIFIED" },
+          { label: "In Progress", value: "IN_PROGRESS" },
+          { label: "Resolution Submitted", value: "RESOLUTION_SUBMITTED" },
+          { label: "Escalation Cleared", value: "ESCALATION_CLEARED" },
+        ],
+      },
+      { id: "assignedStaffName", label: "Assigned Staff", type: "text" },
+      {
+        id: "status",
+        label: "Status",
+        type: "select",
+        options: [
+          { label: "Escalated", value: "ESCALATED" },
+          { label: "Under Review", value: "UNDER_REVIEW" },
+          { label: "In Progress", value: "IN_PROGRESS" },
+          { label: "Resolved", value: "RESOLVED" },
+          { label: "Closed", value: "CLOSED" },
+        ],
+      },
+      { id: "search", label: "Global Search", type: "text" },
+    ],
+    [categoryOptions, subcategoryOptions],
+  );
 
   const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
     setAdvancedConditions(conditions);
@@ -164,7 +175,7 @@ export function SlaGovernanceView({
 
   const filteredList = useMemo(() => {
     return escalatedList.filter((g) =>
-      evaluateSearchConditions(g, advancedConditions, advancedMode)
+      evaluateSearchConditions(g, advancedConditions, advancedMode),
     );
   }, [escalatedList, advancedConditions, advancedMode]);
 
@@ -172,11 +183,10 @@ export function SlaGovernanceView({
     if (!sortState.field || !sortState.direction) return filteredList;
 
     return [...filteredList].sort((a, b) => {
-      let valA: any = a[sortState.field as keyof GrievanceItem] || "";
-      let valB: any = b[sortState.field as keyof GrievanceItem] || "";
-
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
+      const rawA = a[sortState.field as keyof GrievanceItem] ?? "";
+      const rawB = b[sortState.field as keyof GrievanceItem] ?? "";
+      const valA = typeof rawA === "string" ? rawA.toLowerCase() : rawA;
+      const valB = typeof rawB === "string" ? rawB.toLowerCase() : rawB;
 
       if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
@@ -450,17 +460,6 @@ export function SlaGovernanceView({
                               icon: <Eye className="h-3.5 w-3.5" />,
                               onClick: () => onInspect(item, "progress"),
                             },
-                            ...((needsReview || isEscalated) &&
-                            item.isPrimaryDepartment !== false
-                              ? [
-                                  {
-                                    label: "Submit Resolution",
-                                    icon: <FileCheck className="h-3.5 w-3.5" />,
-                                    variant: "default" as const,
-                                    onClick: () => onReviewResolution(item),
-                                  },
-                                ]
-                              : []),
                             ...(isEscalated
                               ? [
                                   {
@@ -472,43 +471,60 @@ export function SlaGovernanceView({
                                     onClick: () => onIntervene(item),
                                   },
                                 ]
-                              : []),
-                            ...(!item.hasProposedKb && canHeadProposeKnowledge(item)
-                              ? [
-                                  {
-                                    label: "Propose KB Article",
-                                    icon: (
-                                      <BookOpen className="h-3.5 w-3.5" />
-                                    ),
-                                    variant: "default" as const,
-                                    onClick: () => onProposeKb?.(item),
-                                  },
-                                ]
-                              : item.assignedStaffName || item.assignedStaffId
-                                ? [
-                                    {
-                                      label: "Change Assignment",
-                                      icon: (
-                                        <UserCheck className="h-3.5 w-3.5" />
-                                      ),
-                                      variant: "default" as const,
-                                      onClick: () =>
-                                        onAssign(
-                                          item,
-                                          item.assignedStaffId || "",
-                                        ),
-                                    },
-                                  ]
-                                : [
-                                    {
-                                      label: "Assign",
-                                      icon: (
-                                        <UserPlus className="h-3.5 w-3.5" />
-                                      ),
-                                      variant: "default" as const,
-                                      onClick: () => onAssign(item),
-                                    },
-                                  ]),
+                              : [
+                                  ...(needsReview &&
+                                  item.isPrimaryDepartment !== false
+                                    ? [
+                                        {
+                                          label: "Submit Resolution",
+                                          icon: (
+                                            <FileCheck className="h-3.5 w-3.5" />
+                                          ),
+                                          variant: "default" as const,
+                                          onClick: () =>
+                                            onReviewResolution(item),
+                                        },
+                                      ]
+                                    : []),
+                                  ...(!item.hasProposedKb &&
+                                  canHeadProposeKnowledge(item)
+                                    ? [
+                                        {
+                                          label: "Propose KB Article",
+                                          icon: (
+                                            <BookOpen className="h-3.5 w-3.5" />
+                                          ),
+                                          variant: "default" as const,
+                                          onClick: () => onProposeKb?.(item),
+                                        },
+                                      ]
+                                    : item.assignedStaffName ||
+                                        item.assignedStaffId
+                                      ? [
+                                          {
+                                            label: "Change Assignment",
+                                            icon: (
+                                              <UserCheck className="h-3.5 w-3.5" />
+                                            ),
+                                            variant: "default" as const,
+                                            onClick: () =>
+                                              onAssign(
+                                                item,
+                                                item.assignedStaffId || "",
+                                              ),
+                                          },
+                                        ]
+                                      : [
+                                          {
+                                            label: "Assign",
+                                            icon: (
+                                              <UserPlus className="h-3.5 w-3.5" />
+                                            ),
+                                            variant: "default" as const,
+                                            onClick: () => onAssign(item),
+                                          },
+                                        ]),
+                                ]),
                           ]}
                         />
                       </td>

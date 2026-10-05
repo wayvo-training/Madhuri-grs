@@ -10,6 +10,7 @@ import {
 } from "react";
 import type {
   EscalationAuditRecord,
+  EscalationInterventionType,
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
@@ -83,14 +84,10 @@ interface DepartmentHeadState {
       | "COMPLEX_INVESTIGATION"
       | "ADMIN_DELAY",
   ) => void;
-  escalationInterventionType:
-    | "MONITOR"
-    | "NOTIFY_STAFF"
-    | "REASSIGN"
-    | "CROSS_DEPT";
-  setEscalationInterventionType: (
-    v: "MONITOR" | "NOTIFY_STAFF" | "REASSIGN" | "CROSS_DEPT",
-  ) => void;
+  escalationInterventionType: EscalationInterventionType;
+  setEscalationInterventionType: (v: EscalationInterventionType) => void;
+  escalationExtensionHours: number;
+  setEscalationExtensionHours: (v: number) => void;
   escalationTargetStaffId: string;
   setEscalationTargetStaffId: (v: string) => void;
   escalationTargetDept: string;
@@ -234,9 +231,10 @@ export function DepartmentHeadProvider({
     | "COMPLEX_INVESTIGATION"
     | "ADMIN_DELAY"
   >("STAFF_CAPACITY");
-  const [escalationInterventionType, setEscalationInterventionType] = useState<
-    "MONITOR" | "NOTIFY_STAFF" | "REASSIGN" | "CROSS_DEPT"
-  >("MONITOR");
+  const [escalationInterventionType, setEscalationInterventionType] =
+    useState<EscalationInterventionType>("MONITOR");
+  const [escalationExtensionHours, setEscalationExtensionHours] =
+    useState<number>(24);
   const [escalationTargetStaffId, setEscalationTargetStaffId] = useState("");
   const [escalationTargetDept, setEscalationTargetDept] =
     useState("Finance & Accounts");
@@ -397,6 +395,8 @@ export function DepartmentHeadProvider({
     setEscalationBottleneck,
     escalationInterventionType,
     setEscalationInterventionType,
+    escalationExtensionHours,
+    setEscalationExtensionHours,
     escalationTargetStaffId,
     setEscalationTargetStaffId,
     escalationTargetDept,

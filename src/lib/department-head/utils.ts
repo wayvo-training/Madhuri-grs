@@ -67,7 +67,7 @@ export function formatAuditActionTitle(action: string): string {
     return "Grievance Submitted";
   }
   if (act.includes("ASSIGN")) {
-    return "Assigned to Investigating Officer";
+    return "Assigned to Investigating Staff";
   }
   if (act.includes("SUBMIT_RESOLUTION")) {
     return "Resolution Findings Submitted";
@@ -135,7 +135,7 @@ export function formatAuditLogContent(
       }
 
       if (act.includes("ASSIGN") || parsed.staff_id) {
-        return "Assigned to designated department officer for inquiry and resolution.";
+        return "Assigned to designated department staff for inquiry and resolution.";
       }
 
       if (act.includes("RESOLUTION") && parsed.decision) {

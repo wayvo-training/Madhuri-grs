@@ -355,6 +355,15 @@ export async function POST(
       }
     }
 
+    // Confirm to the author (Department Head / Staff) that their note/reply was posted
+    await NotificationService.send({
+      userId,
+      grievanceId,
+      type: "HEAD_INTERNAL_NOTE",
+      title: parentId ? "Discussion Reply Logged" : "Internal Note Logged",
+      message: `You added an internal ${parentId ? "reply" : "note"} to grievance ${grievance?.grievance_number || id}.`,
+    });
+
     return NextResponse.json({
       success: true,
       message: `Added internal ${parentId ? "reply" : "note"} to ${

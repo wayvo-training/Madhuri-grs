@@ -223,6 +223,20 @@ export async function POST(
           },
         });
 
+        // Insert confirmation notification for Department Head
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: assign.grievance_id,
+            notification_type: "REASSIGNMENT",
+            channel: "IN_APP",
+            title: `Case Reassigned: ${assign.grievances.grievance_number}`,
+            message: `You reassigned Grievance ${assign.grievances.grievance_number} from ${fromName} to ${toName}.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+
         // Record audit log for each grievance
         await tx.audit_logs.create({
           data: {

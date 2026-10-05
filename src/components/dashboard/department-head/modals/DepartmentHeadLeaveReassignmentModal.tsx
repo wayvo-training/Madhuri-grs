@@ -46,7 +46,7 @@ export function DepartmentHeadLeaveReassignmentModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-900">
-                Officer Has Active Grievances — Reassignment Recommended
+                Staff Has Active Grievances — Reassignment Recommended
               </h3>
               <p className="text-xs font-normal text-slate-500">
                 <span className="font-semibold text-slate-700">
@@ -75,10 +75,10 @@ export function DepartmentHeadLeaveReassignmentModal({
               <span>SLA Protection Advisory</span>
             </div>
             <p className="font-normal text-slate-700 leading-relaxed">
-              Marking this officer on leave will freeze their availability. To
-              prevent active tickets from stalling or breaching resolution SLAs,
-              it is recommended to bulk-transfer these grievances to another
-              available officer.
+              Marking this staff member on leave will freeze their availability.
+              To prevent active grievances from stalling or breaching resolution
+              SLAs, it is recommended to bulk-transfer these grievances to
+              another available staff member.
             </p>
           </div>
 
@@ -147,7 +147,7 @@ export function DepartmentHeadLeaveReassignmentModal({
               onChange={(e) => onTargetStaffIdChange(e.target.value)}
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-600 focus:outline-hidden"
             >
-              <option value="">-- Choose Replacement Officer --</option>
+              <option value="">-- Choose Replacement Staff --</option>
               {staffList
                 .filter(
                   (candidate) =>

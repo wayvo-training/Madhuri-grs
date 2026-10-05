@@ -113,8 +113,8 @@ export function useStaffActions({
             id: `aud-${Date.now()}-${g.id}`,
             timestamp: "Just now",
             actor: `${currentHodName} (Department Head)`,
-            action: "Reassigned due to Officer Leave",
-            details: `Reassigned from ${leavingStaff.name} to ${targetStaff.name}. Reason: Officer marked On Leave. Directive: "${note || "Transferred to maintain SLA turnaround during officer leave."}"`,
+            action: "Reassigned due to Staff Leave",
+            details: `Reassigned from ${leavingStaff.name} to ${targetStaff.name}. Reason: Staff marked On Leave. Directive: "${note || "Transferred to maintain SLA turnaround during staff leave."}"`,
             stage: g.status,
           };
 
@@ -123,7 +123,7 @@ export function useStaffActions({
             author: `${currentHodName} (Department Head)`,
             role: "Department Head",
             timestamp: "Just now",
-            note: `Transferred to ${targetStaff.name} due to officer leave. Directive: "${note || "Transferred to maintain SLA turnaround during officer leave."}"`,
+            note: `Transferred to ${targetStaff.name} due to staff leave. Directive: "${note || "Transferred to maintain SLA turnaround during staff leave."}"`,
           };
 
           return {
@@ -176,7 +176,7 @@ export function useStaffActions({
             targetStaffId: targetStaff.id,
             note:
               note ||
-              "Transferred to maintain SLA turnaround during officer leave.",
+              "Transferred to maintain SLA turnaround during staff leave.",
           }),
         });
         await loadData(undefined, true);
@@ -210,7 +210,7 @@ export function useStaffActions({
           timestamp: "Just now",
           actor: "Staff Availability Engine",
           action: `${leavingStaff.name} Marked On Leave`,
-          details: `Officer marked on leave. Retained ${leavingStaff.activeTickets} ticket assignments in their queue.`,
+          details: `Staff member marked on leave. Retained ${leavingStaff.activeTickets} ticket assignments in their queue.`,
           stage: "ON_LEAVE",
         },
         ...prev,

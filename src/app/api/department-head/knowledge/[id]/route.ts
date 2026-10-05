@@ -240,6 +240,25 @@ export async function PATCH(
           : `Your Knowledge Article proposal "${existingArticle.title}" has been rejected. Reason: ${rejectionReason?.trim()}`,
     });
 
+    // Confirm to the Department Head / reviewer
+    if (hodId !== existingArticle.created_by) {
+      await NotificationService.send({
+        userId: hodId,
+        type:
+          action === "PUBLISH"
+            ? "KNOWLEDGE_ARTICLE_PUBLISHED"
+            : "KNOWLEDGE_ARTICLE_REJECTED",
+        title:
+          action === "PUBLISH"
+            ? `Knowledge Article Published: ${existingArticle.title}`
+            : `Knowledge Article Rejected: ${existingArticle.title}`,
+        message:
+          action === "PUBLISH"
+            ? `You approved and published Knowledge Article "${existingArticle.title}".`
+            : `You rejected Knowledge Article proposal "${existingArticle.title}".`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message:

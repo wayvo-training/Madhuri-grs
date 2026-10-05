@@ -87,6 +87,7 @@ export function useGrievanceActions({
       targetStaffId,
       targetDept,
       note,
+      extensionHours = 24,
     }: {
       grievance: GrievanceItem;
       bottleneck: EscalationBottleneck;
@@ -94,6 +95,7 @@ export function useGrievanceActions({
       targetStaffId?: string;
       targetDept: string;
       note: string;
+      extensionHours?: number;
     }) => {
       const targetStaff = targetStaffId
         ? staffList.find((s) => s.id === targetStaffId)
@@ -126,9 +128,12 @@ export function useGrievanceActions({
 
       const actionLabels: Record<string, string> = {
         MONITOR: "Continued Monitoring (SLA Risk Acknowledged by HOD)",
+        REQUEST_STATUS_UPDATE: `Immediate Status Update Requested from ${targetStaffName}`,
         NOTIFY_STAFF: `Direct Operational Nudge Dispatched to ${targetStaffName}`,
-        REASSIGN: `Reassigned to ${targetStaffName}`,
         CROSS_DEPT: `Enlisted Supporting Department (${targetDept})`,
+        REASSIGN: `Reassigned to ${targetStaffName}`,
+        DIRECT_OVERSIGHT: `Direct Department Head Oversight Assumed by ${currentHodName}`,
+        EXTEND_SLA: `Resolution SLA Deadline Extended (+${extensionHours}h)`,
       };
 
       const chosenBottleneck = bottleneckLabels[bottleneck] || bottleneck;
@@ -206,6 +211,7 @@ export function useGrievanceActions({
               targetStaffId,
               targetDeptName: targetDept,
               note,
+              extensionHours,
             }),
           },
         );

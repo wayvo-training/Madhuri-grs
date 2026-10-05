@@ -14,7 +14,7 @@ import {
   UserCheck,
   UserPlus,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
@@ -23,8 +23,6 @@ import {
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
-import { evaluateSearchConditions } from "@/lib/search-evaluator";
-import { canHeadProposeKnowledge } from "@/lib/department-head/filters";
 import {
   SortableTableHead,
   type SortState,
@@ -37,6 +35,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { canHeadProposeKnowledge } from "@/lib/department-head/filters";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type {
   CaseDrawerTab,
   DepartmentHeadTab,
@@ -112,9 +112,10 @@ export function QueueView({
   onReviewResolution,
   onProposeKb,
 }: QueueViewProps) {
-
   // Local Advanced Search state
-  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedConditions, setAdvancedConditions] = useState<
+    SearchCondition[]
+  >([]);
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   // Pagination state
@@ -138,12 +139,13 @@ export function QueueView({
 
   const localFilteredGrievances = useMemo(() => {
     return grievances.filter((g) =>
-      evaluateSearchConditions(g, advancedConditions, advancedMode)
+      evaluateSearchConditions(g, advancedConditions, advancedMode),
     );
   }, [grievances, advancedConditions, advancedMode]);
 
   const sortedGrievances = useMemo(() => {
-    if (!sortState.field || !sortState.direction) return localFilteredGrievances;
+    if (!sortState.field || !sortState.direction)
+      return localFilteredGrievances;
 
     return [...localFilteredGrievances].sort((a, b) => {
       let valA: any = a[sortState.field as keyof GrievanceItem] || "";
@@ -162,7 +164,6 @@ export function QueueView({
     const start = (currentPage - 1) * pageSize;
     return sortedGrievances.slice(start, start + pageSize);
   }, [sortedGrievances, currentPage, pageSize]);
-
 
   const departmentOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -353,7 +354,6 @@ export function QueueView({
       grievances.filter((g) => ["CLOSED", "RESOLVED"].includes(g.status))
         .length,
   };
-
 
   return (
     <div className="rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
@@ -610,23 +610,6 @@ export function QueueView({
                             icon: <Eye className="h-3.5 w-3.5" />,
                             onClick: () => onInspect(item, "progress"),
                           },
-                          ...(((item.reopenCount ?? 0) >= 2 ||
-                          item.status === "ESCALATED" ||
-                          item.status === "UNDER_REVIEW") &&
-                          item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.isPrimaryDepartment !== false
-                            ? [
-                                {
-                                  label: "Submit Resolution",
-                                  icon: (
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                  ),
-                                  variant: "default" as const,
-                                  onClick: () => onReviewResolution(item),
-                                },
-                              ]
-                            : []),
                           ...(item.status === "ESCALATED"
                             ? [
                                 {
@@ -636,34 +619,59 @@ export function QueueView({
                                   onClick: () => onIntervene(item),
                                 },
                               ]
-                            : []),
-                          ...(item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          !item.assignedStaffName &&
-                          !item.assignedStaffId
-                            ? [
-                                {
-                                  label: "Assign",
-                                  icon: <UserPlus className="h-3.5 w-3.5" />,
-                                  variant: "default" as const,
-                                  onClick: () => onAssign(item),
-                                },
-                              ]
-                            : []),
-                          ...(item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          (item.assignedStaffName || item.assignedStaffId)
-                            ? [
-                                {
-                                  label: "Change Assignment",
-                                  icon: <UserCheck className="h-3.5 w-3.5" />,
-                                  variant: "default" as const,
-                                  onClick: () =>
-                                    onAssign(item, item.assignedStaffId || ""),
-                                },
-                              ]
-                            : []),
-                          ...(!item.hasProposedKb && canHeadProposeKnowledge(item)
+                            : [
+                                ...(((item.reopenCount ?? 0) >= 2 ||
+                                  item.status === "UNDER_REVIEW") &&
+                                item.status !== "CLOSED" &&
+                                item.status !== "RESOLVED" &&
+                                item.isPrimaryDepartment !== false
+                                  ? [
+                                      {
+                                        label: "Submit Resolution",
+                                        icon: (
+                                          <CheckCircle2 className="h-3.5 w-3.5" />
+                                        ),
+                                        variant: "default" as const,
+                                        onClick: () => onReviewResolution(item),
+                                      },
+                                    ]
+                                  : []),
+                                ...(item.status !== "CLOSED" &&
+                                item.status !== "RESOLVED" &&
+                                !item.assignedStaffName &&
+                                !item.assignedStaffId
+                                  ? [
+                                      {
+                                        label: "Assign",
+                                        icon: (
+                                          <UserPlus className="h-3.5 w-3.5" />
+                                        ),
+                                        variant: "default" as const,
+                                        onClick: () => onAssign(item),
+                                      },
+                                    ]
+                                  : []),
+                                ...(item.status !== "CLOSED" &&
+                                item.status !== "RESOLVED" &&
+                                (item.assignedStaffName || item.assignedStaffId)
+                                  ? [
+                                      {
+                                        label: "Change Assignment",
+                                        icon: (
+                                          <UserCheck className="h-3.5 w-3.5" />
+                                        ),
+                                        variant: "default" as const,
+                                        onClick: () =>
+                                          onAssign(
+                                            item,
+                                            item.assignedStaffId || "",
+                                          ),
+                                      },
+                                    ]
+                                  : []),
+                              ]),
+                          ...(!item.hasProposedKb &&
+                          canHeadProposeKnowledge(item)
                             ? [
                                 {
                                   label: "Propose KB Article",

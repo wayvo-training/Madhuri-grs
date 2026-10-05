@@ -163,6 +163,8 @@ export function DepartmentHeadOverviewInner({
     useState<EscalationInterventionType>("REASSIGN");
   const [escalationTargetDept, setEscalationTargetDept] = useState("");
   const [escalationNote, setEscalationNote] = useState("");
+  const [escalationExtensionHours, setEscalationExtensionHours] =
+    useState<number>(24);
 
   const [resolutionModalGrievance, setResolutionModalGrievance] =
     useState<GrievanceItem | null>(null);
@@ -213,7 +215,7 @@ export function DepartmentHeadOverviewInner({
   const handleOpenResolutionModal = useCallback((item: GrievanceItem) => {
     if (item.isPrimaryDepartment === false) {
       toast.error(
-        "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
       );
       return;
     }
@@ -247,6 +249,7 @@ export function DepartmentHeadOverviewInner({
       interventionType: escalationInterventionType,
       targetDept: escalationTargetDept,
       note: escalationNote,
+      extensionHours: escalationExtensionHours,
     });
     setEscalationModalGrievance(null);
   };
@@ -424,6 +427,8 @@ export function DepartmentHeadOverviewInner({
           onInterventionTypeChange={setEscalationInterventionType}
           onTargetDeptChange={setEscalationTargetDept}
           onNoteChange={setEscalationNote}
+          extensionHours={escalationExtensionHours}
+          onExtensionHoursChange={setEscalationExtensionHours}
         />
       )}
 

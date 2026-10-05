@@ -23,6 +23,7 @@ export async function POST(
       targetStaffId,
       targetDeptName,
       note = "",
+      extensionHours = 24,
     } = body;
 
     // 1. Verify grievance exists and belongs to department (or Admin)
@@ -114,29 +115,67 @@ export async function POST(
       ? `${currentAssignedStaff.first_name} ${currentAssignedStaff.last_name || ""}`.trim()
       : "Assigned Officer";
 
+    const hours = Number(extensionHours) || 24;
     const actionLabels: Record<string, string> = {
       MONITOR: "Continue Monitoring (SLA Risk Acknowledged by HOD)",
+      REQUEST_STATUS_UPDATE: `Immediate Status Update Requested from ${currentStaffName}`,
       NOTIFY_STAFF: `Direct Operational Nudge Dispatched to ${currentStaffName}`,
       REASSIGN: `Reassigned to ${targetStaffName}`,
       CROSS_DEPT: `Enlisted Supporting Department (${targetDeptName || "External Department"})`,
+      DIRECT_OVERSIGHT: `Direct Department Head Oversight Assumed by ${hodFullName}`,
+      EXTEND_SLA: `Resolution SLA Deadline Extended (+${hours}h)`,
     };
 
     const chosenAction = actionLabels[interventionType] || interventionType;
+    let newExtendedDueAt: Date | null = null;
+    if (interventionType === "EXTEND_SLA") {
+      const currentDue = grievance.due_at
+        ? new Date(grievance.due_at)
+        : new Date();
+      const baseTime =
+        currentDue.getTime() > Date.now() ? currentDue.getTime() : Date.now();
+      newExtendedDueAt = new Date(baseTime + hours * 3600 * 1000);
+    }
 
     // Execute state changes and audit logging in transaction
     await prisma.$transaction(async (tx) => {
-      // 0. Handle NOTIFY_STAFF intervention
-      if (interventionType === "NOTIFY_STAFF" && currentAssignedStaff) {
+      // 0. Handle REQUEST_STATUS_UPDATE and NOTIFY_STAFF interventions
+      if (
+        (interventionType === "REQUEST_STATUS_UPDATE" ||
+          interventionType === "NOTIFY_STAFF") &&
+        currentAssignedStaff
+      ) {
+        const isExplicitRequest = interventionType === "REQUEST_STATUS_UPDATE";
         await tx.notifications.create({
           data: {
             user_id: currentAssignedStaff.user_id,
             grievance_id: grievanceId,
             notification_type: "HOD_DIRECTIVE_REMINDER",
             channel: "IN_APP",
-            title: `HOD Directive: Expedite Case Resolution (${grievance.grievance_number})`,
+            title: isExplicitRequest
+              ? `Action Required: Immediate Status Update Requested (${grievance.grievance_number})`
+              : `HOD Directive: Expedite Case Resolution (${grievance.grievance_number})`,
             message:
               note ||
-              "Department Head has reviewed this grievance approaching SLA threshold and directed immediate prioritization without reassignment.",
+              (isExplicitRequest
+                ? "Department Head requires an immediate operational progress update and next planned actions within 4 hours."
+                : "Department Head has reviewed this grievance approaching SLA threshold and directed immediate prioritization without reassignment."),
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+
+        // Insert confirmation notification for Department Head
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: grievanceId,
+            notification_type: "HOD_DIRECTIVE_REMINDER",
+            channel: "IN_APP",
+            title: isExplicitRequest
+              ? `Status Update Requested: ${grievance.grievance_number}`
+              : `Directive Sent: ${grievance.grievance_number}`,
+            message: `You requested an operational update from ${currentStaffName} regarding grievance ${grievance.grievance_number}.`,
             status: "PENDING",
             created_at: new Date(),
           },
@@ -176,6 +215,20 @@ export async function POST(
             channel: "IN_APP",
             title: `Case Reassigned`,
             message: `You have been reassigned to Grievance ${grievance.grievance_number} due to a Department Head SLA Intervention.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+
+        // Insert confirmation notification for Department Head
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: grievanceId,
+            notification_type: "REASSIGNMENT",
+            channel: "IN_APP",
+            title: `Case Reassignment Confirmed: ${grievance.grievance_number}`,
+            message: `You reassigned grievance ${grievance.grievance_number} to ${targetStaffName}.`,
             status: "PENDING",
             created_at: new Date(),
           },
@@ -229,20 +282,117 @@ export async function POST(
                 },
               });
             }
+
+            // Insert confirmation notification for initiating Department Head
+            await tx.notifications.create({
+              data: {
+                user_id: user.user_id,
+                grievance_id: grievanceId,
+                notification_type: "SUPPORTING_STAFF_ADDED",
+                channel: "IN_APP",
+                title: `Supporting Department Added: ${grievance.grievance_number}`,
+                message: `You added ${supportDept.department_name} as a supporting department for grievance ${grievance.grievance_number}.`,
+                status: "PENDING",
+                created_at: new Date(),
+              },
+            });
           }
         }
       }
 
-      // 3. Update grievance status to IN_PROGRESS under active intervention
+      // 3. Handle DIRECT_OVERSIGHT intervention
+      if (interventionType === "DIRECT_OVERSIGHT") {
+        if (currentAssignedStaff) {
+          await tx.notifications.create({
+            data: {
+              user_id: currentAssignedStaff.user_id,
+              grievance_id: grievanceId,
+              notification_type: "HOD_DIRECTIVE_REMINDER",
+              channel: "IN_APP",
+              title: `Executive Oversight Active: ${grievance.grievance_number}`,
+              message:
+                note ||
+                `Department Head ${hodFullName} has assumed direct executive oversight over this case. Direct all investigative findings to the Head.`,
+              status: "PENDING",
+              created_at: new Date(),
+            },
+          });
+        }
+
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: grievanceId,
+            notification_type: "HOD_DIRECTIVE_REMINDER",
+            channel: "IN_APP",
+            title: `Direct Oversight Assumed: ${grievance.grievance_number}`,
+            message: `You assumed direct executive oversight for grievance ${grievance.grievance_number}.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+      }
+
+      // 4. Handle EXTEND_SLA intervention
+      if (interventionType === "EXTEND_SLA" && newExtendedDueAt) {
+        // Update latest sla_tracking entry if exists
+        const latestSla = await tx.sla_tracking.findFirst({
+          where: { grievance_id: grievanceId },
+          orderBy: { sla_tracking_id: "desc" },
+        });
+
+        if (latestSla) {
+          await tx.sla_tracking.update({
+            where: { sla_tracking_id: latestSla.sla_tracking_id },
+            data: {
+              due_at: newExtendedDueAt,
+              status: "ON_TRACK",
+            },
+          });
+        }
+
+        if (currentAssignedStaff) {
+          await tx.notifications.create({
+            data: {
+              user_id: currentAssignedStaff.user_id,
+              grievance_id: grievanceId,
+              notification_type: "SLA_AT_RISK",
+              channel: "IN_APP",
+              title: `SLA Deadline Extended (+${hours}h): ${grievance.grievance_number}`,
+              message: `Department Head granted a +${hours}h SLA extension. Revised resolution deadline: ${newExtendedDueAt.toLocaleString()}. Reason: ${note}`,
+              status: "PENDING",
+              created_at: new Date(),
+            },
+          });
+        }
+
+        await tx.notifications.create({
+          data: {
+            user_id: user.user_id,
+            grievance_id: grievanceId,
+            notification_type: "SLA_AT_RISK",
+            channel: "IN_APP",
+            title: `SLA Extension Granted: ${grievance.grievance_number}`,
+            message: `You extended the resolution SLA for ${grievance.grievance_number} by +${hours}h until ${newExtendedDueAt.toLocaleString()}.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+      }
+
+      // 5. Update grievance status to IN_PROGRESS under active intervention (and update due_at if extended)
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
           status: "IN_PROGRESS",
+          ...(newExtendedDueAt
+            ? { due_at: newExtendedDueAt, sla_status: "ON_TRACK" }
+            : {}),
           updated_at: new Date(),
         },
       });
 
-      // 4. Mark open escalations as RESOLVED by Department Head
+      // 6. Mark open escalations as RESOLVED by Department Head
       await tx.escalations.updateMany({
         where: {
           grievance_id: grievanceId,
@@ -254,7 +404,7 @@ export async function POST(
         },
       });
 
-      // Record single genuine HOD Intervention in audit_logs
+      // 7. Record genuine HOD Intervention in audit_logs
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,
@@ -270,12 +420,17 @@ export async function POST(
             intervenedBy: hodFullName,
             targetStaffName: targetStaffName || undefined,
             targetDepartment: targetDeptName || undefined,
+            extensionHours:
+              interventionType === "EXTEND_SLA" ? hours : undefined,
+            newDueAt: newExtendedDueAt
+              ? newExtendedDueAt.toISOString()
+              : undefined,
             details: `Intervention: ${chosenAction} (Bottleneck: ${chosenBottleneck}). Directive: "${note || "Proceed with expedited resolution under departmental directives."}"`,
           },
         },
       });
 
-      // Status history
+      // 8. Status history
       await tx.grievance_status_history.create({
         data: {
           grievance_id: grievanceId,
@@ -289,7 +444,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Steps 5-9 Complete: HOD intervention logged to audit trail & dispatched to staff. Grievance continues in progress.`,
+      message: `HOD intervention logged to audit trail & dispatched to staff. Grievance continues in progress.`,
       intervention: {
         actionType: interventionType,
         actionLabel: chosenAction,
@@ -297,6 +452,8 @@ export async function POST(
         note,
         targetStaffName,
         targetDepartment: targetDeptName,
+        extensionHours: interventionType === "EXTEND_SLA" ? hours : undefined,
+        newDueAt: newExtendedDueAt ? newExtendedDueAt.toISOString() : undefined,
       },
     });
   } catch (error) {
