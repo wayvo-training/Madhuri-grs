@@ -72,8 +72,8 @@ export function CaseProgressTab({
               : "Under Active Investigation"
             : isAssigned || st === "ASSIGNED"
               ? isCaseReopened
-                ? `Reopened — Assigned to ${currentGrievance.assignedStaffName || "Officer"}`
-                : `Assigned to ${currentGrievance.assignedStaffName || "Officer"}`
+                ? `Reopened — Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
+                : `Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
               : "Pending Staff Assignment");
 
   const steps = caseProgressData?.currentStage?.progressSteps || [
@@ -146,7 +146,7 @@ export function CaseProgressTab({
   const officerDesignation =
     caseProgressData?.assignment?.designation ||
     assignedStaff?.designation ||
-    "Investigating Officer";
+    "Investigating Staff";
   const officerEmail =
     caseProgressData?.assignment?.email || assignedStaff?.email || null;
   const assignedTimestamp =
@@ -405,7 +405,7 @@ export function CaseProgressTab({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-emerald-700 hover:underline font-medium truncate max-w-[65%]"
-                          title={`Email officer via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
+                          title={`Email staff via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
                         >
                           {officerEmail}
                         </a>
@@ -417,7 +417,7 @@ export function CaseProgressTab({
             ) : (
               <div className="flex flex-col items-center justify-center py-3 text-center space-y-2">
                 <p className="text-xs text-slate-500">
-                  No officer currently assigned to this ticket.
+                  No staff member currently assigned to this grievance.
                 </p>
                 <button
                   type="button"
@@ -425,7 +425,7 @@ export function CaseProgressTab({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
-                  <span>Assign Officer Now</span>
+                  <span>Assign Staff Now</span>
                 </button>
               </div>
             )}

@@ -8,6 +8,7 @@ import {
   FileCheck2,
   Filter,
   Inbox,
+  Play,
   RotateCcw,
   Search,
   SlidersHorizontal,
@@ -15,7 +16,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
-import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
@@ -33,12 +33,13 @@ import {
   type SortState,
 } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
+import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import type {
   StaffGrievanceItem,
   StaffPriority,
   StaffQueueFilterState,
 } from "@/types/staff";
-import { evaluateSearchConditions } from "@/lib/search-evaluator";
 
 interface GrievanceQueueProps {
   grievances: StaffGrievanceItem[];
@@ -83,8 +84,12 @@ export function GrievanceQueue({
 
   const [advancedSearch, setAdvancedSearch] = useState<SearchCondition[]>([]);
   const [filterMode, setFilterMode] = useState<string>("AND");
-  const [proposeKbItem, setProposeKbItem] = useState<StaffGrievanceItem | null>(null);
-  const [locallyProposedIds, setLocallyProposedIds] = useState<Set<string>>(new Set());
+  const [proposeKbItem, setProposeKbItem] = useState<StaffGrievanceItem | null>(
+    null,
+  );
+  const [locallyProposedIds, setLocallyProposedIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const handleSort = (field: string, direction: SortState["direction"]) => {
     setSortState({ field, direction });
@@ -297,7 +302,7 @@ export function GrievanceQueue({
         ...item,
         isReopened: item.reopenCount > 0 ? "YES" : "NO",
       };
-      
+
       return evaluateSearchConditions(computedItem, advancedSearch, filterMode);
     });
   }, [grievances, activeTab, advancedSearch, filterMode]);
@@ -313,8 +318,10 @@ export function GrievanceQueue({
     }
 
     return list.sort((a, b) => {
-      let aVal: any = a[sortState.field as keyof typeof a];
-      let bVal: any = b[sortState.field as keyof typeof b];
+      let aVal: string | number =
+        (a[sortState.field as keyof typeof a] as string | number) ?? "";
+      let bVal: string | number =
+        (b[sortState.field as keyof typeof b] as string | number) ?? "";
 
       // specific comparisons
       if (sortState.field === "submittedAt") {
@@ -395,7 +402,10 @@ export function GrievanceQueue({
         <div className="flex-1 min-w-0 w-full">
           <AdvancedTableSearch
             fields={searchFields}
-            onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+            onSearch={(conds, mode) => {
+              setAdvancedSearch(conds);
+              setFilterMode(mode);
+            }}
             className="w-full"
           />
         </div>
@@ -609,7 +619,10 @@ export function GrievanceQueue({
                             ),
                             onClick: () => onExamine(item),
                           },
-                          ...(!isClosed && item.status !== "UNDER_REVIEW" && item.status !== "RESOLVED"
+                          ...(!isClosed &&
+                          item.status !== "UNDER_REVIEW" &&
+                          item.status !== "RESOLVED" &&
+                          item.status !== "ASSIGNED"
                             ? [
                                 {
                                   label: "Resolve",
@@ -620,8 +633,21 @@ export function GrievanceQueue({
                                   onClick: () => onResolve(item),
                                 },
                               ]
-                            : []),
-                          ...(!item.hasProposedKb && !locallyProposedIds.has(item.id) && canStaffProposeKnowledge(item)
+                            : item.status === "ASSIGNED"
+                              ? [
+                                  {
+                                    label: "Start Investigation",
+                                    icon: (
+                                      <Play className="h-3.5 w-3.5 text-emerald-600" />
+                                    ),
+                                    variant: "primary" as const,
+                                    onClick: () => onExamine(item),
+                                  },
+                                ]
+                              : []),
+                          ...(!item.hasProposedKb &&
+                          !locallyProposedIds.has(item.id) &&
+                          canStaffProposeKnowledge(item)
                             ? [
                                 {
                                   label: "Propose KB Article",

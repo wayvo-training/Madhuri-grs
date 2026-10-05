@@ -196,7 +196,7 @@ export function CaseFileInspectionModal({
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
-            <span>Internal Notes</span>
+            <span>Internal Discussion</span>
             <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-2.5 text-slate-600">
               {currentGrievance.internalNotes?.length || 0}
             </span>

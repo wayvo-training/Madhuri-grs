@@ -10,9 +10,9 @@ import {
   X,
 } from "lucide-react";
 import type React from "react";
-import { useState, useEffect, useRef } from "react";
-import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
 interface ResolutionFormProps {
   isOpen: boolean;
@@ -50,7 +50,8 @@ export function ResolutionForm({
       if (saved) {
         try {
           const draftData = JSON.parse(saved);
-          if (draftData.problemSummary) setProblemSummary(draftData.problemSummary);
+          if (draftData.problemSummary)
+            setProblemSummary(draftData.problemSummary);
           if (draftData.findings) setFindings(draftData.findings);
           if (draftData.actionTaken) setActionTaken(draftData.actionTaken);
           if (draftData.outcome) setOutcome(draftData.outcome);
@@ -73,7 +74,10 @@ export function ResolutionForm({
         outcome,
         evidence,
       };
-      localStorage.setItem(`draft_resolution_${grievance.id}`, JSON.stringify(draftData));
+      localStorage.setItem(
+        `draft_resolution_${grievance.id}`,
+        JSON.stringify(draftData),
+      );
       toast.success("Resolution draft saved to your browser.");
       onClose();
       return;
@@ -107,21 +111,28 @@ export function ResolutionForm({
       let resId: string | undefined;
       if (grievance.isPrimaryOwner === false) {
         // Supporting Department Findings Submission
-        const res = await fetch(`/api/staff/grievances/${grievance.id}/findings`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            findings: findings.trim(),
-            actionTaken: actionTaken.trim(),
-            notes: `${problemSummary.trim()}\n\nOutcome / Recommendations:\n${outcome.trim()}`,
-          }),
-        });
+        const res = await fetch(
+          `/api/staff/grievances/${grievance.id}/findings`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              findings: findings.trim(),
+              actionTaken: actionTaken.trim(),
+              notes: `${problemSummary.trim()}\n\nOutcome / Recommendations:\n${outcome.trim()}`,
+            }),
+          },
+        );
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.message || "Failed to submit department findings");
+          throw new Error(
+            data.message || "Failed to submit department findings",
+          );
         }
-        toast.success("Department findings submitted! Forwarded to Lead Department.");
+        toast.success(
+          "Department findings submitted! Forwarded to Lead Department.",
+        );
       } else if (onSubmit) {
         await onSubmit(grievance.id, {
           problemSummary: problemSummary.trim(),
@@ -221,7 +232,11 @@ export function ResolutionForm({
           <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
-              <strong>Supporting Department Role:</strong> Submitting your departmental findings completes your investigation and updates your departmental status to <strong>COMPLETED</strong>. Your findings will be shared with the Lead Department to compile the final employee resolution.
+              <strong>Supporting Department Role:</strong> Submitting your
+              departmental findings completes your investigation and updates
+              your departmental status to <strong>COMPLETED</strong>. Your
+              findings will be shared with the Lead Department to compile the
+              final employee resolution.
             </span>
           </div>
         )}
@@ -332,12 +347,12 @@ export function ResolutionForm({
 
           {/* Supporting Documents (Optional) */}
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700 flex items-center justify-between">
+            <div className="font-semibold text-slate-700 flex items-center justify-between text-xs">
               <span>Supporting Documents (Optional)</span>
               <span className="text-[11px] font-normal text-slate-500">
                 PDF, Images, Sheets, Docs
               </span>
-            </label>
+            </div>
 
             <div className="flex items-center gap-3">
               <label className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer">
@@ -365,9 +380,9 @@ export function ResolutionForm({
 
             {supportingFiles.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {supportingFiles.map((file, idx) => (
+                {supportingFiles.map((file, fileIndex) => (
                   <span
-                    key={`${file.name}-${idx}`}
+                    key={`${file.name}-${file.size}-${file.lastModified}`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/70 px-2.5 py-1 text-[11px] font-medium text-teal-900 shadow-2xs"
                   >
                     <FileText className="h-3 w-3 text-[#0F766E]" />
@@ -381,7 +396,7 @@ export function ResolutionForm({
                       type="button"
                       onClick={() =>
                         setSupportingFiles((prev) =>
-                          prev.filter((_, i) => i !== idx),
+                          prev.filter((_, i) => i !== fileIndex),
                         )
                       }
                       className="rounded-xs p-0.5 text-teal-600 hover:bg-teal-100 hover:text-teal-900 transition cursor-pointer"
@@ -400,9 +415,11 @@ export function ResolutionForm({
             <span>
               {grievance.isPrimaryOwner === false ? (
                 <>
-                  Submitting department findings will mark your department's involvement as{" "}
-                  <strong>COMPLETED</strong> and record your findings in the collaborative case file.
-                  The Lead Department will be alerted to review your findings and submit the final customer resolution.
+                  Submitting department findings will mark your department's
+                  involvement as <strong>COMPLETED</strong> and record your
+                  findings in the collaborative case file. The Lead Department
+                  will be alerted to review your findings and submit the final
+                  customer resolution.
                 </>
               ) : grievance.reopenCount >= 3 ? (
                 <>

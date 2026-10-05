@@ -83,7 +83,9 @@ export async function POST(request: Request) {
     if (!catId && category?.trim()) {
       try {
         const matchedCat = await prisma.categories.findFirst({
-          where: { category_name: { equals: category.trim(), mode: "insensitive" } },
+          where: {
+            category_name: { equals: category.trim(), mode: "insensitive" },
+          },
           select: { category_id: true },
         });
         if (matchedCat) catId = matchedCat.category_id;
@@ -113,7 +115,12 @@ export async function POST(request: Request) {
     if (!subCatId && subcategory?.trim()) {
       try {
         const matchedSub = await prisma.subcategories.findFirst({
-          where: { subcategory_name: { equals: subcategory.trim(), mode: "insensitive" } },
+          where: {
+            subcategory_name: {
+              equals: subcategory.trim(),
+              mode: "insensitive",
+            },
+          },
           select: { subcategory_id: true },
         });
         if (matchedSub) subCatId = matchedSub.subcategory_id;
@@ -215,7 +222,10 @@ export async function POST(request: Request) {
         },
       });
     } catch (auditErr) {
-      console.error("Non-fatal: Failed to write audit log for knowledge article:", auditErr);
+      console.error(
+        "Non-fatal: Failed to write audit log for knowledge article:",
+        auditErr,
+      );
     }
 
     // Safely notify Department Head AND Proposed Person if submitted for review
@@ -272,7 +282,10 @@ export async function POST(request: Request) {
           }
         }
       } catch (notifyErr) {
-        console.error("Non-fatal: Failed to send knowledge article notification:", notifyErr);
+        console.error(
+          "Non-fatal: Failed to send knowledge article notification:",
+          notifyErr,
+        );
       }
     }
 
@@ -286,7 +299,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error in POST /api/staff/knowledge:", error);
-    const errorDetails = error instanceof Error ? error.message : "Failed to create knowledge article";
+    const errorDetails =
+      error instanceof Error
+        ? error.message
+        : "Failed to create knowledge article";
     return NextResponse.json(
       { success: false, message: errorDetails },
       { status: 500 },

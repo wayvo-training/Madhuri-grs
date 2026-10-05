@@ -15,12 +15,23 @@ export async function GET(request: Request) {
   const subcategoryNameParam = searchParams.get("subcategory");
 
   try {
-    let catId = categoryIdParam && /^\d+$/.test(categoryIdParam) ? BigInt(categoryIdParam) : null;
-    let subCatId = subcategoryIdParam && /^\d+$/.test(subcategoryIdParam) ? BigInt(subcategoryIdParam) : null;
+    let catId =
+      categoryIdParam && /^\d+$/.test(categoryIdParam)
+        ? BigInt(categoryIdParam)
+        : null;
+    let subCatId =
+      subcategoryIdParam && /^\d+$/.test(subcategoryIdParam)
+        ? BigInt(subcategoryIdParam)
+        : null;
 
     if (!catId && categoryNameParam?.trim()) {
       const cat = await prisma.categories.findFirst({
-        where: { category_name: { equals: categoryNameParam.trim(), mode: "insensitive" } },
+        where: {
+          category_name: {
+            equals: categoryNameParam.trim(),
+            mode: "insensitive",
+          },
+        },
         select: { category_id: true },
       });
       if (cat) catId = cat.category_id;
@@ -28,7 +39,12 @@ export async function GET(request: Request) {
 
     if (!subCatId && subcategoryNameParam?.trim()) {
       const sub = await prisma.subcategories.findFirst({
-        where: { subcategory_name: { equals: subcategoryNameParam.trim(), mode: "insensitive" } },
+        where: {
+          subcategory_name: {
+            equals: subcategoryNameParam.trim(),
+            mode: "insensitive",
+          },
+        },
         select: { subcategory_id: true },
       });
       if (sub) subCatId = sub.subcategory_id;

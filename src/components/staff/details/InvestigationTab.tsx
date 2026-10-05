@@ -1,6 +1,13 @@
 "use client";
 
-import { CornerDownRight, MessageSquare, Reply, Send, X } from "lucide-react";
+import {
+  CornerDownRight,
+  Lock,
+  MessageSquare,
+  Reply,
+  Send,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useMemo, useRef, useState } from "react";
 import type { StaffGrievanceItem, StaffInternalNote } from "@/types/staff";
@@ -160,16 +167,18 @@ export function InvestigationTab({
           {noteItem.note}
         </p>
 
-        <div className="flex items-center justify-end pt-1">
-          <button
-            type="button"
-            onClick={() => handleReplyClick(noteItem)}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F766E] hover:text-[#115E59] dark:text-teal-400 dark:hover:text-teal-300 transition cursor-pointer"
-          >
-            <Reply className="h-3 w-3" />
-            <span>Reply</span>
-          </button>
-        </div>
+        {grievance.status !== "ASSIGNED" && (
+          <div className="flex items-center justify-end pt-1">
+            <button
+              type="button"
+              onClick={() => handleReplyClick(noteItem)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F766E] hover:text-[#115E59] dark:text-teal-400 dark:hover:text-teal-300 transition cursor-pointer"
+            >
+              <Reply className="h-3 w-3" />
+              <span>Reply</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -184,8 +193,8 @@ export function InvestigationTab({
             Internal Discussion
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Internal discussion — visible only to authorized grievance
-            participants
+            Private case communication between authorized grievance participants
+            for investigation, coordination, and resolution.
           </p>
         </div>
         <span className="rounded-full bg-teal-50 dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-slate-700 px-2.5 py-0.5 text-xs font-semibold">
@@ -203,7 +212,7 @@ export function InvestigationTab({
             </p>
             <p className="text-[11px] text-slate-400">
               Use the composer below to begin an internal discussion with
-              Department Head and assigned officers.
+              Department Head and assigned staff.
             </p>
           </div>
         ) : (
@@ -231,6 +240,17 @@ export function InvestigationTab({
       </div>
 
       {/* 3. Composer at Bottom */}
+      {grievance.status === "ASSIGNED" && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3.5 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
+          <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+          <span>
+            Investigation has not started yet. Please click{" "}
+            <strong>&quot;Start Investigation&quot;</strong> in the bottom
+            action bar to enable internal notes and case discussions.
+          </span>
+        </div>
+      )}
+
       <form
         onSubmit={handlePostNoteSubmit}
         className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:bg-slate-900/60 dark:border-slate-700 p-3.5 space-y-2.5 shadow-2xs"
@@ -272,10 +292,19 @@ export function InvestigationTab({
           ref={textareaRef}
           rows={3}
           required
+          disabled={grievance.status === "ASSIGNED"}
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
-          placeholder="Add an internal note or reply..."
-          className="w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E]"
+          placeholder={
+            grievance.status === "ASSIGNED"
+              ? "Investigation has not started. Click 'Start Investigation' below to add notes..."
+              : "Add an internal note or reply..."
+          }
+          className={`w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E] ${
+            grievance.status === "ASSIGNED"
+              ? "opacity-60 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed"
+              : ""
+          }`}
         />
 
         <div className="flex items-center justify-between">
@@ -292,18 +321,32 @@ export function InvestigationTab({
           )}
           <button
             type="submit"
-            disabled={!newNote.trim() || isPostingNote}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer"
+            disabled={
+              grievance.status === "ASSIGNED" ||
+              !newNote.trim() ||
+              isPostingNote
+            }
+            className={`inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition ${
+              grievance.status === "ASSIGNED"
+                ? "cursor-not-allowed"
+                : "cursor-pointer"
+            }`}
           >
-            <Send className="h-3 w-3" />
+            {grievance.status === "ASSIGNED" ? (
+              <Lock className="h-3 w-3" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
             <span>
-              {isPostingNote
-                ? replyingTo
-                  ? "Posting Reply..."
-                  : "Adding Note..."
-                : replyingTo
-                  ? "Post Reply"
-                  : "Add Internal Note"}
+              {grievance.status === "ASSIGNED"
+                ? "Notes Locked (Start Investigation First)"
+                : isPostingNote
+                  ? replyingTo
+                    ? "Posting Reply..."
+                    : "Adding Note..."
+                  : replyingTo
+                    ? "Post Reply"
+                    : "Add Internal Note"}
             </span>
           </button>
         </div>

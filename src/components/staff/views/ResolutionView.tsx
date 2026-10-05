@@ -1,6 +1,13 @@
 "use client";
 
-import { Clock, Eye, FileCheck2, Hourglass, RotateCcw } from "lucide-react";
+import {
+  Clock,
+  Eye,
+  FileCheck2,
+  Hourglass,
+  Play,
+  RotateCcw,
+} from "lucide-react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
@@ -398,14 +405,27 @@ export function ResolutionView({
                       <ActionMenu
                         widthClass="w-44"
                         items={[
-                          {
-                            label: "Prepare Resolution",
-                            icon: (
-                              <FileCheck2 className="h-3.5 w-3.5 text-[#0F766E]" />
-                            ),
-                            variant: "primary" as const,
-                            onClick: () => onResolve(item),
-                          },
+                          ...(item.status !== "ASSIGNED"
+                            ? [
+                                {
+                                  label: "Prepare Resolution",
+                                  icon: (
+                                    <FileCheck2 className="h-3.5 w-3.5 text-[#0F766E]" />
+                                  ),
+                                  variant: "primary" as const,
+                                  onClick: () => onResolve(item),
+                                },
+                              ]
+                            : [
+                                {
+                                  label: "Start Investigation",
+                                  icon: (
+                                    <Play className="h-3.5 w-3.5 text-emerald-600" />
+                                  ),
+                                  variant: "primary" as const,
+                                  onClick: () => onExamine(item),
+                                },
+                              ]),
                           {
                             label: "Examine",
                             icon: (

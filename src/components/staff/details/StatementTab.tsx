@@ -11,20 +11,23 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
+  Lock,
   Mail,
+  MessageSquare,
   Play,
   Send,
   Shield,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   type KnowledgeArticleData,
   KnowledgeArticleViewerModal,
 } from "@/components/knowledge/KnowledgeArticleViewerModal";
 import type { StaffGrievanceItem } from "@/types/staff";
-import { toast } from "sonner";
 
 interface StatementTabProps {
   grievance: StaffGrievanceItem;
@@ -79,6 +82,12 @@ export function StatementTab({
   const [isKbModalOpen, setIsKbModalOpen] = useState(false);
 
   useEffect(() => {
+    // Knowledge Base guidance is only relevant for active investigation, not closed/resolved grievances
+    if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
+      setKbRecommendations([]);
+      return;
+    }
+
     const fetchKb = async () => {
       try {
         const catId =
@@ -220,16 +229,42 @@ export function StatementTab({
           </div>
 
           <div className="flex flex-col justify-center">
-            <span className="text-slate-500 text-[11px]">Contact Email</span>
-            <a
-              href={inquiryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-emerald-700 hover:underline inline-flex items-center gap-1"
-            >
-              <Mail className="h-3 w-3" />
-              <span>{grievance.submitterEmail}</span>
-            </a>
+            <span className="text-slate-500 text-[11px]">
+              Contact & Communication
+            </span>
+            {grievance.status === "ASSIGNED" ? (
+              <div className="space-y-1 mt-0.5">
+                <span
+                  className="font-medium text-slate-400 inline-flex items-center gap-1 text-xs cursor-not-allowed"
+                  title="Start investigation first to enable communication"
+                >
+                  <Lock className="h-3 w-3 text-slate-400" />
+                  <span>{grievance.submitterEmail} (Locked)</span>
+                </span>
+                <span className="text-[10px] text-amber-700 block font-medium">
+                  Communication unlocks after starting investigation
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-1 mt-0.5">
+                <a
+                  href={inquiryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-emerald-700 hover:underline inline-flex items-center gap-1 text-xs"
+                >
+                  <Mail className="h-3 w-3" />
+                  <span>{grievance.submitterEmail}</span>
+                </a>
+                <Link
+                  href={`/staff/messages/${grievance.id}`}
+                  className="font-medium text-[#0F766E] hover:underline inline-flex items-center gap-1 text-xs block"
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  <span>In-App Messages Thread</span>
+                </Link>
+              </div>
+            )}
             {hodEscalationUrl && (
               <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400">Department Head:</span>
@@ -651,55 +686,57 @@ export function StatementTab({
         </div>
       </div>
 
-      {/* Related Published Knowledge Base Guidance */}
-      {kbRecommendations.length > 0 && (
-        <div className="rounded-xl border border-teal-200/90 bg-[#F0FDFA]/60 p-4 space-y-3 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
-            <div className="flex items-center gap-2 font-bold text-teal-950 text-xs">
-              <BookOpen className="h-4 w-4 text-[#0F766E]" />
-              <span>Related Knowledge Base Guidance</span>
-            </div>
-            <span className="text-[10px] font-semibold text-teal-700 bg-teal-100 px-2.5 py-0.5 rounded-full border border-teal-200">
-              Informational Reference Only
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {kbRecommendations.map((art) => (
-              <div
-                key={art.id}
-                className="flex items-center justify-between rounded-xl border border-teal-200 bg-white p-3 text-xs shadow-2xs hover:border-teal-400 transition"
-              >
-                <div className="min-w-0 flex-1 pr-3">
-                  <div className="font-bold text-slate-900 truncate">
-                    {art.title}
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    Published &bull; Relevant to {art.category} /{" "}
-                    {art.subcategory}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedKbArticle(art);
-                    setIsKbModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-800 text-xs font-semibold hover:bg-teal-100 transition shrink-0 cursor-pointer"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>View Guidance</span>
-                </button>
+      {/* Related Published Knowledge Base Guidance (Active Cases Only) */}
+      {grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        kbRecommendations.length > 0 && (
+          <div className="rounded-xl border border-teal-200/90 bg-[#F0FDFA]/60 p-4 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-teal-200/60 pb-2">
+              <div className="flex items-center gap-2 font-bold text-teal-950 text-xs">
+                <BookOpen className="h-4 w-4 text-[#0F766E]" />
+                <span>Related Knowledge Base Guidance</span>
               </div>
-            ))}
-          </div>
+              <span className="text-[10px] font-semibold text-teal-700 bg-teal-100 px-2.5 py-0.5 rounded-full border border-teal-200">
+                Informational Reference Only
+              </span>
+            </div>
 
-          <div className="text-[11px] text-teal-800 italic pt-0.5 leading-relaxed">
-            Note: Recommendations are informational reference material. The
-            system does not automatically resolve or modify this grievance.
+            <div className="space-y-2">
+              {kbRecommendations.map((art) => (
+                <div
+                  key={art.id}
+                  className="flex items-center justify-between rounded-xl border border-teal-200 bg-white p-3 text-xs shadow-2xs hover:border-teal-400 transition"
+                >
+                  <div className="min-w-0 flex-1 pr-3">
+                    <div className="font-bold text-slate-900 truncate">
+                      {art.title}
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      Published &bull; Relevant to {art.category} /{" "}
+                      {art.subcategory}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedKbArticle(art);
+                      setIsKbModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-teal-800 text-xs font-semibold hover:bg-teal-100 transition shrink-0 cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>View Guidance</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-[11px] text-teal-800 italic pt-0.5 leading-relaxed">
+              Note: Recommendations are informational reference material. The
+              system does not automatically resolve or modify this grievance.
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Attached Documents / Proofs */}
       <div className="space-y-2">

@@ -151,7 +151,7 @@ export function StaffEmailHub({
                     complainantName: c.submitterName,
                     staffName,
                     staffEmail,
-                    staffDesignation: "Investigating Officer",
+                    staffDesignation: "Investigating Staff",
                     grievance: {
                       ticketCode: c.ticketCode,
                       title: c.title,

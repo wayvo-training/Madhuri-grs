@@ -311,6 +311,23 @@ export function StaffDashboard({
     await fetchDashboardData(true);
   };
 
+  const handleResolveGrievance = (g: StaffGrievanceItem) => {
+    if (g.status === "ASSIGNED") {
+      toast.error(
+        "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+      );
+      handleExamineGrievance(g, "investigation");
+      return;
+    }
+    if (g.isPrimaryOwner === false) {
+      toast.error(
+        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
+      );
+      return;
+    }
+    setResolvingGrievance(g);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -430,7 +447,7 @@ export function StaffDashboard({
           staffName={staffName}
           staffEmail={staffEmail}
           onExamine={handleExamineGrievance}
-          onResolve={setResolvingGrievance}
+          onResolve={handleResolveGrievance}
           initialTab="all"
         />
       )}
@@ -461,14 +478,8 @@ export function StaffDashboard({
           onResumeInvestigation={handleResumeInvestigation}
           onOpenDocumentPreview={setPreviewDocument}
           onOpenResolutionForm={(g: StaffGrievanceItem) => {
-            if (g.isPrimaryOwner === false) {
-              toast.error(
-                "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
-              );
-              return;
-            }
             setSelectedGrievance(null);
-            setResolvingGrievance(g);
+            handleResolveGrievance(g);
           }}
         />
       )}

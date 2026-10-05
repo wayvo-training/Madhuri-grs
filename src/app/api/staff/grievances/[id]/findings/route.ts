@@ -64,9 +64,10 @@ export async function POST(
     });
 
     // Find the current staff member's department record
-    const myDeptRecord = allInvolvedDepts.find((d) =>
-      d.assignments?.staff_id === staffId ||
-      (!isAdmin && departmentId ? d.department_id === departmentId : false)
+    const myDeptRecord = allInvolvedDepts.find(
+      (d) =>
+        d.assignments?.staff_id === staffId ||
+        (!isAdmin && departmentId ? d.department_id === departmentId : false),
     );
 
     if (!myDeptRecord && !isAdmin) {
@@ -79,7 +80,8 @@ export async function POST(
       );
     }
 
-    const deptName = myDeptRecord?.departments?.department_name || "Supporting Department";
+    const deptName =
+      myDeptRecord?.departments?.department_name || "Supporting Department";
     const authorUser = await prisma.users.findUnique({
       where: { user_id: staffId },
       select: { first_name: true, last_name: true },
@@ -94,7 +96,9 @@ export async function POST(
       // 1. Mark this department's status and staff assignment as COMPLETED
       if (myDeptRecord) {
         await tx.grievance_departments.update({
-          where: { grievance_department_id: myDeptRecord.grievance_department_id },
+          where: {
+            grievance_department_id: myDeptRecord.grievance_department_id,
+          },
           data: {
             status: "COMPLETED",
             completed_at: new Date(),
@@ -149,7 +153,9 @@ export async function POST(
     });
 
     // 4. Notify Primary Department Lead and Primary HOD
-    const primaryRecord = allInvolvedDepts.find((d) => d.involvement_type === "PRIMARY");
+    const primaryRecord = allInvolvedDepts.find(
+      (d) => d.involvement_type === "PRIMARY",
+    );
     const primaryStaffId = primaryRecord?.assignments?.staff_id;
 
     if (primaryStaffId && primaryStaffId !== staffId) {
@@ -183,13 +189,24 @@ export async function POST(
       }
     }
 
+    // Notify submitting staff member of successful submission
+    await NotificationService.send({
+      userId: staffId,
+      grievanceId,
+      type: "SYSTEM",
+      title: `Findings Submitted: ${grievance.grievance_number}`,
+      message: `You submitted departmental findings for grievance ${grievance.grievance_number}. They have been shared with the Primary Lead Department.`,
+    });
+
     return NextResponse.json({
       success: true,
-      message: "Department findings submitted successfully and shared with the Lead Department.",
+      message:
+        "Department findings submitted successfully and shared with the Lead Department.",
     });
   } catch (error: unknown) {
     console.error("Error in POST /api/staff/grievances/[id]/findings:", error);
-    const msg = error instanceof Error ? error.message : "Failed to submit findings";
+    const msg =
+      error instanceof Error ? error.message : "Failed to submit findings";
     return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }

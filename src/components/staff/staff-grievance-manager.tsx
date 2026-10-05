@@ -2,6 +2,7 @@
 
 import { AlertOctagon, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   type DocumentPreviewData,
   DocumentViewerModal,
@@ -9,7 +10,6 @@ import {
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { GrievanceQueue } from "@/components/staff/grievance-queue";
 import { ResolutionForm } from "@/components/staff/resolution-form";
-import { toast } from "sonner";
 import type {
   StaffDashboardData,
   StaffGrievanceItem,
@@ -157,6 +157,23 @@ export function StaffGrievanceManager({
     await fetchData(true);
   };
 
+  const handleResolveGrievance = (g: StaffGrievanceItem) => {
+    if (g.status === "ASSIGNED") {
+      toast.error(
+        "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+      );
+      handleExamine(g);
+      return;
+    }
+    if (g.isPrimaryOwner === false) {
+      toast.error(
+        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
+      );
+      return;
+    }
+    setResolvingGrievance(g);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] space-y-3">
@@ -218,7 +235,7 @@ export function StaffGrievanceManager({
           staffEmail={staffEmail}
           initialTab={initialTab}
           onExamine={handleExamine}
-          onResolve={(g) => setResolvingGrievance(g)}
+          onResolve={handleResolveGrievance}
         />
       </div>
 
@@ -236,14 +253,8 @@ export function StaffGrievanceManager({
           onOpenDocumentPreview={setPreviewDocument}
           onOpenResolveModal={() => {
             const target = selectedGrievance;
-            if (target?.isPrimaryOwner === false) {
-              toast.error(
-                "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
-              );
-              return;
-            }
-            setSelectedGrievance(null);
-            setResolvingGrievance(target);
+            if (!target) return;
+            handleResolveGrievance(target);
           }}
         />
       )}

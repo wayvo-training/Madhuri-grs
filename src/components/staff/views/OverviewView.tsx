@@ -343,8 +343,7 @@ export function OverviewView({
             <h4 className="text-sm font-bold text-slate-800">All Clear!</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-sm">
               You currently have no active grievances requiring immediate
-              attention (such as SLA breaches, high-risk delays, or
-              reopenings).
+              attention (such as SLA breaches, high-risk delays, or reopenings).
             </p>
           </div>
         )}

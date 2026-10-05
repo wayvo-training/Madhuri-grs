@@ -208,9 +208,15 @@ export function StaffSingleGrievanceView({
         onRequestAdditionalInfo={handleRequestAdditionalInfo}
         onOpenDocumentPreview={setPreviewDocument}
         onOpenResolveModal={() => {
+          if (grievance.status === "ASSIGNED") {
+            toast.error(
+              "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+            );
+            return;
+          }
           if (grievance.isPrimaryOwner === false) {
             toast.error(
-              "Supporting Department contributor: Only the Primary Lead department officer can submit the final customer resolution.",
+              "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
             );
             return;
           }

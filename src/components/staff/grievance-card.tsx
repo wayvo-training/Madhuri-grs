@@ -1,6 +1,14 @@
 "use client";
 
-import { CheckCircle2, Clock, Eye, FileCheck2, Mail, RotateCcw, User } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileCheck2,
+  Mail,
+  RotateCcw,
+  User,
+} from "lucide-react";
 import {
   PriorityBadge,
   SlaBadge,
@@ -30,7 +38,9 @@ export function GrievanceCard({
   const isReopened =
     grievance.reopenCount > 0 || grievance.status === "REOPENED";
   const isCompleted =
-    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW" || grievance.status === "RESOLVED";
+    grievance.status === "CLOSED" ||
+    grievance.status === "UNDER_REVIEW" ||
+    grievance.status === "RESOLVED";
 
   const inquiryUrl = buildGmailComposeUrl(
     buildStaffComplainantInquiryEmail({
@@ -144,7 +154,8 @@ export function GrievanceCard({
                 <FileCheck2 className="h-3.5 w-3.5" />
                 <span>Submit Final Resolution</span>
               </button>
-            ) : grievance.isMyDepartmentCompleted || grievance.myDepartmentStatus === "COMPLETED" ? (
+            ) : grievance.isMyDepartmentCompleted ||
+              grievance.myDepartmentStatus === "COMPLETED" ? (
               <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-800 border border-emerald-200">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                 Findings Submitted

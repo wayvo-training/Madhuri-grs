@@ -110,9 +110,11 @@ export async function GET(req: NextRequest) {
         submitterRole: submitter?.roles?.role_name || "EMPLOYEE",
         hasResolution: g.resolutions.length > 0,
         hasProposedKb:
-          ((g.resolutions[0] as unknown as {
-            knowledge_articles?: unknown[];
-          })?.knowledge_articles?.length ?? 0) > 0,
+          ((
+            g.resolutions[0] as unknown as {
+              knowledge_articles?: unknown[];
+            }
+          )?.knowledge_articles?.length ?? 0) > 0,
         submittedResolution: g.resolutions[0]
           ? {
               id: g.resolutions[0].resolution_id.toString(),

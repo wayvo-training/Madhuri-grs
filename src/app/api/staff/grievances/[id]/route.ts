@@ -620,6 +620,17 @@ export async function PATCH(
         status: "IN_PROGRESS",
       });
     } else if (body.action === "ADD_NOTE" && body.note?.trim()) {
+      if (grievance.status === "ASSIGNED") {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Investigation has not been started yet. You must click 'Start Investigation' before adding internal notes.",
+          },
+          { status: 400 },
+        );
+      }
+
       const staffUser = auth.user;
       const rawStaffName =
         `${staffUser.first_name} ${staffUser.last_name || ""}`.trim();
@@ -682,6 +693,15 @@ export async function PATCH(
           message: `${authorDisplay} posted a collaboration update on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? noteContent.substring(0, 60) + "..." : noteContent}"`,
         });
       }
+
+      // Confirm to the staff member who logged the note
+      await NotificationService.send({
+        userId: staffId,
+        grievanceId,
+        type: "HEAD_INTERNAL_NOTE",
+        title: "Internal Note Logged",
+        message: `You added an internal investigation note to grievance ${grievance.grievance_number}.`,
+      });
 
       return NextResponse.json({
         success: true,

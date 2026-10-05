@@ -135,7 +135,8 @@ export async function GET(request: Request) {
     });
 
     // If Admin or Department Head has no direct assignments, show department / system active assignments
-    if (assignments.length === 0 && isAdmin) {
+    const isDeptHead = auth.user.roles.role_name === "DEPARTMENT_HEAD";
+    if (assignments.length === 0 && (isAdmin || isDeptHead)) {
       assignments = await prisma.assignments.findMany({
         where: {
           assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
@@ -149,49 +150,74 @@ export async function GET(request: Request) {
       });
     }
 
-    // 4. Map grievances and calculate SLA
-    const grievanceItems: StaffGrievanceItem[] = assignments.map((a) => {
-      const g = a.grievances;
-      const submitter = g.users;
-      const submitterFullName = submitter
-        ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
-        : "Employee";
+    // 4. Map grievances and calculate SLA (filtering out any unlinked records safely)
+    const grievanceItems: StaffGrievanceItem[] = assignments
+      .filter((a) => Boolean(a.grievances))
+      .map((a) => {
+        const g = a.grievances;
+        const submitter = g.users;
+        const submitterFullName = submitter
+          ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
+          : "Employee";
 
-      const myInvolvementType =
-        (a.grievance_departments?.involvement_type as
-          | "PRIMARY"
-          | "SUPPORTING"
-          | "EQUAL") || "PRIMARY";
-      const isPrimaryOwner =
-        myInvolvementType === "PRIMARY" ||
-        myInvolvementType === "EQUAL" ||
-        isAdmin;
+        const myInvolvementType =
+          (a.grievance_departments?.involvement_type as
+            | "PRIMARY"
+            | "SUPPORTING"
+            | "EQUAL") || "PRIMARY";
+        const isPrimaryOwner =
+          myInvolvementType === "PRIMARY" ||
+          myInvolvementType === "EQUAL" ||
+          isAdmin;
 
-      const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
+        const slaCalc = calculateSlaStatus(
+          g.created_at,
+          g.due_at,
+          g.sla_status,
+        );
 
-      const latestResolution = g.resolutions?.[0];
-      const latestReview = latestResolution?.resolution_reviews?.[0];
-      let submittedResolution: StaffResolutionData | null = null;
+        const latestResolution = g.resolutions?.[0];
+        const latestReview = latestResolution?.resolution_reviews?.[0];
+        let submittedResolution: StaffResolutionData | null = null;
 
-      if (latestResolution) {
-        submittedResolution = {
-          id: latestResolution.resolution_id.toString(),
-          submittedByUserId: latestResolution.submitted_by.toString(),
-          submittedByRole:
-            latestResolution.users?.roles?.role_name || undefined,
-          problemSummary: latestResolution.problem_summary,
-          findings: latestResolution.findings,
-          actionTaken: latestResolution.action_taken,
-          outcome: latestResolution.outcome,
-          evidence: latestResolution.evidence,
-          submittedAt: latestResolution.submitted_at.toISOString(),
-          reviewStatus: latestReview?.decision as
-            | "PENDING"
-            | "ACCEPTED"
-            | "REJECTED"
-            | undefined,
-          rejectionReason: latestReview?.rejection_reason || null,
-          attachments: (latestResolution.attachments || []).map((att) => ({
+        if (latestResolution) {
+          submittedResolution = {
+            id: latestResolution.resolution_id.toString(),
+            submittedByUserId: latestResolution.submitted_by.toString(),
+            submittedByRole:
+              latestResolution.users?.roles?.role_name || undefined,
+            problemSummary: latestResolution.problem_summary,
+            findings: latestResolution.findings,
+            actionTaken: latestResolution.action_taken,
+            outcome: latestResolution.outcome,
+            evidence: latestResolution.evidence,
+            submittedAt: latestResolution.submitted_at
+              ? new Date(latestResolution.submitted_at).toISOString()
+              : new Date().toISOString(),
+            reviewStatus: latestReview?.decision as
+              | "PENDING"
+              | "ACCEPTED"
+              | "REJECTED"
+              | undefined,
+            rejectionReason: latestReview?.rejection_reason || null,
+            attachments: (latestResolution.attachments || []).map((att) => ({
+              id: att.attachment_id.toString(),
+              name: att.file_name,
+              size: att.file_size
+                ? `${Math.round(Number(att.file_size) / 1024)} KB`
+                : "Document",
+              type: att.file_type,
+              path: att.file_path,
+              uploadedAt: att.uploaded_at
+                ? new Date(att.uploaded_at).toISOString()
+                : new Date().toISOString(),
+            })),
+          };
+        }
+
+        const attachments = (g.attachments || [])
+          .filter((att) => !att.resolution_id)
+          .map((att) => ({
             id: att.attachment_id.toString(),
             name: att.file_name,
             size: att.file_size
@@ -199,154 +225,165 @@ export async function GET(request: Request) {
               : "Document",
             type: att.file_type,
             path: att.file_path,
-            uploadedAt: att.uploaded_at.toISOString(),
-          })),
-        };
-      }
+            uploadedAt: formatRelativeTime(g.created_at),
+          }));
 
-      const attachments = (g.attachments || [])
-        .filter((att) => !att.resolution_id)
-        .map((att) => ({
-          id: att.attachment_id.toString(),
-          name: att.file_name,
-          size: att.file_size
-            ? `${Math.round(Number(att.file_size) / 1024)} KB`
-            : "Document",
-          type: att.file_type,
-          path: att.file_path,
-          uploadedAt: formatRelativeTime(g.created_at),
-        }));
+        // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
+        const internalNotes: StaffInternalNote[] = (g.audit_logs || [])
+          .filter(
+            (l) =>
+              l.action === "HOD_DIRECTIVE_NOTE" ||
+              l.action === "INVESTIGATION_NOTE_ADDED" ||
+              l.action === "INTERNAL_NOTE_ADDED" ||
+              l.action === "HEAD_DIRECTIVE_ISSUED",
+          )
+          .slice()
+          .reverse()
+          .map((l) => {
+            const user = l.users;
+            const userRole = user?.roles?.role_name;
+            let val: {
+              note?: string;
+              details?: string;
+              author?: string;
+              role?: string;
+              parentId?: string;
+              replyToAuthor?: string;
+            } | null = null;
 
-      // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
-      const internalNotes: StaffInternalNote[] = (g.audit_logs || [])
-        .filter(
-          (l) =>
-            l.action === "HOD_DIRECTIVE_NOTE" ||
-            l.action === "INVESTIGATION_NOTE_ADDED" ||
-            l.action === "INTERNAL_NOTE_ADDED" ||
-            l.action === "HEAD_DIRECTIVE_ISSUED",
-        )
-        .slice()
-        .reverse()
-        .map((l) => {
-          const user = l.users;
-          const userRole = user?.roles?.role_name;
-          const val = l.new_value as {
-            note?: string;
-            details?: string;
-            author?: string;
-            role?: string;
-            parentId?: string;
-            replyToAuthor?: string;
-          } | null;
-
-          const roleDisplay =
-            val?.role ||
-            (userRole === "DEPARTMENT_HEAD"
-              ? "Department Head"
-              : userRole === "STAFF"
-                ? "Staff"
-                : userRole || "Staff");
-
-          const rawName = user
-            ? `${user.first_name} ${user.last_name || ""}`.trim()
-            : "User";
-
-          const authorDisplay =
-            val?.author ||
-            (userRole === "DEPARTMENT_HEAD"
-              ? `Department Head — ${rawName}`
-              : userRole === "STAFF"
-                ? `Staff — ${rawName}`
-                : rawName);
-
-          return {
-            id: l.audit_log_id.toString(),
-            author: authorDisplay,
-            role: roleDisplay,
-            timestamp: formatRelativeTime(l.created_at),
-            note: val?.note || val?.details || String(l.new_value || ""),
-            parentId: val?.parentId || undefined,
-            replyToAuthor: val?.replyToAuthor || undefined,
-            createdAt: l.created_at.toISOString(),
-          };
-        });
-
-      const auditTrail: StaffAuditItem[] = (g.audit_logs || [])
-        .filter((log) => isStaffRelevantAuditAction(log.action))
-        .map((log) => {
-          const user = log.users;
-          const userRole = user?.roles?.role_name;
-          let actorName = "System";
-          if (user) {
-            const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
-            if (userRole === "DEPARTMENT_HEAD") {
-              actorName = `Department Head — ${rawName}`;
-            } else if (userRole === "STAFF") {
-              actorName = `Staff — ${rawName}`;
-            } else {
-              actorName = rawName;
+            if (typeof l.new_value === "string") {
+              try {
+                val = JSON.parse(l.new_value);
+              } catch {
+                val = { note: l.new_value };
+              }
+            } else if (l.new_value && typeof l.new_value === "object") {
+              val = l.new_value as unknown as typeof val;
             }
-          }
 
-          const logVal = log.new_value as {
-            details?: string;
-            note?: string;
-            author?: string;
-          } | null;
-          const details =
-            logVal?.note ||
-            logVal?.details ||
-            formatAuditActionTitle(log.action);
-          return {
-            id: log.audit_log_id.toString(),
-            action: formatAuditActionTitle(log.action),
-            details,
-            actor: actorName,
-            timestamp: log.created_at.toISOString(),
-            relativeTime: formatRelativeTime(log.created_at),
-            grievanceNumber: g.grievance_number,
-          };
-        });
+            const roleDisplay =
+              val?.role ||
+              (userRole === "DEPARTMENT_HEAD"
+                ? "Department Head"
+                : userRole === "STAFF"
+                  ? "Staff"
+                  : userRole || "Staff");
 
-      return {
-        id: g.grievance_id.toString(),
-        grievanceNumber: g.grievance_number,
-        title: g.title,
-        description: g.description,
-        category: g.categories?.category_name || "General",
-        subcategory: g.subcategories?.subcategory_name || "General",
-        priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-        status: g.status as StaffGrievanceItem["status"],
-        reopenCount: g.reopen_count || 0,
-        manualReviewCount: g.manual_review_count || 0,
-        slaStatus: slaCalc.state,
-        slaConsumptionPercent: slaCalc.consumptionPercent,
-        slaTimeLeft: slaCalc.timeRemaining,
-        dueAt: g.due_at ? g.due_at.toISOString() : null,
-        submittedAt: formatRelativeTime(g.created_at),
-        assignedAt: formatRelativeTime(a.assigned_at),
-        submitterName: submitterFullName,
-        submitterEmail: submitter?.email || "",
-        submitterRole: submitter?.roles?.role_name || "Employee",
-        hasResolution: Boolean(latestResolution),
-        hasProposedKb:
-          (
-            g.resolutions as unknown as Array<{
-              knowledge_articles?: unknown[];
-            }>
-          )?.some((r) => (r.knowledge_articles?.length ?? 0) > 0) ?? false,
-        submittedResolution,
-        attachments,
-        internalNotes,
-        auditTrail,
-        myInvolvementType,
-        isPrimaryOwner,
-        myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
-        isMyDepartmentCompleted:
-          a.grievance_departments?.status === "COMPLETED",
-      };
-    });
+            const rawName = user
+              ? `${user.first_name} ${user.last_name || ""}`.trim()
+              : "User";
+
+            const authorDisplay =
+              val?.author ||
+              (userRole === "DEPARTMENT_HEAD"
+                ? `Department Head — ${rawName}`
+                : userRole === "STAFF"
+                  ? `Staff — ${rawName}`
+                  : rawName);
+
+            return {
+              id: l.audit_log_id.toString(),
+              author: authorDisplay,
+              role: roleDisplay,
+              timestamp: formatRelativeTime(l.created_at),
+              note: val?.note || val?.details || String(l.new_value || ""),
+              parentId: val?.parentId ? String(val.parentId) : undefined,
+              replyToAuthor: val?.replyToAuthor || undefined,
+              createdAt: l.created_at
+                ? new Date(l.created_at).toISOString()
+                : new Date().toISOString(),
+            };
+          });
+
+        const auditTrail: StaffAuditItem[] = (g.audit_logs || [])
+          .filter((log) => isStaffRelevantAuditAction(log.action))
+          .map((log) => {
+            const user = log.users;
+            const userRole = user?.roles?.role_name;
+            let actorName = "System";
+            if (user) {
+              const rawName =
+                `${user.first_name} ${user.last_name || ""}`.trim();
+              if (userRole === "DEPARTMENT_HEAD") {
+                actorName = `Department Head — ${rawName}`;
+              } else if (userRole === "STAFF") {
+                actorName = `Staff — ${rawName}`;
+              } else {
+                actorName = rawName;
+              }
+            }
+
+            let logVal: {
+              details?: string;
+              note?: string;
+              author?: string;
+            } | null = null;
+
+            if (typeof log.new_value === "string") {
+              try {
+                logVal = JSON.parse(log.new_value);
+              } catch {
+                logVal = { details: log.new_value };
+              }
+            } else if (log.new_value && typeof log.new_value === "object") {
+              logVal = log.new_value as unknown as typeof logVal;
+            }
+
+            const details =
+              logVal?.note ||
+              logVal?.details ||
+              formatAuditActionTitle(log.action);
+            return {
+              id: log.audit_log_id.toString(),
+              action: formatAuditActionTitle(log.action),
+              details,
+              actor: actorName,
+              timestamp: log.created_at
+                ? new Date(log.created_at).toISOString()
+                : new Date().toISOString(),
+              relativeTime: formatRelativeTime(log.created_at),
+              grievanceNumber: g.grievance_number,
+            };
+          });
+
+        return {
+          id: g.grievance_id.toString(),
+          grievanceNumber: g.grievance_number,
+          title: g.title,
+          description: g.description,
+          category: g.categories?.category_name || "General",
+          subcategory: g.subcategories?.subcategory_name || "General",
+          priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
+          status: g.status as StaffGrievanceItem["status"],
+          reopenCount: g.reopen_count || 0,
+          manualReviewCount: g.manual_review_count || 0,
+          slaStatus: slaCalc.state,
+          slaConsumptionPercent: slaCalc.consumptionPercent,
+          slaTimeLeft: slaCalc.timeRemaining,
+          dueAt: g.due_at ? new Date(g.due_at).toISOString() : null,
+          submittedAt: formatRelativeTime(g.created_at),
+          assignedAt: formatRelativeTime(a.assigned_at),
+          submitterName: submitterFullName,
+          submitterEmail: submitter?.email || "",
+          submitterRole: submitter?.roles?.role_name || "Employee",
+          hasResolution: Boolean(latestResolution),
+          hasProposedKb:
+            (
+              g.resolutions as unknown as Array<{
+                knowledge_articles?: unknown[];
+              }>
+            )?.some((r) => (r.knowledge_articles?.length ?? 0) > 0) ?? false,
+          submittedResolution,
+          attachments,
+          internalNotes,
+          auditTrail,
+          myInvolvementType,
+          isPrimaryOwner,
+          myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
+          isMyDepartmentCompleted:
+            a.grievance_departments?.status === "COMPLETED",
+        };
+      });
 
     // 5. Aggregate KPIs
     const activeGrievances = grievanceItems.filter(
@@ -453,8 +490,16 @@ export async function GET(request: Request) {
     return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("Error in /api/staff/dashboard:", error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to load staff dashboard data";
     return NextResponse.json(
-      { success: false, message: "Failed to load staff dashboard data" },
+      {
+        success: false,
+        message: `Failed to load staff dashboard data: ${errorMessage}`,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500 },
     );
   }

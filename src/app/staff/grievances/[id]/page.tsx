@@ -43,12 +43,21 @@ export default async function StaffGrievanceDetailPage({ params }: PageProps) {
     ? `${hodUser.first_name} ${hodUser.last_name || ""}`.trim()
     : undefined;
 
+  const designation =
+    user.roles.role_name === "ADMIN"
+      ? "System Administrator"
+      : user.roles.role_name === "DEPARTMENT_HEAD"
+        ? "Department Head"
+        : "Grievance Staff";
+
   return (
     <DashboardShell
       userRole={isAdmin ? "STAFF" : (user.roles.role_name as "STAFF")}
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation={designation}
+      departmentName={deptName}
       title="Grievance Examination"
       subtitle={`Case file review & investigation workspace • ${deptName}`}
     >

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
 import { Send } from "lucide-react";
 import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
@@ -40,10 +40,9 @@ export function StaffMessageComposer({ grievanceId }: { grievanceId: string }) {
       toast.success("Request Sent", {
         description: "The end user has been notified.",
       });
-      
+
       setMessage("");
       router.refresh();
-
     } catch (err: unknown) {
       console.error(err);
       toast.error("Failed to send request", {
@@ -64,13 +63,13 @@ export function StaffMessageComposer({ grievanceId }: { grievanceId: string }) {
           placeholder="Type your message to request additional info..."
           className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 min-h-[50px] resize-none overflow-hidden h-[50px]"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSubmit(e);
             }
           }}
         />
-        
+
         <Button
           type="submit"
           disabled={!message.trim() || isSubmitting}

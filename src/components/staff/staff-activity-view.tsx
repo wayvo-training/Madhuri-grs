@@ -14,13 +14,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pagination } from "@/components/ui/pagination";
-import { SortableTh } from "@/components/ui/sortable-table-head";
 import {
   AdvancedTableSearch,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -69,17 +69,20 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
     return Array.from(actions);
   }, [activities]);
 
-  const searchFields: SearchFieldDef[] = useMemo(() => [
-    {
-      id: "action",
-      label: "Action",
-      type: "select",
-      options: uniqueActions.map(act => ({ value: act, label: act })),
-    },
-    { id: "grievanceNumber", label: "Grievance ID", type: "text" },
-    { id: "actor", label: "Actor", type: "text" },
-    { id: "search", label: "Global Search", type: "text" },
-  ], [uniqueActions]);
+  const searchFields: SearchFieldDef[] = useMemo(
+    () => [
+      {
+        id: "action",
+        label: "Action",
+        type: "select",
+        options: uniqueActions.map((act) => ({ value: act, label: act })),
+      },
+      { id: "grievanceNumber", label: "Grievance ID", type: "text" },
+      { id: "actor", label: "Actor", type: "text" },
+      { id: "search", label: "Global Search", type: "text" },
+    ],
+    [uniqueActions],
+  );
 
   const { sortState, handleSort, sortedItems } = useTableSort(activities, {
     field: "timestamp",
@@ -87,7 +90,9 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
   });
 
   const filteredActivities = useMemo(() => {
-    return sortedItems.filter((item) => evaluateSearchConditions(item, advancedSearch, filterMode));
+    return sortedItems.filter((item) =>
+      evaluateSearchConditions(item, advancedSearch, filterMode),
+    );
   }, [sortedItems, advancedSearch, filterMode]);
 
   const pagination = usePagination(filteredActivities, {
@@ -154,7 +159,10 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
         <div className="flex-1 min-w-0 w-full">
           <AdvancedTableSearch
             fields={searchFields}
-            onSearch={(conds, mode) => { setAdvancedSearch(conds); setFilterMode(mode); }}
+            onSearch={(conds, mode) => {
+              setAdvancedSearch(conds);
+              setFilterMode(mode);
+            }}
             className="w-full"
           />
         </div>

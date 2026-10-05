@@ -89,6 +89,17 @@ export async function POST(request: Request) {
       );
     }
 
+    if (grievance.status === "ASSIGNED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Investigation has not been started yet. You must click 'Start Investigation' before submitting a final resolution.",
+        },
+        { status: 400 },
+      );
+    }
+
     // In a multi-department collaboration, verify primary or equal co-lead responsibility
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: gId },
@@ -221,6 +232,17 @@ export async function POST(request: Request) {
       });
     }
 
+    // Notify the submitting staff member with confirmation
+    await NotificationService.send({
+      userId: staffId,
+      grievanceId: gId,
+      type: "RESOLUTION_SUBMITTED",
+      title: `Resolution Submitted: ${grievance.grievance_number}`,
+      message: requiresHeadReview
+        ? `You submitted a resolution proposal for grievance ${grievance.grievance_number}. It is pending Department Head review.`
+        : `You submitted the resolution for grievance ${grievance.grievance_number}. It has been sent to the complainant.`,
+    });
+
     return NextResponse.json({
       success: true,
       message: requiresHeadReview
@@ -228,21 +250,25 @@ export async function POST(request: Request) {
         : "Resolution sent to complainant successfully",
       resolutionId: resolution.resolution_id.toString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in POST /api/staff/resolutions:", error);
+    const errMessage =
+      error instanceof Error ? error.message : "Failed to submit resolution";
+    const errStack = error instanceof Error ? error.stack : String(error);
+
     try {
-      const fs = require("fs/promises");
-      const path = require("path");
+      const fs = await import("node:fs/promises");
+      const path = await import("node:path");
       await fs.writeFile(
         path.join(process.cwd(), "error-staff-resolution.log"),
-        String(error.stack || error),
+        String(errStack || error),
       );
-    } catch (e) {}
+    } catch (_e) {}
 
     return NextResponse.json(
       {
         success: false,
-        message: error.message || "Failed to submit resolution",
+        message: errMessage,
       },
       { status: 500 },
     );

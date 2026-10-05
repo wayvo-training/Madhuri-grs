@@ -236,8 +236,8 @@ export function CaseNotesTab({
             Internal Discussion
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Internal discussion — visible only to authorized grievance
-            participants
+            Private case communication between authorized grievance participants
+            for investigation, coordination, and resolution.
           </p>
         </div>
         <span className="rounded-full bg-teal-50 dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-slate-700 px-2.5 py-0.5 text-xs font-semibold">
