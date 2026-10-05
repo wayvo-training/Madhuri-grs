@@ -53,6 +53,10 @@ interface AdminRuleConfigModalProps {
   setDurationHours: Dispatch<SetStateAction<string>>;
   warningPercent: string;
   setWarningPercent: Dispatch<SetStateAction<string>>;
+  atRiskPercent?: string;
+  setAtRiskPercent?: Dispatch<SetStateAction<string>>;
+  criticalPercent?: string;
+  setCriticalPercent?: Dispatch<SetStateAction<string>>;
   escalationPercent: string;
   setEscalationPercent: Dispatch<SetStateAction<string>>;
   reopenWindowHours: string;
@@ -108,6 +112,10 @@ export function AdminRuleConfigModal({
   setDurationHours,
   warningPercent,
   setWarningPercent,
+  atRiskPercent = "75",
+  setAtRiskPercent,
+  criticalPercent = "90",
+  setCriticalPercent,
   escalationPercent,
   setEscalationPercent,
   reopenWindowHours,
@@ -131,13 +139,13 @@ export function AdminRuleConfigModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl">
-        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl">
+        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
               Configure Policy Rule
             </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               Define automated triage, routing pathways, resolution SLAs, or
               reopen parameters.
             </p>
@@ -146,20 +154,20 @@ export function AdminRuleConfigModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
+        <div className="mt-4 flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-1 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setModalRuleType("routing")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "routing"
-                ? "bg-white text-[#0F766E] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white dark:bg-slate-800 text-[#0F766E] dark:text-teal-400 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
             Routing Rule
@@ -169,8 +177,8 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("priority")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "priority"
-                ? "bg-white text-[#0F766E] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white dark:bg-slate-800 text-[#0F766E] dark:text-teal-400 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
             Priority Rule
@@ -180,8 +188,8 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("sla")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "sla"
-                ? "bg-white text-[#0F766E] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white dark:bg-slate-800 text-[#0F766E] dark:text-teal-400 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
             SLA Policy
@@ -191,8 +199,8 @@ export function AdminRuleConfigModal({
             onClick={() => setModalRuleType("reopen")}
             className={`flex-1 rounded-lg py-1.5 text-center transition ${
               modalRuleType === "reopen"
-                ? "bg-white text-[#0F766E] shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-white dark:bg-slate-800 text-[#0F766E] dark:text-teal-400 shadow-xs"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             }`}
           >
             Reopen Policy
@@ -349,7 +357,9 @@ export function AdminRuleConfigModal({
                           type="text"
                           placeholder="Enter custom subcategory name"
                           value={newSubcategoryName}
-                          onChange={(e) => setNewSubcategoryName(e.target.value)}
+                          onChange={(e) =>
+                            setNewSubcategoryName(e.target.value)
+                          }
                           required
                           className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
                         />
@@ -382,7 +392,9 @@ export function AdminRuleConfigModal({
                               {s.subcategory_name}
                             </option>
                           ))}
-                        {selectedPriorityCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                        {selectedPriorityCatId && (
+                          <option value="CUSTOM">Custom (Add New)</option>
+                        )}
                       </select>
                     )}
                   </div>
@@ -528,18 +540,25 @@ export function AdminRuleConfigModal({
                       value={selectedRoutingSubcatId}
                       disabled={!selectedCatId}
                       required
-                      onChange={(e) => setSelectedRoutingSubcatId(e.target.value)}
+                      onChange={(e) =>
+                        setSelectedRoutingSubcatId(e.target.value)
+                      }
                       className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
                     >
                       <option value="">-- Select Subcategory --</option>
                       {categories
                         .find((c) => c.category_id === selectedCatId)
                         ?.subcategories?.map((s) => (
-                          <option key={s.subcategory_id} value={s.subcategory_id}>
+                          <option
+                            key={s.subcategory_id}
+                            value={s.subcategory_id}
+                          >
                             {s.subcategory_name}
                           </option>
                         ))}
-                      {selectedCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                      {selectedCatId && (
+                        <option value="CUSTOM">Custom (Add New)</option>
+                      )}
                     </select>
                   )}
                 </div>
@@ -569,15 +588,17 @@ export function AdminRuleConfigModal({
                                 : [...prev, d.department_name],
                             );
                           }}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border ${
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border cursor-pointer ${
                             isChecked
-                              ? "bg-sky-50 border-sky-300 text-sky-700 font-semibold"
-                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                              ? "bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-700/60 text-sky-700 dark:text-sky-300 font-semibold"
+                              : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              isChecked ? "bg-sky-500" : "bg-slate-300"
+                              isChecked
+                                ? "bg-sky-500 dark:bg-sky-400"
+                                : "bg-slate-300 dark:bg-slate-500"
                             }`}
                           />
                           {d.department_name}
@@ -630,40 +651,103 @@ export function AdminRuleConfigModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="warning-percent-input"
-                    className="block font-semibold text-slate-700"
-                  >
-                    Warning Warning Threshold (%) *
-                  </label>
-                  <input
-                    id="warning-percent-input"
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={warningPercent}
-                    onChange={(e) => setWarningPercent(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  />
+              <div>
+                <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mb-2.5">
+                  <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">
+                    SLA Thresholds
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    4-Tier notification & escalation triggers
+                  </span>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="escalation-percent-input"
-                    className="block font-semibold text-slate-700"
-                  >
-                    Escalation Breach Threshold (%) *
-                  </label>
-                  <input
-                    id="escalation-percent-input"
-                    type="number"
-                    min="100"
-                    value={escalationPercent}
-                    onChange={(e) => setEscalationPercent(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label
+                      htmlFor="warning-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Warning Threshold (%) *
+                    </label>
+                    <input
+                      id="warning-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={warningPercent}
+                      onChange={(e) => setWarningPercent(e.target.value)}
+                      placeholder="50"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff notification
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="at-risk-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      At Risk Threshold (%) *
+                    </label>
+                    <input
+                      id="at-risk-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={atRiskPercent}
+                      onChange={(e) => setAtRiskPercent?.(e.target.value)}
+                      placeholder="75"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff + Dept Head
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="critical-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Critical Threshold (%) *
+                    </label>
+                    <input
+                      id="critical-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={criticalPercent}
+                      onChange={(e) => setCriticalPercent?.(e.target.value)}
+                      placeholder="90"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff + Head + Urgent
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="escalation-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Breach Threshold (%) *
+                    </label>
+                    <input
+                      id="escalation-percent-input"
+                      type="number"
+                      min="100"
+                      value={escalationPercent}
+                      onChange={(e) => setEscalationPercent(e.target.value)}
+                      placeholder="100"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Breached + Escalated
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -744,7 +828,9 @@ export function AdminRuleConfigModal({
                             {s.subcategory_name}
                           </option>
                         ))}
-                      {selectedPriorityCatId && <option value="CUSTOM">Custom (Add New)</option>}
+                      {selectedPriorityCatId && (
+                        <option value="CUSTOM">Custom (Add New)</option>
+                      )}
                     </select>
                   )}
                 </div>

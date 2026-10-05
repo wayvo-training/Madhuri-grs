@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  RotateCcw,
-  X,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, RotateCcw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -113,6 +108,10 @@ export function AdminMasterRules({
     setDurationHours,
     warningPercent,
     setWarningPercent,
+    atRiskPercent,
+    setAtRiskPercent,
+    criticalPercent,
+    setCriticalPercent,
     escalationPercent,
     setEscalationPercent,
     reopenWindowHours,
@@ -166,7 +165,6 @@ export function AdminMasterRules({
       <div className="pt-5 sm:pt-6 px-5 sm:px-6">
         <AdminPanelHeader
           title="Master Governance & Rules"
-
           action={
             <div className="flex items-center gap-3 shrink-0 flex-nowrap">
               {activeTab === "priority" && (
@@ -254,31 +252,40 @@ export function AdminMasterRules({
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-4 border-b border-slate-100 px-5 sm:px-6 mt-2 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 px-5 sm:px-6 mt-2 overflow-x-auto no-scrollbar">
         {[
-          { id: "priority", label: "Priority Rules", count: priorityRules.length },
+          {
+            id: "priority",
+            label: "Priority Rules",
+            count: priorityRules.length,
+          },
           { id: "routing", label: "Routing Rules", count: routingRules.length },
           { id: "sla", label: "SLA Policies", count: slaPolicies.length },
-          { id: "reopen", label: "Reopen Policy", count: reopenPolicies.length },
+          {
+            id: "reopen",
+            label: "Reopen Policy",
+            count: reopenPolicies.length,
+          },
         ].map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => {
-              setActiveTab(tab.id as any);
+              setActiveTab(tab.id as "routing" | "priority" | "sla" | "reopen");
               handleResetFilters();
             }}
             className={`flex items-center gap-2 px-2 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? "border-[#0F766E] text-[#0F766E]"
-                : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                ? "border-[#0F766E] text-[#0F766E] dark:text-teal-400"
+                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700"
             }`}
           >
             {tab.label}
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                 activeTab === tab.id
-                  ? "bg-teal-50 text-teal-700"
-                  : "bg-slate-100 text-slate-500"
+                  ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
               }`}
             >
               {tab.count}
@@ -288,7 +295,7 @@ export function AdminMasterRules({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 bg-slate-50/50 px-5 py-3 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 px-5 py-3 sm:px-6">
         <div className="flex-1 w-full lg:w-3/5">
           <AdvancedTableSearch
             fields={(() => {
@@ -303,40 +310,104 @@ export function AdminMasterRules({
               };
               if (activeTab === "priority") {
                 return [
-                  { id: "rule_name", label: "Rule Name", type: "text" as const },
+                  {
+                    id: "rule_name",
+                    label: "Rule Name",
+                    type: "text" as const,
+                  },
                   { id: "category", label: "Category", type: "text" as const },
-                  { id: "priority", label: "Priority Level", type: "text" as const },
+                  {
+                    id: "priority",
+                    label: "Priority Level",
+                    type: "text" as const,
+                  },
                   commonStatus,
                 ];
               }
               if (activeTab === "routing") {
                 return [
-                  { id: "rule_name", label: "Rule Name", type: "text" as const },
+                  {
+                    id: "rule_name",
+                    label: "Rule Name",
+                    type: "text" as const,
+                  },
                   { id: "category", label: "Category", type: "text" as const },
-                  { id: "subcategory", label: "Subcategory", type: "text" as const },
+                  {
+                    id: "subcategory",
+                    label: "Subcategory",
+                    type: "text" as const,
+                  },
                   { id: "priority", label: "Priority", type: "text" as const },
-                  { id: "department", label: "Department", type: "text" as const },
-                  { id: "involvement", label: "Involvement", type: "text" as const },
+                  {
+                    id: "department",
+                    label: "Department",
+                    type: "text" as const,
+                  },
+                  {
+                    id: "involvement",
+                    label: "Involvement",
+                    type: "text" as const,
+                  },
                   commonStatus,
                 ];
               }
               if (activeTab === "sla") {
                 return [
-                  { id: "policy_name", label: "Policy Name", type: "text" as const },
-                  { id: "description", label: "Description", type: "text" as const },
-                  { id: "duration_hours", label: "Resolution Target", type: "number" as const },
-                  { id: "warning_percent", label: "Warning %", type: "number" as const },
-                  { id: "escalation_percent", label: "Escalation %", type: "number" as const },
+                  {
+                    id: "policy_name",
+                    label: "Policy Name",
+                    type: "text" as const,
+                  },
+                  {
+                    id: "description",
+                    label: "Description",
+                    type: "text" as const,
+                  },
+                  {
+                    id: "duration_hours",
+                    label: "Resolution Target",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "warning_percent",
+                    label: "Warning %",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "escalation_percent",
+                    label: "Escalation %",
+                    type: "number" as const,
+                  },
                   commonStatus,
                 ];
               }
               if (activeTab === "reopen") {
                 return [
-                  { id: "policy_name", label: "Policy Name", type: "text" as const },
-                  { id: "description", label: "Description", type: "text" as const },
-                  { id: "reopen_window_hours", label: "Reopen Window", type: "number" as const },
-                  { id: "max_reopens", label: "Max Reopens", type: "number" as const },
-                  { id: "max_reviews", label: "Max Reviews", type: "number" as const },
+                  {
+                    id: "policy_name",
+                    label: "Policy Name",
+                    type: "text" as const,
+                  },
+                  {
+                    id: "description",
+                    label: "Description",
+                    type: "text" as const,
+                  },
+                  {
+                    id: "reopen_window_hours",
+                    label: "Reopen Window",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "max_reopens",
+                    label: "Max Reopens",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "max_reviews",
+                    label: "Max Reviews",
+                    type: "number" as const,
+                  },
                   commonStatus,
                 ];
               }
@@ -345,11 +416,11 @@ export function AdminMasterRules({
             onSearch={(conditions: SearchCondition[], mode: string) => {
               setStatusFilter([]);
               setSearchQuery("");
-              let newStatus: string[] = [];
+              const newStatus: string[] = [];
               let newSearch = "";
-              
-              conditions.forEach(condition => {
-                let valArray = Array.isArray(condition.value)
+
+              conditions.forEach((condition) => {
+                const valArray = Array.isArray(condition.value)
                   ? condition.value
                   : [condition.value as string];
 
@@ -360,15 +431,13 @@ export function AdminMasterRules({
                   newSearch = valArray[0] || newSearch;
                 }
               });
-              
+
               if (newStatus.length > 0) setStatusFilter(newStatus);
               if (newSearch) setSearchQuery(newSearch);
             }}
             className="w-full"
           />
         </div>
-
-
       </div>
 
       {/* Main Tab Content */}
@@ -486,8 +555,16 @@ export function AdminMasterRules({
               setRuleName(p.policy_name);
               setPriorityLevel(p.priority_level || "HIGH");
               setDurationHours((p.target_duration_minutes / 60).toString());
-              setWarningPercent(p.warning_threshold_percent.toString());
-              setEscalationPercent(p.escalation_threshold_percent.toString());
+              setWarningPercent(
+                p.warning_threshold_percent?.toString() || "50",
+              );
+              setAtRiskPercent(p.at_risk_threshold_percent?.toString() || "75");
+              setCriticalPercent(
+                p.critical_threshold_percent?.toString() || "90",
+              );
+              setEscalationPercent(
+                p.escalation_threshold_percent?.toString() || "100",
+              );
 
               setRuleModalOpen(true);
             }}
@@ -567,6 +644,10 @@ export function AdminMasterRules({
         setDurationHours={setDurationHours}
         warningPercent={warningPercent}
         setWarningPercent={setWarningPercent}
+        atRiskPercent={atRiskPercent}
+        setAtRiskPercent={setAtRiskPercent}
+        criticalPercent={criticalPercent}
+        setCriticalPercent={setCriticalPercent}
         escalationPercent={escalationPercent}
         setEscalationPercent={setEscalationPercent}
         reopenWindowHours={reopenWindowHours}

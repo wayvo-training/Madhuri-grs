@@ -61,9 +61,9 @@ export function ReopenPoliciesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
         <Table className="w-full text-left text-sm">
-          <TableHeader className="bg-slate-50/50">
+          <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
                 field="policy_name"
@@ -143,7 +143,9 @@ export function ReopenPoliciesView({
                     <TableCell className="px-2 py-2.5 text-slate-600">
                       {(() => {
                         try {
-                          const cond = p.applicable_condition as { category?: string };
+                          const cond = p.applicable_condition as {
+                            category?: string;
+                          };
                           return cond?.category || "All";
                         } catch {
                           return "All";
@@ -153,7 +155,9 @@ export function ReopenPoliciesView({
                     <TableCell className="px-2 py-2.5 text-slate-600">
                       {(() => {
                         try {
-                          const cond = p.applicable_condition as { subcategory?: string };
+                          const cond = p.applicable_condition as {
+                            subcategory?: string;
+                          };
                           return cond?.subcategory || "All";
                         } catch {
                           return "All";

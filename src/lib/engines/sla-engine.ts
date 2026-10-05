@@ -186,28 +186,28 @@ export async function evaluateGrievanceSla(
       },
     }));
 
-  const warningThreshold = activeSlaPolicy
-    ? Number(activeSlaPolicy.warning_threshold_percent)
-    : DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT;
+  const tc =
+    (activeSlaPolicy?.trigger_condition as Record<string, unknown>) || {};
 
-  const escalationThreshold = activeSlaPolicy
-    ? Number(activeSlaPolicy.escalation_threshold_percent)
-    : DEFAULT_SLA_THRESHOLDS.ESCALATION_BREACH_PERCENT;
+  const staffNudgeThreshold = tc.warning_threshold_percent
+    ? Number(tc.warning_threshold_percent)
+    : DEFAULT_SLA_THRESHOLDS.STAFF_NUDGE_PERCENT;
 
-  const staffNudgeThreshold = Math.min(
-    DEFAULT_SLA_THRESHOLDS.STAFF_NUDGE_PERCENT,
-    Math.round(warningThreshold * 0.67),
-  );
+  const warningThreshold = tc.at_risk_threshold_percent
+    ? Number(tc.at_risk_threshold_percent)
+    : activeSlaPolicy
+      ? Number(activeSlaPolicy.warning_threshold_percent)
+      : DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT;
 
-  const urgentThreshold = Math.min(
-    escalationThreshold - 5,
-    Math.max(
-      warningThreshold + 5,
-      Math.round(
-        warningThreshold + (escalationThreshold - warningThreshold) * 0.6,
-      ),
-    ),
-  );
+  const urgentThreshold = tc.critical_threshold_percent
+    ? Number(tc.critical_threshold_percent)
+    : DEFAULT_SLA_THRESHOLDS.URGENT_PERCENT;
+
+  const escalationThreshold = tc.escalation_threshold_percent
+    ? Number(tc.escalation_threshold_percent)
+    : activeSlaPolicy
+      ? Number(activeSlaPolicy.escalation_threshold_percent)
+      : DEFAULT_SLA_THRESHOLDS.ESCALATION_BREACH_PERCENT;
 
   // =========================================================================
   // RULE 1: Below Staff Nudge threshold → Normal processing

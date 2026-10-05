@@ -12,7 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTableSort } from "@/hooks/useTableSort";
-import type { SerializedPriorityRule, CategoryOption as RuleCategoryOption } from "@/types/admin/master-rules";
+import type {
+  CategoryOption as RuleCategoryOption,
+  SerializedPriorityRule,
+} from "@/types/admin/master-rules";
 
 interface PriorityRulesViewProps {
   rules: SerializedPriorityRule[];
@@ -59,20 +62,33 @@ export function PriorityRulesView({
         let resolvedSubcatName = cond.subcategory_name || cond.subcategory;
 
         if (cond.category_id && categories?.length > 0) {
-          const catMatch = categories.find(c => c.category_id === cond.category_id);
+          const catMatch = categories.find(
+            (c) => c.category_id === cond.category_id,
+          );
           if (catMatch) {
             resolvedCatName = catMatch.category_name;
             if (cond.subcategory_id) {
-              const subMatch = catMatch.subcategories?.find((s: { subcategory_id: string; subcategory_name: string }) => s.subcategory_id === cond.subcategory_id);
+              const subMatch = catMatch.subcategories?.find(
+                (s: { subcategory_id: string; subcategory_name: string }) =>
+                  s.subcategory_id === cond.subcategory_id,
+              );
               if (subMatch) {
                 resolvedSubcatName = subMatch.subcategory_name;
               }
             }
           }
-        } else if (resolvedSubcatName && !resolvedCatName && categories?.length > 0) {
+        } else if (
+          resolvedSubcatName &&
+          !resolvedCatName &&
+          categories?.length > 0
+        ) {
           // Reverse lookup: if we have subcategory name but no category name, find the parent
           for (const c of categories) {
-            const subMatch = c.subcategories?.find((s: { subcategory_id: string; subcategory_name: string }) => s.subcategory_name.trim().toLowerCase() === resolvedSubcatName?.trim().toLowerCase());
+            const subMatch = c.subcategories?.find(
+              (s: { subcategory_id: string; subcategory_name: string }) =>
+                s.subcategory_name.trim().toLowerCase() ===
+                resolvedSubcatName?.trim().toLowerCase(),
+            );
             if (subMatch) {
               resolvedCatName = c.category_name;
               break;
@@ -115,22 +131,22 @@ export function PriorityRulesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
         <Table className="w-full text-left text-sm">
-          <TableHeader className="bg-slate-50/50">
+          <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
                 field="rule_name"
                 currentSort={sortState}
                 onSort={handleSort}
-                className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500"
+                className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
               >
                 Rule Name
               </SortableTableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Category
               </TableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 Subcategory
               </TableHead>
               <SortableTableHead
@@ -188,24 +204,43 @@ export function PriorityRulesView({
                       category_id?: string;
                       subcategory_id?: string;
                     };
-                    
+
                     let resolvedCatName = cond.category_name || cond.category;
-                    let resolvedSubcatName = cond.subcategory_name || cond.subcategory;
+                    let resolvedSubcatName =
+                      cond.subcategory_name || cond.subcategory;
 
                     if (cond.category_id && categories?.length > 0) {
-                      const catMatch = categories.find(c => c.category_id === cond.category_id);
+                      const catMatch = categories.find(
+                        (c) => c.category_id === cond.category_id,
+                      );
                       if (catMatch) {
                         resolvedCatName = catMatch.category_name;
                         if (cond.subcategory_id) {
-                          const subMatch = catMatch.subcategories?.find((s: { subcategory_id: string; subcategory_name: string }) => s.subcategory_id === cond.subcategory_id);
+                          const subMatch = catMatch.subcategories?.find(
+                            (s: {
+                              subcategory_id: string;
+                              subcategory_name: string;
+                            }) => s.subcategory_id === cond.subcategory_id,
+                          );
                           if (subMatch) {
                             resolvedSubcatName = subMatch.subcategory_name;
                           }
                         }
                       }
-                    } else if (resolvedSubcatName && !resolvedCatName && categories?.length > 0) {
+                    } else if (
+                      resolvedSubcatName &&
+                      !resolvedCatName &&
+                      categories?.length > 0
+                    ) {
                       for (const c of categories) {
-                        const subMatch = c.subcategories?.find((s: { subcategory_id: string; subcategory_name: string }) => s.subcategory_name.trim().toLowerCase() === resolvedSubcatName?.trim().toLowerCase());
+                        const subMatch = c.subcategories?.find(
+                          (s: {
+                            subcategory_id: string;
+                            subcategory_name: string;
+                          }) =>
+                            s.subcategory_name.trim().toLowerCase() ===
+                            resolvedSubcatName?.trim().toLowerCase(),
+                        );
                         if (subMatch) {
                           resolvedCatName = c.category_name;
                           break;

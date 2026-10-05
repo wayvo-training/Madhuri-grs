@@ -89,17 +89,37 @@ export default async function AdminRulesPage() {
   );
 
   const serializedSlaPolicies: SerializedSlaPolicy[] = rawSlaPolicies.map(
-    (s) => ({
-      sla_policy_id: s.sla_policy_id.toString(),
-      policy_name: s.policy_name,
-      priority_level: s.priority_level,
-      sla_type: s.sla_type,
-      target_duration_minutes: s.target_duration_minutes,
-      warning_threshold_percent: s.warning_threshold_percent.toString(),
-      escalation_threshold_percent: s.escalation_threshold_percent.toString(),
-      target_role: s.target_role,
-      status: s.status,
-    }),
+    (s) => {
+      const tc =
+        s.trigger_condition && typeof s.trigger_condition === "object"
+          ? (s.trigger_condition as Record<string, unknown>)
+          : {};
+      return {
+        sla_policy_id: s.sla_policy_id.toString(),
+        policy_name: s.policy_name,
+        priority_level: s.priority_level,
+        sla_type: s.sla_type,
+        target_duration_minutes: s.target_duration_minutes,
+        warning_threshold_percent:
+          tc.warning_threshold_percent !== undefined
+            ? String(tc.warning_threshold_percent)
+            : s.warning_threshold_percent.toString(),
+        at_risk_threshold_percent:
+          tc.at_risk_threshold_percent !== undefined
+            ? String(tc.at_risk_threshold_percent)
+            : "75",
+        critical_threshold_percent:
+          tc.critical_threshold_percent !== undefined
+            ? String(tc.critical_threshold_percent)
+            : "90",
+        escalation_threshold_percent:
+          tc.escalation_threshold_percent !== undefined
+            ? String(tc.escalation_threshold_percent)
+            : s.escalation_threshold_percent.toString(),
+        target_role: s.target_role,
+        status: s.status,
+      };
+    },
   );
 
   const serializedReopenPolicies: SerializedReopenPolicy[] =
@@ -128,6 +148,10 @@ export default async function AdminRulesPage() {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Master Governance & Rules Engine"
       subtitle="Automated priority calculation, department routing, SLA compliance & simulation"
     >

@@ -256,7 +256,9 @@ export function useRuleActions({
 
   // SLA-specific State
   const [durationHours, setDurationHours] = useState("24");
-  const [warningPercent, setWarningPercent] = useState("75");
+  const [warningPercent, setWarningPercent] = useState("50");
+  const [atRiskPercent, setAtRiskPercent] = useState("75");
+  const [criticalPercent, setCriticalPercent] = useState("90");
   const [escalationPercent, setEscalationPercent] = useState("100");
 
   // Reopen-specific State
@@ -278,6 +280,11 @@ export function useRuleActions({
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
     setSelectedSupportingDepts([]);
+    setDurationHours("24");
+    setWarningPercent("50");
+    setAtRiskPercent("75");
+    setCriticalPercent("90");
+    setEscalationPercent("100");
     setNewCategoryName("");
     setNewSubcategoryName("");
   }
@@ -368,8 +375,12 @@ export function useRuleActions({
           is_default: isDefault,
           status: ruleStatus,
           conditions,
-          new_category_name: selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
-          new_subcategory_name: selectedPrioritySubcatId === "CUSTOM" ? newSubcategoryName : undefined,
+          new_category_name:
+            selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name:
+            selectedPrioritySubcatId === "CUSTOM"
+              ? newSubcategoryName
+              : undefined,
         };
       } else if (modalRuleType === "routing") {
         if (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId) {
@@ -401,10 +412,20 @@ export function useRuleActions({
           rule_order: Number.parseInt(ruleOrder, 10) || 10,
           status: ruleStatus,
           department_name: chosenDept?.department_name,
-          category_name: selectedCatId === "CUSTOM" ? newCategoryName : chosenCat?.category_name,
-          subcategory_name: selectedRoutingSubcatId === "CUSTOM" ? newSubcategoryName : chosenSub?.subcategory_name,
-          new_category_name: selectedCatId === "CUSTOM" ? newCategoryName : undefined,
-          new_subcategory_name: selectedRoutingSubcatId === "CUSTOM" ? newSubcategoryName : undefined,
+          category_name:
+            selectedCatId === "CUSTOM"
+              ? newCategoryName
+              : chosenCat?.category_name,
+          subcategory_name:
+            selectedRoutingSubcatId === "CUSTOM"
+              ? newSubcategoryName
+              : chosenSub?.subcategory_name,
+          new_category_name:
+            selectedCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name:
+            selectedRoutingSubcatId === "CUSTOM"
+              ? newSubcategoryName
+              : undefined,
         };
       } else if (modalRuleType === "sla") {
         endpoint = "/api/admin/rules/sla";
@@ -414,7 +435,9 @@ export function useRuleActions({
           sla_type: "RESOLUTION",
           target_duration_minutes:
             (Number.parseFloat(durationHours) || 24) * 60,
-          warning_threshold_percent: Number.parseFloat(warningPercent) || 75,
+          warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
+          at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
+          critical_threshold_percent: Number.parseFloat(criticalPercent) || 90,
           escalation_threshold_percent:
             Number.parseFloat(escalationPercent) || 100,
           target_role: "DEPARTMENT_HEAD",
@@ -425,7 +448,9 @@ export function useRuleActions({
         if (selectedPriorityCatId) {
           if (selectedPriorityCatId !== "CUSTOM") {
             conditions.category_id = selectedPriorityCatId;
-            const prioCat = categories.find((c) => c.category_id === selectedPriorityCatId);
+            const prioCat = categories.find(
+              (c) => c.category_id === selectedPriorityCatId,
+            );
             conditions.category = prioCat?.category_name;
           } else {
             conditions.category_id = "CUSTOM";
@@ -434,7 +459,9 @@ export function useRuleActions({
         if (selectedPrioritySubcatId) {
           if (selectedPrioritySubcatId !== "CUSTOM") {
             conditions.subcategory_id = selectedPrioritySubcatId;
-            const prioCat = categories.find((c) => c.category_id === selectedPriorityCatId);
+            const prioCat = categories.find(
+              (c) => c.category_id === selectedPriorityCatId,
+            );
             const prioSubcat = prioCat?.subcategories?.find(
               (s) => s.subcategory_id === selectedPrioritySubcatId,
             );
@@ -451,9 +478,14 @@ export function useRuleActions({
           max_reopen_count: Number.parseInt(maxReopens, 10) || 2,
           max_manual_review_count: Number.parseInt(maxReviews, 10) || 1,
           status: ruleStatus,
-          applicable_condition: Object.keys(conditions).length > 0 ? conditions : undefined,
-          new_category_name: selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
-          new_subcategory_name: selectedPrioritySubcatId === "CUSTOM" ? newSubcategoryName : undefined,
+          applicable_condition:
+            Object.keys(conditions).length > 0 ? conditions : undefined,
+          new_category_name:
+            selectedPriorityCatId === "CUSTOM" ? newCategoryName : undefined,
+          new_subcategory_name:
+            selectedPrioritySubcatId === "CUSTOM"
+              ? newSubcategoryName
+              : undefined,
         };
       }
 
@@ -547,6 +579,10 @@ export function useRuleActions({
     setDurationHours,
     warningPercent,
     setWarningPercent,
+    atRiskPercent,
+    setAtRiskPercent,
+    criticalPercent,
+    setCriticalPercent,
     escalationPercent,
     setEscalationPercent,
     reopenWindowHours,

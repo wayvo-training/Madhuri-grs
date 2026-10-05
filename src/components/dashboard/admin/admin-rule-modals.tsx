@@ -55,6 +55,10 @@ interface AdminRuleConfigModalProps {
   setDurationHours: Dispatch<SetStateAction<string>>;
   warningPercent: string;
   setWarningPercent: Dispatch<SetStateAction<string>>;
+  atRiskPercent?: string;
+  setAtRiskPercent?: Dispatch<SetStateAction<string>>;
+  criticalPercent?: string;
+  setCriticalPercent?: Dispatch<SetStateAction<string>>;
   escalationPercent: string;
   setEscalationPercent: Dispatch<SetStateAction<string>>;
   reopenWindowHours: string;
@@ -103,6 +107,10 @@ export function AdminRuleConfigModal({
   setDurationHours,
   warningPercent,
   setWarningPercent,
+  atRiskPercent = "75",
+  setAtRiskPercent,
+  criticalPercent = "90",
+  setCriticalPercent,
   escalationPercent,
   setEscalationPercent,
   reopenWindowHours,
@@ -538,40 +546,103 @@ export function AdminRuleConfigModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="warning-percent-input"
-                    className="block font-semibold text-slate-700"
-                  >
-                    Warning Warning Threshold (%) *
-                  </label>
-                  <input
-                    id="warning-percent-input"
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={warningPercent}
-                    onChange={(e) => setWarningPercent(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  />
+              <div>
+                <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 mb-2.5">
+                  <span className="font-semibold text-xs text-slate-900 dark:text-slate-100">
+                    SLA Thresholds
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    4-Tier notification & escalation triggers
+                  </span>
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="escalation-percent-input"
-                    className="block font-semibold text-slate-700"
-                  >
-                    Escalation Breach Threshold (%) *
-                  </label>
-                  <input
-                    id="escalation-percent-input"
-                    type="number"
-                    min="100"
-                    value={escalationPercent}
-                    onChange={(e) => setEscalationPercent(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                  />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label
+                      htmlFor="warning-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Warning Threshold (%) *
+                    </label>
+                    <input
+                      id="warning-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={warningPercent}
+                      onChange={(e) => setWarningPercent(e.target.value)}
+                      placeholder="50"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff notification
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="at-risk-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      At Risk Threshold (%) *
+                    </label>
+                    <input
+                      id="at-risk-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={atRiskPercent}
+                      onChange={(e) => setAtRiskPercent?.(e.target.value)}
+                      placeholder="75"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff + Dept Head
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="critical-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Critical Threshold (%) *
+                    </label>
+                    <input
+                      id="critical-percent-input"
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={criticalPercent}
+                      onChange={(e) => setCriticalPercent?.(e.target.value)}
+                      placeholder="90"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Staff + Head + Urgent
+                    </span>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="escalation-percent-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Breach Threshold (%) *
+                    </label>
+                    <input
+                      id="escalation-percent-input"
+                      type="number"
+                      min="100"
+                      value={escalationPercent}
+                      onChange={(e) => setEscalationPercent(e.target.value)}
+                      placeholder="100"
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Breached + Escalated
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

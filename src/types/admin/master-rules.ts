@@ -31,6 +31,8 @@ export interface SerializedSlaPolicy {
   sla_type: string;
   target_duration_minutes: number;
   warning_threshold_percent: string;
+  at_risk_threshold_percent?: string;
+  critical_threshold_percent?: string;
   escalation_threshold_percent: string;
   target_role: string;
   status: string;

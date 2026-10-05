@@ -15,6 +15,8 @@ export async function POST(request: Request) {
       sla_type,
       target_duration_minutes,
       warning_threshold_percent,
+      at_risk_threshold_percent,
+      critical_threshold_percent,
       escalation_threshold_percent,
       target_role,
     } = body;
@@ -72,7 +74,9 @@ export async function POST(request: Request) {
     }
 
     const durationNum = Number(target_duration_minutes);
-    const warnPercent = Number(warning_threshold_percent) || 75;
+    const warnPercent = Number(warning_threshold_percent) || 50;
+    const atRiskPercent = Number(at_risk_threshold_percent) || 75;
+    const critPercent = Number(critical_threshold_percent) || 90;
     const escPercent = Number(escalation_threshold_percent) || 100;
     const tgtRole = target_role || "DEPARTMENT_HEAD";
 
@@ -111,6 +115,12 @@ export async function POST(request: Request) {
           target_duration_minutes: durationNum,
           warning_threshold_percent: warnPercent,
           escalation_threshold_percent: escPercent,
+          trigger_condition: {
+            warning_threshold_percent: warnPercent,
+            at_risk_threshold_percent: atRiskPercent,
+            critical_threshold_percent: critPercent,
+            escalation_threshold_percent: escPercent,
+          },
           target_role: tgtRole,
           status: requestedStatus,
           created_by: user.user_id,
@@ -140,7 +150,14 @@ export async function POST(request: Request) {
       policy: {
         sla_policy_id: policy.sla_policy_id.toString(),
         policy_name: policy.policy_name,
+        priority_level: policy.priority_level,
+        sla_type: policy.sla_type,
         target_duration_minutes: policy.target_duration_minutes,
+        warning_threshold_percent: warnPercent.toString(),
+        at_risk_threshold_percent: atRiskPercent.toString(),
+        critical_threshold_percent: critPercent.toString(),
+        escalation_threshold_percent: escPercent.toString(),
+        target_role: policy.target_role,
         status: policy.status,
       },
     });

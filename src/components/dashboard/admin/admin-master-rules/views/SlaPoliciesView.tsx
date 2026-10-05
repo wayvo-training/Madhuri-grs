@@ -68,9 +68,9 @@ export function SlaPoliciesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
         <Table className="w-full text-left text-sm">
-          <TableHeader className="bg-slate-50/50">
+          <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
                 field="policy_name"
@@ -96,22 +96,18 @@ export function SlaPoliciesView({
               >
                 Resolution Target
               </SortableTableHead>
-              <SortableTableHead
-                field="warning_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-              >
-                Warning Threshold
-              </SortableTableHead>
-              <SortableTableHead
-                field="escalation_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-              >
-                Escalation Threshold
-              </SortableTableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                Warning (50%)
+              </TableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                At Risk (75%)
+              </TableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                Critical (90%)
+              </TableHead>
+              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+                Breach (100%)
+              </TableHead>
               <SortableTableHead
                 field="status"
                 currentSort={sortState}
@@ -130,7 +126,7 @@ export function SlaPoliciesView({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={9}
                   className="py-12 text-center text-slate-400 font-normal"
                 >
                   <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -165,7 +161,17 @@ export function SlaPoliciesView({
                       </span>
                     </TableCell>
                     <TableCell className="px-2 py-2.5">
-                      <span className="text-rose-600 font-semibold">
+                      <span className="text-orange-600 font-semibold">
+                        {p.at_risk_threshold_percent || "75"}%
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      <span className="text-red-500 font-semibold">
+                        {p.critical_threshold_percent || "90"}%
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-2 py-2.5">
+                      <span className="text-rose-700 font-semibold">
                         {p.escalation_threshold_percent}%
                       </span>
                     </TableCell>
