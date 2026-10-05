@@ -333,7 +333,7 @@ export function SubmitGrievanceForm({
                     className="flex items-center justify-between py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xs"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0 text-rose-500">
+                      <div className="shrink-0 text-rose-500">
                         <FileIcon className="h-5 w-5" />
                       </div>
                       <div className="flex flex-col">

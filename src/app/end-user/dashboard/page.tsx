@@ -1,4 +1,3 @@
-import { User } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/shell";
 import {
   EndUserPortal,
@@ -84,7 +83,6 @@ export default async function UserDashboardPage() {
         {/* Live End User Portal with Inquiry Response & Document Upload */}
         <EndUserPortal
           initialGrievances={serializedGrievances}
-          userFullName={fullName}
           userEmail={user.email}
         />
       </div>

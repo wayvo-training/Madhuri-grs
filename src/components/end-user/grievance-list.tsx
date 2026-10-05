@@ -1,18 +1,8 @@
 "use client";
 
-import {
-  AlertCircle,
-  Clock,
-  Eye,
-  FileText,
-  Paperclip,
-  Search,
-  Send,
-  X,
-} from "lucide-react";
+import { Eye, FileText, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
@@ -34,8 +24,7 @@ interface GrievanceListProps {
 }
 
 export function GrievanceList({ initialGrievances }: GrievanceListProps) {
-  const [grievances, setGrievances] =
-    useState<EndUserGrievance[]>(initialGrievances);
+  const grievances = initialGrievances;
   const router = useRouter();
 
   // Advanced Search State
@@ -214,12 +203,12 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                         {item.grievanceNumber}
                       </span>
                     </td>
-                    <td className="py-4 px-4 max-w-[200px]">
+                    <td className="py-4 px-4 max-w-50">
                       <span className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm truncate max-w-[140px]">
+                    <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm truncate max-w-35">
                       {item.category}
                     </td>
                     <td className="py-4 px-4">

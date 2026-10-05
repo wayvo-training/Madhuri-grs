@@ -4,13 +4,10 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Eye,
   FilePlus,
   FileText,
-  Filter,
   Paperclip,
   Plus,
   RefreshCw,
@@ -22,11 +19,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
-import { GrievanceList } from "./grievance-list";
 
 export interface UserGrievanceItem {
   id: string;
@@ -58,14 +54,12 @@ export interface UserGrievanceItem {
 
 interface EndUserPortalProps {
   initialGrievances: UserGrievanceItem[];
-  userFullName: string;
   userEmail: string;
 }
 
 export function EndUserPortal({
   initialGrievances,
   userEmail,
-  userFullName,
 }: EndUserPortalProps) {
   const router = useRouter();
   const [grievances, setGrievances] =
@@ -467,12 +461,12 @@ export function EndUserPortal({
                     <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                       {g.grievanceNumber}
                     </td>
-                    <td className="py-2.5 px-2 max-w-[200px]">
+                    <td className="py-2.5 px-2 max-w-50">
                       <span className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
                         {g.title}
                       </span>
                     </td>
-                    <td className="py-2.5 px-2 text-slate-600 dark:text-slate-400 text-sm truncate max-w-[140px]">
+                    <td className="py-2.5 px-2 text-slate-600 dark:text-slate-400 text-sm truncate max-w-35">
                       {g.category}
                     </td>
                     <td className="py-2.5 px-2">

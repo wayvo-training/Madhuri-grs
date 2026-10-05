@@ -152,7 +152,7 @@ const ConditionPill = ({
             </span>
             <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-50 shrink-0" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[200px]">
+          <DropdownMenuContent align="start" className="w-50">
             {fieldDef.options?.map((opt) => (
               <DropdownMenuCheckboxItem
                 key={opt.value}
@@ -181,7 +181,7 @@ const ConditionPill = ({
               ? "date"
               : "text"
         }
-        className="h-full bg-transparent outline-none px-3 text-xs min-w-[120px] w-[120px] font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors"
+        className="h-full bg-transparent outline-none px-3 text-xs min-w-30 w-30 font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors"
         value={condition.value as string}
         onChange={(e) => onChange({ value: e.target.value })}
         placeholder="Enter value..."
@@ -205,12 +205,12 @@ const ConditionPill = ({
             })
           }
         >
-          <SelectTrigger className="h-full border-0 shadow-none focus:ring-0 bg-transparent rounded-none px-3 w-auto min-w-[110px] text-xs font-medium hover:bg-slate-50">
+          <SelectTrigger className="h-full border-0 shadow-none focus:ring-0 bg-transparent rounded-none px-3 w-auto min-w-27.5 text-xs font-medium hover:bg-slate-50">
             <SelectValue>
               {ops.find((o) => o.value === condition.operator)?.label}
             </SelectValue>
           </SelectTrigger>
-          <SelectContent className="min-w-[180px]">
+          <SelectContent className="min-w-45">
             {ops.map((o) => (
               <SelectItem key={o.value} value={o.value}>
                 {o.label}
@@ -400,7 +400,7 @@ export function AdvancedTableSearch({
         onOpenChange={setPopoverOpen}
         align="left"
         widthClass="w-64 p-0 shadow-lg"
-        className={"relative w-full " + className}
+        className={`relative w-full ${className}`}
         trigger={
           <div className="relative w-full">
             <Input
@@ -499,7 +499,7 @@ export function AdvancedTableSearch({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 p-2 rounded-xl bg-slate-50/50 shadow-sm border border-slate-200 w-full min-h-[52px] ${className}`}
+      className={`flex flex-wrap items-center gap-2 p-2 rounded-xl bg-slate-50/50 shadow-sm border border-slate-200 w-full min-h-13 ${className}`}
     >
       {conditions.map((c) => (
         <ConditionPill
