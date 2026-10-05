@@ -236,6 +236,8 @@ export async function GET(request: Request) {
             details?: string;
             author?: string;
             role?: string;
+            parentId?: string;
+            replyToAuthor?: string;
           } | null;
 
           const roleDisplay =
@@ -264,6 +266,9 @@ export async function GET(request: Request) {
             role: roleDisplay,
             timestamp: formatRelativeTime(l.created_at),
             note: val?.note || val?.details || String(l.new_value || ""),
+            parentId: val?.parentId || undefined,
+            replyToAuthor: val?.replyToAuthor || undefined,
+            createdAt: l.created_at.toISOString(),
           };
         });
 
@@ -338,7 +343,8 @@ export async function GET(request: Request) {
         myInvolvementType,
         isPrimaryOwner,
         myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
-        isMyDepartmentCompleted: a.grievance_departments?.status === "COMPLETED",
+        isMyDepartmentCompleted:
+          a.grievance_departments?.status === "COMPLETED",
       };
     });
 

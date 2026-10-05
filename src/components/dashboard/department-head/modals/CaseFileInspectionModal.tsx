@@ -36,6 +36,8 @@ export interface CaseFileInspectionModalProps {
   onAddInternalNote: (
     grievance: GrievanceItem,
     note: string,
+    parentId?: string,
+    replyToAuthor?: string,
   ) => Promise<GrievanceItem | undefined>;
 }
 

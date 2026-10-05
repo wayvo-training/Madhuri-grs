@@ -352,7 +352,12 @@ export function useGrievanceActions({
   );
 
   const handleAddInternalNote = useCallback(
-    async (grievance: GrievanceItem, noteText: string) => {
+    async (
+      grievance: GrievanceItem,
+      noteText: string,
+      parentId?: string,
+      replyToAuthor?: string,
+    ) => {
       const trimmedNote = noteText.trim();
       if (!trimmedNote) return;
 
@@ -366,13 +371,15 @@ export function useGrievanceActions({
         role: "Department Head",
         timestamp: "Just now",
         note: trimmedNote,
+        parentId,
+        replyToAuthor,
       };
 
       const newAudit: EscalationAuditRecord = {
         id: `aud-${Date.now()}-note`,
         timestamp: "Just now",
         actor: headDisplayName,
-        action: "Internal Note",
+        action: parentId ? "Internal Reply" : "Internal Note",
         details: trimmedNote,
         stage: grievance.status,
       };
@@ -387,7 +394,12 @@ export function useGrievanceActions({
         prev.map((g) => (g.id === grievance.id ? updatedGrievance : g)),
       );
 
-      showSuccess(`Added internal note to ${grievance.ticketCode}`, 4000);
+      showSuccess(
+        parentId
+          ? `Added reply to discussion on ${grievance.ticketCode}`
+          : `Added internal note to ${grievance.ticketCode}`,
+        4000,
+      );
 
       try {
         const res = await fetch(
@@ -395,7 +407,11 @@ export function useGrievanceActions({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ note: trimmedNote }),
+            body: JSON.stringify({
+              note: trimmedNote,
+              parentId,
+              replyToAuthor,
+            }),
           },
         );
         if (res.ok) {

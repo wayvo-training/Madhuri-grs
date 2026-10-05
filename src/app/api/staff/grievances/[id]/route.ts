@@ -129,8 +129,7 @@ export async function GET(
       submittedResolution = {
         id: latestResolution.resolution_id.toString(),
         submittedByUserId: latestResolution.submitted_by.toString(),
-        submittedByRole:
-          latestResolution.users?.roles?.role_name || undefined,
+        submittedByRole: latestResolution.users?.roles?.role_name || undefined,
         problemSummary: latestResolution.problem_summary,
         findings: latestResolution.findings,
         actionTaken: latestResolution.action_taken,
@@ -188,6 +187,8 @@ export async function GET(
           details?: string;
           author?: string;
           role?: string;
+          parentId?: string;
+          replyToAuthor?: string;
         } | null;
 
         const roleDisplay =
@@ -216,6 +217,9 @@ export async function GET(
           role: roleDisplay,
           timestamp: formatRelativeTime(l.created_at),
           note: val?.note || val?.details || String(l.new_value || ""),
+          parentId: val?.parentId || undefined,
+          replyToAuthor: val?.replyToAuthor || undefined,
+          createdAt: l.created_at.toISOString(),
         };
       });
 
@@ -302,7 +306,8 @@ export async function GET(
     });
 
     const myDept = departmentsInvolved.find((d) => d.isMyAssignment);
-    const myInvolvementType = myDept?.involvementType || (isAdmin ? "PRIMARY" : "PRIMARY");
+    const myInvolvementType =
+      myDept?.involvementType || (isAdmin ? "PRIMARY" : "PRIMARY");
     const isPrimaryOwner =
       myInvolvementType === "PRIMARY" ||
       myInvolvementType === "EQUAL" ||
@@ -335,9 +340,11 @@ export async function GET(
       submitterRole: submitter?.roles?.role_name || "Employee",
       hasResolution: Boolean(latestResolution),
       hasProposedKb:
-        ((latestResolution as unknown as {
-          knowledge_articles?: unknown[];
-        })?.knowledge_articles?.length ?? 0) > 0,
+        ((
+          latestResolution as unknown as {
+            knowledge_articles?: unknown[];
+          }
+        )?.knowledge_articles?.length ?? 0) > 0,
       submittedResolution,
       attachments,
       internalNotes,
@@ -383,6 +390,8 @@ export async function PATCH(
         | "REQUEST_ADDITIONAL_INFO"
         | "RESUME_INVESTIGATION";
       note?: string;
+      parentId?: string;
+      replyToAuthor?: string;
       subject?: string;
       message?: string;
       channels?: ("IN_APP" | "EMAIL")[];
@@ -629,6 +638,8 @@ export async function PATCH(
             author: authorDisplay,
             role: "Staff",
             details: noteContent,
+            parentId: body.parentId?.trim() || null,
+            replyToAuthor: body.replyToAuthor?.trim() || null,
           },
         },
       });
@@ -668,7 +679,7 @@ export async function PATCH(
           grievanceId,
           type: "HEAD_INTERNAL_NOTE",
           title: "Cross-Department Collaboration Note",
-          message: `${authorDisplay} posted a collaboration update on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? noteContent.substring(0, 60) + '...' : noteContent}"`,
+          message: `${authorDisplay} posted a collaboration update on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? noteContent.substring(0, 60) + "..." : noteContent}"`,
         });
       }
 
@@ -681,6 +692,9 @@ export async function PATCH(
           role: "Staff",
           timestamp: formatRelativeTime(createdAudit.created_at),
           note: noteContent,
+          parentId: body.parentId?.trim() || undefined,
+          replyToAuthor: body.replyToAuthor?.trim() || undefined,
+          createdAt: createdAudit.created_at.toISOString(),
         },
       });
     }

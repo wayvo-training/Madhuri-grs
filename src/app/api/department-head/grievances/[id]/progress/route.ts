@@ -197,11 +197,15 @@ export async function GET(
     });
 
     // 1. Assignment details
-    const myDeptRecord = rawDepartments.find((d) => d.department_id === departmentId);
+    const myDeptRecord = rawDepartments.find(
+      (d) => d.department_id === departmentId,
+    );
     const primaryAssignment =
       (myDeptRecord
         ? allDeptAssignments.find(
-            (a) => a.grievance_department_id === myDeptRecord.grievance_department_id,
+            (a) =>
+              a.grievance_department_id ===
+              myDeptRecord.grievance_department_id,
           )
         : null) ||
       allDeptAssignments[0] ||
@@ -557,6 +561,9 @@ export async function GET(
             (val?.note as string) ||
             (val?.details as string) ||
             String(l.new_value || ""),
+          parentId: (val?.parentId as string) || undefined,
+          replyToAuthor: (val?.replyToAuthor as string) || undefined,
+          createdAt: l.created_at.toISOString(),
         };
       });
 
@@ -602,9 +609,11 @@ export async function GET(
                 submittedByUserId:
                   grievance.resolutions[0].submitted_by.toString(),
                 submittedByRole:
-                  (grievance.resolutions[0] as unknown as {
-                    users?: { roles?: { role_name?: string } };
-                  }).users?.roles?.role_name || null,
+                  (
+                    grievance.resolutions[0] as unknown as {
+                      users?: { roles?: { role_name?: string } };
+                    }
+                  ).users?.roles?.role_name || null,
                 staffName:
                   `${(grievance.resolutions[0] as unknown as { users?: { first_name?: string; last_name?: string } }).users?.first_name || ""} ${(grievance.resolutions[0] as unknown as { users?: { first_name?: string; last_name?: string } }).users?.last_name || ""}`.trim(),
                 problemSummary: grievance.resolutions[0].problem_summary,
@@ -620,9 +629,11 @@ export async function GET(
               }
             : null,
           hasProposedKb:
-            ((grievance.resolutions?.[0] as unknown as {
-              knowledge_articles?: unknown[];
-            })?.knowledge_articles?.length ?? 0) > 0,
+            ((
+              grievance.resolutions?.[0] as unknown as {
+                knowledge_articles?: unknown[];
+              }
+            )?.knowledge_articles?.length ?? 0) > 0,
         },
         currentStage: {
           key: currentStageKey,

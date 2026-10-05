@@ -10,6 +10,8 @@ interface CaseCollaborationTabProps {
   onAddInternalNote: (
     grievance: GrievanceItem,
     note: string,
+    parentId?: string,
+    replyToAuthor?: string,
   ) => Promise<GrievanceItem | undefined>;
   onGrievanceUpdated: (updated: GrievanceItem) => void;
 }

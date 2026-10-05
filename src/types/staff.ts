@@ -48,6 +48,9 @@ export interface StaffInternalNote {
   role: string;
   note: string;
   timestamp: string;
+  parentId?: string;
+  replyToAuthor?: string;
+  createdAt?: string;
 }
 
 export interface StaffAuditItem {

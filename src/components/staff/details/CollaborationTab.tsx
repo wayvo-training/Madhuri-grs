@@ -4,7 +4,12 @@ import type { StaffGrievanceItem } from "@/types/staff";
 
 interface CollaborationTabProps {
   grievance: StaffGrievanceItem;
-  onAddNote?: (grievanceId: string, note: string) => Promise<void>;
+  onAddNote?: (
+    grievanceId: string,
+    note: string,
+    parentId?: string,
+    replyToAuthor?: string,
+  ) => Promise<void>;
 }
 
 export function CollaborationTab({
@@ -124,7 +129,8 @@ export function CollaborationTab({
               ))
             ) : (
               <div className="text-center text-xs text-slate-400 py-6">
-                No cross-department communication yet. Use the box below to coordinate.
+                No cross-department communication yet. Use the box below to
+                coordinate.
               </div>
             )}
           </div>

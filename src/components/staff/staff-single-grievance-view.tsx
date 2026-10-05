@@ -3,13 +3,13 @@
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   type DocumentPreviewData,
   DocumentViewerModal,
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
-import { toast } from "sonner";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
 interface StaffSingleGrievanceViewProps {
@@ -67,11 +67,21 @@ export function StaffSingleGrievanceView({
     fetchGrievance();
   }, [fetchGrievance]);
 
-  const handleAddNote = async (id: string, noteText: string) => {
+  const handleAddNote = async (
+    id: string,
+    noteText: string,
+    parentId?: string,
+    replyToAuthor?: string,
+  ) => {
     const res = await fetch(`/api/staff/grievances/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "ADD_NOTE", note: noteText }),
+      body: JSON.stringify({
+        action: "ADD_NOTE",
+        note: noteText,
+        parentId,
+        replyToAuthor,
+      }),
     });
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
@@ -132,7 +142,9 @@ export function StaffSingleGrievanceView({
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || errJson.error || "Failed to submit resolution");
+      throw new Error(
+        errJson.message || errJson.error || "Failed to submit resolution",
+      );
     }
 
     setIsResolving(false);

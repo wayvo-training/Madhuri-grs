@@ -1,6 +1,15 @@
 "use client";
 
-import { ArrowLeft, BookOpen, CheckCircle2, FileCheck2, Play, RotateCcw, ShieldAlert, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  CheckCircle2,
+  FileCheck2,
+  Play,
+  RotateCcw,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
@@ -37,7 +46,12 @@ interface GrievanceDetailsProps {
     },
   ) => Promise<void>;
   onResumeInvestigation?: (grievanceId: string) => Promise<void>;
-  onAddNote: (grievanceId: string, note: string) => Promise<void>;
+  onAddNote: (
+    grievanceId: string,
+    note: string,
+    parentId?: string,
+    replyToAuthor?: string,
+  ) => Promise<void>;
   onOpenResolutionForm?: (grievance: StaffGrievanceItem) => void;
   onOpenResolveModal?: () => void;
   onOpenDocumentPreview?: (doc: {
@@ -90,7 +104,9 @@ export function GrievanceDetails({
   if (!isOpen) return null;
 
   const isCompleted =
-    grievance.status === "CLOSED" || grievance.status === "UNDER_REVIEW" || grievance.status === "RESOLVED";
+    grievance.status === "CLOSED" ||
+    grievance.status === "UNDER_REVIEW" ||
+    grievance.status === "RESOLVED";
   const isWaitingOnUser = grievance.status === "WAITING_ON_USER";
   const isInProgress = grievance.status === "IN_PROGRESS";
 
@@ -362,11 +378,13 @@ export function GrievanceDetails({
                     <FileCheck2 className="h-3.5 w-3.5" />
                     <span>Submit Final Resolution</span>
                   </button>
-                ) : grievance.isMyDepartmentCompleted || grievance.myDepartmentStatus === "COMPLETED" ? (
+                ) : grievance.isMyDepartmentCompleted ||
+                  grievance.myDepartmentStatus === "COMPLETED" ? (
                   <div className="flex items-center gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                      Department Findings Submitted · Awaiting Lead Dept Resolution
+                      Department Findings Submitted · Awaiting Lead Dept
+                      Resolution
                     </span>
                   </div>
                 ) : (

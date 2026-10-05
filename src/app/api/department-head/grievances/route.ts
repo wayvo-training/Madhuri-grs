@@ -341,31 +341,38 @@ export async function GET(request: Request) {
       let resolvedAssignedStaffName: string | null = null;
       if (myDeptAssignment) {
         const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
-        const myStaffName = `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
+        const myStaffName =
+          `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
         if (otherCoLeadAssignment) {
-          const partnerStaff = otherCoLeadAssignment.users_assignments_staff_idTousers;
+          const partnerStaff =
+            otherCoLeadAssignment.users_assignments_staff_idTousers;
           const partnerDept =
             otherCoLeadAssignment.grievance_departments?.departments
               ?.department_name || "Partner";
-          resolvedAssignedStaffName = `${myStaffName} (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() + ")";
+          resolvedAssignedStaffName =
+            `${myStaffName} (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
+            ")";
         } else {
           resolvedAssignedStaffName = myStaffName;
         }
       } else if (otherCoLeadAssignment) {
-        const partnerStaff = otherCoLeadAssignment.users_assignments_staff_idTousers;
+        const partnerStaff =
+          otherCoLeadAssignment.users_assignments_staff_idTousers;
         const partnerDept =
           otherCoLeadAssignment.grievance_departments?.departments
             ?.department_name || "Partner";
-        resolvedAssignedStaffName = `Unassigned (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() + ")";
+        resolvedAssignedStaffName =
+          `Unassigned (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
+          ")";
       } else if (!departmentId && grievanceAssignments.length > 0) {
         resolvedAssignedStaffName = grievanceAssignments
-          .map(
-            (a) =>
-              `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
+          .map((a) =>
+            `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
           )
           .join(", ");
       } else if (assignedStaff) {
-        resolvedAssignedStaffName = `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+        resolvedAssignedStaffName =
+          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
       }
 
       const latestEscalation = g.escalations[0];
@@ -390,6 +397,8 @@ export async function GET(request: Request) {
             details?: string;
             author?: string;
             role?: string;
+            parentId?: string;
+            replyToAuthor?: string;
           } | null;
 
           const roleDisplay =
@@ -418,6 +427,9 @@ export async function GET(request: Request) {
             role: roleDisplay,
             timestamp: formatRelativeTime(l.created_at),
             note: val?.note || val?.details || String(l.new_value || ""),
+            parentId: val?.parentId || undefined,
+            replyToAuthor: val?.replyToAuthor || undefined,
+            createdAt: l.created_at.toISOString(),
           };
         });
 
@@ -498,10 +510,10 @@ export async function GET(request: Request) {
 
       // Check cross-department collaboration and involvement
       const relatedDepts = allDeptRecords.filter(
-        (d) => d.grievance_id === g.grievance_id
+        (d) => d.grievance_id === g.grievance_id,
       );
       const deptList: string[] = relatedDepts.map(
-        (d) => d.departments.department_name
+        (d) => d.departments.department_name,
       );
       if (deptList.length === 0 && g.grievance_departments) {
         deptList.push(g.grievance_departments.departments.department_name);
@@ -509,11 +521,13 @@ export async function GET(request: Request) {
       const isCrossDepartment = deptList.length > 1;
 
       const myDeptRecord = relatedDepts.find(
-        (d) => d.department_id === departmentId
+        (d) => d.department_id === departmentId,
       );
       const myInvolvementType =
-        (myDeptRecord?.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
-        "PRIMARY";
+        (myDeptRecord?.involvement_type as
+          | "PRIMARY"
+          | "SUPPORTING"
+          | "EQUAL") || "PRIMARY";
       const isPrimaryDepartment =
         myInvolvementType === "PRIMARY" ||
         myInvolvementType === "EQUAL" ||
@@ -565,7 +579,7 @@ export async function GET(request: Request) {
         createdAt: formatFriendlyDate(g.created_at),
         isReopened: g.reopen_count > 0 || g.status === "REOPENED",
         reopenCount: g.reopen_count,
-        hasProposedKb: ((latestResolution?.knowledge_articles?.length ?? 0) > 0),
+        hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
         isCrossDepartment,
         collaboratingDepartments: deptList,
         isPrimaryDepartment,
@@ -585,8 +599,7 @@ export async function GET(request: Request) {
           ? {
               id: latestResolution.resolution_id.toString(),
               submittedByUserId: latestResolution.submitted_by.toString(),
-              submittedByRole:
-                latestResolution.users.roles?.role_name || null,
+              submittedByRole: latestResolution.users.roles?.role_name || null,
               staffName:
                 `${latestResolution.users.first_name} ${latestResolution.users.last_name || ""}`.trim(),
               problemSummary: latestResolution.problem_summary,

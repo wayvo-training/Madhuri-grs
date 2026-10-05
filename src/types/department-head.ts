@@ -8,6 +8,17 @@ export interface EscalationAuditRecord {
   stage?: string;
 }
 
+export interface InternalNoteItem {
+  id: string;
+  author: string;
+  role: string;
+  timestamp: string;
+  note: string;
+  parentId?: string;
+  replyToAuthor?: string;
+  createdAt?: string;
+}
+
 export interface GrievanceItem {
   id: string;
   ticketCode: string;
@@ -99,13 +110,7 @@ export interface GrievanceItem {
     path?: string;
     uploadedAt?: string;
   }[];
-  internalNotes?: {
-    id: string;
-    author: string;
-    role: string;
-    timestamp: string;
-    note: string;
-  }[];
+  internalNotes?: InternalNoteItem[];
   departmentsInvolved?: {
     id: string;
     departmentName: string;

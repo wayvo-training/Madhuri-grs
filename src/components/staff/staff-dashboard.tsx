@@ -3,13 +3,13 @@
 import { AlertOctagon, LogIn, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   type DocumentPreviewData,
   DocumentViewerModal,
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
-import { toast } from "sonner";
 
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
@@ -106,12 +106,22 @@ export function StaffDashboard({
   }, [initialData, fetchDashboardData]);
 
   // Handle note addition in details modal
-  const handleAddNote = async (grievanceId: string, noteText: string) => {
+  const handleAddNote = async (
+    grievanceId: string,
+    noteText: string,
+    parentId?: string,
+    replyToAuthor?: string,
+  ) => {
     try {
       const res = await fetch(`/api/staff/grievances/${grievanceId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ADD_NOTE", note: noteText }),
+        body: JSON.stringify({
+          action: "ADD_NOTE",
+          note: noteText,
+          parentId,
+          replyToAuthor,
+        }),
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -123,7 +133,7 @@ export function StaffDashboard({
         if (!prev || prev.id !== grievanceId) return prev;
         const newAudit: StaffAuditItem = {
           id: `temp-${Date.now()}`,
-          action: "Investigation Note",
+          action: parentId ? "Internal Reply" : "Investigation Note",
           details: noteText,
           actor: `Staff — ${staffName}`,
           timestamp: new Date().toISOString(),
@@ -135,6 +145,8 @@ export function StaffDashboard({
           role: "Staff",
           timestamp: "Just now",
           note: noteText,
+          parentId,
+          replyToAuthor,
         };
         return {
           ...prev,
