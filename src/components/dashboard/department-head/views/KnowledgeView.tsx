@@ -14,16 +14,16 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  type KnowledgeArticleData,
+  KnowledgeArticleViewerModal,
+} from "@/components/knowledge/KnowledgeArticleViewerModal";
 import {
   AdvancedTableSearch,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
-import {
-  type KnowledgeArticleData,
-  KnowledgeArticleViewerModal,
-} from "@/components/knowledge/KnowledgeArticleViewerModal";
-import { toast } from "sonner";
 
 export function KnowledgeView() {
   const [articles, setArticles] = useState<KnowledgeArticleData[]>([]);
@@ -49,7 +49,7 @@ export function KnowledgeView() {
   const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
     let newSearch = "";
     conditions.forEach((condition) => {
-      let valArray = Array.isArray(condition.value)
+      const valArray = Array.isArray(condition.value)
         ? condition.value
         : [condition.value as string];
       if (condition.field === "search") {
@@ -101,7 +101,8 @@ export function KnowledgeView() {
       });
       fetchArticles();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to publish article";
+      const msg =
+        err instanceof Error ? err.message : "Failed to publish article";
       toast.error("Failed to publish article", { description: msg });
     } finally {
       setIsSubmitting(false);
@@ -137,7 +138,8 @@ export function KnowledgeView() {
       setRejectionReason("");
       fetchArticles();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to reject article";
+      const msg =
+        err instanceof Error ? err.message : "Failed to reject article";
       toast.error("Failed to reject article", { description: msg });
     } finally {
       setIsSubmitting(false);
@@ -286,6 +288,8 @@ export function KnowledgeView() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
+                    Department:{" "}
+                    <strong>{art.departmentName || "General"}</strong> &bull;{" "}
                     Category: <strong>{art.category}</strong> &bull;
                     Subcategory: <strong>{art.subcategory}</strong> &bull;
                     Author: <strong>{art.createdBy}</strong>
@@ -303,29 +307,36 @@ export function KnowledgeView() {
                     <span>Inspect</span>
                   </button>
 
-                  {art.status === "PENDING_REVIEW" && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setRejectingArticle(art)}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer disabled:opacity-50"
-                      >
-                        <FileX className="h-3.5 w-3.5 text-rose-600" />
-                        <span>Reject</span>
-                      </button>
+                  {art.status === "PENDING_REVIEW" &&
+                    (art.canApprove ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setRejectingArticle(art)}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer disabled:opacity-50"
+                        >
+                          <FileX className="h-3.5 w-3.5 text-rose-600" />
+                          <span>Reject</span>
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handlePublish(art)}
-                        disabled={isSubmitting}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer disabled:opacity-50"
-                      >
-                        <FileCheck2 className="h-3.5 w-3.5" />
-                        <span>Approve</span>
-                      </button>
-                    </>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => handlePublish(art)}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer disabled:opacity-50"
+                        >
+                          <FileCheck2 className="h-3.5 w-3.5" />
+                          <span>Approve</span>
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-[11px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                        {art.departmentName
+                          ? `${art.departmentName} Review`
+                          : "Respective Dept Review"}
+                      </span>
+                    ))}
                 </div>
               </div>
 
@@ -335,7 +346,9 @@ export function KnowledgeView() {
                   Problem Pattern:
                 </span>
                 <p className="line-clamp-2 text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                  {art.problem || art.solutionSteps || `Standard redressal procedure and recurring pattern for ${art.title}.`}
+                  {art.problem ||
+                    art.solutionSteps ||
+                    `Standard redressal procedure and recurring pattern for ${art.title}.`}
                 </p>
               </div>
 
@@ -414,7 +427,7 @@ export function KnowledgeView() {
         isOpen={Boolean(viewingArticle)}
         onClose={() => setViewingArticle(null)}
         article={viewingArticle}
-        isApprover={true}
+        isApprover={Boolean(viewingArticle?.canApprove)}
         onApprove={async (art) => {
           setViewingArticle(null);
           await handlePublish(art);

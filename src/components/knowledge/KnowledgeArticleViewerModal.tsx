@@ -29,6 +29,9 @@ export interface KnowledgeArticleData {
   createdBy?: string;
   createdAt?: string;
   status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED";
+  departmentId?: string | null;
+  departmentName?: string | null;
+  canApprove?: boolean;
 }
 
 interface KnowledgeArticleViewerModalProps {
@@ -82,10 +85,16 @@ export function KnowledgeArticleViewerModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Category: <strong>{article.category || "General"}</strong> &bull; Subcategory:{" "}
+                Department:{" "}
+                <strong>{article.departmentName || "General"}</strong> &bull;{" "}
+                Category: <strong>{article.category || "General"}</strong>{" "}
+                &bull; Subcategory:{" "}
                 <strong>{article.subcategory || "General"}</strong>
                 {article.createdBy && (
-                  <> &bull; Proposed by: <strong>{article.createdBy}</strong></>
+                  <>
+                    {" "}
+                    &bull; Proposed by: <strong>{article.createdBy}</strong>
+                  </>
                 )}
               </p>
             </div>
@@ -108,7 +117,9 @@ export function KnowledgeArticleViewerModal({
                 <Shield className="h-3.5 w-3.5 text-rose-600" />
                 Department Head Review Feedback (Rejected):
               </strong>
-              <p className="text-xs leading-relaxed">{article.rejectionReason}</p>
+              <p className="text-xs leading-relaxed">
+                {article.rejectionReason}
+              </p>
             </div>
           )}
 
@@ -119,7 +130,9 @@ export function KnowledgeArticleViewerModal({
               Problem / Scenario:
             </span>
             <div className="rounded-xl border border-slate-200 p-3 bg-slate-50/50 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
-              {article.problem || article.solutionSteps || `Standard resolution pattern for ${article.title}.`}
+              {article.problem ||
+                article.solutionSteps ||
+                `Standard resolution pattern for ${article.title}.`}
             </div>
           </div>
 
@@ -164,8 +177,10 @@ export function KnowledgeArticleViewerModal({
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-600 leading-relaxed flex items-start gap-2">
             <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
             <span>
-              <strong>Reference Material Only:</strong> This Knowledge Base article is an authorized standard operating guide.
-              Articles are reference material only and must not automatically resolve, route, assign, or alter the priority of any grievance.
+              <strong>Reference Material Only:</strong> This Knowledge Base
+              article is an authorized standard operating guide. Articles are
+              reference material only and must not automatically resolve, route,
+              assign, or alter the priority of any grievance.
             </span>
           </div>
         </div>
@@ -173,26 +188,29 @@ export function KnowledgeArticleViewerModal({
         {/* Footer */}
         <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50/80 shrink-0">
           <div className="flex items-center gap-2">
-            {isApprover && article.status === "PENDING_REVIEW" && onReject && onApprove && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onReject(article)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
-                >
-                  <FileX className="h-3.5 w-3.5 text-rose-600" />
-                  <span>Reject</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onApprove(article)}
-                  className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                >
-                  <FileCheck2 className="h-3.5 w-3.5" />
-                  <span>Approve</span>
-                </button>
-              </>
-            )}
+            {isApprover &&
+              article.status === "PENDING_REVIEW" &&
+              onReject &&
+              onApprove && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onReject(article)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
+                  >
+                    <FileX className="h-3.5 w-3.5 text-rose-600" />
+                    <span>Reject</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onApprove(article)}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Approve</span>
+                  </button>
+                </>
+              )}
           </div>
           <button
             type="button"

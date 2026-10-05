@@ -47,6 +47,72 @@ export async function PATCH(
 
     const existingArticle = await prisma.knowledge_articles.findUnique({
       where: { article_id: articleId },
+      include: {
+        users: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            department_id: true,
+            departments: {
+              select: {
+                department_id: true,
+                department_name: true,
+              },
+            },
+          },
+        },
+        resolutions: {
+          select: {
+            resolution_id: true,
+            submitted_by: true,
+            users: {
+              select: {
+                department_id: true,
+                departments: {
+                  select: {
+                    department_id: true,
+                    department_name: true,
+                  },
+                },
+              },
+            },
+            grievances: {
+              select: {
+                grievance_id: true,
+                grievance_departments: {
+                  select: {
+                    department_id: true,
+                    departments: {
+                      select: {
+                        department_id: true,
+                        department_name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        categories: {
+          select: {
+            category_id: true,
+            routing_rules: {
+              where: { status: "ACTIVE" },
+              select: {
+                department_id: true,
+                departments: {
+                  select: {
+                    department_id: true,
+                    department_name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!existingArticle) {
@@ -54,6 +120,67 @@ export async function PATCH(
         { success: false, message: "Knowledge article record not found" },
         { status: 404 },
       );
+    }
+
+    // Determine the article's respective department(s)
+    const allDepartmentIds = new Set<bigint>();
+    let primaryDeptName = "";
+
+    // 1. From source grievance departments (if linked to a grievance resolution)
+    const gDept =
+      existingArticle.resolutions?.grievances?.grievance_departments;
+    if (gDept) {
+      allDepartmentIds.add(gDept.department_id);
+      if (!primaryDeptName) {
+        primaryDeptName = gDept.departments?.department_name || "";
+      }
+    }
+
+    // 2. From author's department
+    if (existingArticle.users?.department_id) {
+      allDepartmentIds.add(existingArticle.users.department_id);
+      if (!primaryDeptName) {
+        primaryDeptName =
+          existingArticle.users.departments?.department_name || "";
+      }
+    }
+
+    // 3. From resolution submitter's department
+    if (existingArticle.resolutions?.users?.department_id) {
+      allDepartmentIds.add(existingArticle.resolutions.users.department_id);
+      if (!primaryDeptName) {
+        primaryDeptName =
+          existingArticle.resolutions.users.departments?.department_name || "";
+      }
+    }
+
+    // 4. From category routing rules
+    const routingRules = existingArticle.categories?.routing_rules;
+    if (routingRules && routingRules.length > 0) {
+      for (const rr of routingRules) {
+        allDepartmentIds.add(rr.department_id);
+        if (!primaryDeptName) {
+          primaryDeptName = rr.departments?.department_name || "";
+        }
+      }
+    }
+
+    // Strict authority check: Only respective Department Head (or Admin) can publish or reject
+    if (!auth.isAdmin) {
+      const isRespectiveHead =
+        auth.departmentId && allDepartmentIds.has(auth.departmentId);
+
+      if (!isRespectiveHead) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Forbidden: Only the respective Department Head${
+              primaryDeptName ? ` (${primaryDeptName})` : ""
+            } has authority to publish or reject this knowledge article.`,
+          },
+          { status: 403 },
+        );
+      }
     }
 
     let parsedContent: Record<string, unknown> = {};
@@ -91,6 +218,7 @@ export async function PATCH(
           title: existingArticle.title,
           newStatus,
           rejectionReason: rejectionReason?.trim() || null,
+          department: primaryDeptName || null,
         },
       },
     });
