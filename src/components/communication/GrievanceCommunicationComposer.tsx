@@ -96,7 +96,7 @@ export function GrievanceCommunicationComposer({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 space-y-3 shadow-xs">
+    <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-3 sm:p-3.5 space-y-2 shadow-xs">
       {/* File chips if attached */}
       {selectedFiles.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-1">

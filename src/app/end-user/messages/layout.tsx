@@ -12,10 +12,16 @@ export default async function EndUserMessagesLayout({
   const user = await requirePageRole("END_USER");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const conversations = await getUserGrievanceConversations(
-    user,
-    "/end-user/messages",
-  );
+  let conversations: Awaited<ReturnType<typeof getUserGrievanceConversations>> =
+    [];
+  try {
+    conversations = await getUserGrievanceConversations(
+      user,
+      "/end-user/messages",
+    );
+  } catch (error) {
+    console.error("EndUserMessagesLayout: error loading conversations:", error);
+  }
 
   return (
     <DashboardShell
@@ -23,6 +29,8 @@ export default async function EndUserMessagesLayout({
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="Employee"
+      departmentName={user.departments?.department_name || "Employee"}
       title="Grievance Communication"
       subtitle="Communicate with redressal staff and department teams about your grievances."
     >

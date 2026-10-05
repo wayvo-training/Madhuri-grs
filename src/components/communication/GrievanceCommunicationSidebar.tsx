@@ -73,9 +73,6 @@ export function GrievanceCommunicationSidebar({
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
               Grievance Communication
             </h2>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-[#0F766E] border border-teal-200">
-              {conversations.length}
-            </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Communicate with the people involved in your grievances.

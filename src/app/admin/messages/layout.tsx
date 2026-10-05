@@ -12,10 +12,16 @@ export default async function AdminMessagesLayout({
   const user = await requirePageRole(["ADMIN"]);
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const conversations = await getUserGrievanceConversations(
-    user,
-    "/admin/messages",
-  );
+  let conversations: Awaited<ReturnType<typeof getUserGrievanceConversations>> =
+    [];
+  try {
+    conversations = await getUserGrievanceConversations(
+      user,
+      "/admin/messages",
+    );
+  } catch (error) {
+    console.error("AdminMessagesLayout: error loading conversations:", error);
+  }
 
   return (
     <DashboardShell
@@ -23,6 +29,10 @@ export default async function AdminMessagesLayout({
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="System Administrator"
+      departmentName={
+        user.departments?.department_name || "Central Administration"
+      }
       title="Grievance Communication"
       subtitle="Governance oversight and communication audit across grievances."
     >

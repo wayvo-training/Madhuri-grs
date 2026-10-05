@@ -67,6 +67,7 @@ export interface GrievanceCommunicationThreadData {
   actionLabel: string;
   userRole: string;
   currentUserId: string;
+  currentUserName?: string;
   basePath: string;
 }
 
@@ -128,18 +129,17 @@ export async function getUserGrievanceConversations(
     return [];
   }
 
-  const grievances = await prisma.grievances.findMany({
-    where: whereClause,
+  type GrievanceWithRelations = Prisma.grievancesGetPayload<{
     include: {
-      categories: { select: { category_name: true } },
-      subcategories: { select: { subcategory_name: true } },
+      categories: { select: { category_name: true } };
+      subcategories: { select: { subcategory_name: true } };
       users: {
         select: {
-          user_id: true,
-          first_name: true,
-          last_name: true,
-        },
-      },
+          user_id: true;
+          first_name: true;
+          last_name: true;
+        };
+      };
       audit_logs: {
         where: {
           action: {
@@ -150,38 +150,111 @@ export async function getUserGrievanceConversations(
               "COMMUNICATION_MESSAGE",
               "RESOLUTION_ACCEPTED",
               "GRIEVANCE_REOPENED",
-            ],
-          },
-        },
-        orderBy: { created_at: "desc" },
-        take: 3,
+            ];
+          };
+        };
+        orderBy: { created_at: "desc" };
+        take: 3;
         include: {
           users: {
             select: {
-              first_name: true,
-              last_name: true,
-              roles: { select: { role_name: true } },
-            },
-          },
-        },
-      },
+              first_name: true;
+              last_name: true;
+              roles: { select: { role_name: true } };
+            };
+          };
+        };
+      };
       resolutions: {
-        orderBy: { submitted_at: "desc" },
-        take: 1,
+        orderBy: { submitted_at: "desc" };
+        take: 1;
         include: {
           users: {
             select: {
-              first_name: true,
-              last_name: true,
-              roles: { select: { role_name: true } },
+              first_name: true;
+              last_name: true;
+              roles: { select: { role_name: true } };
+            };
+          };
+        };
+      };
+    };
+  }>;
+
+  const fetchGrievances = () =>
+    prisma.grievances.findMany({
+      where: whereClause,
+      include: {
+        categories: { select: { category_name: true } },
+        subcategories: { select: { subcategory_name: true } },
+        users: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
+        audit_logs: {
+          where: {
+            action: {
+              in: [
+                "ADDITIONAL_INFO_REQUESTED",
+                "USER_INFO_SUBMITTED",
+                "USER_ADDITIONAL_INFO_PROVIDED",
+                "COMMUNICATION_MESSAGE",
+                "RESOLUTION_ACCEPTED",
+                "GRIEVANCE_REOPENED",
+              ],
+            },
+          },
+          orderBy: { created_at: "desc" },
+          take: 3,
+          include: {
+            users: {
+              select: {
+                first_name: true,
+                last_name: true,
+                roles: { select: { role_name: true } },
+              },
+            },
+          },
+        },
+        resolutions: {
+          orderBy: { submitted_at: "desc" },
+          take: 1,
+          include: {
+            users: {
+              select: {
+                first_name: true,
+                last_name: true,
+                roles: { select: { role_name: true } },
+              },
             },
           },
         },
       },
-    },
-    orderBy: { updated_at: "desc" },
-    take: 100,
-  });
+      orderBy: { updated_at: "desc" },
+      take: 100,
+    });
+
+  let grievances: GrievanceWithRelations[] = [];
+  try {
+    grievances = await fetchGrievances();
+  } catch (firstErr) {
+    console.warn(
+      "First attempt to fetch grievance conversations failed, retrying...",
+      firstErr,
+    );
+    try {
+      grievances = await fetchGrievances();
+    } catch (secondErr) {
+      console.error(
+        "Failed to fetch grievance conversations after retry:",
+        secondErr,
+      );
+      return [];
+    }
+  }
 
   return grievances.map((g) => {
     const endUserName = g.users
@@ -677,7 +750,7 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `audit-${log.audit_log_id}`,
         author: actorName,
-        authorUserId: actor?.user_id.toString(),
+        authorUserId: (actor?.user_id || log.user_id)?.toString(),
         role: actorRole === "Department Head" ? "Department Head" : "Staff",
         department: actor?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
@@ -693,7 +766,9 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `audit-${log.audit_log_id}`,
         author: endUserName,
-        authorUserId: grievance.users?.user_id.toString(),
+        authorUserId: (
+          grievance.users?.user_id || grievance.submitted_by
+        )?.toString(),
         role: "End User",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
@@ -707,7 +782,7 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `audit-${log.audit_log_id}`,
         author: actorName,
-        authorUserId: actor?.user_id.toString(),
+        authorUserId: (actor?.user_id || log.user_id)?.toString(),
         role: actorRole,
         department: actor?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
@@ -720,7 +795,9 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `audit-${log.audit_log_id}`,
         author: endUserName,
-        authorUserId: grievance.users?.user_id.toString(),
+        authorUserId: (
+          grievance.users?.user_id || grievance.submitted_by
+        )?.toString(),
         role: "End User",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
@@ -733,7 +810,9 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `audit-${log.audit_log_id}`,
         author: endUserName,
-        authorUserId: grievance.users?.user_id.toString(),
+        authorUserId: (
+          grievance.users?.user_id || grievance.submitted_by
+        )?.toString(),
         role: "End User",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
@@ -756,7 +835,7 @@ export async function getGrievanceCommunicationThread(
     timeline.push({
       id: `res-${res.resolution_id}`,
       author: staffAuthor,
-      authorUserId: res.users?.user_id.toString(),
+      authorUserId: (res.users?.user_id || res.submitted_by)?.toString(),
       role: "Staff",
       department: res.users?.departments?.department_name,
       timestamp: res.submitted_at.toISOString(),
@@ -776,7 +855,7 @@ export async function getGrievanceCommunicationThread(
       timeline.push({
         id: `review-${review.review_id}`,
         author: headName,
-        authorUserId: reviewer?.user_id.toString(),
+        authorUserId: (reviewer?.user_id || review.reviewed_by)?.toString(),
         role: "Department Head",
         department: reviewer?.departments?.department_name,
         timestamp: review.reviewed_at.toISOString(),
@@ -837,6 +916,10 @@ export async function getGrievanceCommunicationThread(
       closureNote =
         "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.";
     }
+  } else if (userRole === "STAFF" && grievance.status === "ASSIGNED") {
+    canSend = false;
+    closureNote =
+      "Investigation has not been started yet. Please click 'Start Investigation' in the staff desk to begin communication.";
   } else if (isSubmitter || isAssignedStaff || isInvolvedDepartment) {
     canSend = true;
   }
@@ -873,6 +956,7 @@ export async function getGrievanceCommunicationThread(
     actionLabel,
     userRole,
     currentUserId: userId.toString(),
+    currentUserName: `${user.first_name} ${user.last_name || ""}`.trim(),
     basePath,
   };
 }

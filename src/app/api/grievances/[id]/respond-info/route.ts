@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
-import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -195,6 +195,16 @@ export async function POST(
         message: `Hello ${assignedStaff.first_name},\n\nComplainant ${complainantName} has submitted response details and documentation for grievance #${grievance.grievance_number}.\n\nResponse Statement:\n"${responseMessage}"\n\nAttached Documents: ${incomingFiles.map((f) => f.fileName).join(", ") || "None"}\n\nThe grievance status has been transitioned back to In Progress so you can continue your investigation.\n\nRegards,\nGRS Resolution Desk`,
       });
     }
+
+    // 6. Notify complainant confirming their submission
+    await NotificationService.send({
+      userId: grievance.submitted_by,
+      grievanceId: targetGrievanceId,
+      type: "ADDITIONAL_INFO_SUBMITTED",
+      channel: "IN_APP",
+      title: `Response Submitted: ${grievance.grievance_number}`,
+      message: `Your response and ${incomingFiles.length} attached document(s) for grievance ${grievance.grievance_number} were submitted successfully. Investigation has resumed.`,
+    });
 
     return NextResponse.json({
       success: true,

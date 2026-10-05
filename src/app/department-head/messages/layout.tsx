@@ -12,10 +12,19 @@ export default async function DepartmentHeadMessagesLayout({
   const user = await requirePageRole(["DEPARTMENT_HEAD", "ADMIN"]);
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const conversations = await getUserGrievanceConversations(
-    user,
-    "/department-head/messages",
-  );
+  let conversations: Awaited<ReturnType<typeof getUserGrievanceConversations>> =
+    [];
+  try {
+    conversations = await getUserGrievanceConversations(
+      user,
+      "/department-head/messages",
+    );
+  } catch (error) {
+    console.error(
+      "DepartmentHeadMessagesLayout: error loading conversations:",
+      error,
+    );
+  }
 
   return (
     <DashboardShell
@@ -23,6 +32,8 @@ export default async function DepartmentHeadMessagesLayout({
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
+      designation="Department Head"
+      departmentName={user.departments?.department_name || "Department Queue"}
       title="Grievance Communication"
       subtitle="Communicate with citizens and staff involved in department grievances."
     >

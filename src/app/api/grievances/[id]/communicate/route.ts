@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
-import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 
 interface IncomingAttachment {
   fileName: string;
@@ -51,12 +51,24 @@ export async function POST(
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
       include: {
-        users: { select: { user_id: true, first_name: true, last_name: true, email: true } },
+        users: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
         assignments: {
           where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
           include: {
             users_assignments_staff_idTousers: {
-              select: { user_id: true, first_name: true, last_name: true, email: true },
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
             },
           },
         },
@@ -72,7 +84,10 @@ export async function POST(
 
     if (grievance.status === "CLOSED") {
       return NextResponse.json(
-        { success: false, message: "Cannot send messages on a closed grievance." },
+        {
+          success: false,
+          message: "Cannot send messages on a closed grievance.",
+        },
         { status: 403 },
       );
     }
@@ -87,21 +102,42 @@ export async function POST(
     const deptId = user.department_id ? BigInt(user.department_id) : null;
 
     const isSubmitter = grievance.submitted_by === userId;
-    const isAssignedStaff = grievance.assignments.some((a) => a.staff_id === userId);
+    const isAssignedStaff = grievance.assignments.some(
+      (a) => a.staff_id === userId,
+    );
     const isInvolvedDepartment = deptId
       ? involvedDepts.some((gd) => gd.department_id === deptId)
       : false;
 
     if (userRole === "ADMIN") {
       return NextResponse.json(
-        { success: false, message: "Admin accounts have read-only visibility for grievance communication." },
+        {
+          success: false,
+          message:
+            "Admin accounts have read-only visibility for grievance communication.",
+        },
         { status: 403 },
       );
     }
 
     if (!isSubmitter && !isAssignedStaff && !isInvolvedDepartment) {
       return NextResponse.json(
-        { success: false, message: "Forbidden: You are not a permitted participant for this grievance." },
+        {
+          success: false,
+          message:
+            "Forbidden: You are not a permitted participant for this grievance.",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (userRole === "STAFF" && grievance.status === "ASSIGNED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Investigation has not been started yet. You must click 'Start Investigation' before sending messages.",
+        },
         { status: 403 },
       );
     }
@@ -188,10 +224,21 @@ export async function POST(
           message: `${senderFullName} replied to the grievance communication thread.`,
         });
       }
+
+      // Confirm to End User
+      await NotificationService.send({
+        userId,
+        grievanceId,
+        type: "ADDITIONAL_INFO_SUBMITTED",
+        title: `Communication Sent: ${grievance.grievance_number}`,
+        message: `Your message on grievance ${grievance.grievance_number} was sent successfully.`,
+      });
     } else {
       // Staff or Department Head messaging
       const isStaff = userRole === "STAFF";
-      const actionType = isStaff ? "ADDITIONAL_INFO_REQUESTED" : "COMMUNICATION_MESSAGE";
+      const actionType = isStaff
+        ? "ADDITIONAL_INFO_REQUESTED"
+        : "COMMUNICATION_MESSAGE";
 
       await prisma.audit_logs.create({
         data: {
@@ -222,6 +269,15 @@ export async function POST(
         type: "ADDITIONAL_INFO_REQUESTED",
         title: `New Message on Grievance ${grievance.grievance_number}`,
         message: `${senderFullName} sent a message regarding your grievance.`,
+      });
+
+      // Confirm to Staff / Department Head
+      await NotificationService.send({
+        userId,
+        grievanceId,
+        type: "SYSTEM",
+        title: `Message Sent: ${grievance.grievance_number}`,
+        message: `You sent a message regarding grievance ${grievance.grievance_number} to the complainant.`,
       });
     }
 
