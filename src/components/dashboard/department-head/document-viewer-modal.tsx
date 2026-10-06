@@ -86,7 +86,7 @@ export function DocumentViewerModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative flex flex-col w-full max-w-4xl max-h-[92vh] bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Top Control Bar */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200 shrink-0">

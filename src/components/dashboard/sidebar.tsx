@@ -333,7 +333,7 @@ export function DashboardSidebar({
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-between hover:bg-sidebar-accent cursor-pointer h-auto min-h-[3.25rem] py-2 px-2.5 group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:size-8!"
+                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-between hover:bg-sidebar-accent cursor-pointer h-auto min-h-13 py-2 px-2.5 group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:size-8!"
                   />
                 }
               >

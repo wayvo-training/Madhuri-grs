@@ -808,7 +808,7 @@ export function NotificationsPageView({
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto max-h-[calc(100vh-320px)] min-h-[300px] custom-scrollbar">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto max-h-[calc(100vh-320px)] min-h-75 custom-scrollbar">
           {filteredNotifications.map((item) => {
             const semantic = getSemanticIcon(item.type, item.title);
             const Icon = semantic.icon;
