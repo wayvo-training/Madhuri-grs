@@ -180,18 +180,18 @@ export function OverviewView({
       <StaffPieCharts grievances={assignedGrievances} layout="horizontal" />
 
       {/* 1. Grievances Requiring Immediate Attention (Compact Alert Section) */}
-      <div className="flex-1 flex flex-col rounded-2xl border border-amber-200 bg-amber-50/50 p-3 sm:p-3.5 space-y-2 min-h-0">
+      <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white p-3 sm:p-3.5 space-y-2 min-h-0 shadow-2xs">
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-            <h3 className="text-xs font-bold text-amber-900">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+            <h3 className="text-xs font-bold text-slate-800">
               Grievances Requiring Immediate Attention
             </h3>
           </div>
           <button
             type="button"
             onClick={() => onSwitchView("queue")}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 transition cursor-pointer"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
           >
             <span>View All Grievances</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -199,10 +199,10 @@ export function OverviewView({
         </div>
 
         {attentionItems.length > 0 ? (
-          <div className="flex-1 overflow-auto rounded-xl bg-white border border-amber-200/90 shadow-2xs">
+          <div className="flex-1 overflow-auto rounded-xl bg-white border border-slate-200 shadow-2xs">
             <table className="w-full text-left text-xs border-collapse relative">
-              <thead className="sticky top-0 z-10 bg-amber-50/50">
-                <tr className="border-b border-amber-200/60 text-[11px] font-bold uppercase tracking-wider text-slate-900 shadow-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50">
+                <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-900 shadow-sm">
                   {renderSortHeader("Grievance ID", "grievanceNumber")}
                   {renderSortHeader("Summary", "title")}
                   {renderSortHeader("Reopened Status", "reopenCount")}
@@ -216,7 +216,7 @@ export function OverviewView({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-amber-200/60">
+              <tbody className="divide-y divide-slate-100">
                 {sortedAttentionItems.map((item) => {
                   const isBreached = item.slaStatus === "BREACHED";
                   const isAtRisk = item.slaStatus === "AT_RISK";
@@ -226,7 +226,7 @@ export function OverviewView({
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-amber-50/30 transition"
+                      className="hover:bg-slate-50/80 transition"
                     >
                       {/* Grievance Number */}
                       <td className="py-2 px-3 whitespace-nowrap">
@@ -336,7 +336,7 @@ export function OverviewView({
             </table>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-white border border-amber-200/90 shadow-2xs p-8 text-center">
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-slate-50/40 border border-slate-200/70 shadow-2xs p-8 text-center">
             <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
               <FileCheck2 className="h-5 w-5 text-emerald-600" />
             </div>

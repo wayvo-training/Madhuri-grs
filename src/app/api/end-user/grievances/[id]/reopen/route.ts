@@ -183,7 +183,7 @@ export async function POST(
           data: {
             grievance_id: grievanceId,
             escalated_to: hod.user_id,
-            reason: `Automatically escalated due to reaching max reopen limit (${newReopenCount} reopens). Citizen reason: ${reason}`,
+            reason: `Automatically escalated due to reaching max reopen limit (${newReopenCount} reopens). Employee reason: ${reason}`,
             status: "OPEN",
             escalation_level: 1,
           },
@@ -196,10 +196,10 @@ export async function POST(
         type: isEscalated ? "GRIEVANCE_ESCALATED" : "GRIEVANCE_REOPENED",
         title: isEscalated
           ? `Max Reopen Limit Reached — Head Manual Review Required`
-          : "Grievance Reopened by User",
+          : "Grievance Reopened by Employee",
         message: isEscalated
-          ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Citizen reason: ${reason}. As Department Head, you can solve this grievance directly or assign it to another person.`
-          : `Grievance ${grievance.grievance_number} has been reopened by the citizen. Reason provided: ${reason}`,
+          ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Employee reason: ${reason}. As Department Head, you can solve this grievance directly or assign it to another person.`
+          : `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}`,
       });
     }
 
@@ -210,7 +210,7 @@ export async function POST(
         grievanceId: grievanceId,
         type: "GRIEVANCE_REOPENED",
         title: "Grievance Reopened",
-        message: `Grievance ${grievance.grievance_number} which you recently resolved has been reopened by the citizen. Reason: ${reason}. It has been returned to the department queue.`,
+        message: `Grievance ${grievance.grievance_number} which you recently resolved has been reopened by the employee. Reason: ${reason}. It has been returned to the department queue.`,
       });
     }
 

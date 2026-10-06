@@ -136,8 +136,8 @@ export async function POST(
           type: "RESOLUTION_ACCEPTED",
           title: `Resolution Accepted: ${grievance.grievance_number}`,
           message: isThisHodTheResolver
-            ? `The citizen has accepted your direct resolution for grievance ${grievance.grievance_number}. You can now propose it as a Knowledge Article.`
-            : `The citizen has accepted the resolution for grievance ${grievance.grievance_number}. The grievance is now officially closed.`,
+            ? `The employee has accepted your direct resolution for grievance ${grievance.grievance_number}. You can now propose it as a Knowledge Article.`
+            : `The employee has accepted the resolution for grievance ${grievance.grievance_number}. The grievance is now officially closed.`,
         });
       }
     }
@@ -162,7 +162,7 @@ export async function POST(
         grievanceId: grievanceId,
         type: "RESOLUTION_ACCEPTED",
         title: `Resolution Accepted: ${grievance.grievance_number}`,
-        message: `Your resolution for grievance ${grievance.grievance_number} was accepted by the citizen. The case is now officially closed. You can now propose it as a Knowledge Article.`,
+        message: `Your resolution for grievance ${grievance.grievance_number} was accepted by the employee. The case is now officially closed. You can now propose it as a Knowledge Article.`,
       });
     }
 

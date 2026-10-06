@@ -159,6 +159,17 @@ export function StaffPieCharts({
         ? "My completed grievances by SLA status"
         : "My grievances across all SLA statuses";
 
+  const getCenterLabel = (filter: ChartFilter) => {
+    switch (filter) {
+      case "Active":
+        return "ACTIVE";
+      case "Completed":
+        return "COMPLETED";
+      case "All Time":
+        return "TOTAL";
+    }
+  };
+
   return (
     <div
       className={`grid grid-cols-1 ${layout === "horizontal" ? "lg:grid-cols-2" : ""} gap-4 sm:gap-6`}
@@ -169,6 +180,8 @@ export function StaffPieCharts({
         data={statusDataRaw}
         config={statusConfig}
         centerValue={totalActiveStatus}
+        centerLabelTop={getCenterLabel(statusFilter)}
+        centerLabelBottom="GRIEVANCES"
         extraHeaderElement={
           <Select
             value={statusFilter}
@@ -193,6 +206,8 @@ export function StaffPieCharts({
         data={slaDataRaw}
         config={slaConfig}
         centerValue={totalActiveSla}
+        centerLabelTop={getCenterLabel(slaFilter)}
+        centerLabelBottom="GRIEVANCES"
         extraHeaderElement={
           <Select
             value={slaFilter}

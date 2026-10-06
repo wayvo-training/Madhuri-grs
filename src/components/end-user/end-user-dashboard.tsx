@@ -207,48 +207,50 @@ export function EndUserPortal({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-amber-200/80 dark:border-amber-900/30 bg-amber-50/50 dark:bg-amber-900/10 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-500 flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-              </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              {waitingOnUserCases.length > 0 && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+              )}
               Action Required
             </span>
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400">
+            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-amber-900 dark:text-amber-100">
+          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
             {waitingOnUserCases.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-blue-200/80 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               In Progress
             </span>
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <RefreshCw className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-blue-900 dark:text-blue-100">
+          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
             {inProgressCases.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-emerald-200/80 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-500">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Resolved
             </span>
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-emerald-900 dark:text-emerald-100">
+          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
             {closedCases.length}
           </div>
         </div>
