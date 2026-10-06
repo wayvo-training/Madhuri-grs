@@ -28,6 +28,8 @@ export async function POST(request: Request) {
       sourceResolutionId?: string;
       grievanceId?: string;
       status?: "DRAFT" | "PENDING_REVIEW";
+      duplicateJustification?: string;
+      duplicateCheckResult?: unknown;
     };
 
     const {
@@ -46,6 +48,8 @@ export async function POST(request: Request) {
       sourceResolutionId,
       grievanceId,
       status = "PENDING_REVIEW",
+      duplicateJustification,
+      duplicateCheckResult,
     } = body;
 
     const finalProblem = (problemSummary || problem || "").trim();
@@ -190,6 +194,8 @@ export async function POST(request: Request) {
       keyPoints: finalKeyPoints || null,
       considerations: finalKeyPoints || null, // backwards compatibility
       references: references?.trim() || null,
+      duplicateJustification: duplicateJustification?.trim() || null,
+      duplicateCheck: duplicateCheckResult || null,
     });
 
     const article = await prisma.knowledge_articles.create({
