@@ -85,6 +85,7 @@ export function useGrievanceActions({
     async ({
       grievance,
       bottleneck,
+      bottleneckExplanation,
       interventionType,
       targetStaffId,
       targetDept,
@@ -93,6 +94,7 @@ export function useGrievanceActions({
     }: {
       grievance: GrievanceItem;
       bottleneck: EscalationBottleneck;
+      bottleneckExplanation?: string;
       interventionType: EscalationInterventionType;
       targetStaffId?: string;
       targetDept: string;
@@ -123,23 +125,29 @@ export function useGrievanceActions({
       const bottleneckLabels: Record<string, string> = {
         STAFF_CAPACITY: "Staff Capacity / Absence",
         CROSS_DEPT: "Cross-Department Dependency",
-        MISSING_DOCS: "Incomplete Submitter Documentation",
-        COMPLEX_INVESTIGATION: "Complex Case Investigation",
+        MISSING_DOCS: "Incomplete Information / Documentation",
+        COMPLEX_INVESTIGATION: "Complex Investigation Required",
+        OTHER_CONSTRAINT: "Other Operational Constraint",
         ADMIN_DELAY: "Internal Administrative Delay",
       };
 
       const actionLabels: Record<string, string> = {
-        MONITOR: "Continued Monitoring (SLA Risk Acknowledged by HOD)",
+        MONITOR: "Continue Monitoring",
         REQUEST_STATUS_UPDATE: `Immediate Status Update Requested from ${targetStaffName}`,
-        NOTIFY_STAFF: `Direct Operational Nudge Dispatched to ${targetStaffName}`,
-        CROSS_DEPT: `Enlisted Supporting Department (${targetDept})`,
+        NOTIFY_STAFF: `Operational Direction Provided to ${targetStaffName}`,
+        CROSS_DEPT: `Supporting Department Added (${targetDept})`,
         REASSIGN: `Reassigned to ${targetStaffName}`,
-        DIRECT_OVERSIGHT: `Direct Department Head Oversight Assumed by ${currentHodName}`,
+        ASSUME_RESOLUTION_AUTHORITY: `Resolution Authority Assumed by ${currentHodName}`,
+        DIRECT_OVERSIGHT: `Resolution Authority Assumed by ${currentHodName}`,
+        REQUEST_ADDITIONAL_INFO: "Request Additional Information Dispatched",
         EXTEND_SLA: `Resolution SLA Deadline Extended (+${extensionHours}h)`,
       };
 
       const chosenBottleneck = bottleneckLabels[bottleneck] || bottleneck;
       const chosenAction = actionLabels[interventionType] || interventionType;
+      const isAssumingAuthority =
+        interventionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+        interventionType === "DIRECT_OVERSIGHT";
 
       const newAuditEntries: EscalationAuditRecord[] = [
         {
@@ -148,7 +156,7 @@ export function useGrievanceActions({
           actor: `${currentHodName} (DEPARTMENT_HEAD)`,
           action: "HOD_INTERVENTION_TAKEN",
           bottleneck: chosenBottleneck,
-          details: `Intervention: ${chosenAction} (Bottleneck: ${chosenBottleneck}). Directive: "${note || "Proceed with expedited resolution under departmental directives."}"`,
+          details: `Intervention: ${chosenAction} (Bottleneck: ${chosenBottleneck}${bottleneckExplanation ? ` - ${bottleneckExplanation}` : ""}). Directive: "${note || "Proceed under departmental directives."}"`,
         },
       ];
 
@@ -157,8 +165,9 @@ export function useGrievanceActions({
           if (g.id !== grievance.id) return g;
           return {
             ...g,
-            status: "IN_PROGRESS",
-            slaStatus: "ON_TRACK",
+            status: isAssumingAuthority ? g.status : "IN_PROGRESS",
+            slaStatus:
+              interventionType === "EXTEND_SLA" ? "ON_TRACK" : g.slaStatus,
             priority: g.priority,
             assignedStaffId:
               interventionType === "REASSIGN" && targetStaff
@@ -168,7 +177,9 @@ export function useGrievanceActions({
               interventionType === "REASSIGN" && targetStaff
                 ? targetStaff.name
                 : g.assignedStaffName,
-            escalationStage: "IN_PROGRESS",
+            escalationStage: isAssumingAuthority
+              ? g.escalationStage
+              : "IN_PROGRESS",
             identifiedBottleneck: chosenBottleneck,
             hodIntervention: {
               actionType: interventionType,
@@ -176,8 +187,15 @@ export function useGrievanceActions({
               note: note,
               intervenedAt: "Just now",
               intervenedBy: currentHodName,
+              isResolutionAuthority: isAssumingAuthority,
+              resolutionAuthorityName: isAssumingAuthority
+                ? currentHodName
+                : undefined,
               targetStaffName: targetStaffName,
               targetDepartment: targetDept,
+              rootBottleneck: chosenBottleneck,
+              bottleneckExplanation,
+              directiveJustification: note,
             },
             auditTrail: [...(g.auditTrail || []), ...newAuditEntries],
           };
@@ -196,21 +214,23 @@ export function useGrievanceActions({
         ...prev,
       ]);
 
-      const successMsg =
-        interventionType === "REQUEST_STATUS_UPDATE"
+      const successMsg = isAssumingAuthority
+        ? `Resolution authority assumed for ${grievance.ticketCode}. You may now review staff findings and submit the resolution.`
+        : interventionType === "REQUEST_STATUS_UPDATE"
           ? `Immediate status update requested for ${grievance.ticketCode}. Notification dispatched to assigned staff.`
-          : `HOD intervention (${chosenAction}) logged to audit trail & dispatched to staff for ${grievance.ticketCode}.`;
+          : `Intervention (${chosenAction}) logged to audit trail & dispatched for ${grievance.ticketCode}.`;
 
       showSuccess(successMsg, 5000);
 
       try {
-        await fetch(
+        const res = await fetch(
           `/api/department-head/grievances/${grievance.id}/intervene`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               bottleneck,
+              bottleneckExplanation,
               interventionType,
               targetStaffId,
               targetDeptName: targetDept,
@@ -219,9 +239,14 @@ export function useGrievanceActions({
             }),
           },
         );
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          toast.error(data.message || "Failed to execute intervention");
+        }
         await loadData(undefined, true);
       } catch (err) {
         console.error("Failed to persist intervention:", err);
+        toast.error("Network error while recording intervention.");
       }
     },
     [
@@ -243,6 +268,7 @@ export function useGrievanceActions({
       findings,
       actionTaken,
       outcome,
+      evidence,
     }: {
       grievance: GrievanceItem;
       decision: "APPROVE" | "CLARIFY";
@@ -250,25 +276,24 @@ export function useGrievanceActions({
       findings?: string;
       actionTaken?: string;
       outcome?: string;
+      evidence?: string;
     }) => {
       const isDirectResolution =
         (grievance.reopenCount ?? 0) >= 2 ||
         grievance.status === "ESCALATED" ||
-        grievance.status !== "UNDER_REVIEW";
+        grievance.status !== "UNDER_REVIEW" ||
+        Boolean(grievance.hodIntervention?.isResolutionAuthority);
+
       if (decision === "APPROVE") {
         const finalAudit: EscalationAuditRecord = {
           id: `aud-${Date.now()}-11`,
           timestamp: "Just now",
           actor: `${currentHodName} (DEPARTMENT_HEAD)`,
-          action: isDirectResolution
-            ? "RESOLUTION_SUBMITTED"
-            : "ACCEPT_RESOLUTION",
+          action: "RESOLUTION_SUBMITTED",
           details: isDirectResolution
-            ? "Department Head submitted a direct resolution."
-            : "Department Head approved final resolution. Escalation cleared, grievance successfully closed.",
-          stage: isDirectResolution
-            ? "RESOLUTION_SUBMITTED"
-            : "ESCALATION_CLEARED",
+            ? "Department Head submitted resolution. Placed in UNDER_REVIEW for Employee Review."
+            : "Department Head approved resolution. Transferred to Employee Review.",
+          stage: "UNDER_REVIEW",
         };
 
         setGrievances((prev) =>
@@ -276,11 +301,8 @@ export function useGrievanceActions({
             g.id === grievance.id
               ? {
                   ...g,
-                  status: isDirectResolution ? "RESOLVED" : "CLOSED",
-                  slaStatus: "ON_TRACK",
-                  escalationStage: isDirectResolution
-                    ? "RESOLUTION_SUBMITTED"
-                    : "ESCALATION_CLEARED",
+                  status: "UNDER_REVIEW",
+                  escalationStage: "RESOLUTION_SUBMITTED",
                   auditTrail: [...(g.auditTrail || []), finalAudit],
                 }
               : g,
@@ -291,17 +313,17 @@ export function useGrievanceActions({
           {
             id: `gov-${Date.now()}`,
             timestamp: "Just now",
-            actor: "HOD Approval",
-            action: `${grievance.ticketCode}: Resolution Approved & Escalation Cleared`,
+            actor: "HOD Resolution",
+            action: `${grievance.ticketCode}: Resolution Submitted`,
             details:
-              "Grievance successfully resolved and closed under SLA governance protocol.",
-            stage: "ESCALATION_CLEARED",
+              "Resolution submitted by Department Head. Grievance placed in Employee Review.",
+            stage: "UNDER_REVIEW",
           },
           ...prev,
         ]);
 
         showSuccess(
-          `Resolution approved & Escalation Cleared for ${grievance.ticketCode}. Ticket is now officially CLOSED.`,
+          `Resolution submitted successfully for ${grievance.ticketCode}. Grievance is now under Employee Review.`,
           5000,
         );
       } else {
@@ -333,7 +355,7 @@ export function useGrievanceActions({
       }
 
       try {
-        await fetch(
+        const res = await fetch(
           `/api/department-head/grievances/${grievance.id}/resolution`,
           {
             method: "POST",
@@ -344,12 +366,18 @@ export function useGrievanceActions({
               findings,
               actionTaken,
               outcome,
+              evidence,
             }),
           },
         );
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          toast.error(data.message || "Failed to submit resolution");
+        }
         await loadData(undefined, true);
       } catch (err) {
         console.error("Failed to persist resolution decision:", err);
+        toast.error("Network error while submitting resolution.");
       }
     },
     [

@@ -85,6 +85,12 @@ export interface GrievanceItem {
     targetStaffName?: string;
     targetDepartment?: string;
     newDeadline?: string;
+    isResolutionAuthority?: boolean;
+    resolutionAuthorityUserId?: string;
+    resolutionAuthorityName?: string;
+    rootBottleneck?: string;
+    bottleneckExplanation?: string;
+    directiveJustification?: string;
   } | null;
   submittedResolution?: {
     id?: string;
@@ -133,16 +139,19 @@ export type EscalationBottleneck =
   | "CROSS_DEPT"
   | "MISSING_DOCS"
   | "COMPLEX_INVESTIGATION"
+  | "OTHER_CONSTRAINT"
   | "ADMIN_DELAY";
 
 export type EscalationInterventionType =
   | "MONITOR"
   | "REQUEST_STATUS_UPDATE"
-  | "NOTIFY_STAFF"
   | "CROSS_DEPT"
   | "REASSIGN"
-  | "DIRECT_OVERSIGHT"
-  | "EXTEND_SLA";
+  | "NOTIFY_STAFF"
+  | "ASSUME_RESOLUTION_AUTHORITY"
+  | "REQUEST_ADDITIONAL_INFO"
+  | "EXTEND_SLA"
+  | "DIRECT_OVERSIGHT";
 
 export type DepartmentHeadTab =
   | "ALL"
@@ -217,6 +226,8 @@ export interface CaseProgressData {
     assignedAt: string | null;
     assignedAtRelative: string | null;
     status: string;
+    isResolutionAuthority?: boolean;
+    resolutionAuthorityName?: string;
   };
   sla?: {
     consumptionPercent: number;

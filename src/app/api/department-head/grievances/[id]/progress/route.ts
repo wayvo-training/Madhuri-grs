@@ -573,6 +573,58 @@ export async function GET(
       ? `${latestEvent.title} · ${latestEvent.relativeTime}`
       : "Grievance registered";
 
+    // 6. Find HOD intervention
+    const interventionLog = (grievance.audit_logs || []).find(
+      (l: { action?: string }) =>
+        l.action === "HOD_INTERVENTION_TAKEN" ||
+        l.action === "Step 6: Intervention Action Taken",
+    );
+    let hodIntervention = null;
+    if (interventionLog?.new_value) {
+      let iv: Record<string, unknown> = {};
+      if (typeof interventionLog.new_value === "string") {
+        try {
+          iv = JSON.parse(interventionLog.new_value);
+        } catch {
+          iv = {};
+        }
+      } else if (typeof interventionLog.new_value === "object") {
+        iv = interventionLog.new_value as Record<string, unknown>;
+      }
+
+      const isResAuth = Boolean(
+        iv.isResolutionAuthority ||
+          iv.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+          iv.actionType === "DIRECT_OVERSIGHT",
+      );
+
+      hodIntervention = {
+        actionType: (iv.actionType as string) || "MONITOR",
+        actionLabel: (iv.actionLabel as string) || "HOD Intervention",
+        note: (iv.note as string) || "",
+        intervenedAt: formatRelativeTime(interventionLog.created_at),
+        intervenedBy:
+          (iv.intervenedBy as string) ||
+          (interventionLog.users
+            ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
+            : "Department Head"),
+        isResolutionAuthority: isResAuth,
+        resolutionAuthorityName:
+          (iv.resolutionAuthorityName as string) ||
+          (iv.intervenedBy as string) ||
+          (interventionLog.users
+            ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
+            : "Department Head"),
+        resolutionAuthorityUserId: iv.resolutionAuthorityUserId as
+          | string
+          | undefined,
+        rootBottleneck: (iv.bottleneck as string) || undefined,
+        bottleneckExplanation:
+          (iv.bottleneckExplanation as string) || undefined,
+        directiveJustification: (iv.note as string) || "",
+      };
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -603,6 +655,7 @@ export async function GET(
             uploadedAt: formatFullDateTime(a.uploaded_at),
           })),
           internalNotes,
+          hodIntervention,
           submittedResolution: grievance.resolutions?.[0]
             ? {
                 id: grievance.resolutions[0].resolution_id.toString(),
@@ -641,7 +694,14 @@ export async function GET(
           stageNumber: currentStageNumber,
           progressSteps,
         },
-        assignment,
+        assignment: {
+          ...assignment,
+          isResolutionAuthority: Boolean(
+            hodIntervention?.isResolutionAuthority,
+          ),
+          resolutionAuthorityName:
+            hodIntervention?.resolutionAuthorityName || undefined,
+        },
         sla,
         latestActivity,
         timeline,

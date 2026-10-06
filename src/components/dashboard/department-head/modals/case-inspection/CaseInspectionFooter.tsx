@@ -11,7 +11,8 @@ import {
 import { useState } from "react";
 import {
   canHeadProposeKnowledge,
-  requiresHeadResolutionReview,
+  canHeadSubmitResolution,
+  hasHeadResolutionAuthority,
 } from "@/lib/department-head/filters";
 import type {
   CaseProgressData,
@@ -112,16 +113,17 @@ export function CaseInspectionFooter({
             </button>
           ) : null}
 
-          {!isClosedOrResolved && (
-            <button
-              type="button"
-              onClick={() => onAssignClick(currentGrievance)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
-            >
-              <UserCheck className="h-3.5 w-3.5 text-slate-500" />
-              <span>Change Assignment</span>
-            </button>
-          )}
+          {!isClosedOrResolved &&
+            !hasHeadResolutionAuthority(currentGrievance) && (
+              <button
+                type="button"
+                onClick={() => onAssignClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+              >
+                <UserCheck className="h-3.5 w-3.5 text-slate-500" />
+                <span>Change Assignment</span>
+              </button>
+            )}
 
           {!isClosedOrResolved && (
             <button
@@ -134,7 +136,7 @@ export function CaseInspectionFooter({
             </button>
           )}
 
-          {requiresHeadResolutionReview(currentGrievance) &&
+          {canHeadSubmitResolution(currentGrievance) &&
             (currentGrievance.isPrimaryDepartment !== false ? (
               <button
                 type="button"

@@ -5,15 +5,38 @@ import type {
   StaffMember,
 } from "@/types/department-head";
 
-export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
+export function hasHeadResolutionAuthority(item: GrievanceItem): boolean {
   if (item.status === "CLOSED" || item.status === "RESOLVED") {
     return false;
   }
-  return (
-    (item.reopenCount ?? 0) >= 2 ||
-    item.status === "ESCALATED" ||
-    item.status === "UNDER_REVIEW"
+  return Boolean(
+    item.hodIntervention?.isResolutionAuthority ||
+      item.hodIntervention?.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+      item.hodIntervention?.actionType === "DIRECT_OVERSIGHT",
   );
+}
+
+export function canHeadSubmitResolution(item: GrievanceItem): boolean {
+  if (item.status === "CLOSED" || item.status === "RESOLVED") {
+    return false;
+  }
+  // 1. Department Head assumed resolution authority via SLA Escalation Intervention
+  if (hasHeadResolutionAuthority(item)) {
+    return true;
+  }
+  // 2. Staff submitted a resolution pending Head review
+  if (item.status === "UNDER_REVIEW" && item.submittedResolution) {
+    return true;
+  }
+  // 3. Maximum reopens reached with submitted resolution
+  if ((item.reopenCount ?? 0) >= 2 && item.submittedResolution) {
+    return true;
+  }
+  return false;
+}
+
+export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
+  return canHeadSubmitResolution(item);
 }
 
 export function canHeadProposeKnowledge(item: GrievanceItem): boolean {

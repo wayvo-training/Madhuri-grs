@@ -155,7 +155,7 @@ export function DepartmentHeadResolutionModal({
                   id="direct-findings"
                   name="findings"
                   rows={3}
-                  placeholder="e.g. Re-evaluated the documents provided by the citizen..."
+                  placeholder="e.g. Re-evaluated the investigation findings and documents provided by the employee..."
                   className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
                   required
                 />
@@ -183,13 +183,13 @@ export function DepartmentHeadResolutionModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
                 decision === "APPROVE"
                   ? "bg-[#0F766E] hover:bg-[#115E59]"
                   : "bg-slate-800 hover:bg-slate-900"
@@ -198,9 +198,9 @@ export function DepartmentHeadResolutionModal({
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>
                 {isDirectResolution
-                  ? "Submit Resolution & Close Grievance"
+                  ? "Submit Resolution for Review"
                   : decision === "APPROVE"
-                    ? "Approve Resolution & Close Grievance"
+                    ? "Endorse Resolution for Review"
                     : "Return to Staff with Feedback"}
               </span>
             </button>

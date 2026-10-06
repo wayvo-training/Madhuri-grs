@@ -484,7 +484,23 @@ export async function GET(request: Request) {
       );
       let hodIntervention = null;
       if (interventionLog?.new_value) {
-        const iv = interventionLog.new_value as Record<string, unknown>;
+        let iv: Record<string, unknown> = {};
+        if (typeof interventionLog.new_value === "string") {
+          try {
+            iv = JSON.parse(interventionLog.new_value);
+          } catch {
+            iv = {};
+          }
+        } else if (typeof interventionLog.new_value === "object") {
+          iv = interventionLog.new_value as Record<string, unknown>;
+        }
+
+        const isResAuth = Boolean(
+          iv.isResolutionAuthority ||
+            iv.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+            iv.actionType === "DIRECT_OVERSIGHT",
+        );
+
         hodIntervention = {
           actionType:
             (iv.actionType as
@@ -493,11 +509,13 @@ export async function GET(request: Request) {
               | "NOTIFY_STAFF"
               | "REASSIGN"
               | "CROSS_DEPT"
+              | "ASSUME_RESOLUTION_AUTHORITY"
+              | "REQUEST_ADDITIONAL_INFO"
               | "DIRECT_OVERSIGHT"
               | "EXTEND_SLA"
               | "EXPEDITE"
               | "OVERRIDE"
-              | "SLA_EXTENSION") || "REASSIGN",
+              | "SLA_EXTENSION") || "MONITOR",
           actionLabel: (iv.actionLabel as string) || "HOD Intervention",
           note: (iv.note as string) || "",
           intervenedAt: formatRelativeTime(interventionLog.created_at),
@@ -508,6 +526,22 @@ export async function GET(request: Request) {
               : "Department Head"),
           targetStaffName: iv.targetStaffName as string | undefined,
           targetDepartment: iv.targetDepartment as string | undefined,
+          isResolutionAuthority: isResAuth,
+          resolutionAuthorityUserId:
+            (iv.resolutionAuthorityUserId as string) ||
+            (interventionLog.user_id
+              ? interventionLog.user_id.toString()
+              : undefined),
+          resolutionAuthorityName:
+            (iv.resolutionAuthorityName as string) ||
+            (iv.intervenedBy as string) ||
+            (interventionLog.users
+              ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
+              : "Department Head"),
+          rootBottleneck: (iv.bottleneck as string) || undefined,
+          bottleneckExplanation:
+            (iv.bottleneckExplanation as string) || undefined,
+          directiveJustification: (iv.note as string) || "",
         };
       }
 
