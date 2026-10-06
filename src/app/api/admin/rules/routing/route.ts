@@ -148,7 +148,9 @@ export async function POST(request: Request) {
     let finalCatName = "";
 
     if (category_id === "CUSTOM" && new_category_name) {
-      const existingCat = await prisma.categories.findUnique({ where: { category_name: new_category_name.trim() } });
+      const existingCat = await prisma.categories.findUnique({
+        where: { category_name: new_category_name.trim() },
+      });
       if (existingCat) {
         finalCatId = existingCat.category_id;
         finalCatName = existingCat.category_name;
@@ -157,7 +159,7 @@ export async function POST(request: Request) {
           data: {
             category_name: new_category_name.trim(),
             status: "ACTIVE",
-          }
+          },
         });
         finalCatId = newCat.category_id;
         finalCatName = newCat.category_name;
@@ -177,7 +179,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "category_id must be a valid integer identifier or CUSTOM.",
+            message:
+              "category_id must be a valid integer identifier or CUSTOM.",
           },
           { status: 400 },
         );
@@ -209,8 +212,8 @@ export async function POST(request: Request) {
           category_id_subcategory_name: {
             category_id: finalCatId,
             subcategory_name: new_subcategory_name.trim(),
-          }
-        }
+          },
+        },
       });
       if (existingSub) {
         finalSubcatId = existingSub.subcategory_id;
@@ -221,7 +224,7 @@ export async function POST(request: Request) {
             category_id: finalCatId,
             subcategory_name: new_subcategory_name.trim(),
             status: "ACTIVE",
-          }
+          },
         });
         finalSubcatId = newSub.subcategory_id;
         finalSubcatName = newSub.subcategory_name;
@@ -241,7 +244,8 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "subcategory_id must be a valid integer identifier or CUSTOM.",
+            message:
+              "subcategory_id must be a valid integer identifier or CUSTOM.",
           },
           { status: 400 },
         );
@@ -502,9 +506,7 @@ export async function POST(request: Request) {
           rule_name: rule.rule_name,
           category_id: finalCatId.toString(),
           category_name: finalCatName,
-          subcategory_id: finalSubcatId
-            ? finalSubcatId.toString()
-            : null,
+          subcategory_id: finalSubcatId ? finalSubcatId.toString() : null,
           subcategory_name: finalSubcatName ? finalSubcatName : null,
           department_id: department.department_id.toString(),
           department_name: department.department_name,

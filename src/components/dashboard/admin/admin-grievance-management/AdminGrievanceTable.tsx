@@ -59,7 +59,6 @@ export function AdminGrievanceTable({
               <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
             )}
           </h2>
-
         </div>
 
         {/* Search and Dropdown Filters */}

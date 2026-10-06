@@ -7,17 +7,17 @@ import {
   AdminPanelHeader,
 } from "@/components/dashboard/admin/admin-shared";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  AdvancedTableSearch,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
-import {
-  AdvancedTableSearch,
-  type SearchCondition,
-  type SearchFieldDef,
-} from "@/components/ui/advanced-table-search";
 import type {
   CaseDrawerTab,
   DepartmentMetricsSummary,
@@ -64,7 +64,9 @@ export function StaffView({
     setCurrentPage(1);
   }, []);
 
-  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedConditions, setAdvancedConditions] = useState<
+    SearchCondition[]
+  >([]);
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export function StaffView({
 
   const filteredStaff = useMemo(() => {
     return staffList.filter((s) =>
-      evaluateSearchConditions(s, advancedConditions, advancedMode)
+      evaluateSearchConditions(s, advancedConditions, advancedMode),
     );
   }, [staffList, advancedConditions, advancedMode]);
 
@@ -173,7 +175,7 @@ export function StaffView({
           </div>
           <div className="flex-1 min-w-0 flex flex-col items-end gap-3 w-full">
             <span className="text-sm font-medium text-slate-600">
-              <span>Department Utilization:{" "}</span>
+              <span>Department Utilization: </span>
               <strong className="font-semibold text-emerald-800 ml-1">
                 {metrics.totalActiveTickets} / {metrics.totalStaffCapacity}{" "}
                 capacity

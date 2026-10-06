@@ -8,7 +8,6 @@ import {
   RotateCcw,
   Users,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import {
   AdminPanelHeader,
   AdminToolbarAction,
@@ -73,10 +72,10 @@ export function DepartmentTable({
     { field: "department_name", direction: "asc" },
   );
 
-  const activeCount = departments.filter(
+  const _activeCount = departments.filter(
     (d) => (d.status || "ACTIVE") === "ACTIVE",
   ).length;
-  const inactiveCount = departments.filter(
+  const _inactiveCount = departments.filter(
     (d) => d.status === "INACTIVE",
   ).length;
 
@@ -96,7 +95,10 @@ export function DepartmentTable({
       id: "department",
       label: "Department",
       type: "select",
-      options: departments.map(d => ({ label: d.department_name, value: d.department_name })),
+      options: departments.map((d) => ({
+        label: d.department_name,
+        value: d.department_name,
+      })),
     },
     {
       id: "staff",
@@ -110,15 +112,17 @@ export function DepartmentTable({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     onStatusFilterChange([]);
     onSearchQueryChange("");
 
-    let newStatus: string[] = [];
+    const newStatus: string[] = [];
     let newSearch = "";
 
     conditions.forEach((condition) => {
-      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      const valArray = Array.isArray(condition.value)
+        ? condition.value
+        : [condition.value as string];
 
       if (condition.field === "status") {
         newStatus.push(...valArray);
@@ -163,7 +167,6 @@ export function DepartmentTable({
           }
         />
       </div>
-
 
       {/* Departments Table */}
       <div className="mt-5 overflow-x-auto">
@@ -252,7 +255,7 @@ export function DepartmentTable({
                 </td>
               </tr>
             ) : (
-              sortedItems.map((dept, index) => {
+              sortedItems.map((dept, _index) => {
                 const isDeptActive = (dept.status || "ACTIVE") === "ACTIVE";
 
                 return (

@@ -13,8 +13,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getRoleDashboardPath } from "@/lib/role-redirect";
 import { Logo } from "@/components/ui/logo";
+import { getRoleDashboardPath } from "@/lib/role-redirect";
 
 export default function LoginPage() {
   const _router = useRouter();
@@ -50,6 +50,15 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setError(
+          "Unexpected server response. Please verify server connection and try again.",
+        );
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -62,7 +71,9 @@ export default function LoginPage() {
       const redirectUrl = params.get("redirect");
       const defaultPath = getRoleDashboardPath(data.user?.role);
       const targetPath =
-        redirectUrl && redirectUrl.startsWith("/") && data.user?.role === "END_USER"
+        redirectUrl &&
+        redirectUrl.startsWith("/") &&
+        data.user?.role === "END_USER"
           ? redirectUrl
           : defaultPath;
 

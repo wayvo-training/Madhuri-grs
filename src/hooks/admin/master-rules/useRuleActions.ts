@@ -42,6 +42,11 @@ export function useRuleActions({
 
   const showNotice = useCallback((type: "success" | "error", text: string) => {
     setActionNotice({ type, text });
+    if (type === "success") {
+      toast.success(text);
+    } else {
+      toast.error(text);
+    }
     setTimeout(() => {
       setActionNotice((prev) => (prev?.text === text ? null : prev));
     }, 5000);

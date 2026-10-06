@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { NextResponse } from "next/server";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -51,33 +51,45 @@ export async function POST(request: Request) {
     const maxReviews = Number(max_manual_review_count) || 1;
 
     // Optional: resolve custom categories if provided
-    let finalCondition = body.applicable_condition || null;
+    const finalCondition = body.applicable_condition || null;
     if (finalCondition) {
       if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
         let cat = await prisma.categories.findFirst({
-          where: { category_name: { equals: body.new_category_name, mode: "insensitive" } }
+          where: {
+            category_name: {
+              equals: body.new_category_name,
+              mode: "insensitive",
+            },
+          },
         });
         if (!cat) {
           cat = await prisma.categories.create({
-            data: { category_name: body.new_category_name }
+            data: { category_name: body.new_category_name },
           });
         }
         finalCondition.category_id = cat.category_id.toString();
         finalCondition.category = cat.category_name;
       }
-      if (body.new_subcategory_name && finalCondition.subcategory_id === "CUSTOM" && finalCondition.category_id) {
+      if (
+        body.new_subcategory_name &&
+        finalCondition.subcategory_id === "CUSTOM" &&
+        finalCondition.category_id
+      ) {
         let subcat = await prisma.subcategories.findFirst({
-          where: { 
-            subcategory_name: { equals: body.new_subcategory_name, mode: "insensitive" },
-            category_id: BigInt(finalCondition.category_id)
-          }
+          where: {
+            subcategory_name: {
+              equals: body.new_subcategory_name,
+              mode: "insensitive",
+            },
+            category_id: BigInt(finalCondition.category_id),
+          },
         });
         if (!subcat) {
           subcat = await prisma.subcategories.create({
-            data: { 
+            data: {
               subcategory_name: body.new_subcategory_name,
-              category_id: BigInt(finalCondition.category_id)
-            }
+              category_id: BigInt(finalCondition.category_id),
+            },
           });
         }
         finalCondition.subcategory_id = subcat.subcategory_id.toString();
@@ -92,7 +104,9 @@ export async function POST(request: Request) {
           reopen_window_hours: windowHours,
           max_reopen_count: maxReopen,
           max_manual_review_count: maxReviews,
-          applicable_condition: finalCondition ? (finalCondition as any) : Prisma.JsonNull,
+          applicable_condition: finalCondition
+            ? (finalCondition as any)
+            : Prisma.JsonNull,
           status: requestedStatus,
           created_by: user.user_id,
         },

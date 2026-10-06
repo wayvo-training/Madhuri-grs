@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  Loader2,
-  Lock,
-  Search,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Loader2, Lock, Search, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -92,7 +86,8 @@ export default function GrievanceTracker() {
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
             <Lock className="h-3.5 w-3.5 text-teal-600 shrink-0" />
             <span>
-              Secure tracking: Entering your ID takes you to sign in to protect grievance privacy.
+              Secure tracking: Entering your ID takes you to sign in to protect
+              grievance privacy.
             </span>
           </div>
 

@@ -87,6 +87,7 @@ export function StaffSingleGrievanceView({
       const errJson = await res.json().catch(() => ({}));
       throw new Error(errJson.message || errJson.error || "Failed to add note");
     }
+    toast.success(parentId ? "Reply posted to thread." : "Internal note saved.");
     await fetchGrievance();
   };
 
@@ -102,6 +103,7 @@ export function StaffSingleGrievanceView({
         errJson.message || errJson.error || "Failed to start investigation",
       );
     }
+    toast.success("Investigation started. Case is now In Progress.");
     await fetchGrievance();
   };
 
@@ -127,6 +129,7 @@ export function StaffSingleGrievanceView({
           "Failed to request additional information",
       );
     }
+    toast.success("Additional information request dispatched to complainant.");
     await fetchGrievance();
   };
 
@@ -148,6 +151,7 @@ export function StaffSingleGrievanceView({
     }
 
     setIsResolving(false);
+    toast.success("Resolution submitted successfully for Department Head review!");
     await fetchGrievance();
   };
 

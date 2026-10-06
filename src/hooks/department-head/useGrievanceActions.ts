@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import type {
   DocumentPreviewData,
   EscalationAuditRecord,
@@ -38,6 +39,7 @@ export function useGrievanceActions({
 
   const showSuccess = useCallback((message: string, duration = 4000) => {
     setActionSuccessMessage(message);
+    toast.success(message, { duration });
     setTimeout(() => setActionSuccessMessage(null), duration);
   }, []);
 
@@ -194,10 +196,12 @@ export function useGrievanceActions({
         ...prev,
       ]);
 
-      showSuccess(
-        `Steps 5-9 Complete: HOD intervention logged to audit trail & dispatched to staff. Grievance ${grievance.ticketCode} continues in progress.`,
-        5000,
-      );
+      const successMsg =
+        interventionType === "REQUEST_STATUS_UPDATE"
+          ? `Immediate status update requested for ${grievance.ticketCode}. Notification dispatched to assigned staff.`
+          : `HOD intervention (${chosenAction}) logged to audit trail & dispatched to staff for ${grievance.ticketCode}.`;
+
+      showSuccess(successMsg, 5000);
 
       try {
         await fetch(

@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
-import { UploadCloud, Paperclip, X, Send, AlertCircle } from "lucide-react";
+import { AlertCircle, Paperclip, Send, UploadCloud, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { toast } from "sonner";
 
-export function MessageComposer({ grievanceId, userEmail }: { grievanceId: string, userEmail: string }) {
+export function MessageComposer({
+  grievanceId,
+  userEmail,
+}: {
+  grievanceId: string;
+  userEmail: string;
+}) {
   const router = useRouter();
   const [responseText, setResponseText] = useState("");
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
@@ -79,10 +85,17 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-5"
+    >
       <div>
-        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">Your Response</h3>
-        <p className="text-xs text-slate-500 mb-4">Submit the required information or documents requested by staff.</p>
+        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">
+          Your Response
+        </h3>
+        <p className="text-xs text-slate-500 mb-4">
+          Submit the required information or documents requested by staff.
+        </p>
       </div>
 
       {error && (
@@ -103,7 +116,9 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attachments</label>
+        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+          Attachments
+        </label>
         <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-slate-900 p-4 transition">
           <input
             type="file"
@@ -130,10 +145,15 @@ export function MessageComposer({ grievanceId, userEmail }: { grievanceId: strin
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {filesToUpload.map((f, idx) => (
-                <div key={idx} className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs"
+                >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{f.name}</span>
+                    <span className="truncate text-slate-700 dark:text-slate-300 font-medium">
+                      {f.name}
+                    </span>
                   </div>
                   <button
                     type="button"

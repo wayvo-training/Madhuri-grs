@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { UploadCloud, Paperclip, X, Send, AlertCircle, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  Paperclip,
+  Plus,
+  Send,
+  UploadCloud,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 
 export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
@@ -48,14 +55,17 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
         filePath: `/uploads/${f.name}`, // In a real app, you would upload to S3 here
       }));
 
-      const res = await fetch(`/api/end-user/grievances/${grievanceId}/additional-information`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: message.trim(),
-          attachments: attachmentPayloads,
-        }),
-      });
+      const res = await fetch(
+        `/api/end-user/grievances/${grievanceId}/additional-information`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: message.trim(),
+            attachments: attachmentPayloads,
+          }),
+        },
+      );
 
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -63,7 +73,8 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
       }
 
       toast.success("Additional Information Submitted", {
-        description: "Your information and documents have been sent to the grievance processing team.",
+        description:
+          "Your information and documents have been sent to the grievance processing team.",
       });
 
       closeModal();
@@ -91,7 +102,9 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Provide Additional Information</h3>
+              <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">
+                Provide Additional Information
+              </h3>
               <button
                 onClick={closeModal}
                 disabled={isSubmitting}
@@ -103,7 +116,9 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
 
             <div className="p-5">
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-                Provide additional clarification or documents related to this grievance. This will be shared with the grievance processing team.
+                Provide additional clarification or documents related to this
+                grievance. This will be shared with the grievance processing
+                team.
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -115,7 +130,9 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Message / Clarification</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Message / Clarification
+                  </label>
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -126,7 +143,9 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Supporting Documents (Optional)</label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Supporting Documents (Optional)
+                  </label>
                   <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-900/50 p-4 transition">
                     <input
                       type="file"
@@ -153,12 +172,19 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                     <div className="mt-3 space-y-2">
                       <div className="grid grid-cols-1 gap-2">
                         {filesToUpload.map((f, idx) => (
-                          <div key={idx} className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs">
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs"
+                          >
                             <div className="flex items-center gap-2 overflow-hidden">
                               <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                               <div className="flex flex-col overflow-hidden">
-                                <span className="truncate text-slate-700 dark:text-slate-300 font-medium">{f.name}</span>
-                                <span className="text-slate-400 text-[10px]">{Math.round(f.size / 1024)} KB</span>
+                                <span className="truncate text-slate-700 dark:text-slate-300 font-medium">
+                                  {f.name}
+                                </span>
+                                <span className="text-slate-400 text-[10px]">
+                                  {Math.round(f.size / 1024)} KB
+                                </span>
                               </div>
                             </div>
                             <button
@@ -186,11 +212,16 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                   </button>
                   <button
                     type="submit"
-                    disabled={(!message.trim() && filesToUpload.length === 0) || isSubmitting}
+                    disabled={
+                      (!message.trim() && filesToUpload.length === 0) ||
+                      isSubmitting
+                    }
                     className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <span className="flex items-center gap-2">Sending...</span>
+                      <span className="flex items-center gap-2">
+                        Sending...
+                      </span>
                     ) : (
                       <span className="flex items-center gap-2">
                         <Send className="h-4 w-4" /> Send Information

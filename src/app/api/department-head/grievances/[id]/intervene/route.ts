@@ -155,11 +155,11 @@ export async function POST(
             title: isExplicitRequest
               ? `Action Required: Immediate Status Update Requested (${grievance.grievance_number})`
               : `HOD Directive: Expedite Case Resolution (${grievance.grievance_number})`,
-            message:
-              note ||
-              (isExplicitRequest
-                ? "Department Head requires an immediate operational progress update and next planned actions within 4 hours."
-                : "Department Head has reviewed this grievance approaching SLA threshold and directed immediate prioritization without reassignment."),
+            message: note
+              ? `[Case ${grievance.grievance_number}] ${note}`
+              : isExplicitRequest
+                ? `Department Head requires an immediate operational progress update and next planned actions within 4 hours for Case ${grievance.grievance_number}.`
+                : `Department Head has reviewed Case ${grievance.grievance_number} approaching SLA threshold and directed immediate prioritization without reassignment.`,
             status: "PENDING",
             created_at: new Date(),
           },

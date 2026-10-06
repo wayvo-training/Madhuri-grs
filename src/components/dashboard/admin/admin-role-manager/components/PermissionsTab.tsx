@@ -9,10 +9,7 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
-import type {
-  PermStatusFilter,
-  SerializedPermission,
-} from "@/types/admin/role-manager";
+import type { SerializedPermission } from "@/types/admin/role-manager";
 
 interface PermissionsTabProps {
   permissionsList: SerializedPermission[];
@@ -35,23 +32,23 @@ interface PermissionsTabProps {
 }
 
 export function PermissionsTab({
-  permissionsList,
+  permissionsList: _permissionsList,
   filteredPermissions,
   activePermsCount,
   inactivePermsCount,
-  permSearch,
+  permSearch: _permSearch,
   onPermSearchChange,
-  permStatusFilter,
+  permStatusFilter: _permStatusFilter,
   onPermStatusChange,
   togglingPermId,
-  onTogglePermStatus,
+  onTogglePermStatus: _onTogglePermStatus,
   paginatedPermissions,
   currentPage,
   totalPages,
   pageSize,
   onPageChange,
   onPageSizeChange,
-  onTabChange,
+  onTabChange: _onTabChange,
 }: PermissionsTabProps) {
   const { sortState, handleSort, sortedItems } = useTableSort(
     paginatedPermissions,
@@ -73,15 +70,17 @@ export function PermissionsTab({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     onPermStatusChange([]);
     onPermSearchChange("");
 
-    let newStatus: string[] = [];
+    const newStatus: string[] = [];
     let newSearch = "";
 
     conditions.forEach((condition) => {
-      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      const valArray = Array.isArray(condition.value)
+        ? condition.value
+        : [condition.value as string];
 
       if (condition.field === "status") {
         newStatus.push(...valArray);

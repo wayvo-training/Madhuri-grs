@@ -5,7 +5,6 @@ import {
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
-import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
 import type { TabCategory } from "@/types/admin/audit";
 
 interface AuditCategoryTabsProps {
@@ -16,9 +15,9 @@ interface AuditCategoryTabsProps {
 }
 
 export function AuditCategoryTabs({
-  activeTab,
-  onTabChange,
-  searchQuery,
+  activeTab: _activeTab,
+  onTabChange: _onTabChange,
+  searchQuery: _searchQuery,
   onSearchChange,
 }: AuditCategoryTabsProps) {
   const filterFields: SearchFieldDef[] = [
@@ -29,13 +28,15 @@ export function AuditCategoryTabs({
     { id: "ip_address", label: "IP Address", type: "text" },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     onSearchChange("");
     let newSearch = "";
 
     conditions.forEach((condition) => {
-      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
-      
+      const valArray = Array.isArray(condition.value)
+        ? condition.value
+        : [condition.value as string];
+
       // All field searches collapse into the unified text search for this view
       newSearch = valArray[0] || newSearch;
     });

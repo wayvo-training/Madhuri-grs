@@ -129,7 +129,9 @@ export async function POST(request: Request) {
 
       if (rawCatId) {
         if (rawCatId === "CUSTOM" && new_category_name) {
-          const existingCat = await prisma.categories.findUnique({ where: { category_name: new_category_name.trim() } });
+          const existingCat = await prisma.categories.findUnique({
+            where: { category_name: new_category_name.trim() },
+          });
           if (existingCat) {
             categoryRecord = existingCat;
           } else {
@@ -137,11 +139,12 @@ export async function POST(request: Request) {
               data: {
                 category_name: new_category_name.trim(),
                 status: "ACTIVE",
-              }
+              },
             });
             categoryRecord = newCat;
           }
-          sanitizedConditions.category_id = categoryRecord.category_id.toString();
+          sanitizedConditions.category_id =
+            categoryRecord.category_id.toString();
           sanitizedConditions.category = categoryRecord.category_name;
         } else {
           const parsedCatId = validateBigIntId(rawCatId);
@@ -149,7 +152,8 @@ export async function POST(request: Request) {
             return NextResponse.json(
               {
                 success: false,
-                message: "category_id must be a valid integer identifier or CUSTOM.",
+                message:
+                  "category_id must be a valid integer identifier or CUSTOM.",
               },
               { status: 400 },
             );
@@ -169,7 +173,8 @@ export async function POST(request: Request) {
             );
           }
           categoryRecord = foundCategory;
-          sanitizedConditions.category_id = foundCategory.category_id.toString();
+          sanitizedConditions.category_id =
+            foundCategory.category_id.toString();
           sanitizedConditions.category = foundCategory.category_name;
         }
       }
@@ -181,8 +186,8 @@ export async function POST(request: Request) {
               category_id_subcategory_name: {
                 category_id: categoryRecord.category_id,
                 subcategory_name: new_subcategory_name.trim(),
-              }
-            }
+              },
+            },
           });
           if (existingSub) {
             subcategoryRecord = existingSub;
@@ -192,11 +197,12 @@ export async function POST(request: Request) {
                 category_id: categoryRecord.category_id,
                 subcategory_name: new_subcategory_name.trim(),
                 status: "ACTIVE",
-              }
+              },
             });
             subcategoryRecord = newSub;
           }
-          sanitizedConditions.subcategory_id = subcategoryRecord.subcategory_id.toString();
+          sanitizedConditions.subcategory_id =
+            subcategoryRecord.subcategory_id.toString();
           sanitizedConditions.subcategory = subcategoryRecord.subcategory_name;
         } else {
           const parsedSubcatId = validateBigIntId(rawSubcatId);
@@ -204,7 +210,8 @@ export async function POST(request: Request) {
             return NextResponse.json(
               {
                 success: false,
-                message: "subcategory_id must be a valid integer identifier or CUSTOM.",
+                message:
+                  "subcategory_id must be a valid integer identifier or CUSTOM.",
               },
               { status: 400 },
             );

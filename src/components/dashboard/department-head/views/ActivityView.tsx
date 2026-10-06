@@ -1,14 +1,14 @@
 "use client";
 
 import { ArrowDownUp } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
-import { Pagination } from "@/components/ui/pagination";
-import { SortableTh } from "@/components/ui/sortable-table-head";
+import { useEffect, useMemo, useState } from "react";
 import {
   AdvancedTableSearch,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
+import { Pagination } from "@/components/ui/pagination";
+import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -21,7 +21,9 @@ export interface ActivityViewProps {
 export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [advancedConditions, setAdvancedConditions] = useState<SearchCondition[]>([]);
+  const [advancedConditions, setAdvancedConditions] = useState<
+    SearchCondition[]
+  >([]);
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   useEffect(() => {
@@ -52,7 +54,9 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
 
   const filteredFeed = useMemo(() => {
     return governanceAuditFeed.filter((a) => {
-      const feedGrievanceRef = a.action.includes(":") ? a.action.split(":")[0].trim() : "N/A";
+      const feedGrievanceRef = a.action.includes(":")
+        ? a.action.split(":")[0].trim()
+        : "N/A";
       const computedRole = a.actor.includes("DEPARTMENT_HEAD")
         ? "DEPARTMENT_HEAD"
         : a.actor.includes("END_USER")
@@ -60,11 +64,11 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
           : a.actor.includes("SLA") || a.actor.includes("SYSTEM")
             ? "SYSTEM"
             : "STAFF";
-      
+
       return evaluateSearchConditions(
         { ...a, grievanceId: feedGrievanceRef, role: computedRole },
         advancedConditions,
-        advancedMode
+        advancedMode,
       );
     });
   }, [governanceAuditFeed, advancedConditions, advancedMode]);

@@ -143,6 +143,11 @@ export function ResolutionForm({
           attachments: attachmentPayloads,
           isDraft,
         });
+        toast.success(
+          isDraft
+            ? "Resolution draft saved successfully!"
+            : "Resolution submitted successfully for Department Head review!",
+        );
       } else {
         const res = await fetch("/api/staff/resolutions", {
           method: "POST",
@@ -169,7 +174,11 @@ export function ResolutionForm({
           throw new Error(data.message || "Failed to submit resolution");
         }
         resId = data.resolutionId;
-        toast.success("Resolution submitted successfully!");
+        toast.success(
+          isDraft
+            ? "Resolution draft saved successfully!"
+            : "Resolution submitted successfully for Department Head review!",
+        );
       }
 
       localStorage.removeItem(`draft_resolution_${grievance.id}`);

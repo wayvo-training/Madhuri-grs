@@ -1,9 +1,9 @@
 "use client";
 
 import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
-import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
 import { useAdminAudit } from "@/hooks/admin/audit/useAdminAudit";
-import type { AdminAuditTrailProps } from "@/types/admin/audit";
+import { CATEGORY_TABS } from "@/lib/admin/audit/audit-constants";
+import type { AdminAuditTrailProps, TabCategory } from "@/types/admin/audit";
 import { AuditCategoryTabs } from "./components/AuditCategoryTabs";
 import { AuditLogTable } from "./components/AuditLogTable";
 import { AuditMetricCards } from "./components/AuditMetricCards";
@@ -43,10 +43,7 @@ export function AdminAuditTrail({
       >
         {/* Header */}
         <div className="pt-5 sm:pt-6 px-5 sm:px-6">
-          <AdminPanelHeader
-            title="Observability & Audit Trail"
-
-          />
+          <AdminPanelHeader title="Observability & Audit Trail" />
 
           {/* Top-Level Tabs */}
           <div className="flex items-center gap-6 mt-2 border-b border-slate-100 overflow-x-auto no-scrollbar pb-1">
@@ -54,8 +51,9 @@ export function AdminAuditTrail({
               const Icon = tab.icon;
               return (
                 <button
+                  type="button"
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as TabCategory)}
                   className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? "border-[#0F766E] text-[#0F766E]"

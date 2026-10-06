@@ -1,6 +1,5 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
 import {
   AdvancedTableSearch,
   type SearchCondition,
@@ -32,20 +31,20 @@ interface AdminGrievanceToolbarProps {
 }
 
 export function AdminGrievanceToolbar({
-  searchQuery,
+  searchQuery: _searchQuery,
   setSearchQuery,
-  activeTab,
-  setActiveTab,
-  counts,
+  activeTab: _activeTab,
+  setActiveTab: _setActiveTab,
+  counts: _counts,
   departments,
   categories = [],
-  selectedDept,
+  selectedDept: _selectedDept,
   setSelectedDept,
-  selectedPriority,
+  selectedPriority: _selectedPriority,
   setSelectedPriority,
-  selectedStatus,
+  selectedStatus: _selectedStatus,
   setSelectedStatus,
-  selectedSla,
+  selectedSla: _selectedSla,
   setSelectedSla,
   setCurrentPage,
 }: AdminGrievanceToolbarProps) {
@@ -101,7 +100,7 @@ export function AdminGrievanceToolbar({
       id: "category",
       label: "Category",
       type: "select",
-      options: categories.map(c => ({ label: c, value: c })),
+      options: categories.map((c) => ({ label: c, value: c })),
     },
     {
       id: "search",
@@ -110,21 +109,23 @@ export function AdminGrievanceToolbar({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     setSelectedDept([]);
     setSelectedPriority([]);
     setSelectedStatus([]);
     setSelectedSla([]);
     setSearchQuery("");
 
-    let newDept: string[] = [];
-    let newPriority: string[] = [];
-    let newStatus: string[] = [];
-    let newSla: string[] = [];
+    const newDept: string[] = [];
+    const newPriority: string[] = [];
+    const newStatus: string[] = [];
+    const newSla: string[] = [];
     let newSearch = "";
 
     conditions.forEach((condition) => {
-      let valArray = Array.isArray(condition.value) ? condition.value : [condition.value as string];
+      const valArray = Array.isArray(condition.value)
+        ? condition.value
+        : [condition.value as string];
       if (condition.field === "department") newDept.push(...valArray);
       if (condition.field === "priority") newPriority.push(...valArray);
       if (condition.field === "status") newStatus.push(...valArray);
@@ -140,15 +141,6 @@ export function AdminGrievanceToolbar({
     if (newSla.length > 0) setSelectedSla(newSla);
     if (newSearch) setSearchQuery(newSearch);
 
-    setCurrentPage(1);
-  };
-
-  const handleClear = () => {
-    setSelectedDept([]);
-    setSelectedPriority([]);
-    setSelectedStatus([]);
-    setSelectedSla([]);
-    setSearchQuery("");
     setCurrentPage(1);
   };
 

@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertCircle, BookOpen, CheckCircle2, Send, ShieldAlert, X } from "lucide-react";
+import {
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+  Send,
+  ShieldAlert,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,7 +44,11 @@ interface ProposeKnowledgeModalProps {
 /**
  * Sanitizes text to remove direct personal identifiers
  */
-function sanitizePii(text: string, submitterName?: string, submitterEmail?: string): string {
+function sanitizePii(
+  text: string,
+  submitterName?: string,
+  submitterEmail?: string,
+): string {
   if (!text) return "";
   let clean = text;
   if (submitterName && submitterName.trim()) {
@@ -49,7 +60,10 @@ function sanitizePii(text: string, submitterName?: string, submitterEmail?: stri
     clean = clean.replace(emailRegex, "[user@email.hidden]");
   }
   // Remove email patterns
-  clean = clean.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[email.hidden]");
+  clean = clean.replace(
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    "[email.hidden]",
+  );
   // Remove 10-digit phone patterns
   clean = clean.replace(/\b\d{10}\b/g, "[phone.hidden]");
   return clean;
@@ -104,7 +118,11 @@ export function ProposeKnowledgeModal({
     sanitizePii(rawSolution, grievance.submitterName, grievance.submitterEmail),
   );
   const [keyPointsGuidance, setKeyPointsGuidance] = useState(
-    sanitizePii(rawKeyPoints, grievance.submitterName, grievance.submitterEmail),
+    sanitizePii(
+      rawKeyPoints,
+      grievance.submitterName,
+      grievance.submitterEmail,
+    ),
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -115,8 +133,13 @@ export function ProposeKnowledgeModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !problemScenario.trim() || !resolutionApproach.trim()) {
-      const msg = "Please provide a Title, Problem / Scenario, and Resolution / Recommended Approach.";
+    if (
+      !title.trim() ||
+      !problemScenario.trim() ||
+      !resolutionApproach.trim()
+    ) {
+      const msg =
+        "Please provide a Title, Problem / Scenario, and Resolution / Recommended Approach.";
       setErrorMsg(msg);
       toast.error("Required fields missing", { description: msg });
       return;
@@ -126,8 +149,14 @@ export function ProposeKnowledgeModal({
     setErrorMsg(null);
 
     try {
-      const catId = grievance.categoryId || (grievance as unknown as Record<string, unknown>).category_id || undefined;
-      const subCatId = grievance.subcategoryId || (grievance as unknown as Record<string, unknown>).subcategory_id || undefined;
+      const catId =
+        grievance.categoryId ||
+        (grievance as unknown as Record<string, unknown>).category_id ||
+        undefined;
+      const subCatId =
+        grievance.subcategoryId ||
+        (grievance as unknown as Record<string, unknown>).subcategory_id ||
+        undefined;
 
       const res = await fetch("/api/staff/knowledge", {
         method: "POST",
@@ -156,7 +185,8 @@ export function ProposeKnowledgeModal({
         "Knowledge Article submitted successfully for Department Head review (Status: PENDING_REVIEW).",
       );
       toast.success("Knowledge Article Proposed", {
-        description: "Article submitted successfully for Department Head review.",
+        description:
+          "Article submitted successfully for Department Head review.",
       });
 
       onSuccess?.();
@@ -166,7 +196,10 @@ export function ProposeKnowledgeModal({
         setSuccessMsg(null);
       }, 1500);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to propose Knowledge Article";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to propose Knowledge Article";
       setErrorMsg(msg);
       toast.error("Submission Failed", {
         description: msg,
@@ -190,7 +223,11 @@ export function ProposeKnowledgeModal({
                 Propose Knowledge Article
               </h3>
               <p className="text-xs text-slate-500">
-                Case {grievance.grievanceNumber || grievance.ticketCode || grievance.id} &bull; {grievance.category} / {grievance.subcategory}
+                Case{" "}
+                {grievance.grievanceNumber ||
+                  grievance.ticketCode ||
+                  grievance.id}{" "}
+                &bull; {grievance.category} / {grievance.subcategory}
               </p>
             </div>
           </div>
@@ -204,7 +241,10 @@ export function ProposeKnowledgeModal({
         </div>
 
         {/* Scrollable Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-5 space-y-4 text-xs"
+        >
           {errorMsg && (
             <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -226,14 +266,19 @@ export function ProposeKnowledgeModal({
               <strong className="font-semibold block text-amber-950 mb-0.5">
                 Privacy Protection &amp; Confidentiality Notice
               </strong>
-              Never expose employee/citizen names, personal contact information, private case details, or confidential evidence.
-              Content has been pre-filled from this closed case for your convenience. Please carefully review and edit all fields below before submitting.
+              Never expose employee/citizen names, personal contact information,
+              private case details, or confidential evidence. Content has been
+              pre-filled from this closed case for your convenience. Please
+              carefully review and edit all fields below before submitting.
             </div>
           </div>
 
           {/* Title */}
           <div className="space-y-1">
-            <label htmlFor="prop-title" className="font-semibold text-slate-700">
+            <label
+              htmlFor="prop-title"
+              className="font-semibold text-slate-700"
+            >
               Title <span className="text-rose-500">*</span>
             </label>
             <input
@@ -250,7 +295,10 @@ export function ProposeKnowledgeModal({
           {/* Category & Subcategory */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label htmlFor="prop-category" className="font-semibold text-slate-700">
+              <label
+                htmlFor="prop-category"
+                className="font-semibold text-slate-700"
+              >
                 Category
               </label>
               <input
@@ -262,7 +310,10 @@ export function ProposeKnowledgeModal({
               />
             </div>
             <div className="space-y-1">
-              <label htmlFor="prop-subcategory" className="font-semibold text-slate-700">
+              <label
+                htmlFor="prop-subcategory"
+                className="font-semibold text-slate-700"
+              >
                 Subcategory
               </label>
               <input
@@ -277,7 +328,10 @@ export function ProposeKnowledgeModal({
 
           {/* Problem / Scenario */}
           <div className="space-y-1">
-            <label htmlFor="prop-problem" className="font-semibold text-slate-700">
+            <label
+              htmlFor="prop-problem"
+              className="font-semibold text-slate-700"
+            >
               Problem / Scenario <span className="text-rose-500">*</span>
             </label>
             <textarea
@@ -293,8 +347,12 @@ export function ProposeKnowledgeModal({
 
           {/* Resolution / Recommended Approach */}
           <div className="space-y-1">
-            <label htmlFor="prop-solution" className="font-semibold text-slate-700">
-              Resolution / Recommended Approach <span className="text-rose-500">*</span>
+            <label
+              htmlFor="prop-solution"
+              className="font-semibold text-slate-700"
+            >
+              Resolution / Recommended Approach{" "}
+              <span className="text-rose-500">*</span>
             </label>
             <textarea
               id="prop-solution"
@@ -309,7 +367,10 @@ export function ProposeKnowledgeModal({
 
           {/* Key Points / Preventive Guidance */}
           <div className="space-y-1">
-            <label htmlFor="prop-keypoints" className="font-semibold text-slate-700">
+            <label
+              htmlFor="prop-keypoints"
+              className="font-semibold text-slate-700"
+            >
               Key Points / Preventive Guidance
             </label>
             <textarea

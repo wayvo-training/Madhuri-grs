@@ -1,16 +1,12 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, RotateCcw, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import {
-  AdminFilterToolbar,
-  AdminPanelHeader,
-} from "@/components/dashboard/admin/admin-shared";
+import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
 import {
   AdvancedTableSearch,
   type SearchCondition,
-  type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
 import { useRuleActions } from "@/hooks/admin/master-rules/useRuleActions";
@@ -18,7 +14,6 @@ import { useRuleFilters } from "@/hooks/admin/master-rules/useRuleFilters";
 import type { AdminMasterRulesProps } from "@/types/admin/master-rules";
 
 import { AdminRuleConfigModal, ConfirmRuleDeleteModal } from "./modals";
-import { RulesFilterPopover } from "./panels";
 import { PriorityRulesView } from "./views/PriorityRulesView";
 import { ReopenPoliciesView } from "./views/ReopenPoliciesView";
 import { RoutingRulesView } from "./views/RoutingRulesView";
@@ -143,7 +138,7 @@ export function AdminMasterRules({
   });
 
   // 4. Dropdown Container Click-Outside Listener
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [_activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     function handleGlobalClick(e: MouseEvent) {
@@ -413,7 +408,7 @@ export function AdminMasterRules({
               }
               return [commonStatus];
             })()}
-            onSearch={(conditions: SearchCondition[], mode: string) => {
+            onSearch={(conditions: SearchCondition[], _mode: string) => {
               setStatusFilter([]);
               setSearchQuery("");
               const newStatus: string[] = [];

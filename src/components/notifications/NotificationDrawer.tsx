@@ -16,6 +16,7 @@ export interface Notification {
   id: string;
   userId: string;
   grievanceId?: string | null;
+  grievanceNumber?: string | null;
   type: string;
   channel: string;
   title: string;
@@ -308,7 +309,13 @@ export function NotificationDrawer({
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                             {notification.message}
                           </p>
-                          {/* Removed raw grievanceId display to fix the '17' issue */}
+                          {notification.grievanceNumber && (
+                            <div className="pt-1">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/70 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                                Case: {notification.grievanceNumber}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       {!notification.isRead && (

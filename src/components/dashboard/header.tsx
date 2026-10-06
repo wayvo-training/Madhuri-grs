@@ -1,11 +1,11 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ChevronRight } from "lucide-react";
-import Link from "next/link";
 
 interface DashboardHeaderProps {
   title: string;
@@ -17,24 +17,38 @@ interface DashboardHeaderProps {
   searchPlaceholder?: string;
 }
 
-export function DashboardHeader({ title, subtitle, userRole }: DashboardHeaderProps) {
+export function DashboardHeader({
+  title,
+  subtitle,
+  userRole,
+}: DashboardHeaderProps) {
   const getParentLabel = () => {
     switch (userRole) {
-      case "END_USER": return "End User";
-      case "STAFF": return "Staff";
-      case "DEPARTMENT_HEAD": return "Department Head";
-      case "ADMIN": return "Admin";
-      default: return "Dashboard";
+      case "END_USER":
+        return "End User";
+      case "STAFF":
+        return "Staff";
+      case "DEPARTMENT_HEAD":
+        return "Department Head";
+      case "ADMIN":
+        return "Admin";
+      default:
+        return "Dashboard";
     }
   };
 
   const getParentHref = () => {
     switch (userRole) {
-      case "END_USER": return "/end-user/dashboard";
-      case "STAFF": return "/staff/dashboard";
-      case "DEPARTMENT_HEAD": return "/department-head/dashboard";
-      case "ADMIN": return "/admin/dashboard";
-      default: return "/";
+      case "END_USER":
+        return "/end-user/dashboard";
+      case "STAFF":
+        return "/staff/dashboard";
+      case "DEPARTMENT_HEAD":
+        return "/department-head/dashboard";
+      case "ADMIN":
+        return "/admin/dashboard";
+      default:
+        return "/";
     }
   };
 
@@ -46,11 +60,16 @@ export function DashboardHeader({ title, subtitle, userRole }: DashboardHeaderPr
         <SidebarTrigger className="-ml-1" />
 
         <div className="flex items-center text-sm font-medium text-muted-foreground">
-          <Link href={getParentHref()} className="hover:text-foreground transition-colors hidden sm:block">
+          <Link
+            href={getParentHref()}
+            className="hover:text-foreground transition-colors hidden sm:block"
+          >
             {getParentLabel()}
           </Link>
           <ChevronRight className="h-4 w-4 mx-1 hidden sm:block" />
-          <span className="text-foreground font-semibold tracking-tight">{title}</span>
+          <span className="text-foreground font-semibold tracking-tight">
+            {title}
+          </span>
         </div>
       </div>
 

@@ -37,7 +37,6 @@ export function RoleManagerHeader({
     <div className="pt-5 sm:pt-6 px-5 sm:px-6">
       <AdminPanelHeader
         title="Roles & Permission Matrix Governance"
-
         action={
           activeTab === "roles" ? (
             <AdminToolbarAction onClick={onOpenCreateModal}>
@@ -69,6 +68,7 @@ export function RoleManagerHeader({
       {/* Top-Level Tabs */}
       <div className="flex items-center gap-6 mt-2 border-b border-slate-100">
         <button
+          type="button"
           onClick={() => onTabChange("roles")}
           className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === "roles"
@@ -89,6 +89,7 @@ export function RoleManagerHeader({
           </span>
         </button>
         <button
+          type="button"
           onClick={() => onTabChange("permissions")}
           className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors ${
             activeTab === "permissions"

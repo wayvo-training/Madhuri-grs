@@ -50,16 +50,17 @@ export async function GET(request: Request) {
       if (sub) subCatId = sub.subcategory_id;
     }
 
-    // Relevance criteria: Category + Subcategory as initial filter
+    // Relevance criteria: Strict Subcategory match or general Category-wide guidance
     const orConditions = [];
     if (catId && subCatId) {
+      // 1. Exact match on both category and subcategory
       orConditions.push({ category_id: catId, subcategory_id: subCatId });
-      orConditions.push({ category_id: catId });
+      // 2. Or general category-wide guidance that has no specific subcategory assigned
+      orConditions.push({ category_id: catId, subcategory_id: null });
+    } else if (subCatId) {
       orConditions.push({ subcategory_id: subCatId });
     } else if (catId) {
       orConditions.push({ category_id: catId });
-    } else if (subCatId) {
-      orConditions.push({ subcategory_id: subCatId });
     }
 
     // Find only PUBLISHED knowledge articles

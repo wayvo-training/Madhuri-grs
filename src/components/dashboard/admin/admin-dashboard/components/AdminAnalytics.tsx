@@ -1,19 +1,14 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowRight,
   Building2,
-  CheckCircle2,
   ClipboardList,
-  Clock,
-  Info,
   Landmark,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import * as React from "react";
 import type { ChartConfig } from "@/components/ui/chart";
 import { DashboardPieChartCard } from "@/components/ui/dashboard-pie-chart";
 import {

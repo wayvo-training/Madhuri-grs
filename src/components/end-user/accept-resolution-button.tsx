@@ -1,31 +1,36 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle } from "lucide-react";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 interface AcceptResolutionButtonProps {
   grievanceId: string;
 }
 
-export function AcceptResolutionButton({ grievanceId }: AcceptResolutionButtonProps) {
+export function AcceptResolutionButton({
+  grievanceId,
+}: AcceptResolutionButtonProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const executeAccept = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/end-user/grievances/${grievanceId}/accept`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/end-user/grievances/${grievanceId}/accept`,
+        {
+          method: "POST",
+        },
+      );
       const data = await res.json();
-      
+
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to accept resolution");
       }
-      
+
       toast.success("Resolution accepted successfully. Grievance closed.");
       router.refresh();
     } catch (err: any) {
@@ -37,7 +42,8 @@ export function AcceptResolutionButton({ grievanceId }: AcceptResolutionButtonPr
 
   const handleAccept = () => {
     toast("Confirm Acceptance", {
-      description: "Are you sure you want to accept this resolution? The grievance will be permanently closed.",
+      description:
+        "Are you sure you want to accept this resolution? The grievance will be permanently closed.",
       action: {
         label: "Confirm",
         onClick: () => executeAccept(),

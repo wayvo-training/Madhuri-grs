@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export function TrackSearch() {
@@ -18,7 +18,10 @@ export function TrackSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="flex max-w-lg mx-auto items-center gap-3">
+    <form
+      onSubmit={handleSearch}
+      className="flex max-w-lg mx-auto items-center gap-3"
+    >
       <div className="relative flex-1">
         <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-slate-400">
           <Search className="h-5 w-5" />

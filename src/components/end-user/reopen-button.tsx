@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,17 +34,20 @@ export function ReopenButton({ grievanceId }: ReopenButtonProps) {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/end-user/grievances/${grievanceId}/reopen`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: reason.trim() }),
-      });
+      const res = await fetch(
+        `/api/end-user/grievances/${grievanceId}/reopen`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason.trim() }),
+        },
+      );
       const data = await res.json();
-      
+
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to reopen grievance");
       }
-      
+
       toast.success("Grievance reopened successfully");
       setIsOpen(false);
       setReason("");
@@ -70,7 +73,8 @@ export function ReopenButton({ grievanceId }: ReopenButtonProps) {
         <DialogHeader>
           <DialogTitle>Reopen Grievance</DialogTitle>
           <DialogDescription>
-            Are you sure you want to reopen this grievance? Please explain why you are not satisfied with the resolution.
+            Are you sure you want to reopen this grievance? Please explain why
+            you are not satisfied with the resolution.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -83,10 +87,17 @@ export function ReopenButton({ grievanceId }: ReopenButtonProps) {
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button onClick={handleReopen} disabled={isSubmitting || !reason.trim()}>
+          <Button
+            onClick={handleReopen}
+            disabled={isSubmitting || !reason.trim()}
+          >
             {isSubmitting ? "Reopening..." : "Submit"}
           </Button>
         </DialogFooter>

@@ -14,6 +14,13 @@ export async function GET() {
 
     const notifications = await prisma.notifications.findMany({
       where: { user_id: userId },
+      include: {
+        grievances: {
+          select: {
+            grievance_number: true,
+          },
+        },
+      },
       orderBy: { created_at: "desc" },
       take: 50,
     });
@@ -22,6 +29,7 @@ export async function GET() {
       id: n.notification_id.toString(),
       userId: n.user_id.toString(),
       grievanceId: n.grievance_id?.toString() || null,
+      grievanceNumber: n.grievances?.grievance_number || null,
       type: n.notification_type,
       channel: n.channel,
       title: n.title,
