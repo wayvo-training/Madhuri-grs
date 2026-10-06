@@ -49,7 +49,7 @@ export function NotificationDrawer({
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -119,47 +119,35 @@ export function NotificationDrawer({
     }
   };
 
+  const getNotificationsUrl = () => {
+    switch (userRole) {
+      case "ADMIN":
+        return "/admin/notifications";
+      case "DEPARTMENT_HEAD":
+        return "/department-head/notifications";
+      case "STAFF":
+        return "/staff/notifications";
+      case "END_USER":
+        return "/end-user/notifications";
+      default:
+        return "/end-user/notifications";
+    }
+  };
+
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
     setIsOpen(false);
-    if (notification.type.startsWith("KNOWLEDGE_ARTICLE")) {
-      if (userRole === "DEPARTMENT_HEAD" || userRole === "ADMIN") {
-        router.push("/department-head/dashboard#knowledge");
-        return;
-      }
+    const baseUrl = getNotificationsUrl();
+    const params = new URLSearchParams();
+    params.set("id", notification.id);
+    if (notification.grievanceNumber) {
+      params.set("grievanceNumber", notification.grievanceNumber);
+    } else if (notification.grievanceId) {
+      params.set("grievanceId", notification.grievanceId);
     }
-    if (notification.grievanceId) {
-      if (userRole === "END_USER") {
-        if (
-          notification.type === "ADDITIONAL_INFO_REQUESTED" ||
-          notification.title.toLowerCase().includes("additional info") ||
-          notification.title.toLowerCase().includes("action required")
-        ) {
-          router.push(`/end-user/messages/${notification.grievanceId}`);
-        } else {
-          router.push(`/end-user/grievances/${notification.grievanceId}`);
-        }
-      } else if (userRole === "STAFF") {
-        router.push(`/staff/dashboard?grievance=${notification.grievanceId}`);
-      } else if (userRole === "ADMIN") {
-        if (
-          notification.type === "ROUTING_EXCEPTION" ||
-          notification.title.toLowerCase().includes("manual routing")
-        ) {
-          router.push(
-            `/admin/grievances?tab=EXCEPTIONS&id=${notification.grievanceId}`,
-          );
-        } else {
-          router.push(`/admin/grievances?id=${notification.grievanceId}`);
-        }
-      } else {
-        router.push(
-          `/department-head/dashboard?grievance=${notification.grievanceId}`,
-        );
-      }
-    }
+    router.push(`${baseUrl}?${params.toString()}`);
   };
 
   const markAllAsRead = async () => {
@@ -328,14 +316,18 @@ export function NotificationDrawer({
             )}
           </div>
 
-          {notifications.length > 5 && (
-            <div className="p-2 border-t border-border bg-muted/10 text-center">
+          {notifications.length > 0 && (
+            <div className="p-2.5 border-t border-border bg-muted/20 text-center">
               <button
                 type="button"
-                className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-                onClick={() => setShowAll(!showAll)}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 cursor-pointer inline-flex items-center gap-1"
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push(getNotificationsUrl());
+                }}
               >
-                {showAll ? "Show less" : "View all notifications"}
+                <span>View all notifications</span>
+                <span>→</span>
               </button>
             </div>
           )}

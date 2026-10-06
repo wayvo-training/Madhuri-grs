@@ -218,6 +218,32 @@ export function DashboardSidebar({
     }
   }
 
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.success && typeof data.count === "number") {
+            setUnreadNotifications(data.count);
+          }
+        }
+      } catch {
+        // silent fallback
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   const navGroups = ROLE_NAVIGATION[userRole] || [];
 
   return (
@@ -255,6 +281,13 @@ export function DashboardSidebar({
                   {visibleItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = isItemActive(item.href);
+                    const isNotification =
+                      item.title === "Notifications" ||
+                      item.href.includes("/notifications");
+                    const badgeContent =
+                      isNotification && unreadNotifications > 0
+                        ? unreadNotifications.toString()
+                        : item.badge;
 
                     return (
                       <SidebarMenuItem key={item.title}>
@@ -271,8 +304,16 @@ export function DashboardSidebar({
                           <Icon />
                           <span>{item.title}</span>
                         </SidebarMenuButton>
-                        {item.badge && (
-                          <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                        {badgeContent && (
+                          <SidebarMenuBadge
+                            className={
+                              isNotification
+                                ? "bg-rose-500 text-white font-bold text-[10px] px-1.5 py-0.5 rounded-full"
+                                : ""
+                            }
+                          >
+                            {badgeContent}
+                          </SidebarMenuBadge>
                         )}
                       </SidebarMenuItem>
                     );
