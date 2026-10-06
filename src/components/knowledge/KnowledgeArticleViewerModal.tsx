@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   X,
 } from "lucide-react";
+import { SimilarityScoreBreakdown } from "./SimilarityScoreBreakdown";
 
 export interface KnowledgeArticleData {
   id: string;
@@ -220,35 +221,25 @@ export function KnowledgeArticleViewerModal({
                       </span>
                     </div>
 
-                    {/* Component Scores */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-[10px]">
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Problem:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {article.duplicateCheck.problemSimilarity ?? 0}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">
-                          Resolution:
-                        </span>
-                        <strong className="text-slate-900 font-bold">
-                          {article.duplicateCheck.resolutionSimilarity ?? 0}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Title:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {article.duplicateCheck.titleSimilarity ?? 0}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Metadata:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {article.duplicateCheck.metadataScore ?? 100}%
-                        </strong>
-                      </div>
-                    </div>
+                    {/* Calculation Formula & Score Breakdown */}
+                    <SimilarityScoreBreakdown
+                      problemSimilarity={
+                        article.duplicateCheck.problemSimilarity ?? 0
+                      }
+                      resolutionSimilarity={
+                        article.duplicateCheck.resolutionSimilarity ?? 0
+                      }
+                      titleSimilarity={
+                        article.duplicateCheck.titleSimilarity ?? 0
+                      }
+                      metadataScore={
+                        article.duplicateCheck.metadataScore ?? 100
+                      }
+                      finalScore={article.duplicateCheck.highestScore}
+                      classification={
+                        article.duplicateCheck.highestClassification
+                      }
+                    />
 
                     {/* Staff justification note if provided */}
                     {article.duplicateJustification && (

@@ -18,6 +18,7 @@ import {
   type KnowledgeArticleData,
   KnowledgeArticleViewerModal,
 } from "./KnowledgeArticleViewerModal";
+import { SimilarityScoreBreakdown } from "./SimilarityScoreBreakdown";
 
 export interface ProposeKnowledgeGrievance {
   id: string;
@@ -85,11 +86,11 @@ function sanitizePii(
 ): string {
   if (!text) return "";
   let clean = text;
-  if (submitterName && submitterName.trim()) {
+  if (submitterName?.trim()) {
     const nameRegex = new RegExp(submitterName.trim(), "gi");
     clean = clean.replace(nameRegex, "[Citizen/Employee]");
   }
-  if (submitterEmail && submitterEmail.trim()) {
+  if (submitterEmail?.trim()) {
     const emailRegex = new RegExp(submitterEmail.trim(), "gi");
     clean = clean.replace(emailRegex, "[user@email.hidden]");
   }
@@ -122,8 +123,7 @@ export function ProposeKnowledgeModal({
     rawSolution = resolution.note.replace(/^Investigation into [^:]+:\s*/i, "");
   }
   if (
-    resolution?.findings &&
-    resolution.findings.trim() &&
+    resolution?.findings?.trim() &&
     resolution.findings.trim() !== rawSolution.trim()
   ) {
     rawSolution = rawSolution
@@ -624,35 +624,19 @@ export function ProposeKnowledgeModal({
                       </span>
                     </div>
 
-                    {/* Component scores */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-[10px]">
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Problem:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.problemSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">
-                          Resolution:
-                        </span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.resolutionSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Title:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.titleSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Metadata:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.metadataScore}%
-                        </strong>
-                      </div>
-                    </div>
+                    {/* Score and Calculation Formula Breakdown */}
+                    <SimilarityScoreBreakdown
+                      problemSimilarity={
+                        dupState.highestMatch.problemSimilarity
+                      }
+                      resolutionSimilarity={
+                        dupState.highestMatch.resolutionSimilarity
+                      }
+                      titleSimilarity={dupState.highestMatch.titleSimilarity}
+                      metadataScore={dupState.highestMatch.metadataScore}
+                      finalScore={dupState.highestMatch.finalScore}
+                      classification={dupState.classification || "SIMILAR"}
+                    />
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-1">
@@ -713,35 +697,21 @@ export function ProposeKnowledgeModal({
                       </span>
                     </div>
 
-                    {/* Component scores */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-[10px]">
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Problem:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.problemSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">
-                          Resolution:
-                        </span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.resolutionSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Title:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.titleSimilarity}%
-                        </strong>
-                      </div>
-                      <div className="rounded-md bg-slate-50 p-1.5">
-                        <span className="text-slate-500 block">Metadata:</span>
-                        <strong className="text-slate-900 font-bold">
-                          {dupState.highestMatch.metadataScore}%
-                        </strong>
-                      </div>
-                    </div>
+                    {/* Score and Calculation Formula Breakdown */}
+                    <SimilarityScoreBreakdown
+                      problemSimilarity={
+                        dupState.highestMatch.problemSimilarity
+                      }
+                      resolutionSimilarity={
+                        dupState.highestMatch.resolutionSimilarity
+                      }
+                      titleSimilarity={dupState.highestMatch.titleSimilarity}
+                      metadataScore={dupState.highestMatch.metadataScore}
+                      finalScore={dupState.highestMatch.finalScore}
+                      classification={
+                        dupState.classification || "LIKELY_DUPLICATE"
+                      }
+                    />
                   </div>
 
                   {/* Mandatory justification requirement */}
