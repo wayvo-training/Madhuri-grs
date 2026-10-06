@@ -257,7 +257,7 @@ export function KnowledgeView() {
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h4 className="text-sm font-bold text-slate-900">
                       {art.title}
                     </h4>
@@ -274,6 +274,29 @@ export function KnowledgeView() {
                     >
                       {art.status.replace("_", " ")}
                     </span>
+
+                    {/* Duplicate Check Indicator for review decision support */}
+                    {art.status === "PENDING_REVIEW" && art.duplicateCheck && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full font-bold text-[10px] flex items-center gap-1 ${
+                          art.duplicateCheck.highestClassification ===
+                          "LIKELY_DUPLICATE"
+                            ? "bg-rose-100 text-rose-800 border border-rose-300"
+                            : art.duplicateCheck.highestClassification ===
+                                "SIMILAR"
+                              ? "bg-amber-100 text-amber-800 border border-amber-300"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        }`}
+                      >
+                        {art.duplicateCheck.highestClassification ===
+                        "LIKELY_DUPLICATE"
+                          ? `⚠️ Likely Duplicate (${art.duplicateCheck.highestScore}%)`
+                          : art.duplicateCheck.highestClassification ===
+                              "SIMILAR"
+                            ? `Similar Article Found (${art.duplicateCheck.highestScore}%)`
+                            : "✓ No Duplicate"}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-500">
                     Department:{" "}

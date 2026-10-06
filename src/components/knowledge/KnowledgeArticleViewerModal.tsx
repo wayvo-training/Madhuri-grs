@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   BookOpen,
   CheckCircle2,
   Clock,
@@ -9,6 +10,7 @@ import {
   FileX,
   Lightbulb,
   Shield,
+  ShieldAlert,
   X,
 } from "lucide-react";
 
@@ -22,6 +24,32 @@ export interface KnowledgeArticleData {
   keyPoints?: string | null;
   references?: string | null;
   rejectionReason?: string | null;
+  duplicateJustification?: string | null;
+  duplicateCheck?: {
+    highestScore: number;
+    highestClassification:
+      | "LIKELY_DUPLICATE"
+      | "SIMILAR"
+      | "NO_SIGNIFICANT_MATCH";
+    matchedArticleId?: string;
+    matchedArticleTitle?: string;
+    matchedArticleStatus?: string;
+    problemSimilarity?: number;
+    resolutionSimilarity?: number;
+    titleSimilarity?: number;
+    metadataScore?: number;
+    candidates?: Array<{
+      articleId: string;
+      articleTitle: string;
+      status: string;
+      problemSimilarity: number;
+      resolutionSimilarity: number;
+      titleSimilarity: number;
+      metadataScore: number;
+      finalScore: number;
+      classification: string;
+    }>;
+  } | null;
   category?: string;
   subcategory?: string;
   categoryId?: string | null;
@@ -120,6 +148,121 @@ export function KnowledgeArticleViewerModal({
               <p className="text-xs leading-relaxed">
                 {article.rejectionReason}
               </p>
+            </div>
+          )}
+
+          {/* DUPLICATE CHECK DECISION SUPPORT (Section 12) */}
+          {article.duplicateCheck && (
+            <div
+              className={`rounded-xl border p-3.5 space-y-2.5 ${
+                article.duplicateCheck.highestClassification ===
+                "LIKELY_DUPLICATE"
+                  ? "border-rose-300 bg-rose-50/70 text-rose-950"
+                  : article.duplicateCheck.highestClassification === "SIMILAR"
+                    ? "border-amber-300 bg-amber-50/70 text-amber-950"
+                    : "border-emerald-200 bg-emerald-50/50 text-emerald-950"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {article.duplicateCheck.highestClassification ===
+                  "LIKELY_DUPLICATE" ? (
+                    <ShieldAlert className="h-4 w-4 text-rose-600 shrink-0" />
+                  ) : article.duplicateCheck.highestClassification ===
+                    "SIMILAR" ? (
+                    <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  )}
+                  <span className="font-bold text-xs">
+                    Duplicate Check:{" "}
+                    {article.duplicateCheck.highestClassification ===
+                    "LIKELY_DUPLICATE"
+                      ? "Likely duplicate"
+                      : article.duplicateCheck.highestClassification ===
+                          "SIMILAR"
+                        ? "Similar article found"
+                        : "No significant duplicate found"}
+                  </span>
+                </div>
+
+                {article.duplicateCheck.highestClassification !==
+                  "NO_SIGNIFICANT_MATCH" && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                      article.duplicateCheck.highestClassification ===
+                      "LIKELY_DUPLICATE"
+                        ? "bg-rose-200/80 text-rose-900"
+                        : "bg-amber-200/80 text-amber-900"
+                    }`}
+                  >
+                    Similarity Score: {article.duplicateCheck.highestScore}%
+                  </span>
+                )}
+              </div>
+
+              {article.duplicateCheck.highestClassification !==
+                "NO_SIGNIFICANT_MATCH" &&
+                article.duplicateCheck.matchedArticleTitle && (
+                  <div className="rounded-lg bg-white/90 border border-slate-200/70 p-2.5 space-y-2 text-slate-800">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          Matched Knowledge Article:
+                        </p>
+                        <p className="font-bold text-xs text-slate-900 truncate">
+                          {article.duplicateCheck.matchedArticleTitle}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 shrink-0">
+                        {article.duplicateCheck.matchedArticleStatus ||
+                          "PUBLISHED"}
+                      </span>
+                    </div>
+
+                    {/* Component Scores */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 border-t border-slate-100 text-[10px]">
+                      <div className="rounded-md bg-slate-50 p-1.5">
+                        <span className="text-slate-500 block">Problem:</span>
+                        <strong className="text-slate-900 font-bold">
+                          {article.duplicateCheck.problemSimilarity ?? 0}%
+                        </strong>
+                      </div>
+                      <div className="rounded-md bg-slate-50 p-1.5">
+                        <span className="text-slate-500 block">
+                          Resolution:
+                        </span>
+                        <strong className="text-slate-900 font-bold">
+                          {article.duplicateCheck.resolutionSimilarity ?? 0}%
+                        </strong>
+                      </div>
+                      <div className="rounded-md bg-slate-50 p-1.5">
+                        <span className="text-slate-500 block">Title:</span>
+                        <strong className="text-slate-900 font-bold">
+                          {article.duplicateCheck.titleSimilarity ?? 0}%
+                        </strong>
+                      </div>
+                      <div className="rounded-md bg-slate-50 p-1.5">
+                        <span className="text-slate-500 block">Metadata:</span>
+                        <strong className="text-slate-900 font-bold">
+                          {article.duplicateCheck.metadataScore ?? 100}%
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Staff justification note if provided */}
+                    {article.duplicateJustification && (
+                      <div className="rounded-md bg-amber-50/60 border border-amber-200/60 p-2 text-[11px] text-amber-950">
+                        <span className="font-semibold block text-amber-900">
+                          Staff Justification for Proposal:
+                        </span>
+                        <p className="mt-0.5 italic text-slate-800">
+                          &ldquo;{article.duplicateJustification}&rdquo;
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
             </div>
           )}
 
