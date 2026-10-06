@@ -11,6 +11,7 @@ import {
   useQueueFilters,
   useStaffActions,
 } from "@/hooks/department-head";
+import { hasHeadResolutionAuthority } from "@/lib/department-head/filters";
 import type {
   CaseDrawerTab,
   DepartmentHeadOverviewProps,
@@ -159,8 +160,11 @@ export function DepartmentHeadOverviewInner({
     useState<GrievanceItem | null>(null);
   const [escalationBottleneck, setEscalationBottleneck] =
     useState<EscalationBottleneck>("STAFF_CAPACITY");
+  const [escalationBottleneckExplanation, setEscalationBottleneckExplanation] =
+    useState("");
   const [escalationInterventionType, setEscalationInterventionType] =
-    useState<EscalationInterventionType>("REASSIGN");
+    useState<EscalationInterventionType>("ASSUME_RESOLUTION_AUTHORITY");
+  const [escalationTargetStaffId, setEscalationTargetStaffId] = useState("");
   const [escalationTargetDept, setEscalationTargetDept] = useState("");
   const [escalationNote, setEscalationNote] = useState("");
   const [escalationExtensionHours, setEscalationExtensionHours] =
@@ -190,6 +194,12 @@ export function DepartmentHeadOverviewInner({
 
   const handleOpenAssignModal = useCallback(
     (item: GrievanceItem, _currentStaffId?: string) => {
+      if (item.status === "CLOSED" || item.status === "RESOLVED") {
+        toast.error(
+          `Cannot assign or change assignment for a ${item.status.toLowerCase()} grievance.`,
+        );
+        return;
+      }
       setAssignModalGrievance(item);
     },
     [],
@@ -197,9 +207,17 @@ export function DepartmentHeadOverviewInner({
 
   const handleOpenEscalateModal = useCallback(
     (item: GrievanceItem) => {
+      if (item.status === "CLOSED" || item.status === "RESOLVED") {
+        toast.error(
+          `Cannot intervene on a ${item.status.toLowerCase()} grievance.`,
+        );
+        return;
+      }
       setEscalationModalGrievance(item);
       setEscalationBottleneck("STAFF_CAPACITY");
-      setEscalationInterventionType("REASSIGN");
+      setEscalationBottleneckExplanation("");
+      setEscalationInterventionType("ASSUME_RESOLUTION_AUTHORITY");
+      setEscalationTargetStaffId("");
       const defaultDept =
         availableDepartments.find(
           (d) =>
@@ -208,6 +226,7 @@ export function DepartmentHeadOverviewInner({
         )?.name || "";
       setEscalationTargetDept(defaultDept);
       setEscalationNote("");
+      setEscalationExtensionHours(24);
     },
     [availableDepartments, currentDepartmentName],
   );
@@ -236,7 +255,7 @@ export function DepartmentHeadOverviewInner({
     e.preventDefault();
     if (!escalationModalGrievance) return;
 
-    if (escalationInterventionType === "REASSIGN") {
+    if (escalationInterventionType === "REASSIGN" && !escalationTargetStaffId) {
       const g = escalationModalGrievance;
       setEscalationModalGrievance(null);
       handleOpenAssignModal(g);
@@ -246,7 +265,9 @@ export function DepartmentHeadOverviewInner({
     await executeEscalationSubmit({
       grievance: escalationModalGrievance,
       bottleneck: escalationBottleneck,
+      bottleneckExplanation: escalationBottleneckExplanation,
       interventionType: escalationInterventionType,
+      targetStaffId: escalationTargetStaffId,
       targetDept: escalationTargetDept,
       note: escalationNote,
       extensionHours: escalationExtensionHours,
@@ -416,16 +437,21 @@ export function DepartmentHeadOverviewInner({
         <DepartmentHeadEscalationModal
           grievance={escalationModalGrievance}
           bottleneck={escalationBottleneck}
+          bottleneckExplanation={escalationBottleneckExplanation}
           interventionType={escalationInterventionType}
           targetDept={escalationTargetDept}
+          targetStaffId={escalationTargetStaffId}
           note={escalationNote}
           availableDepartments={availableDepartments}
+          staffList={staffList}
           currentDepartmentName={currentDepartmentName}
           onClose={() => setEscalationModalGrievance(null)}
           onSubmit={handleEscalationFormSubmit}
           onBottleneckChange={setEscalationBottleneck}
+          onBottleneckExplanationChange={setEscalationBottleneckExplanation}
           onInterventionTypeChange={setEscalationInterventionType}
           onTargetDeptChange={setEscalationTargetDept}
+          onTargetStaffIdChange={setEscalationTargetStaffId}
           onNoteChange={setEscalationNote}
           extensionHours={escalationExtensionHours}
           onExtensionHoursChange={setEscalationExtensionHours}
@@ -433,8 +459,8 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {resolutionModalGrievance &&
-        ((resolutionModalGrievance.reopenCount ?? 0) >= 2 ||
-        resolutionModalGrievance.status === "ESCALATED" ||
+        (hasHeadResolutionAuthority(resolutionModalGrievance) ||
+        (resolutionModalGrievance.reopenCount ?? 0) >= 2 ||
         resolutionModalGrievance.status !== "UNDER_REVIEW" ? (
           <ResolutionForm
             isOpen={!!resolutionModalGrievance}
@@ -460,6 +486,7 @@ export function DepartmentHeadOverviewInner({
                 findings: data.findings,
                 actionTaken: data.actionTaken,
                 outcome: data.outcome,
+                evidence: data.evidence || undefined,
               });
               setResolutionModalGrievance(null);
             }}

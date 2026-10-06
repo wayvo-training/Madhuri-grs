@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowDownUp, Check, Clock, User, UserPlus } from "lucide-react";
+import {
+  ArrowDownUp,
+  Check,
+  Clock,
+  ShieldAlert,
+  User,
+  UserPlus,
+} from "lucide-react";
 import { useState } from "react";
 import {
   formatAuditActionTitle,
@@ -143,6 +150,19 @@ export function CaseProgressTab({
     assignedStaff?.name ||
     null;
   if (officerName === "Unassigned") officerName = null;
+
+  const isClosedOrResolved = st === "CLOSED" || st === "RESOLVED";
+
+  const isResolutionAuthorityAssumed =
+    !isClosedOrResolved &&
+    Boolean(
+      currentGrievance.hodIntervention?.isResolutionAuthority ||
+        caseProgressData?.assignment?.isResolutionAuthority,
+    );
+  const headResolutionAuthorityName =
+    currentGrievance.hodIntervention?.resolutionAuthorityName ||
+    caseProgressData?.assignment?.resolutionAuthorityName ||
+    "Department Head";
   const officerDesignation =
     caseProgressData?.assignment?.designation ||
     assignedStaff?.designation ||
@@ -342,12 +362,57 @@ export function CaseProgressTab({
               ))}
             </div>
           </div>
+        ) : isResolutionAuthorityAssumed ? (
+          <div className="rounded-xl border border-teal-200 bg-teal-50/30 p-3 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-teal-100 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 text-teal-700" />
+                Current Resolution Authority
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                Head Intervention Active
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0F766E] text-white font-bold text-xs">
+                  {(headResolutionAuthorityName || "H").charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-slate-900 text-xs truncate">
+                    {headResolutionAuthorityName} &mdash; Department Head
+                  </div>
+                  <div className="text-[11px] text-teal-700 truncate font-medium">
+                    Resolution Authority Assumed
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1 pt-1.5 border-t border-teal-100 text-slate-600">
+                {officerName && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">
+                      Assigned Staff (Findings Preserved):
+                    </span>
+                    <span className="font-semibold text-slate-800">
+                      {officerName}
+                    </span>
+                  </div>
+                )}
+                <div className="text-[11px] text-teal-800 font-normal pt-0.5">
+                  Department Head is now responsible for reviewing the
+                  investigation and submitting the final resolution.
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5 text-emerald-800" />
-                Assignment
+                Current Assignment
               </span>
               <span className="text-xs text-slate-500">
                 Status:{" "}
@@ -365,7 +430,7 @@ export function CaseProgressTab({
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-900 text-xs truncate">
-                      {officerName}
+                      {officerName} &mdash; Staff
                     </div>
                     <div className="text-[11px] text-slate-500 truncate">
                       {officerDesignation}
@@ -417,16 +482,20 @@ export function CaseProgressTab({
             ) : (
               <div className="flex flex-col items-center justify-center py-3 text-center space-y-2">
                 <p className="text-xs text-slate-500">
-                  No staff member currently assigned to this grievance.
+                  {isClosedOrResolved
+                    ? "Case completed without active staff assignment."
+                    : "No staff member currently assigned to this grievance."}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => onAssignClick(currentGrievance)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  <span>Assign Staff Now</span>
-                </button>
+                {!isClosedOrResolved && (
+                  <button
+                    type="button"
+                    onClick={() => onAssignClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>Assign Staff Now</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

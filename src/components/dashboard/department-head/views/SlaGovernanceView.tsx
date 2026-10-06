@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/sortable-table-head";
 import {
   canHeadProposeKnowledge,
+  canHeadSubmitResolution,
+  hasHeadResolutionAuthority,
   requiresHeadResolutionReview,
 } from "@/lib/department-head/filters";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -347,10 +349,16 @@ export function SlaGovernanceView({
                 </tr>
               ) : (
                 paginatedList.map((item) => {
+                  const isClosedOrResolved =
+                    item.status === "CLOSED" || item.status === "RESOLVED";
                   const isEscalated = item.status === "ESCALATED";
+                  const hasAuthority = hasHeadResolutionAuthority(item);
+                  const canSubmitResolution = canHeadSubmitResolution(item);
                   const isUnderIntervention =
-                    item.status === "IN_PROGRESS" && item.hodIntervention;
-                  const needsReview = requiresHeadResolutionReview(item);
+                    !isClosedOrResolved &&
+                    (hasAuthority ||
+                      (item.status === "IN_PROGRESS" &&
+                        !!item.hodIntervention));
 
                   return (
                     <tr
@@ -398,57 +406,92 @@ export function SlaGovernanceView({
 
                       <td className="py-2 px-3 align-top">
                         <div className="flex flex-col items-start gap-1">
-                          {item.hodIntervention ? (
+                          {item.hodIntervention && !isClosedOrResolved ? (
                             <details className="group">
                               <summary
                                 className={`list-none cursor-pointer w-fit inline-flex items-center text-[13px] group-hover:opacity-80 transition-opacity ${
-                                  isEscalated
-                                    ? "font-semibold text-slate-900 dark:text-slate-200"
-                                    : isUnderIntervention || needsReview
+                                  hasAuthority
+                                    ? "font-semibold text-amber-800 dark:text-amber-300"
+                                    : isEscalated
                                       ? "font-semibold text-slate-900 dark:text-slate-200"
-                                      : "font-medium text-slate-700 dark:text-slate-300"
+                                      : isUnderIntervention ||
+                                          canSubmitResolution
+                                        ? "font-semibold text-slate-900 dark:text-slate-200"
+                                        : "font-medium text-slate-700 dark:text-slate-300"
                                 }`}
                               >
-                                {isEscalated
-                                  ? "Escalated"
-                                  : isUnderIntervention
-                                    ? "Under Intervention"
-                                    : needsReview
-                                      ? "Resolution Required"
-                                      : "Monitor"}
+                                {hasAuthority
+                                  ? "Head Intervention Active"
+                                  : isEscalated
+                                    ? "Escalated"
+                                    : isUnderIntervention
+                                      ? "Under Intervention"
+                                      : canSubmitResolution
+                                        ? "Resolution Required"
+                                        : "Monitor"}
                               </summary>
                               <div className="text-[13px] text-slate-500 max-w-[210px] leading-tight mt-1 animate-in fade-in">
-                                {item.hodIntervention.actionLabel}
+                                {item.hodIntervention.actionLabel ||
+                                  (hasAuthority
+                                    ? "Resolution Authority Assumed"
+                                    : "")}
                               </div>
                             </details>
                           ) : (
                             <span
                               className={`w-fit inline-flex items-center text-[13px] ${
-                                isEscalated
-                                  ? "font-semibold text-slate-900 dark:text-slate-200"
-                                  : needsReview
+                                isClosedOrResolved
+                                  ? "font-medium text-slate-500"
+                                  : isEscalated
                                     ? "font-semibold text-slate-900 dark:text-slate-200"
-                                    : "font-medium text-slate-700 dark:text-slate-300"
+                                    : canSubmitResolution
+                                      ? "font-semibold text-slate-900 dark:text-slate-200"
+                                      : "font-medium text-slate-700 dark:text-slate-300"
                               }`}
                             >
-                              {isEscalated
-                                ? "Escalated"
-                                : needsReview
-                                  ? "Resolution Required"
-                                  : "Monitor"}
+                              {isClosedOrResolved
+                                ? item.status === "RESOLVED"
+                                  ? "Resolved"
+                                  : "Closed"
+                                : isEscalated
+                                  ? "Escalated"
+                                  : canSubmitResolution
+                                    ? "Resolution Required"
+                                    : "Monitor"}
                             </span>
                           )}
                         </div>
                       </td>
 
                       <td className="py-2 px-3 align-top">
-                        <span className="text-sm text-slate-700">
-                          {item.assignedStaffName || "Unassigned"}
-                        </span>
+                        {!isClosedOrResolved &&
+                        item.hodIntervention?.isResolutionAuthority ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                              {item.hodIntervention.resolutionAuthorityName ||
+                                "Department Head"}{" "}
+                              (Authority)
+                            </span>
+                            {item.assignedStaffName && (
+                              <span className="text-[11px] text-slate-500">
+                                Staff: {item.assignedStaffName}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-700">
+                            {item.assignedStaffName || "Unassigned"}
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-2 px-3 align-top">
                         <StatusBadge status={item.status} />
+                        {hasAuthority && !isClosedOrResolved && (
+                          <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                            Head Intervention Active
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-2 pl-3 pr-4 text-right align-top">
@@ -460,7 +503,21 @@ export function SlaGovernanceView({
                               icon: <Eye className="h-3.5 w-3.5" />,
                               onClick: () => onInspect(item, "progress"),
                             },
-                            ...(isEscalated
+                            ...(canSubmitResolution &&
+                            !isClosedOrResolved &&
+                            item.isPrimaryDepartment !== false
+                              ? [
+                                  {
+                                    label: "Submit Resolution",
+                                    icon: <FileCheck className="h-3.5 w-3.5" />,
+                                    variant: "default" as const,
+                                    onClick: () => onReviewResolution(item),
+                                  },
+                                ]
+                              : []),
+                            ...(!hasAuthority &&
+                            !isClosedOrResolved &&
+                            (isEscalated || item.slaStatus === "BREACHED")
                               ? [
                                   {
                                     label: "Intervene",
@@ -471,60 +528,45 @@ export function SlaGovernanceView({
                                     onClick: () => onIntervene(item),
                                   },
                                 ]
-                              : [
-                                  ...(needsReview &&
-                                  item.isPrimaryDepartment !== false
-                                    ? [
-                                        {
-                                          label: "Submit Resolution",
-                                          icon: (
-                                            <FileCheck className="h-3.5 w-3.5" />
-                                          ),
-                                          variant: "default" as const,
-                                          onClick: () =>
-                                            onReviewResolution(item),
-                                        },
-                                      ]
-                                    : []),
-                                  ...(!item.hasProposedKb &&
-                                  canHeadProposeKnowledge(item)
-                                    ? [
-                                        {
-                                          label: "Propose KB Article",
-                                          icon: (
-                                            <BookOpen className="h-3.5 w-3.5" />
-                                          ),
-                                          variant: "default" as const,
-                                          onClick: () => onProposeKb?.(item),
-                                        },
-                                      ]
-                                    : item.assignedStaffName ||
-                                        item.assignedStaffId
-                                      ? [
-                                          {
-                                            label: "Change Assignment",
-                                            icon: (
-                                              <UserCheck className="h-3.5 w-3.5" />
-                                            ),
-                                            variant: "default" as const,
-                                            onClick: () =>
-                                              onAssign(
-                                                item,
-                                                item.assignedStaffId || "",
-                                              ),
-                                          },
-                                        ]
-                                      : [
-                                          {
-                                            label: "Assign",
-                                            icon: (
-                                              <UserPlus className="h-3.5 w-3.5" />
-                                            ),
-                                            variant: "default" as const,
-                                            onClick: () => onAssign(item),
-                                          },
-                                        ]),
-                                ]),
+                              : []),
+                            ...(!item.hasProposedKb &&
+                            canHeadProposeKnowledge(item)
+                              ? [
+                                  {
+                                    label: "Propose KB Article",
+                                    icon: <BookOpen className="h-3.5 w-3.5" />,
+                                    variant: "default" as const,
+                                    onClick: () => onProposeKb?.(item),
+                                  },
+                                ]
+                              : []),
+                            ...(!hasAuthority &&
+                            !isClosedOrResolved &&
+                            (item.assignedStaffName || item.assignedStaffId)
+                              ? [
+                                  {
+                                    label: "Change Assignment",
+                                    icon: <UserCheck className="h-3.5 w-3.5" />,
+                                    variant: "default" as const,
+                                    onClick: () =>
+                                      onAssign(
+                                        item,
+                                        item.assignedStaffId || "",
+                                      ),
+                                  },
+                                ]
+                              : !hasAuthority && !isClosedOrResolved
+                                ? [
+                                    {
+                                      label: "Assign Staff",
+                                      icon: (
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => onAssign(item, ""),
+                                    },
+                                  ]
+                                : []),
                           ]}
                         />
                       </td>

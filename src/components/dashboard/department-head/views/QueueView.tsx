@@ -35,7 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { canHeadProposeKnowledge } from "@/lib/department-head/filters";
+import {
+  canHeadProposeKnowledge,
+  canHeadSubmitResolution,
+  hasHeadResolutionAuthority,
+} from "@/lib/department-head/filters";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type {
   CaseDrawerTab,
@@ -550,6 +554,11 @@ export function QueueView({
                     {/* 4. Status */}
                     <TableCell className="py-3 px-3 whitespace-nowrap align-top">
                       <StatusBadge status={item.status} />
+                      {hasHeadResolutionAuthority(item) && (
+                        <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                          Head Intervention Active
+                        </span>
+                      )}
                     </TableCell>
 
                     {/* 5. SLA Status */}
@@ -576,7 +585,25 @@ export function QueueView({
 
                     {/* 6. Assigned Officer */}
                     <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      {item.assignedStaffName ? (
+                      {item.status !== "CLOSED" &&
+                      item.status !== "RESOLVED" &&
+                      item.hodIntervention?.isResolutionAuthority ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                            <UserCheck className="h-3 w-3 text-amber-600" />
+                            <span>
+                              {item.hodIntervention.resolutionAuthorityName ||
+                                "Department Head"}{" "}
+                              (Authority)
+                            </span>
+                          </span>
+                          {item.assignedStaffName && (
+                            <span className="text-[11px] text-slate-500">
+                              Staff: {item.assignedStaffName}
+                            </span>
+                          )}
+                        </div>
+                      ) : item.assignedStaffName ? (
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
                           <User className="h-3 w-3 text-slate-400" />
                           <span>{item.assignedStaffName}</span>
@@ -603,14 +630,33 @@ export function QueueView({
                     {/* 8. Actions */}
                     <TableCell className="py-3 pl-3 pr-4 text-right whitespace-nowrap align-top">
                       <ActionMenu
-                        widthClass="w-40"
+                        widthClass="w-44"
                         items={[
                           {
                             label: "Inspect",
                             icon: <Eye className="h-3.5 w-3.5" />,
                             onClick: () => onInspect(item, "progress"),
                           },
-                          ...(item.status === "ESCALATED"
+                          ...(canHeadSubmitResolution(item) &&
+                          item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          item.isPrimaryDepartment !== false
+                            ? [
+                                {
+                                  label: "Submit Resolution",
+                                  icon: (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  ),
+                                  variant: "default" as const,
+                                  onClick: () => onReviewResolution(item),
+                                },
+                              ]
+                            : []),
+                          ...(!hasHeadResolutionAuthority(item) &&
+                          item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          (item.status === "ESCALATED" ||
+                            item.slaStatus === "BREACHED")
                             ? [
                                 {
                                   label: "Intervene",
@@ -619,57 +665,35 @@ export function QueueView({
                                   onClick: () => onIntervene(item),
                                 },
                               ]
-                            : [
-                                ...(((item.reopenCount ?? 0) >= 2 ||
-                                  item.status === "UNDER_REVIEW") &&
-                                item.status !== "CLOSED" &&
-                                item.status !== "RESOLVED" &&
-                                item.isPrimaryDepartment !== false
-                                  ? [
-                                      {
-                                        label: "Submit Resolution",
-                                        icon: (
-                                          <CheckCircle2 className="h-3.5 w-3.5" />
-                                        ),
-                                        variant: "default" as const,
-                                        onClick: () => onReviewResolution(item),
-                                      },
-                                    ]
-                                  : []),
-                                ...(item.status !== "CLOSED" &&
-                                item.status !== "RESOLVED" &&
-                                !item.assignedStaffName &&
-                                !item.assignedStaffId
-                                  ? [
-                                      {
-                                        label: "Assign",
-                                        icon: (
-                                          <UserPlus className="h-3.5 w-3.5" />
-                                        ),
-                                        variant: "default" as const,
-                                        onClick: () => onAssign(item),
-                                      },
-                                    ]
-                                  : []),
-                                ...(item.status !== "CLOSED" &&
-                                item.status !== "RESOLVED" &&
-                                (item.assignedStaffName || item.assignedStaffId)
-                                  ? [
-                                      {
-                                        label: "Change Assignment",
-                                        icon: (
-                                          <UserCheck className="h-3.5 w-3.5" />
-                                        ),
-                                        variant: "default" as const,
-                                        onClick: () =>
-                                          onAssign(
-                                            item,
-                                            item.assignedStaffId || "",
-                                          ),
-                                      },
-                                    ]
-                                  : []),
-                              ]),
+                            : []),
+                          ...(!hasHeadResolutionAuthority(item) &&
+                          item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          !item.assignedStaffName &&
+                          !item.assignedStaffId
+                            ? [
+                                {
+                                  label: "Assign",
+                                  icon: <UserPlus className="h-3.5 w-3.5" />,
+                                  variant: "default" as const,
+                                  onClick: () => onAssign(item),
+                                },
+                              ]
+                            : []),
+                          ...(!hasHeadResolutionAuthority(item) &&
+                          item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          (item.assignedStaffName || item.assignedStaffId)
+                            ? [
+                                {
+                                  label: "Change Assignment",
+                                  icon: <UserCheck className="h-3.5 w-3.5" />,
+                                  variant: "default" as const,
+                                  onClick: () =>
+                                    onAssign(item, item.assignedStaffId || ""),
+                                },
+                              ]
+                            : []),
                           ...(!item.hasProposedKb &&
                           canHeadProposeKnowledge(item)
                             ? [

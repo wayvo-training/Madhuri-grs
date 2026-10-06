@@ -11,6 +11,7 @@ export interface HodInterventionInfo {
   targetStaffName?: string;
   targetDepartment?: string;
   newDeadline?: string;
+  isResolutionAuthority?: boolean;
 }
 
 export interface DepartmentInvolvementInfo {
@@ -28,6 +29,7 @@ interface CaseInspectionHeaderProps {
   subcategory: string;
   priority: string;
   slaState: "BREACHED" | "SLA_AT_RISK" | "AT_RISK" | "ON_TRACK" | string;
+  status?: string;
   hodIntervention?: HodInterventionInfo | null;
   departmentsInvolved?: DepartmentInvolvementInfo[];
   onClose: () => void;
@@ -40,12 +42,21 @@ export function CaseInspectionHeader({
   subcategory,
   priority,
   slaState,
+  status,
   hodIntervention,
   departmentsInvolved,
   onClose,
 }: CaseInspectionHeaderProps) {
+  const isClosedOrResolved = status === "CLOSED" || status === "RESOLVED";
   const isBreached = slaState === "BREACHED";
   const isAtRisk = slaState === "SLA_AT_RISK" || slaState === "AT_RISK";
+  const isResolutionAuthorityAssumed =
+    !isClosedOrResolved &&
+    Boolean(
+      hodIntervention?.isResolutionAuthority ||
+        hodIntervention?.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+        hodIntervention?.actionType === "DIRECT_OVERSIGHT",
+    );
 
   return (
     <div className="flex flex-col border-b border-slate-200/90 bg-slate-50/70 px-6 py-4 shrink-0 gap-3">
@@ -65,7 +76,7 @@ export function CaseInspectionHeader({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition cursor-pointer"
             title="Close dialog"
           >
             <X className="h-4 w-4" />
@@ -111,29 +122,53 @@ export function CaseInspectionHeader({
               ))}
             </div>
           )}
-          {hodIntervention && (
+          {hodIntervention && !isClosedOrResolved && (
             <div className="pt-2">
-              <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>
-                    Current Head Intervention &ndash;{" "}
-                    {hodIntervention.actionLabel}
-                  </span>
+              {isResolutionAuthorityAssumed ? (
+                <div className="inline-flex flex-col gap-1 rounded-xl bg-teal-50 border border-teal-300/80 px-3.5 py-2.5 shadow-2xs">
+                  <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-[#0F766E] text-white">
+                      Head Intervention Active
+                    </span>
+                    <span>Resolution Authority Assumed</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-teal-900 leading-snug">
+                    Department Head is now responsible for reviewing the
+                    investigation and submitting the final resolution.
+                  </p>
+                  {hodIntervention.note && (
+                    <p className="text-[11px] text-teal-800 italic border-t border-teal-200/60 pt-1 mt-0.5">
+                      Directive: &ldquo;{hodIntervention.note}&rdquo;
+                    </p>
+                  )}
                 </div>
-                {(hodIntervention.note ||
-                  hodIntervention.actionType === "MONITOR") && (
-                  <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
-                    {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
-                  </span>
-                )}
-              </div>
+              ) : (
+                <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>
+                      Current Head Intervention &ndash;{" "}
+                      {hodIntervention.actionLabel}
+                    </span>
+                  </div>
+                  {(hodIntervention.note ||
+                    hodIntervention.actionType === "MONITOR") && (
+                    <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
+                      {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         <div>
-          {isBreached ? (
+          {isClosedOrResolved ? (
+            <span className="text-sm font-bold text-slate-700 uppercase">
+              {status}
+            </span>
+          ) : isBreached ? (
             <span className="text-sm font-bold text-slate-900 uppercase">
               SLA BREACHED
             </span>

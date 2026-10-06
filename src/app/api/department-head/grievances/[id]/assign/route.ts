@@ -101,6 +101,17 @@ export async function POST(
     }
 
     const grievance = grievanceDept.grievances;
+
+    if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Cannot assign or change assignment for a ${grievance.status.toLowerCase()} grievance.`,
+        },
+        { status: 400 },
+      );
+    }
+
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
     // Prepare recommendation payload if provided

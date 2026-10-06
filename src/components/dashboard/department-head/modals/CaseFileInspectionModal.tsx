@@ -152,6 +152,7 @@ export function CaseFileInspectionModal({
           subcategory={currentGrievance.subcategory}
           priority={currentGrievance.priority}
           slaState={slaState}
+          status={currentGrievance.status}
           hodIntervention={currentGrievance.hodIntervention}
           departmentsInvolved={
             currentGrievance.departmentsInvolved ||
