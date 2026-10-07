@@ -1,4 +1,4 @@
-import { MessageSquare, ShieldCheck, Users } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 export function GrievanceCommunicationEmptyState() {
   return (
@@ -14,17 +14,6 @@ export function GrievanceCommunicationEmptyState() {
         communication history, discuss inquiries with involved participants, or
         submit clarifications.
       </p>
-      <div className="flex items-center gap-4 mt-6 text-xs text-slate-400 font-medium">
-        <span className="flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5 text-[#0F766E]" /> Authorized
-          Participants Only
-        </span>
-        <span>•</span>
-        <span className="flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5 text-teal-600" /> Internal Notes
-          Segregated
-        </span>
-      </div>
     </div>
   );
 }
