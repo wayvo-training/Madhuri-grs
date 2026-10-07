@@ -147,7 +147,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
-      designation="Citizen / Complainant"
+      designation="Employee"
       departmentName={user.departments?.department_name || "General Public"}
       title={`Grievance ${grievance.grievance_number}`}
       subtitle="View full details, resolution, tracking, and documents."
