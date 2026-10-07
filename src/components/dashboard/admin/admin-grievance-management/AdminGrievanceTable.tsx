@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { AdminPagination } from "@/components/dashboard/admin/admin-shared";
 import { useAdminGrievances } from "@/hooks/admin/grievance-management/useAdminGrievances";
 import type { AdminGrievanceTableProps } from "@/types/admin/grievances";
 import { AdminGrievanceToolbar } from "./components/AdminGrievanceToolbar";
@@ -82,21 +81,16 @@ export function AdminGrievanceTable({
         />
       </div>
 
-      {/* Table Content */}
+      {/* Table Content with Integrated Pagination */}
       <GrievanceTableList
         grievancesList={grievancesList}
         isLoading={isLoading}
         onOpenModal={openGrievanceModal}
-      />
-
-      {/* Pagination Footer */}
-      <AdminPagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalCount={totalCount}
         pageSize={pageSize}
         onPageChange={handlePageChange}
-        isLoading={isLoading}
       />
 
       {/* Detail Modal / Drawer */}

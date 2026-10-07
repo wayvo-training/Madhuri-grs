@@ -92,15 +92,23 @@ interface GrievanceTableListProps {
   grievancesList: SerializedGrievance[];
   isLoading: boolean;
   onOpenModal: (g: SerializedGrievance) => void;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 export function GrievanceTableList({
   grievancesList,
   isLoading,
   onOpenModal,
+  currentPage,
+  totalPages,
+  totalCount,
+  pageSize,
+  onPageChange,
 }: GrievanceTableListProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [sortState, setSortState] = useState<SortState>({
     field: null,
     direction: null,
@@ -133,11 +141,6 @@ export function GrievanceTableList({
       return 0;
     });
   }, [grievancesList, sortState]);
-
-  const paginatedList = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return sortedList.slice(start, start + pageSize);
-  }, [sortedList, currentPage, pageSize]);
 
   return (
     <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
@@ -238,7 +241,7 @@ export function GrievanceTableList({
               </TableCell>
             </TableRow>
           ) : (
-            paginatedList.map((g) => {
+            sortedList.map((g) => {
               const isException =
                 g.status === "SUBMITTED" || !g.department_name;
 
@@ -357,13 +360,12 @@ export function GrievanceTableList({
       <div className="border-t border-slate-100">
         <Pagination
           currentPage={currentPage}
-          totalPages={Math.ceil(grievancesList.length / pageSize) || 1}
-          totalCount={grievancesList.length}
+          totalPages={totalPages}
+          totalCount={totalCount}
           pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={onPageChange}
           itemLabel="grievances"
+          isLoading={isLoading}
         />
       </div>
     </div>
