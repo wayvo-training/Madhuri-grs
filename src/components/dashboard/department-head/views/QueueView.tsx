@@ -669,6 +669,8 @@ export function QueueView({
                           ...(!hasHeadResolutionAuthority(item) &&
                           item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
+                          item.status !== "ESCALATED" &&
+                          item.slaStatus !== "BREACHED" &&
                           !item.assignedStaffName &&
                           !item.assignedStaffId
                             ? [
@@ -683,6 +685,8 @@ export function QueueView({
                           ...(!hasHeadResolutionAuthority(item) &&
                           item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
+                          item.status !== "ESCALATED" &&
+                          item.slaStatus !== "BREACHED" &&
                           (item.assignedStaffName || item.assignedStaffId)
                             ? [
                                 {

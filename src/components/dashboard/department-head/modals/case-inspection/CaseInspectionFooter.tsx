@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowLeft,
   BookOpen,
   CheckCircle2,
@@ -31,7 +30,7 @@ interface CaseInspectionFooterProps {
   hodEmail?: string;
   onClose: () => void;
   onAssignClick: (item: GrievanceItem) => void;
-  onEscalateClick: (item: GrievanceItem) => void;
+  onEscalateClick?: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
   onProposeKbClick?: (item: GrievanceItem) => void;
   onAddInternalNote?: (
@@ -124,17 +123,6 @@ export function CaseInspectionFooter({
                 <span>Change Assignment</span>
               </button>
             )}
-
-          {!isClosedOrResolved && (
-            <button
-              type="button"
-              onClick={() => onEscalateClick(currentGrievance)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-            >
-              <AlertCircle className="h-3.5 w-3.5" />
-              <span>Add Direction</span>
-            </button>
-          )}
 
           {canHeadSubmitResolution(currentGrievance) &&
             (currentGrievance.isPrimaryDepartment !== false ? (

@@ -455,6 +455,10 @@ export function DepartmentHeadOverviewInner({
           onNoteChange={setEscalationNote}
           extensionHours={escalationExtensionHours}
           onExtensionHoursChange={setEscalationExtensionHours}
+          onNavigateToSmartAssignment={(item) => {
+            setEscalationModalGrievance(null);
+            handleOpenAssignModal(item);
+          }}
         />
       )}
 

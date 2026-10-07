@@ -43,6 +43,7 @@ export interface DepartmentHeadEscalationModalProps {
   onBottleneckExplanationChange?: (value: string) => void;
   onNoteChange: (value: string) => void;
   onExtensionHoursChange?: (hours: number) => void;
+  onNavigateToSmartAssignment?: (grievance: GrievanceItem) => void;
 }
 
 const BOTTLENECK_OPTIONS: {
@@ -111,7 +112,8 @@ const INTERVENTION_OPTIONS: {
   {
     value: "REASSIGN",
     title: "Change Assignment",
-    purpose: "Transfer the grievance to another eligible Staff member.",
+    purpose:
+      "Open Smart Assignment to reallocate case to an optimal Staff member.",
     icon: UserCheck,
   },
   {
@@ -174,6 +176,7 @@ export function DepartmentHeadEscalationModal({
   onBottleneckExplanationChange,
   onNoteChange,
   onExtensionHoursChange,
+  onNavigateToSmartAssignment,
 }: DepartmentHeadEscalationModalProps) {
   const eligibleDepartments = availableDepartments.filter(
     (d) =>
@@ -344,18 +347,34 @@ export function DepartmentHeadEscalationModal({
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => onInterventionTypeChange(opt.value)}
+                      onClick={() => {
+                        if (
+                          opt.value === "REASSIGN" &&
+                          onNavigateToSmartAssignment
+                        ) {
+                          onNavigateToSmartAssignment(grievance);
+                          return;
+                        }
+                        onInterventionTypeChange(opt.value);
+                      }}
                       className={`flex flex-col rounded-xl border p-3 text-left transition cursor-pointer ${
                         isSelected
                           ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] shadow-2xs ring-1 ring-[#0F766E]"
                           : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
-                        <Icon
-                          className={`h-4 w-4 shrink-0 ${isSelected ? "text-[#0F766E]" : "text-slate-500"}`}
-                        />
-                        <span>{opt.title}</span>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
+                          <Icon
+                            className={`h-4 w-4 shrink-0 ${isSelected ? "text-[#0F766E]" : "text-slate-500"}`}
+                          />
+                          <span>{opt.title}</span>
+                        </div>
+                        {opt.value === "REASSIGN" && (
+                          <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md border border-teal-200">
+                            Smart &rarr;
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] font-normal text-slate-500 mt-1 leading-snug">
                         {opt.purpose}
@@ -474,40 +493,31 @@ export function DepartmentHeadEscalationModal({
             )}
 
             {/* 4. REASSIGN Sub-Panel */}
-            {interventionType === "REASSIGN" && staffList.length > 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <label
-                  htmlFor="escalation-target-staff"
-                  className="block text-xs font-semibold text-slate-900 mb-1"
-                >
-                  Select Eligible Staff Member{" "}
-                  <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="escalation-target-staff"
-                  required
-                  value={targetStaffId}
-                  onChange={(e) => onTargetStaffIdChange?.(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
-                >
-                  <option value="">-- Select Eligible Staff Member --</option>
-                  {staffList
-                    .filter((s) => s.id !== grievance.assignedStaffId)
-                    .map((s) => (
-                      <option
-                        key={s.id}
-                        value={s.id}
-                        disabled={
-                          s.status === "ON_LEAVE" ||
-                          s.activeTickets >= s.maxCapacity
-                        }
-                      >
-                        {s.name} ({s.designation}) — {s.activeTickets}/
-                        {s.maxCapacity} active{" "}
-                        {s.status === "ON_LEAVE" ? "[On Leave]" : ""}
-                      </option>
-                    ))}
-                </select>
+            {interventionType === "REASSIGN" && (
+              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <UserCheck className="h-4 w-4 text-teal-700 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-semibold text-xs text-teal-950">
+                      Smart Staff Assignment
+                    </div>
+                    <p className="text-[11px] text-teal-800 mt-0.5 leading-snug">
+                      Reassign this case to an optimal staff officer using
+                      intelligent workload, category specialization, and
+                      performance matching.
+                    </p>
+                  </div>
+                </div>
+                {onNavigateToSmartAssignment && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateToSmartAssignment(grievance)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <UserCheck className="h-3.5 w-3.5" />
+                    <span>Open Smart Assignment &rarr;</span>
+                  </button>
+                )}
               </div>
             )}
 

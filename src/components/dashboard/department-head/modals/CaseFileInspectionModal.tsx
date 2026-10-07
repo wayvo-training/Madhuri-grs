@@ -30,7 +30,7 @@ export interface CaseFileInspectionModalProps {
   onOpenDocumentPreview: (doc: DocumentPreviewData) => void;
   onDownloadDocument: (doc: DocumentPreviewData) => void;
   onAssignClick: (item: GrievanceItem) => void;
-  onEscalateClick: (item: GrievanceItem) => void;
+  onEscalateClick?: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
   onProposeKbClick?: (item: GrievanceItem) => void;
   onAddInternalNote: (

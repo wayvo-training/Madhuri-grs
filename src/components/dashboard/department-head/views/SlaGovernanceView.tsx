@@ -9,7 +9,6 @@ import {
   Flame,
   RotateCcw,
   UserCheck,
-  UserPlus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
@@ -542,6 +541,8 @@ export function SlaGovernanceView({
                               : []),
                             ...(!hasAuthority &&
                             !isClosedOrResolved &&
+                            !isEscalated &&
+                            item.slaStatus !== "BREACHED" &&
                             (item.assignedStaffName || item.assignedStaffId)
                               ? [
                                   {
@@ -555,18 +556,7 @@ export function SlaGovernanceView({
                                       ),
                                   },
                                 ]
-                              : !hasAuthority && !isClosedOrResolved
-                                ? [
-                                    {
-                                      label: "Assign Staff",
-                                      icon: (
-                                        <UserPlus className="h-3.5 w-3.5" />
-                                      ),
-                                      variant: "default" as const,
-                                      onClick: () => onAssign(item, ""),
-                                    },
-                                  ]
-                                : []),
+                              : []),
                           ]}
                         />
                       </td>
