@@ -49,7 +49,13 @@ export function CaseInspectionHeader({
 }: CaseInspectionHeaderProps) {
   const isClosedOrResolved = status === "CLOSED" || status === "RESOLVED";
   const isBreached = slaState === "BREACHED";
-  const isAtRisk = slaState === "SLA_AT_RISK" || slaState === "AT_RISK";
+  const isSlaExtended =
+    !isClosedOrResolved &&
+    !isBreached &&
+    (hodIntervention?.actionType === "EXTEND_SLA" ||
+      Boolean(hodIntervention?.actionLabel?.includes("Deadline Extended")));
+  const isAtRisk =
+    !isSlaExtended && (slaState === "SLA_AT_RISK" || slaState === "AT_RISK");
   const isResolutionAuthorityAssumed =
     !isClosedOrResolved &&
     Boolean(
@@ -169,15 +175,19 @@ export function CaseInspectionHeader({
               {status}
             </span>
           ) : isBreached ? (
-            <span className="text-sm font-bold text-slate-900 uppercase">
+            <span className="text-sm font-bold text-rose-600 uppercase">
               SLA BREACHED
             </span>
+          ) : isSlaExtended ? (
+            <span className="text-sm font-bold text-emerald-700 uppercase">
+              SLA EXTENDED
+            </span>
           ) : isAtRisk ? (
-            <span className="text-sm font-bold text-slate-900 uppercase">
+            <span className="text-sm font-bold text-amber-600 uppercase">
               SLA AT RISK
             </span>
           ) : (
-            <span className="text-sm font-bold text-slate-900 uppercase">
+            <span className="text-sm font-bold text-emerald-700 uppercase">
               ON TRACK
             </span>
           )}

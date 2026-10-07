@@ -299,6 +299,13 @@ export function DepartmentHeadProvider({
             Array.isArray(grievancesData.grievances)
           )
             setGrievances(grievancesData.grievances);
+          setSelectedCaseFile((prev) => {
+            if (!prev) return null;
+            const updated = grievancesData.grievances.find(
+              (g: GrievanceItem) => g.id === prev.id,
+            );
+            return updated || prev;
+          });
         }
         if (staffRes.ok) {
           const staffData = await staffRes.json();

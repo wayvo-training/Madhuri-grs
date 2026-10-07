@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowDownUp,
-  Check,
-  Clock,
-  ShieldAlert,
-  User,
-  UserPlus,
-} from "lucide-react";
+import { Check, Clock, ShieldAlert, User, UserPlus } from "lucide-react";
 import { useState } from "react";
 import {
   formatAuditActionTitle,
@@ -37,7 +30,7 @@ export function CaseProgressTab({
   hodEmail,
   onAssignClick,
 }: CaseProgressTabProps) {
-  const [timelineSort, setTimelineSort] = useState<"desc" | "asc">("desc");
+  const [timelineSort] = useState<"desc" | "asc">("desc");
 
   const st = currentGrievance.status;
   const isAssigned =
@@ -110,14 +103,28 @@ export function CaseProgressTab({
     },
   ];
 
+  const isSlaExtensionActive = Boolean(
+    currentGrievance.hodIntervention?.actionType === "EXTEND_SLA" ||
+      currentGrievance.hodIntervention?.actionLabel?.includes(
+        "Deadline Extended",
+      ) ||
+      ((caseProgressData as Record<string, unknown> | null)?.hodIntervention &&
+        (
+          (caseProgressData as Record<string, unknown>)
+            .hodIntervention as Record<string, unknown>
+        )?.actionType === "EXTEND_SLA"),
+  );
+
   const slaPercent =
     caseProgressData?.sla?.consumptionPercent ??
-    currentGrievance.slaConsumptionPercent ??
-    (currentGrievance.slaStatus === "BREACHED"
-      ? 100
-      : currentGrievance.slaStatus === "AT_RISK"
-        ? 80
-        : 40);
+    (isSlaExtensionActive
+      ? 5
+      : (currentGrievance.slaConsumptionPercent ??
+        (currentGrievance.slaStatus === "BREACHED"
+          ? 100
+          : currentGrievance.slaStatus === "AT_RISK"
+            ? 80
+            : 40)));
 
   const slaTimeRemaining =
     caseProgressData?.sla?.timeRemaining || currentGrievance.slaTimeLeft;
@@ -127,19 +134,23 @@ export function CaseProgressTab({
 
   const slaState =
     caseProgressData?.sla?.state ||
-    (currentGrievance.slaStatus === "BREACHED"
-      ? "BREACHED"
-      : currentGrievance.slaStatus === "AT_RISK"
-        ? "SLA_AT_RISK"
-        : "ON_TRACK");
+    (isSlaExtensionActive
+      ? "ON_TRACK"
+      : currentGrievance.slaStatus === "BREACHED"
+        ? "BREACHED"
+        : currentGrievance.slaStatus === "AT_RISK"
+          ? "SLA_AT_RISK"
+          : "ON_TRACK");
 
   const slaStateLabel =
     caseProgressData?.sla?.stateLabel ||
-    (currentGrievance.slaStatus === "BREACHED"
-      ? "SLA Breached"
-      : currentGrievance.slaStatus === "AT_RISK"
-        ? "Approaching SLA"
-        : "Within SLA");
+    (isSlaExtensionActive
+      ? "Within Extended SLA"
+      : currentGrievance.slaStatus === "BREACHED"
+        ? "SLA Breached"
+        : currentGrievance.slaStatus === "AT_RISK"
+          ? "Approaching SLA"
+          : "Within SLA");
 
   const assignedStaff = staffList.find(
     (s: StaffMember) => s.id === currentGrievance.assignedStaffId,
@@ -208,7 +219,7 @@ export function CaseProgressTab({
         </div>
 
         <div className="relative flex items-start justify-between pt-2 pb-10 px-3 sm:px-6">
-          <div className="absolute left-[26px] sm:left-[38px] right-[26px] sm:right-[38px] top-5.5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
+          <div className="absolute left-6.5 sm:left-9.5 right-6.5 sm:right-9.5 top-5.5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
               style={{
@@ -238,7 +249,7 @@ export function CaseProgressTab({
                     <span>{idx + 1}</span>
                   )}
                 </div>
-                <div className="absolute top-full mt-1.5 w-[90px] sm:w-[110px] left-1/2 -translate-x-1/2 flex justify-center">
+                <div className="absolute top-full mt-1.5 w-27.5 sm:w-27.5 left-1/2 -translate-x-1/2 flex justify-center">
                   <span
                     className={`text-[11px] sm:text-xs text-center line-clamp-2 leading-tight ${
                       isPastOrCurrent

@@ -26,7 +26,7 @@ interface UseGrievanceActionsProps {
 
 export function useGrievanceActions({
   currentHodName,
-  hodName,
+  hodName: _hodName,
   staffList,
   setStaffList,
   setGrievances,
@@ -168,6 +168,12 @@ export function useGrievanceActions({
             status: isAssumingAuthority ? g.status : "IN_PROGRESS",
             slaStatus:
               interventionType === "EXTEND_SLA" ? "ON_TRACK" : g.slaStatus,
+            slaConsumptionPercent:
+              interventionType === "EXTEND_SLA" ? 5 : g.slaConsumptionPercent,
+            slaTimeLeft:
+              interventionType === "EXTEND_SLA"
+                ? `${extensionHours}h 00m remaining`
+                : g.slaTimeLeft,
             priority: g.priority,
             assignedStaffId:
               interventionType === "REASSIGN" && targetStaff

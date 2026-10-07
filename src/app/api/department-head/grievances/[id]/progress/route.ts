@@ -229,6 +229,30 @@ export async function GET(
       status: primaryAssignment?.assignment_status || "PENDING",
     };
 
+    // Check if there is an HOD intervention (specifically SLA extension)
+    const interventionLog = (grievance.audit_logs || []).find(
+      (l: { action?: string }) =>
+        l.action === "HOD_INTERVENTION_TAKEN" ||
+        l.action === "Step 6: Intervention Action Taken",
+    );
+    let ivData: Record<string, unknown> | null = null;
+    if (interventionLog?.new_value) {
+      if (typeof interventionLog.new_value === "string") {
+        try {
+          ivData = JSON.parse(interventionLog.new_value);
+        } catch {
+          ivData = {};
+        }
+      } else if (typeof interventionLog.new_value === "object") {
+        ivData = interventionLog.new_value as Record<string, unknown>;
+      }
+    }
+
+    const isSlaExtensionActive =
+      ivData?.actionType === "EXTEND_SLA" ||
+      (typeof ivData?.actionLabel === "string" &&
+        ivData.actionLabel.includes("Deadline Extended"));
+
     // 2. SLA calculations
     const now = new Date();
     const createdAt = new Date(grievance.created_at);
@@ -239,30 +263,70 @@ export async function GET(
     let isApproaching = false;
 
     if (dueAt) {
-      const totalDuration = dueAt.getTime() - createdAt.getTime();
-      const elapsedDuration = now.getTime() - createdAt.getTime();
-      if (totalDuration > 0) {
-        consumptionPercent = Math.min(
-          Math.max(Math.round((elapsedDuration / totalDuration) * 100), 0),
-          100,
+      if (isSlaExtensionActive && interventionLog) {
+        // Calculate SLA consumption relative to the extension grace window
+        const extensionStartTime = new Date(interventionLog.created_at);
+        const extensionWindowMs = Math.max(
+          1,
+          dueAt.getTime() - extensionStartTime.getTime(),
         );
-      }
-      if (now > dueAt) {
-        isBreached = true;
-        const diffMs = now.getTime() - dueAt.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
-        timeRemainingStr =
-          diffDays > 0
-            ? `Breached ${diffDays}d ago`
-            : `Breached ${diffHours}h ago`;
+        const elapsedSinceExtensionMs = Math.max(
+          0,
+          now.getTime() - extensionStartTime.getTime(),
+        );
+
+        if (now > dueAt) {
+          isBreached = true;
+          consumptionPercent = 100;
+          const diffMs = now.getTime() - dueAt.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+          timeRemainingStr =
+            diffDays > 0
+              ? `Breached ${diffDays}d ago`
+              : `Breached ${diffHours}h ago`;
+        } else {
+          consumptionPercent = Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round((elapsedSinceExtensionMs / extensionWindowMs) * 100),
+            ),
+          );
+          const diffMs = dueAt.getTime() - now.getTime();
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
+          timeRemainingStr = `${diffHours}h ${diffMins}m remaining`;
+          if (consumptionPercent >= 75) {
+            isApproaching = true;
+          }
+        }
       } else {
-        const diffMs = dueAt.getTime() - now.getTime();
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-        timeRemainingStr = `${diffHours}h ${diffMins}m remaining`;
-        if (consumptionPercent >= 75) {
-          isApproaching = true;
+        const totalDuration = dueAt.getTime() - createdAt.getTime();
+        const elapsedDuration = now.getTime() - createdAt.getTime();
+        if (totalDuration > 0) {
+          consumptionPercent = Math.min(
+            Math.max(Math.round((elapsedDuration / totalDuration) * 100), 0),
+            100,
+          );
+        }
+        if (now > dueAt) {
+          isBreached = true;
+          const diffMs = now.getTime() - dueAt.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+          timeRemainingStr =
+            diffDays > 0
+              ? `Breached ${diffDays}d ago`
+              : `Breached ${diffHours}h ago`;
+        } else {
+          const diffMs = dueAt.getTime() - now.getTime();
+          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+          const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
+          timeRemainingStr = `${diffHours}h ${diffMins}m remaining`;
+          if (consumptionPercent >= 75) {
+            isApproaching = true;
+          }
         }
       }
     }
@@ -273,14 +337,22 @@ export async function GET(
       dueAt: dueAt ? formatFullDateTime(dueAt) : "No Target Set",
       state: isBreached
         ? "BREACHED"
-        : isApproaching || grievance.sla_status === "AT_RISK"
-          ? "SLA_AT_RISK"
-          : "ON_TRACK",
+        : isSlaExtensionActive
+          ? isApproaching
+            ? "SLA_AT_RISK"
+            : "ON_TRACK"
+          : isApproaching || grievance.sla_status === "AT_RISK"
+            ? "SLA_AT_RISK"
+            : "ON_TRACK",
       stateLabel: isBreached
         ? "SLA Breached"
-        : isApproaching || grievance.sla_status === "AT_RISK"
-          ? "SLA At Risk"
-          : "Within SLA",
+        : isSlaExtensionActive
+          ? isApproaching
+            ? "Approaching Extended SLA"
+            : "Within Extended SLA"
+          : isApproaching || grievance.sla_status === "AT_RISK"
+            ? "SLA At Risk"
+            : "Within SLA",
     };
 
     // 3. Current Stage & Stepper
@@ -574,11 +646,6 @@ export async function GET(
       : "Grievance registered";
 
     // 6. Find HOD intervention
-    const interventionLog = (grievance.audit_logs || []).find(
-      (l: { action?: string }) =>
-        l.action === "HOD_INTERVENTION_TAKEN" ||
-        l.action === "Step 6: Intervention Action Taken",
-    );
     let hodIntervention = null;
     if (interventionLog?.new_value) {
       let iv: Record<string, unknown> = {};
@@ -707,6 +774,7 @@ export async function GET(
         timeline,
         internalNotes,
         departmentsInvolved,
+        hodIntervention,
       },
     });
   } catch (error) {
