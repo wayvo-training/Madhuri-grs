@@ -86,7 +86,7 @@ export function KnowledgeArticleViewerModal({
   const keyPointsText = article.keyPoints || article.considerations || "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">

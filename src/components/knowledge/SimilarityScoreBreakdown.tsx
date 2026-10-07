@@ -6,7 +6,7 @@ import { useState } from "react";
 interface SimilarityScoreBreakdownProps {
   problemSimilarity: number;
   resolutionSimilarity: number;
-  titleSimilarity: number;
+  titleSimilarity?: number;
   metadataScore: number;
   finalScore: number;
   classification: "LIKELY_DUPLICATE" | "SIMILAR" | "NO_SIGNIFICANT_MATCH";
@@ -17,7 +17,6 @@ interface SimilarityScoreBreakdownProps {
 export function SimilarityScoreBreakdown({
   problemSimilarity,
   resolutionSimilarity,
-  titleSimilarity,
   metadataScore,
   finalScore,
   classification,
@@ -26,18 +25,15 @@ export function SimilarityScoreBreakdown({
 }: SimilarityScoreBreakdownProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
-  // Weighted component contributions
-  const problemWeight = 40;
-  const resolutionWeight = 35;
-  const titleWeight = 15;
+  // Weighted component contributions (Domain Model: Problem 50%, Resolution 40%, Metadata 10%)
+  const problemWeight = 50;
+  const resolutionWeight = 40;
   const metadataWeight = 10;
 
   const problemContribution =
     Math.round(((problemSimilarity * problemWeight) / 100) * 100) / 100;
   const resolutionContribution =
     Math.round(((resolutionSimilarity * resolutionWeight) / 100) * 100) / 100;
-  const titleContribution =
-    Math.round(((titleSimilarity * titleWeight) / 100) * 100) / 100;
   const metadataContribution =
     Math.round(((metadataScore * metadataWeight) / 100) * 100) / 100;
 
@@ -77,14 +73,14 @@ export function SimilarityScoreBreakdown({
         </button>
       </div>
 
-      {/* Component Cards (Always Visible) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+      {/* Component Cards (Always Visible) - 3 Domain Fields */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
         {/* Problem Card */}
         <div className="rounded-lg border border-teal-100 bg-teal-50/50 p-2 space-y-0.5">
           <div className="flex items-center justify-between text-teal-800 font-medium">
-            <span>Problem</span>
+            <span>Problem Statement</span>
             <span className="text-[10px] bg-teal-100/80 px-1.5 rounded-full font-bold">
-              40% wt
+              50% wt
             </span>
           </div>
           <div className="flex items-baseline justify-between pt-0.5">
@@ -102,7 +98,7 @@ export function SimilarityScoreBreakdown({
           <div className="flex items-center justify-between text-blue-800 font-medium">
             <span>Resolution</span>
             <span className="text-[10px] bg-blue-100/80 px-1.5 rounded-full font-bold">
-              35% wt
+              40% wt
             </span>
           </div>
           <div className="flex items-baseline justify-between pt-0.5">
@@ -115,28 +111,10 @@ export function SimilarityScoreBreakdown({
           </div>
         </div>
 
-        {/* Title Card */}
-        <div className="rounded-lg border border-purple-100 bg-purple-50/50 p-2 space-y-0.5">
-          <div className="flex items-center justify-between text-purple-800 font-medium">
-            <span>Title</span>
-            <span className="text-[10px] bg-purple-100/80 px-1.5 rounded-full font-bold">
-              15% wt
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between pt-0.5">
-            <strong className="text-xs font-bold text-slate-900">
-              {titleSimilarity}%
-            </strong>
-            <span className="text-[10px] text-purple-900 font-semibold">
-              +{titleContribution}%
-            </span>
-          </div>
-        </div>
-
-        {/* Metadata Card */}
+        {/* Metadata Card (Category & Subcategory) */}
         <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 p-2 space-y-0.5">
           <div className="flex items-center justify-between text-emerald-800 font-medium">
-            <span>Metadata</span>
+            <span>Category &amp; Subcategory</span>
             <span className="text-[10px] bg-emerald-100/80 px-1.5 rounded-full font-bold">
               10% wt
             </span>
@@ -170,19 +148,14 @@ export function SimilarityScoreBreakdown({
             title={`Resolution: ${resolutionContribution}%`}
           />
           <div
-            className="bg-purple-500 transition-all duration-300"
-            style={{ width: `${titleContribution}%` }}
-            title={`Title: ${titleContribution}%`}
-          />
-          <div
             className="bg-emerald-500 transition-all duration-300"
             style={{ width: `${metadataContribution}%` }}
-            title={`Metadata: ${metadataContribution}%`}
+            title={`Category & Subcategory: ${metadataContribution}%`}
           />
         </div>
       </div>
 
-      {/* Expanded Mathematical Explanation (Section 9) */}
+      {/* Expanded Mathematical Explanation */}
       {isExpanded && (
         <div className="rounded-lg border border-slate-200/80 bg-slate-50 p-2.5 space-y-2 text-[11px] animate-in fade-in duration-150">
           <div className="flex items-center gap-1.5 font-bold text-slate-800">
@@ -192,17 +165,16 @@ export function SimilarityScoreBreakdown({
 
           <div className="rounded-md bg-white p-2 border border-slate-200 font-mono text-[10px] text-slate-700 space-y-1 overflow-x-auto">
             <p className="text-slate-500 font-sans font-medium text-[10px]">
-              Final Score = (Problem &times; 0.40) + (Resolution &times; 0.35) +
-              (Title &times; 0.15) + (Metadata &times; 0.10)
+              Final Score = (Problem &times; 0.50) + (Resolution &times; 0.40) +
+              (Metadata &times; 0.10)
             </p>
             <p className="text-slate-900 font-bold">
-              = ({problemSimilarity}% &times; 0.40) + ({resolutionSimilarity}%
-              &times; 0.35) + ({titleSimilarity}% &times; 0.15) + (
-              {metadataScore}% &times; 0.10)
+              = ({problemSimilarity}% &times; 0.50) + ({resolutionSimilarity}%
+              &times; 0.40) + ({metadataScore}% &times; 0.10)
             </p>
             <p className="text-teal-700 font-bold">
               = {problemContribution}% + {resolutionContribution}% +{" "}
-              {titleContribution}% + {metadataContribution}% = {finalScore}%
+              {metadataContribution}% = {finalScore}%
             </p>
           </div>
 

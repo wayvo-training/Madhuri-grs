@@ -62,6 +62,8 @@ interface DuplicateCandidate {
   classification: "LIKELY_DUPLICATE" | "SIMILAR" | "NO_SIGNIFICANT_MATCH";
   problemText?: string;
   resolutionText?: string;
+  categoryName?: string;
+  subcategoryName?: string;
 }
 
 interface DuplicateCheckState {
@@ -133,9 +135,19 @@ export function ProposeKnowledgeModal({
 
   const rawKeyPoints = resolution?.outcome ? resolution.outcome.trim() : "";
 
-  const [title, setTitle] = useState(
-    `Handling ${grievance.category} / ${grievance.subcategory} — Standard Operating Procedure`,
-  );
+  const cleanedGrievanceTitle = grievance.title
+    ? sanitizePii(
+        grievance.title.trim(),
+        grievance.submitterName,
+        grievance.submitterEmail,
+      )
+    : "";
+
+  const defaultTitle = cleanedGrievanceTitle
+    ? `SOP: ${cleanedGrievanceTitle}`
+    : `Handling ${grievance.category} / ${grievance.subcategory} — Standard Operating Procedure`;
+
+  const [title, setTitle] = useState(defaultTitle);
   const [category] = useState(grievance.category || "General");
   const [subcategory] = useState(grievance.subcategory || "General");
   const [problemScenario, setProblemScenario] = useState(
@@ -380,8 +392,8 @@ export function ProposeKnowledgeModal({
       resolution:
         candidate.resolutionText ||
         "Pre-existing recommended approach and resolution.",
-      category,
-      subcategory,
+      category: candidate.categoryName || category,
+      subcategory: candidate.subcategoryName || subcategory,
       status:
         (candidate.status as "PUBLISHED" | "PENDING_REVIEW") || "PUBLISHED",
     });

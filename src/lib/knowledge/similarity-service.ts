@@ -66,11 +66,10 @@ export function classifyScore(score: number): SimilarityClassification {
  * 1. Taxonomy Filtering (Category + Subcategory match, status IN PUBLISHED / PENDING_REVIEW).
  * 2. Deterministic text preprocessing via Natural.
  * 3. TF-IDF vectorization and cosine similarity via Natural.
- * 4. Weighted scoring:
- *    - Problem Similarity: 40%
- *    - Resolution Similarity: 35%
- *    - Title Similarity: 15%
- *    - Metadata Match: 10%
+ * 4. Weighted scoring (aligned with Grievance Domain Model):
+ *    - Problem Statement: 50%
+ *    - Resolution: 40%
+ *    - Taxonomy Metadata Match (Category + Subcategory): 10%
  * 5. Returns sorted candidates by finalScore DESC.
  */
 export async function checkKnowledgeDuplicates(
@@ -260,12 +259,11 @@ export async function checkKnowledgeDuplicates(
     // B. Metadata matching score: deterministic 100 since taxonomy filtered
     const metadataScore = 100;
 
-    // C. Weighted final score:
-    // Final Score = (Problem * 0.40) + (Resolution * 0.35) + (Title * 0.15) + (Metadata * 0.10)
+    // C. Weighted final score (Domain Model: Problem Statement 50%, Resolution 40%, Taxonomy Metadata 10%):
+    // Final Score = (Problem * 0.50) + (Resolution * 0.40) + (Metadata * 0.10)
     const rawFinalScore =
-      problemSimilarity * 0.4 +
-      resolutionSimilarity * 0.35 +
-      titleSimilarity * 0.15 +
+      problemSimilarity * 0.5 +
+      resolutionSimilarity * 0.4 +
       metadataScore * 0.1;
 
     const finalScore = Math.min(
