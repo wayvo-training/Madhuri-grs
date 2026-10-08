@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { calculateStaffRecommendations } from "@/lib/engines/staff-recommendation-engine";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -21,10 +24,18 @@ export async function GET(
       departmentId,
     );
 
-    return NextResponse.json({
-      success: true,
-      ...result,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        ...result,
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      },
+    );
   } catch (error) {
     console.error("Error in grievance recommendations route:", error);
     return NextResponse.json(

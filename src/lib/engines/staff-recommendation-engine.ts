@@ -259,25 +259,36 @@ export async function calculateStaffRecommendations(
     skillScore = Math.min(35, Math.round(skillScore));
 
     // --- Factor 2: Relevant Previous Experience (25%) ---
-    // Count previous assignments or resolutions in this category or subcategory
+    // Count previous resolved/closed assignments or resolutions in this category or subcategory
     let pastCategoryCases = 0;
     let pastSubcategoryCases = 0;
+    const resolvedGrievanceIds = new Set<string>();
 
-    for (const a of staff.assignments_assignments_staff_idTousers) {
-      if (a.grievance_id !== grievanceId) {
-        if (a.grievances?.subcategory_id === grievance.subcategory_id) {
+    for (const r of staff.resolutions) {
+      if (r.grievance_id !== grievanceId) {
+        resolvedGrievanceIds.add(r.grievance_id.toString());
+        if (r.grievances?.subcategory_id === grievance.subcategory_id) {
           pastSubcategoryCases++;
-        } else if (a.grievances?.category_id === grievance.category_id) {
+        } else if (r.grievances?.category_id === grievance.category_id) {
           pastCategoryCases++;
         }
       }
     }
 
-    for (const r of staff.resolutions) {
-      if (r.grievance_id !== grievanceId) {
-        if (r.grievances?.subcategory_id === grievance.subcategory_id) {
+    for (const a of staff.assignments_assignments_staff_idTousers) {
+      const gidStr = a.grievance_id.toString();
+      // Only count completed/resolved cases (not active, in-flight assignments) that haven't been counted via resolutions
+      if (
+        a.grievance_id !== grievanceId &&
+        !resolvedGrievanceIds.has(gidStr) &&
+        (a.assignment_status === "COMPLETED" ||
+          a.grievances?.status === "RESOLVED" ||
+          a.grievances?.status === "CLOSED")
+      ) {
+        resolvedGrievanceIds.add(gidStr);
+        if (a.grievances?.subcategory_id === grievance.subcategory_id) {
           pastSubcategoryCases++;
-        } else if (r.grievances?.category_id === grievance.category_id) {
+        } else if (a.grievances?.category_id === grievance.category_id) {
           pastCategoryCases++;
         }
       }
@@ -301,25 +312,30 @@ export async function calculateStaffRecommendations(
     }
 
     // --- Factor 3: Current Workload (20%) ---
+    // Clear tiered penalty: score reliably decreases with each additional active case assigned
     let workloadScore = 0;
     if (activeWorkload === 0) workloadScore = 20;
-    else if (activeWorkload === 1) workloadScore = 19;
-    else if (activeWorkload === 2) workloadScore = 18;
-    else if (activeWorkload === 3) workloadScore = 16;
-    else if (activeWorkload === 4) workloadScore = 14;
-    else if (activeWorkload === 5) workloadScore = 12;
-    else if (activeWorkload === 6) workloadScore = 9;
-    else if (activeWorkload === 7) workloadScore = 6;
-    else if (activeWorkload === 8) workloadScore = 4;
-    else if (activeWorkload === 9) workloadScore = 2;
+    else if (activeWorkload === 1) workloadScore = 17;
+    else if (activeWorkload === 2) workloadScore = 14;
+    else if (activeWorkload === 3) workloadScore = 11;
+    else if (activeWorkload === 4) workloadScore = 9;
+    else if (activeWorkload === 5) workloadScore = 7;
+    else if (activeWorkload === 6) workloadScore = 5;
+    else if (activeWorkload === 7) workloadScore = 3;
+    else if (activeWorkload === 8) workloadScore = 2;
+    else if (activeWorkload === 9) workloadScore = 1;
     else workloadScore = 0;
 
     // --- Factor 4: Availability (10%) ---
     let availabilityScore = 0;
     if (availabilityStatus === "AVAILABLE" && activeWorkload < 10) {
-      availabilityScore = activeWorkload <= 4 ? 10 : 7;
+      if (activeWorkload <= 2) availabilityScore = 10;
+      else if (activeWorkload <= 4) availabilityScore = 8;
+      else if (activeWorkload <= 6) availabilityScore = 6;
+      else if (activeWorkload <= 8) availabilityScore = 4;
+      else availabilityScore = 2;
     } else if (availabilityStatus === "BUSY" || activeWorkload >= 10) {
-      availabilityScore = 2;
+      availabilityScore = 1;
     } else {
       availabilityScore = 0;
     }
@@ -335,16 +351,22 @@ export async function calculateStaffRecommendations(
           us.proficiency_level === "EXPERT" ||
           us.proficiency_level === "ADVANCED",
       );
-      if (hasExpertSkill && activeWorkload <= 3) {
+      if (hasExpertSkill && activeWorkload <= 2) {
         slaScore = 10;
-      } else if (hasExpertSkill || activeWorkload <= 4) {
-        slaScore = 7;
+      } else if (hasExpertSkill && activeWorkload <= 4) {
+        slaScore = 8;
+      } else if (activeWorkload <= 5) {
+        slaScore = 5;
       } else {
-        slaScore = 4;
+        slaScore = 2;
       }
     } else {
       // Normal/Medium priority
-      slaScore = activeWorkload <= 5 ? 10 : 6;
+      if (activeWorkload <= 2) slaScore = 10;
+      else if (activeWorkload <= 4) slaScore = 8;
+      else if (activeWorkload <= 6) slaScore = 6;
+      else if (activeWorkload <= 8) slaScore = 4;
+      else slaScore = 2;
     }
 
     // Total Score (0 - 100)

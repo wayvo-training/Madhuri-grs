@@ -282,26 +282,31 @@ export function SmartStaffAssignmentModal({
         // Calculate dynamic factors that accurately reflect workload and profile
         const workloadScore = Math.max(0, 20 - s.activeTickets * 2);
         const availabilityScore =
-          s.status === "ON_LEAVE" ? 0 : isAtCap ? 2 : 10;
+          s.status === "ON_LEAVE"
+            ? 0
+            : isAtCap
+              ? 1
+              : s.activeTickets <= 2
+                ? 10
+                : s.activeTickets <= 5
+                  ? 8
+                  : 5;
         const skillScore = isTop ? 30 : Math.max(10, 26 - index * 4);
         const experienceScore = isTop ? 20 : Math.max(6, 18 - index * 3);
-        const slaScore = isTop
-          ? 8
-          : Math.max(4, 8 - Math.floor(s.activeTickets / 3));
+        const slaScore =
+          s.activeTickets <= 2 ? 10 : s.activeTickets <= 5 ? 8 : 4;
 
-        const computedScore = isTop
-          ? 88
-          : Math.min(
-              95,
-              Math.max(
-                35,
-                skillScore +
-                  experienceScore +
-                  workloadScore +
-                  availabilityScore +
-                  slaScore,
-              ),
-            );
+        const computedScore = Math.min(
+          95,
+          Math.max(
+            35,
+            skillScore +
+              experienceScore +
+              workloadScore +
+              availabilityScore +
+              slaScore,
+          ),
+        );
 
         return {
           staffId: s.id,
@@ -358,7 +363,15 @@ export function SmartStaffAssignmentModal({
     setLoading(true);
     setErrorMsg(null);
 
-    fetch(`/api/department-head/grievances/${grievance.id}/recommendations`)
+    fetch(
+      `/api/department-head/grievances/${grievance.id}/recommendations?t=${Date.now()}`,
+      {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      },
+    )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!isMounted) return;
@@ -399,9 +412,33 @@ export function SmartStaffAssignmentModal({
 
   const topCandidate = recommendedCandidates[0];
 
-  const manualCandidates = staffList.filter(
-    (s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE",
-  );
+  const manualCandidates = [...staffList]
+    .filter((s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE")
+    .sort((a, b) => {
+      const recA = recommendations.find((r) => r.staffId === a.id);
+      const recB = recommendations.find((r) => r.staffId === b.id);
+      const scoreA = recA?.score ?? 0;
+      const scoreB = recB?.score ?? 0;
+
+      // 1. Available capacity first (below capacity ranked before at-capacity)
+      const aAtCap = a.activeTickets >= (a.maxCapacity || 10);
+      const bAtCap = b.activeTickets >= (b.maxCapacity || 10);
+      if (aAtCap !== bAtCap) {
+        return aAtCap ? 1 : -1;
+      }
+
+      // 2. Sort by recommendation score descending
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+
+      // 3. Lower active workload secondary tie-breaker
+      if (a.activeTickets !== b.activeTickets) {
+        return a.activeTickets - b.activeTickets;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
 
   // Find currently assigned staff info for reassignment view
   const currentAssignedMember = staffList.find(
@@ -810,7 +847,7 @@ export function SmartStaffAssignmentModal({
                     htmlFor="available-staff-select"
                     className="mb-1 block text-[11px] font-semibold text-slate-700"
                   >
-                    Manual Selection (Other Available Staff)
+                    Manual Selection (Other Available Staff — Ranked by Score)
                   </label>
 
                   {manualCandidates.length > 0 ? (
@@ -820,7 +857,9 @@ export function SmartStaffAssignmentModal({
                       onChange={(e) => setSelectedStaffId(e.target.value)}
                       className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
                     >
-                      <option value="">Select another available staff</option>
+                      <option value="">
+                        Select another available staff (Ranked by Score)
+                      </option>
                       {manualCandidates.map((candidate) => {
                         const recCandidate = recommendations.find(
                           (r) => r.staffId === candidate.id,
@@ -841,15 +880,15 @@ export function SmartStaffAssignmentModal({
                               candidate.status === "ON_LEAVE" || isAtCap
                             }
                           >
-                            {candidate.name} — Active Workload:{" "}
-                            {candidate.activeTickets} /{" "}
+                            {candidate.name}
+                            {recCandidate
+                              ? ` (${recCandidate.score}% Score)`
+                              : ""}{" "}
+                            — Active Workload: {candidate.activeTickets} /{" "}
                             {candidate.maxCapacity || 10}{" "}
                             {isAtCap
                               ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
                               : `(Available Capacity: ${availCap})`}
-                            {recCandidate
-                              ? ` • Recommendation Score: ${recCandidate.score}%`
-                              : ""}
                           </option>
                         );
                       })}
