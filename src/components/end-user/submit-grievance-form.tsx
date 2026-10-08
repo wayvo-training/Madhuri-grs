@@ -110,9 +110,9 @@ export function SubmitGrievanceForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col"
+      className="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col w-full shadow-lg"
     >
-      <div className="p-6 sm:p-8 flex-1 space-y-8 overflow-y-auto max-h-[70vh]">
+      <div className="p-6 sm:p-8 flex-1 space-y-8">
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
             Grievance Details
