@@ -2,9 +2,11 @@
 
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   FileCheck2,
   FileText,
+  Loader2,
   Paperclip,
   Send,
   X,
@@ -43,6 +45,7 @@ export function ResolutionForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     if (isOpen && grievance.id) {
@@ -468,7 +471,22 @@ export function ResolutionForm({
           </button>
           <button
             type="button"
-            onClick={() => submitForm(false)}
+            onClick={() => {
+              if (
+                !problemSummary.trim() ||
+                !findings.trim() ||
+                !actionTaken.trim() ||
+                !outcome.trim()
+              ) {
+                setErrorMsg(
+                  "Please complete all required fields before submitting.",
+                );
+                toast.error("Please fill in all mandatory resolution fields.");
+                return;
+              }
+              setErrorMsg(null);
+              setShowConfirmModal(true);
+            }}
             disabled={
               isSubmitting ||
               !problemSummary.trim() ||
@@ -495,6 +513,107 @@ export function ResolutionForm({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal: Are you sure? */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {grievance.isPrimaryOwner === false
+                    ? "Confirm Findings Submission"
+                    : grievance.reopenCount >= 3
+                      ? "Confirm Review Submission"
+                      : "Confirm Grievance Resolution"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {grievance.isPrimaryOwner === false
+                    ? `Are you sure you want to submit your department's findings for ${grievance.grievanceNumber}? This will mark your participation as completed and notify the Lead Department.`
+                    : grievance.reopenCount >= 3
+                      ? `Are you sure you want to submit this resolution for ${grievance.grievanceNumber}? Because this grievance has been reopened 3+ times, submitting will transition it to UNDER_REVIEW for Department Head approval.`
+                      : `Are you sure you want to resolve ${grievance.grievanceNumber}? This will finalize the investigation, mark the grievance as RESOLVED, and notify the employee.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick summary recap */}
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Grievance:</span>
+                <span className="font-semibold text-slate-800">
+                  {grievance.grievanceNumber}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 block mb-0.5">
+                  Action Taken:
+                </span>
+                <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                  {actionTaken}
+                </p>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 block mb-0.5">
+                  Outcome Summary:
+                </span>
+                <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                  {outcome}
+                </p>
+              </div>
+              {supportingFiles.length > 0 && (
+                <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/50">
+                  <span className="font-medium text-slate-500">
+                    Supporting Files:
+                  </span>
+                  <span className="font-semibold text-slate-800">
+                    {supportingFiles.length} file(s) attached
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={async () => {
+                  setShowConfirmModal(false);
+                  await submitForm(false);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
+                  grievance.isPrimaryOwner === false
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-[#0F766E] hover:bg-[#115E59]"
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Yes, Confirm &amp; Submit
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
