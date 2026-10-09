@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   CalendarPlus,
+  Check,
   Clock,
   FileText,
   Send,
@@ -12,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type { FormEvent } from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { PriorityBadge } from "@/components/dashboard/badges";
 import { formatEscalationNotice } from "@/lib/department-head/utils";
 import type {
@@ -172,12 +173,15 @@ export function DepartmentHeadEscalationModal({
   onBottleneckChange,
   onInterventionTypeChange,
   onTargetDeptChange,
-  onTargetStaffIdChange,
+  onTargetStaffIdChange: _onTargetStaffIdChange,
   onBottleneckExplanationChange,
   onNoteChange,
   onExtensionHoursChange,
   onNavigateToSmartAssignment,
 }: DepartmentHeadEscalationModalProps) {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
   const eligibleDepartments = availableDepartments.filter(
     (d) =>
       d.name !== currentDepartmentName &&
@@ -212,7 +216,6 @@ export function DepartmentHeadEscalationModal({
         return "List the specific missing documents or information required from the submitter or department...";
       case "MONITOR":
         return "Note supervisory observations and planned follow-up checkpoints...";
-      case "REASSIGN":
       default:
         return "Explain the operational bottleneck resolved and specific directives given to staff...";
     }
@@ -252,7 +255,11 @@ export function DepartmentHeadEscalationModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex flex-col flex-1 min-h-0">
+        <form
+          ref={formRef}
+          onSubmit={onSubmit}
+          className="flex flex-col flex-1 min-h-0"
+        >
           <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
             {/* Grievance Header Banner */}
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
@@ -642,7 +649,21 @@ export function DepartmentHeadEscalationModal({
                 Cancel
               </button>
               <button
-                type="submit"
+                type="button"
+                onClick={() => {
+                  if (
+                    (interventionType === "CROSS_DEPT" && !targetDept) ||
+                    (interventionType === "REASSIGN" &&
+                      staffList.length > 0 &&
+                      !targetStaffId) ||
+                    (bottleneck === "OTHER_CONSTRAINT" &&
+                      !bottleneckExplanation?.trim()) ||
+                    !note.trim()
+                  ) {
+                    return;
+                  }
+                  setShowConfirmModal(true);
+                }}
                 disabled={
                   (interventionType === "CROSS_DEPT" && !targetDept) ||
                   (interventionType === "REASSIGN" &&
@@ -655,12 +676,132 @@ export function DepartmentHeadEscalationModal({
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
               >
                 <Send className="h-3.5 w-3.5" />
-                <span>Confirm &amp; Execute Intervention &rarr;</span>
+                <span>Execute Intervention &rarr;</span>
               </button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* Intervention Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Confirm Executive Intervention
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {interventionType === "REASSIGN"
+                    ? `Are you sure you want to change the assignment for ${grievance.ticketCode}? The case will be reallocated immediately.`
+                    : interventionType === "NOTIFY_STAFF"
+                      ? `Are you sure you want to issue this operational direction for ${grievance.ticketCode}?`
+                      : interventionType === "CROSS_DEPT"
+                        ? `Are you sure you want to add department collaboration for ${grievance.ticketCode}?`
+                        : interventionType === "EXTEND_SLA"
+                          ? `Are you sure you want to grant an SLA extension of ${extensionHours} hours for ${grievance.ticketCode}?`
+                          : `Are you sure you want to execute this intervention for ${grievance.ticketCode}?`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick summary recap */}
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Action:</span>
+                <span className="font-semibold text-slate-900">
+                  {INTERVENTION_OPTIONS.find(
+                    (o) => o.value === interventionType,
+                  )?.title || interventionType}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Bottleneck:</span>
+                <span className="font-semibold text-slate-800">
+                  {BOTTLENECK_OPTIONS.find((b) => b.value === bottleneck)
+                    ?.title || bottleneck}
+                </span>
+              </div>
+              {interventionType === "REASSIGN" && targetStaffId && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="font-medium text-slate-500">
+                    Reassign To:
+                  </span>
+                  <span className="font-semibold text-[#0F766E]">
+                    {staffList.find((s) => s.id === targetStaffId)?.name ||
+                      targetStaffId}
+                  </span>
+                </div>
+              )}
+              {interventionType === "CROSS_DEPT" && targetDept && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="font-medium text-slate-500">
+                    Supporting Dept:
+                  </span>
+                  <span className="font-semibold text-[#0F766E]">
+                    {availableDepartments.find((d) => d.id === targetDept)
+                      ?.name || targetDept}
+                  </span>
+                </div>
+              )}
+              {interventionType === "EXTEND_SLA" && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="font-medium text-slate-500">
+                    SLA Extension:
+                  </span>
+                  <span className="font-semibold text-amber-700">
+                    +{extensionHours} Hours
+                  </span>
+                </div>
+              )}
+              <div>
+                <span className="font-medium text-slate-500 block mb-0.5">
+                  Directive Note:
+                </span>
+                <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                  {note}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-snug">
+              This intervention will be recorded in the immutable audit trail
+              and resolve the pending escalation alert.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  if (formRef.current) {
+                    formRef.current.requestSubmit();
+                  } else {
+                    onSubmit({
+                      preventDefault: () => {},
+                    } as FormEvent<HTMLFormElement>);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+              >
+                <Check className="h-4 w-4" />
+                <span>Yes, Execute Intervention</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

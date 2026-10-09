@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Clock,
   Info,
+  Loader2,
   Scale,
   Send,
   SlidersHorizontal,
@@ -267,6 +268,7 @@ export function SmartStaffAssignmentModal({
   const [assignmentNote, setAssignmentNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Fetch recommendations from API
   const fallbackFromStaffList = useCallback(() => {
@@ -447,8 +449,22 @@ export function SmartStaffAssignmentModal({
       s.name === grievance.assignedStaffName,
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOpenConfirm = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedStaffId || !selectedCandidate) return;
+
+    if (selectedCandidate.activeWorkload >= 10) {
+      setErrorMsg(
+        "This Staff member has reached the maximum active workload of 10 grievances.",
+      );
+      return;
+    }
+
+    setErrorMsg(null);
+    setShowConfirmModal(true);
+  };
+
+  const handleExecuteAssignment = async () => {
     if (!selectedStaffId || !selectedCandidate) return;
 
     if (selectedCandidate.activeWorkload >= 10) {
@@ -483,6 +499,7 @@ export function SmartStaffAssignmentModal({
         );
       }
 
+      setShowConfirmModal(false);
       onAssignmentSuccess(
         selectedCandidate.staffId,
         selectedCandidate.name,
@@ -496,6 +513,7 @@ export function SmartStaffAssignmentModal({
         err instanceof Error ? err.message : "Failed to assign grievance",
       );
       setIsSubmitting(false);
+      setShowConfirmModal(false);
     }
   };
 
@@ -987,28 +1005,129 @@ export function SmartStaffAssignmentModal({
             <button
               type="button"
               disabled={!selectedStaffId || isSubmitting}
-              onClick={handleSubmit}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleOpenConfirm}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              {isSubmitting ? (
-                <>
-                  <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Recording Assignment...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" />
-                  <span>
-                    {isReassignment
-                      ? "Confirm Assignment Change"
-                      : "Confirm Staff Assignment"}
-                  </span>
-                </>
-              )}
+              <Send className="h-3.5 w-3.5" />
+              <span>
+                {isReassignment ? "Change Assignment" : "Assign Staff"}
+              </span>
             </button>
           </div>
         </div>
       </div>
+
+      {/* Assignment Confirmation Modal: Are you sure? */}
+      {showConfirmModal && selectedCandidate && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {isReassignment
+                    ? "Confirm Assignment Change"
+                    : "Confirm Staff Assignment"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {isReassignment
+                    ? `Are you sure you want to reassign grievance ${grievance.ticketCode} to ${selectedCandidate.name}?`
+                    : `Are you sure you want to assign grievance ${grievance.ticketCode} to ${selectedCandidate.name}?`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick summary recap */}
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Grievance:</span>
+                <span className="font-semibold text-slate-900">
+                  {grievance.ticketCode}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Title:</span>
+                <span className="font-semibold text-slate-800 max-w-[220px] truncate">
+                  {grievance.title}
+                </span>
+              </div>
+              {isReassignment && (
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="font-medium text-slate-500">
+                    Current Assignee:
+                  </span>
+                  <span className="font-medium text-slate-700">
+                    {grievance.assignedStaffName || "Unassigned"}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center text-slate-600 border-t border-slate-200/60 pt-1.5">
+                <span className="font-medium text-slate-500">
+                  New Assignee:
+                </span>
+                <span className="font-bold text-[#0F766E]">
+                  {selectedCandidate.name}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">
+                  Workload &amp; Match:
+                </span>
+                <span className="font-medium text-slate-700">
+                  {selectedCandidate.activeWorkload} active tickets &bull;{" "}
+                  {selectedCandidate.score}% Match
+                </span>
+              </div>
+              {assignmentNote.trim() && (
+                <div className="pt-1">
+                  <span className="font-medium text-slate-500 block mb-0.5">
+                    Directive Note:
+                  </span>
+                  <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                    {assignmentNote.trim()}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-snug">
+              This action will be recorded in the official audit trail and{" "}
+              {selectedCandidate.name} will be immediately notified.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleExecuteAssignment}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>Yes, Confirm Assignment</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

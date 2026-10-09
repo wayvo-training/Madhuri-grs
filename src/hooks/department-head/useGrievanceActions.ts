@@ -38,9 +38,7 @@ export function useGrievanceActions({
   >(null);
 
   const showSuccess = useCallback((message: string, duration = 4000) => {
-    setActionSuccessMessage(message);
     toast.success(message, { duration });
-    setTimeout(() => setActionSuccessMessage(null), duration);
   }, []);
 
   const handleAssignmentSuccess = useCallback(

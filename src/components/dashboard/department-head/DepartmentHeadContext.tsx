@@ -8,6 +8,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { toast } from "sonner";
 import type {
   EscalationAuditRecord,
   EscalationInterventionType,
@@ -362,8 +363,7 @@ export function DepartmentHeadProvider({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setActionSuccessMessage(`Downloaded file: ${doc.name}`);
-    setTimeout(() => setActionSuccessMessage(null), 3000);
+    toast.success(`Downloaded file: ${doc.name}`);
   }, []);
 
   const value = {

@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, AlertTriangle, UserPlus, X } from "lucide-react";
-import type { FormEvent } from "react";
+import { AlertCircle, AlertTriangle, Check, UserPlus, X } from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import type { GrievanceItem, StaffMember } from "@/types/department-head";
 
@@ -32,9 +32,13 @@ export function DepartmentHeadLeaveReassignmentModal({
   onMarkLeave,
   staffList,
 }: DepartmentHeadLeaveReassignmentModalProps) {
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
   const activeTickets = grievances.filter(
     (g) => g.assignedStaffId === staff.id && g.status !== "CLOSED",
   );
+  const targetStaff = staffList.find((s) => s.id === targetStaffId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 overflow-y-auto">
@@ -68,7 +72,7 @@ export function DepartmentHeadLeaveReassignmentModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-4 space-y-4">
+        <form ref={formRef} onSubmit={onSubmit} className="mt-4 space-y-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-800 space-y-1">
             <div className="flex items-center gap-1.5 font-semibold text-slate-900">
               <AlertTriangle className="h-4 w-4 shrink-0 text-slate-600" />
@@ -210,16 +214,114 @@ export function DepartmentHeadLeaveReassignmentModal({
               Keep Tickets & Mark On Leave
             </button>
             <button
-              type="submit"
+              type="button"
               disabled={!targetStaffId}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50"
+              onClick={() => {
+                if (!targetStaffId) return;
+                setShowConfirmModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              <span>Bulk Reassign & Mark Leave</span>
+              <span>Bulk Reassign &amp; Mark Leave</span>
             </button>
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && targetStaff && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Confirm Bulk Reassignment &amp; Leave
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Are you sure you want to reassign all{" "}
+                  <strong>{activeTickets.length} active grievance(s)</strong>{" "}
+                  from <strong>{staff.name}</strong> to{" "}
+                  <strong>{targetStaff.name}</strong>?
+                </p>
+              </div>
+            </div>
+
+            {/* Quick summary recap */}
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">
+                  Staff Taking Leave:
+                </span>
+                <span className="font-semibold text-slate-800">
+                  {staff.name} ({staff.designation})
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">
+                  Cases to Transfer:
+                </span>
+                <span className="font-semibold text-amber-800">
+                  {activeTickets.length} active grievance(s)
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600 border-t border-slate-200/60 pt-1.5">
+                <span className="font-medium text-slate-500">
+                  New Assignee:
+                </span>
+                <span className="font-bold text-[#0F766E]">
+                  {targetStaff.name} ({targetStaff.designation})
+                </span>
+              </div>
+              {note.trim() && (
+                <div className="pt-1">
+                  <span className="font-medium text-slate-500 block mb-0.5">
+                    Reassignment Note:
+                  </span>
+                  <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                    {note.trim()}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-snug">
+              This action will update all active case ownerships, log entries in
+              the audit trail, and mark {staff.name} as On Leave.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  if (formRef.current) {
+                    formRef.current.requestSubmit();
+                  } else {
+                    onSubmit({
+                      preventDefault: () => {},
+                    } as FormEvent<HTMLFormElement>);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+              >
+                <Check className="h-4 w-4" />
+                <span>Yes, Execute Reassignment</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
