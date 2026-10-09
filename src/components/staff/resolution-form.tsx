@@ -9,9 +9,9 @@ import {
   Send,
   X,
 } from "lucide-react";
-import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { uploadFileToSupabase } from "@/lib/storage-client";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
 interface ResolutionFormProps {
@@ -98,17 +98,20 @@ export function ResolutionForm({
     isSubmittingRef.current = true;
     setErrorMsg(null);
 
-    const attachmentPayloads = supportingFiles.map((f) => ({
-      id: String(Date.now() + Math.random()),
-      name: f.name,
-      size: `${(f.size / 1024).toFixed(1)} KB`,
-      type: f.type || "Document",
-      path: `/uploads/${f.name}`,
-      uploadedAt: new Date().toISOString(),
-    }));
-
     try {
-      let resId: string | undefined;
+      const attachmentPayloads = await Promise.all(
+        supportingFiles.map(async (f) => {
+          const uploadRes = await uploadFileToSupabase(f, "resolutions");
+          return {
+            id: String(Date.now() + Math.random()),
+            name: f.name,
+            size: `${(f.size / 1024).toFixed(1)} KB`,
+            type: f.type || "Document",
+            path: uploadRes.fileUrl || uploadRes.filePath,
+            uploadedAt: new Date().toISOString(),
+          };
+        }),
+      );
       if (grievance.isPrimaryOwner === false) {
         // Supporting Department Findings Submission
         const res = await fetch(
@@ -173,7 +176,6 @@ export function ResolutionForm({
         if (!res.ok || !data.success) {
           throw new Error(data.message || "Failed to submit resolution");
         }
-        resId = data.resolutionId;
         toast.success(
           isDraft
             ? "Resolution draft saved successfully!"

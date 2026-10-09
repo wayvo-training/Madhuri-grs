@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { uploadFileToSupabase } from "@/lib/storage-client";
 
 export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
   const router = useRouter();
@@ -48,12 +49,17 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
     setError(null);
 
     try {
-      const attachmentPayloads = filesToUpload.map((f) => ({
-        fileName: f.name,
-        fileType: f.type || "application/octet-stream",
-        fileSize: f.size,
-        filePath: `/uploads/${f.name}`, // In a real app, you would upload to S3 here
-      }));
+      const attachmentPayloads = await Promise.all(
+        filesToUpload.map(async (f) => {
+          const uploadRes = await uploadFileToSupabase(f, "grievances");
+          return {
+            fileName: f.name,
+            fileType: f.type || "application/octet-stream",
+            fileSize: f.size,
+            filePath: uploadRes.fileUrl || uploadRes.filePath,
+          };
+        }),
+      );
 
       const res = await fetch(
         `/api/end-user/grievances/${grievanceId}/additional-information`,
@@ -79,11 +85,13 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
 
       closeModal();
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An unexpected error occurred.";
       toast.error("Failed to send", {
-        description: err.message || "An unexpected error occurred.",
+        description: errorMessage,
       });
-      setError(err.message || "Failed to submit information");
+      setError(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -91,6 +99,7 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
   return (
     <>
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
         className="inline-flex items-center gap-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-5 py-2.5 text-sm font-bold shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition cursor-pointer"
       >
@@ -106,6 +115,7 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                 Provide Additional Information
               </h3>
               <button
+                type="button"
                 onClick={closeModal}
                 disabled={isSubmitting}
                 className="p-1.5 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -130,10 +140,14 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label
+                    htmlFor="additional-info-message"
+                    className="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
                     Message / Clarification
                   </label>
                   <textarea
+                    id="additional-info-message"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
@@ -143,11 +157,15 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label
+                    htmlFor="additional-info-files"
+                    className="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
                     Supporting Documents (Optional)
                   </label>
                   <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-900/50 p-4 transition">
                     <input
+                      id="additional-info-files"
                       type="file"
                       multiple
                       onChange={handleFileChange}
@@ -173,7 +191,7 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                       <div className="grid grid-cols-1 gap-2">
                         {filesToUpload.map((f, idx) => (
                           <div
-                            key={idx}
+                            key={`${f.name}-${f.size}-${f.lastModified}`}
                             className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs"
                           >
                             <div className="flex items-center gap-2 overflow-hidden">

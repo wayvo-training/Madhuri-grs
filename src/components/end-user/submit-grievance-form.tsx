@@ -110,19 +110,21 @@ export function SubmitGrievanceForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col w-full shadow-lg"
+      className="text-left bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden flex flex-col w-full h-full min-h-0"
     >
-      <div className="p-6 sm:p-8 flex-1 space-y-8">
-        <div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-            Grievance Details
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Fill in the information about your grievance. Fields marked with{" "}
-            <span className="text-rose-500">*</span> are mandatory.
-          </p>
-        </div>
+      {/* Form Header (Pinned at top) */}
+      <div className="px-6 py-4 sm:px-8 sm:py-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+        <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+          Grievance Details
+        </h2>
+        <p className="text-sm text-slate-500 mt-1">
+          Fill in the information about your grievance. Fields marked with{" "}
+          <span className="text-rose-500">*</span> are mandatory.
+        </p>
+      </div>
 
+      {/* Scrollable Form Body */}
+      <div className="p-6 sm:p-8 flex-1 min-h-0 overflow-y-auto space-y-6 custom-scrollbar">
         <div className="space-y-6">
           {/* Category */}
           <div className="space-y-2">
@@ -360,7 +362,8 @@ export function SubmitGrievanceForm({
         </div>
       </div>
 
-      <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+      {/* Form Action Footer (Pinned at bottom) */}
+      <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-4 flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
         <Button
           type="button"
           variant="outline"

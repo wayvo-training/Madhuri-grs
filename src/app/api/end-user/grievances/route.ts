@@ -1,14 +1,15 @@
-import { promises as fs } from "fs";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { NextResponse } from "next/server";
-import path from "path";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { prisma } from "@/lib/prisma";
+import { uploadToSupabase } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.roles?.role_name !== "END_USER") {
+    if (user?.roles?.role_name !== "END_USER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -69,10 +70,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const assignedDepartmentId = null;
     const title =
       problemStatement.length > 50
-        ? problemStatement.substring(0, 50) + "..."
+        ? `${problemStatement.substring(0, 50)}...`
         : problemStatement;
 
     // Resolve category and subcategory names for priority matching
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     const now = new Date();
     const dueAt = new Date(now.getTime() + targetMinutes * 60 * 1000);
 
-    const isAutoRouted = Boolean(activeRule && activeRule.department_id);
+    const isAutoRouted = Boolean(activeRule?.department_id);
     const initialStatus = isAutoRouted ? "ROUTED" : "SUBMITTED";
 
     // Create the grievance with status ROUTED (if rule matched) or SUBMITTED (if manual routing needed), priority, calculated due_at, and sla_status
@@ -157,7 +157,7 @@ export async function POST(request: Request) {
 
     // 1. Resolve primary department if routing rule exists
     let primaryDept = null;
-    if (activeRule && activeRule.department_id) {
+    if (activeRule?.department_id) {
       primaryDept = await prisma.departments.findFirst({
         where: {
           department_id: activeRule.department_id,
@@ -311,24 +311,25 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle File Uploads
+    // Handle File Uploads to Supabase Storage
     if (files && files.length > 0) {
-      const uploadDir = path.join(process.cwd(), "public/uploads/grievances");
-      await fs.mkdir(uploadDir, { recursive: true });
-
       for (const file of files) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const fileName = `${newGrievance.grievance_number}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-        const filePath = path.join(uploadDir, fileName);
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+        const storagePath = `grievances/${newGrievance.grievance_number}/${Date.now()}-${sanitizedName}`;
 
-        await fs.writeFile(filePath, buffer);
+        const uploadResult = await uploadToSupabase(
+          storagePath,
+          buffer,
+          file.type,
+        );
 
         await prisma.attachments.create({
           data: {
             grievance_id: newGrievance.grievance_id,
             file_name: file.name,
-            file_path: `/uploads/grievances/${fileName}`,
+            file_path: uploadResult.publicUrl || uploadResult.path,
             file_type: file.type,
             file_size: BigInt(file.size),
             uploaded_by: user.user_id,

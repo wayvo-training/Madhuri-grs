@@ -40,7 +40,7 @@ export default async function EndUserSubmitPage() {
       title="File a New Grievance"
       subtitle="Submit a workplace grievance for review and resolution."
     >
-      <div className="w-full max-w-3xl mx-auto my-auto py-4 sm:py-6 flex flex-col justify-center">
+      <div className="w-full max-w-4xl mx-auto flex-1 min-h-0 h-full flex flex-col py-2 sm:py-3">
         <SubmitGrievanceForm
           categories={serializedCategories}
           subcategories={serializedSubcategories}
