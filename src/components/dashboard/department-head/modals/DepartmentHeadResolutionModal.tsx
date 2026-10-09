@@ -1,0 +1,212 @@
+"use client";
+
+import { CheckCircle2, X } from "lucide-react";
+import type { FormEvent } from "react";
+import type { GrievanceItem } from "@/types/department-head";
+
+export interface DepartmentHeadResolutionModalProps {
+  grievance: GrievanceItem;
+  decision: "APPROVE" | "CLARIFY" | "REJECT";
+  feedback: string;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onDecisionChange: (value: "APPROVE" | "CLARIFY") => void;
+  onFeedbackChange: (value: string) => void;
+}
+
+export function DepartmentHeadResolutionModal({
+  grievance,
+  decision,
+  feedback,
+  onClose,
+  onSubmit,
+  onDecisionChange,
+  onFeedbackChange,
+}: DepartmentHeadResolutionModalProps) {
+  const isClarify = decision === "CLARIFY" || decision === "REJECT";
+  const isDirectResolution =
+    (grievance.reopenCount ?? 0) >= 2 ||
+    grievance.status === "ESCALATED" ||
+    grievance.status !== "UNDER_REVIEW";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+      <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              {isDirectResolution
+                ? "Direct Resolution Submission"
+                : "Resolution Review & Clearance"}
+            </h3>
+            <p className="text-xs font-normal text-slate-500">
+              {isDirectResolution
+                ? "Submit final resolution for "
+                : "Final sign-off for "}
+              <span className="font-mono font-semibold text-[#0F766E]">
+                {grievance.ticketCode}
+              </span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="mt-4 space-y-4">
+          {!isDirectResolution && grievance.submittedResolution && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between font-semibold text-emerald-950">
+                <span>
+                  Assigned Staff Findings:{" "}
+                  {grievance.submittedResolution.staffName}
+                </span>
+                <span className="text-2.75 font-normal text-slate-500">
+                  {grievance.submittedResolution.submittedAt}
+                </span>
+              </div>
+              <p className="font-normal leading-relaxed">
+                {grievance.submittedResolution.note}
+              </p>
+            </div>
+          )}
+
+          {!isDirectResolution && (
+            <div>
+              <div className="block text-xs font-semibold text-slate-800 mb-1.5">
+                Department Head Final Decision
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => onDecisionChange("APPROVE")}
+                  className={`rounded-xl border p-3 text-xs text-left transition ${
+                    decision === "APPROVE"
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-900 font-semibold ring-1 ring-emerald-600"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700 font-normal"
+                  }`}
+                >
+                  ✅ Approve & Clear Escalation
+                  <div className="text-2.5 font-normal text-slate-500 mt-0.5">
+                    Clear escalation flag & mark grievance as CLOSED
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDecisionChange("CLARIFY")}
+                  className={`rounded-xl border p-3 text-xs text-left transition ${
+                    isClarify
+                      ? "border-slate-800 bg-slate-100 text-slate-900 font-semibold ring-1 ring-slate-800"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700 font-normal"
+                  }`}
+                >
+                  🔄 Request Clarification
+                  <div className="text-2.5 font-normal text-slate-500 mt-0.5">
+                    Return to assigned staff member for revision
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="review-feedback"
+              className="block text-xs font-semibold text-slate-800 mb-1.5"
+            >
+              {isDirectResolution
+                ? "Problem Summary"
+                : decision === "APPROVE"
+                  ? "Final Approval Remarks (Logged to Audit Trail)"
+                  : "Clarification Directives"}
+            </label>
+            <textarea
+              id="review-feedback"
+              rows={isDirectResolution ? 2 : 3}
+              value={feedback}
+              onChange={(e) => onFeedbackChange(e.target.value)}
+              placeholder={
+                isDirectResolution
+                  ? "e.g. Issue directly resolved by Department Head."
+                  : decision === "APPROVE"
+                    ? "e.g. Resolution verified and sanctioned. All compliance requirements fulfilled."
+                    : "e.g. Please verify additional bank annexures before final submission."
+              }
+              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+              required={!isDirectResolution}
+            />
+          </div>
+
+          {isDirectResolution && (
+            <>
+              <div>
+                <label
+                  htmlFor="direct-findings"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
+                >
+                  Findings / Investigation Details
+                </label>
+                <textarea
+                  id="direct-findings"
+                  name="findings"
+                  rows={3}
+                  placeholder="e.g. Re-evaluated the investigation findings and documents provided by the employee..."
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  required
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="direct-action"
+                  className="block text-xs font-semibold text-slate-800 mb-1.5"
+                >
+                  Action Taken
+                </label>
+                <textarea
+                  id="direct-action"
+                  name="actionTaken"
+                  rows={3}
+                  placeholder="e.g. Approved the requested change and updated records."
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
+                decision === "APPROVE"
+                  ? "bg-[#0F766E] hover:bg-[#115E59]"
+                  : "bg-slate-800 hover:bg-slate-900"
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>
+                {isDirectResolution
+                  ? "Submit Resolution for Review"
+                  : decision === "APPROVE"
+                    ? "Endorse Resolution for Review"
+                    : "Return to Staff with Feedback"}
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
