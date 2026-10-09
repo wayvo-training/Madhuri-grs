@@ -1,16 +1,33 @@
 "use client";
 
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/ui/logo";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      const mainEl = document.querySelector("main");
+      if (mainEl && mainEl.scrollTop > 0) {
+        mainEl.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <footer className="border-t border-slate-800 bg-slate-950 text-slate-400 text-xs">
       <div className="mx-auto max-w-6xl px-6 py-6 sm:py-8 lg:px-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Brand */}
-          <Link href="/" className="inline-flex items-center gap-2.5">
+          <Link
+            href="/"
+            onClick={handleHomeClick}
+            className="inline-flex items-center gap-2.5 cursor-pointer"
+          >
             <Logo size={32} />
             <div>
               <span className="font-bold tracking-tight text-white text-sm">
@@ -22,31 +39,16 @@ export default function Footer() {
             </div>
           </Link>
 
-          {/* Quick Nav Links */}
-          <nav className="flex flex-wrap items-center gap-5 sm:gap-6 text-xs">
-            <Link href="/" className="hover:text-white transition-colors">
-              Home
-            </Link>
-            <Link href="/#track" className="hover:text-white transition-colors">
-              Track Status
-            </Link>
-            <Link
-              href="/#how-it-works"
-              className="hover:text-white transition-colors"
-            >
-              How It Works
-            </Link>
-            <Link href="/faq" className="hover:text-white transition-colors">
-              FAQ
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1 font-semibold text-teal-400 hover:text-teal-300 transition-colors"
-            >
-              Login
-              <ArrowUpRight className="h-3 w-3" />
-            </Link>
-          </nav>
+          {/* Tagline based on place constraint */}
+          <p className="text-xs text-slate-400 italic sm:text-right leading-relaxed max-w-md">
+            <span className="hidden md:inline">
+              “Every concern deserves to be heard, every issue deserves a
+              resolution.”
+            </span>
+            <span className="md:hidden">
+              “Listen with empathy. Resolve with integrity.”
+            </span>
+          </p>
         </div>
 
         {/* Bottom bar */}

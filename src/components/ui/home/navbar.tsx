@@ -2,16 +2,33 @@
 
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 import { Logo } from "@/components/ui/logo";
 
 export default function Navbar() {
+  const pathname = usePathname();
+
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      const mainEl = document.querySelector("main");
+      if (mainEl && mainEl.scrollTop > 0) {
+        mainEl.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <nav className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
+        <Link
+          href="/"
+          onClick={handleHomeClick}
+          className="flex items-center gap-3 cursor-pointer"
+        >
           <Logo size={40} />
 
           <div className="hidden sm:block">
@@ -28,7 +45,8 @@ export default function Navbar() {
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block"
+            onClick={handleHomeClick}
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block cursor-pointer"
           >
             Home
           </Link>

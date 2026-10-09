@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { getRoleDashboardPath } from "@/lib/role-redirect";
 
@@ -23,18 +23,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const ref = params.get("ref");
-    const redirect = params.get("redirect");
-    if (ref) {
-      setRedirectNotice(`Please sign in to track grievance "${ref}".`);
-    } else if (redirect) {
-      setRedirectNotice("Please sign in to continue to your requested page.");
-    }
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,9 +59,7 @@ export default function LoginPage() {
       const redirectUrl = params.get("redirect");
       const defaultPath = getRoleDashboardPath(data.user?.role);
       const targetPath =
-        redirectUrl &&
-        redirectUrl.startsWith("/") &&
-        data.user?.role === "END_USER"
+        redirectUrl?.startsWith("/") && data.user?.role === "END_USER"
           ? redirectUrl
           : defaultPath;
 
@@ -125,13 +111,6 @@ export default function LoginPage() {
               Sign in with your organizational credentials
             </p>
           </div>
-
-          {redirectNotice && (
-            <div className="mb-5 flex items-center gap-2.5 rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2.5 text-xs font-semibold text-teal-800 animate-in fade-in-50">
-              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-600" />
-              <span>{redirectNotice}</span>
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (

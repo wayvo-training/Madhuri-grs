@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Loader2, Lock, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, Loader2, Lock, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -15,9 +15,7 @@ export default function GrievanceTracker() {
 
     setLoading(true);
     const redirectPath = `/end-user/track?id=${encodeURIComponent(numToSearch)}`;
-    router.push(
-      `/login?redirect=${encodeURIComponent(redirectPath)}&ref=${encodeURIComponent(numToSearch)}`,
-    );
+    router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`);
   };
 
   return (
@@ -45,42 +43,43 @@ export default function GrievanceTracker() {
 
         {/* Search Bar */}
         <div className="mx-auto mt-6 max-w-2xl">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleTrack();
-            }}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-[#0E7490] focus-within:ring-2 focus-within:ring-cyan-500/20"
-          >
-            <div className="flex flex-1 items-center gap-3 pl-3">
-              <Search className="h-5 w-5 text-slate-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter reference number (e.g. GRS-2026-0001)..."
-                className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
-            </div>
+          <search aria-label="Grievance tracking search">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-[#0E7490] focus-within:ring-2 focus-within:ring-cyan-500/20">
+              <div className="flex flex-1 items-center gap-3 pl-3">
+                <Search
+                  className="h-5 w-5 text-slate-400 shrink-0"
+                  aria-hidden="true"
+                />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Enter reference number (e.g. GRS-2026-0001)..."
+                  aria-label="Enter reference number"
+                  className="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#0F766E] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  Track Status
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-          </form>
+              <button
+                type="button"
+                onClick={() => handleTrack()}
+                disabled={loading || !query.trim()}
+                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#0F766E] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    Track
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </search>
 
           {/* Confidentiality / Login Note */}
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
@@ -101,7 +100,6 @@ export default function GrievanceTracker() {
                   type="button"
                   onClick={() => {
                     setQuery(sample);
-                    handleTrack(sample);
                   }}
                   className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-mono text-2.75 text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-800 transition-colors cursor-pointer"
                 >
