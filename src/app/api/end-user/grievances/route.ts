@@ -16,19 +16,28 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const categoryId = formData.get("categoryId") as string;
     const subcategoryId = formData.get("subcategoryId") as string;
-    const problemStatement = formData.get("problemStatement") as string;
+    const titleFromForm = (formData.get("title") as string)?.trim();
+    const descriptionFromForm = (formData.get("description") as string)?.trim();
+    const userPriority = (formData.get("priority") as string)?.trim();
+    const problemStatement =
+      descriptionFromForm || (formData.get("problemStatement") as string) || "";
+    const title =
+      titleFromForm ||
+      (problemStatement.length > 50
+        ? `${problemStatement.substring(0, 50)}...`
+        : problemStatement);
     const files = formData.getAll("files") as File[];
 
     if (
       !categoryId ||
       !subcategoryId ||
+      !title ||
       !problemStatement ||
-      problemStatement.trim().length < 100
+      problemStatement.trim().length < 5
     ) {
       return NextResponse.json(
         {
-          error:
-            "Problem Statement is mandatory and must be at least 100 characters long",
+          error: "Category, Subcategory, Title, and Description are mandatory.",
         },
         { status: 400 },
       );
@@ -70,11 +79,6 @@ export async function POST(request: Request) {
       });
     }
 
-    const title =
-      problemStatement.length > 50
-        ? `${problemStatement.substring(0, 50)}...`
-        : problemStatement;
-
     // Resolve category and subcategory names for priority matching
     const subcategoryRecord = await prisma.subcategories.findUnique({
       where: { subcategory_id: BigInt(subcategoryId) },
@@ -92,7 +96,12 @@ export async function POST(request: Request) {
       description: problemStatement,
     });
 
-    const priorityLevel = priorityResult.priority || "MEDIUM";
+    const priorityLevel =
+      priorityResult.isDefault &&
+      userPriority &&
+      ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(userPriority.toUpperCase())
+        ? userPriority.toUpperCase()
+        : priorityResult.priority || "MEDIUM";
 
     // Lookup active SLA Policy based on priority
     const slaPolicy = await prisma.sla_policies.findFirst({
