@@ -43,11 +43,27 @@ model attachments {
   resolution_id           BigInt?
   grievance_departments   grievance_departments? @relation(fields: [grievance_department_id], references: [grievance_department_id], onUpdate: NoAction)
   grievances              grievances             @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
-  resolutions             resolutions?           @relation(fields: [resolution_id], references: [resolution_id], onUpdate: NoAction)
-  users                   users                  @relation(fields: [uploaded_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  resolutions                  resolutions?                   @relation(fields: [resolution_id], references: [resolution_id], onUpdate: NoAction)
+  users                        users                          @relation(fields: [uploaded_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  attachment_department_grants attachment_department_grants[]
 
   @@index([grievance_id], map: "idx_attachments_grievance_id")
   @@index([resolution_id], map: "idx_attachments_resolution_id")
+}
+
+model attachment_department_grants {
+  grant_id      BigInt      @id @default(autoincrement())
+  attachment_id BigInt
+  department_id BigInt
+  granted_by    BigInt
+  granted_at    DateTime    @default(now()) @db.Timestamptz(6)
+  attachments   attachments @relation(fields: [attachment_id], references: [attachment_id], onDelete: Cascade, onUpdate: NoAction)
+  departments   departments @relation(fields: [department_id], references: [department_id], onDelete: Cascade, onUpdate: NoAction)
+  users         users       @relation(fields: [granted_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([attachment_id, department_id], map: "uq_attachment_department_grant")
+  @@index([attachment_id], map: "idx_attachment_dept_grants_att_id")
+  @@index([department_id], map: "idx_attachment_dept_grants_dept_id")
 }
 
 model audit_logs {
@@ -89,9 +105,10 @@ model departments {
   department_name       String                  @unique @db.VarChar(100)
   description           String?                 @db.VarChar(255)
   status                String                  @default("ACTIVE") @db.VarChar(20)
-  created_at            DateTime                @default(now()) @db.Timestamptz(6)
-  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
-  grievance_departments grievance_departments[]
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  attachment_department_grants attachment_department_grants[]
+  grievance_departments        grievance_departments[]
   routing_rules         routing_rules[]
   users                 users[]
 }
@@ -483,8 +500,9 @@ model users {
   status                                     String                     @default("ACTIVE") @db.VarChar(20)
   created_at                                 DateTime                   @default(now()) @db.Timestamptz(6)
   updated_at                                 DateTime                   @default(now()) @db.Timestamptz(6)
-  assignments_assignments_assigned_byTousers assignments[]              @relation("assignments_assigned_byTousers")
-  assignments_assignments_staff_idTousers    assignments[]              @relation("assignments_staff_idTousers")
+  assignments_assignments_assigned_byTousers assignments[]                  @relation("assignments_assigned_byTousers")
+  assignments_assignments_staff_idTousers    assignments[]                  @relation("assignments_staff_idTousers")
+  attachment_department_grants               attachment_department_grants[]
   attachments                                attachments[]
   audit_logs                                 audit_logs[]
   escalations                                escalations[]
