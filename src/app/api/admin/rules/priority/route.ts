@@ -472,8 +472,15 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { priority_rule_id, status, rule_name, rule_order, priority_level } =
-      body;
+    const {
+      priority_rule_id,
+      status,
+      rule_name,
+      rule_order,
+      priority_level,
+      conditions,
+      is_default,
+    } = body;
 
     // 1. Validate priority_rule_id
     if (!priority_rule_id) {
@@ -560,6 +567,23 @@ export async function PATCH(request: Request) {
         );
       }
       newPrioLevel = parsedPrio;
+    }
+
+    let newConditions: unknown = existingRule.conditions;
+    if (conditions !== undefined) {
+      const conditionsValidation = validateConditions(conditions);
+      if (conditionsValidation.error) {
+        return NextResponse.json(
+          { success: false, message: conditionsValidation.error },
+          { status: 400 },
+        );
+      }
+      newConditions = conditionsValidation.conditions || {};
+    }
+
+    let newIsDefault = existingRule.is_default;
+    if (is_default !== undefined) {
+      newIsDefault = Boolean(is_default);
     }
 
     const validatedNewName = validateRuleName(rule_name);
@@ -706,6 +730,8 @@ export async function PATCH(request: Request) {
           rule_name: newName,
           rule_order: newOrder,
           priority_level: newPrioLevel,
+          conditions: newConditions as unknown as Prisma.InputJsonValue,
+          is_default: newIsDefault,
           updated_at: new Date(),
         },
       });
@@ -765,6 +791,8 @@ export async function PATCH(request: Request) {
         status: updated.status,
         rule_order: updated.rule_order,
         priority_level: updated.priority_level,
+        is_default: updated.is_default,
+        conditions: updated.conditions,
       },
     });
   } catch (error) {

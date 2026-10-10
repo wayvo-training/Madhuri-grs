@@ -356,9 +356,9 @@ export function useRuleActions({
       let payload: Record<string, unknown> = {};
 
       if (modalRuleType === "priority") {
-        if (!isDefault && !selectedPriorityCatId) {
+        if (!isDefault && !selectedPriorityCatId && !keywords.trim()) {
           toast.error(
-            "Category is required. Every priority rule must be scoped to a Category (or set as Default Fallback).",
+            "Category or trigger keywords are required. Every priority rule must define a Category or keywords (or be set as Default Fallback).",
           );
           setIsSubmitting(false);
           return;
@@ -373,13 +373,14 @@ export function useRuleActions({
 
         let conditions: Record<string, unknown> | null = null;
         if (!isDefault) {
-          conditions = {
-            category_id: selectedPriorityCatId,
-            category: prioCat?.category_name,
-          };
-          if (selectedPrioritySubcatId) {
-            conditions.subcategory_id = selectedPrioritySubcatId;
-            conditions.subcategory = prioSubcat?.subcategory_name;
+          conditions = {};
+          if (selectedPriorityCatId) {
+            conditions.category_id = selectedPriorityCatId;
+            conditions.category = prioCat?.category_name;
+            if (selectedPrioritySubcatId) {
+              conditions.subcategory_id = selectedPrioritySubcatId;
+              conditions.subcategory = prioSubcat?.subcategory_name;
+            }
           }
           if (keywords.trim()) {
             conditions.keywords = keywords
@@ -533,22 +534,44 @@ export function useRuleActions({
         };
       }
 
+      const isEditing = Boolean(editingRuleId);
+      const method =
+        isEditing && modalRuleType === "priority" ? "PATCH" : "POST";
+      const submitPayload =
+        isEditing && modalRuleType === "priority"
+          ? { ...payload, priority_rule_id: editingRuleId }
+          : payload;
+
       const res = await fetch(endpoint, {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(submitPayload),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to create policy rule.");
-        showNotice("error", data.message || "Failed to create policy rule.");
+        toast.error(data.message || "Failed to save policy rule.");
+        showNotice("error", data.message || "Failed to save policy rule.");
         setIsSubmitting(false);
         return;
       }
 
       if (modalRuleType === "priority") {
-        setPriorityRules((prev) => [...prev, data.rule]);
+        if (isEditing) {
+          setPriorityRules((prev) =>
+            prev.map((r) =>
+              r.priority_rule_id === editingRuleId
+                ? {
+                    ...r,
+                    ...data.rule,
+                    conditions: data.rule?.conditions ?? payload.conditions,
+                  }
+                : r,
+            ),
+          );
+        } else {
+          setPriorityRules((prev) => [...prev, data.rule]);
+        }
       } else if (modalRuleType === "routing") {
         setRoutingRules((prev) => [...prev, data.rule]);
       } else if (modalRuleType === "sla") {

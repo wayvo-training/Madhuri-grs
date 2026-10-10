@@ -129,6 +129,7 @@ export function AdminMasterRules({
 
     resetForm,
     handleCreateRule,
+    keywords,
     setKeywords,
   } = useRuleActions({
     departments,
@@ -469,12 +470,20 @@ export function AdminMasterRules({
                   subcategory_id?: string;
                   department_ids?: string[];
                   keywords?: string[];
-                };
+                  contains?: string[];
+                } | null;
                 if (cond?.category_id)
                   setSelectedPriorityCatId(cond.category_id);
                 if (cond?.subcategory_id)
                   setSelectedPrioritySubcatId(cond.subcategory_id);
-                if (cond?.keywords) setKeywords(cond.keywords.join(", "));
+                const kwList = cond?.keywords || cond?.contains;
+                if (Array.isArray(kwList) && kwList.length > 0) {
+                  setKeywords(kwList.join(", "));
+                } else if (typeof kwList === "string") {
+                  setKeywords(kwList);
+                } else {
+                  setKeywords("");
+                }
               } catch (_e) {}
               setRuleModalOpen(true);
             }}
@@ -652,6 +661,8 @@ export function AdminMasterRules({
         setSelectedPriorityCatId={setSelectedPriorityCatId}
         selectedPrioritySubcatId={selectedPrioritySubcatId}
         setSelectedPrioritySubcatId={setSelectedPrioritySubcatId}
+        keywords={keywords}
+        setKeywords={setKeywords}
         durationHours={durationHours}
         setDurationHours={setDurationHours}
         warningPercent={warningPercent}

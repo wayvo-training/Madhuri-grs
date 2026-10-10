@@ -62,6 +62,8 @@ interface AdminRuleConfigModalProps {
   setSelectedPriorityCatId: Dispatch<SetStateAction<string>>;
   selectedPrioritySubcatId: string;
   setSelectedPrioritySubcatId: Dispatch<SetStateAction<string>>;
+  keywords?: string;
+  setKeywords?: Dispatch<SetStateAction<string>>;
   durationHours: string;
   setDurationHours: Dispatch<SetStateAction<string>>;
   warningPercent: string;
@@ -127,6 +129,8 @@ export function AdminRuleConfigModal({
   setSelectedPriorityCatId,
   selectedPrioritySubcatId,
   setSelectedPrioritySubcatId,
+  keywords = "",
+  setKeywords,
   durationHours,
   setDurationHours,
   warningPercent,
@@ -321,7 +325,7 @@ export function AdminRuleConfigModal({
                       htmlFor="prio-cat-select"
                       className="block font-semibold text-slate-700"
                     >
-                      Category Scope *
+                      Category Scope {!keywords.trim() && "*"}
                     </label>
                     {selectedPriorityCatId === "CUSTOM" ? (
                       <div className="mt-1 flex items-center gap-2">
@@ -345,7 +349,7 @@ export function AdminRuleConfigModal({
                       <select
                         id="prio-cat-select"
                         value={selectedPriorityCatId}
-                        required={!isDefault}
+                        required={!isDefault && !keywords.trim()}
                         onChange={(e) => {
                           setSelectedPriorityCatId(e.target.value);
                           setSelectedPrioritySubcatId("");
@@ -416,6 +420,27 @@ export function AdminRuleConfigModal({
                         )}
                       </select>
                     )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label
+                      htmlFor="prio-keywords-input"
+                      className="block font-semibold text-slate-700"
+                    >
+                      Trigger Keywords (Optional)
+                    </label>
+                    <input
+                      id="prio-keywords-input"
+                      type="text"
+                      placeholder="e.g. emergency, ragging, hazard, leak (comma-separated)"
+                      value={keywords}
+                      onChange={(e) => setKeywords?.(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                      Matches case-insensitively against grievance title and
+                      description.
+                    </span>
                   </div>
                 </div>
               )}

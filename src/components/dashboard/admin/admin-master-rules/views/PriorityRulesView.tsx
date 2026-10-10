@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText } from "lucide-react";
+import { AlertTriangle, FileText, Pencil } from "lucide-react";
 import { useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
@@ -266,6 +266,21 @@ export function PriorityRulesView({
                           {r.rule_name}
                           {isDefault && " (Default Fallback)"}
                         </span>
+                        {(() => {
+                          const cond = r.conditions as {
+                            keywords?: string[];
+                            contains?: string[];
+                          } | null;
+                          const kwList = cond?.keywords || cond?.contains;
+                          if (Array.isArray(kwList) && kwList.length > 0) {
+                            return (
+                              <span className="text-[11px] text-slate-400">
+                                Keywords: {kwList.join(", ")}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell
@@ -297,6 +312,11 @@ export function PriorityRulesView({
                       <ActionMenu
                         widthClass="w-36"
                         items={[
+                          {
+                            label: "Edit Rule",
+                            icon: <Pencil className="h-3.5 w-3.5" />,
+                            onClick: () => onEdit(r),
+                          },
                           {
                             label: "Delete Rule",
                             variant: "danger" as const,
