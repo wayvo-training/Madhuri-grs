@@ -554,7 +554,19 @@ export async function PATCH(request: Request) {
 
   try {
     const body = await request.json();
-    const { routing_rule_id, status, rule_name, rule_order } = body;
+    const {
+      routing_rule_id,
+      status,
+      rule_name,
+      rule_order,
+      category_id,
+      subcategory_id,
+      department_id,
+      supporting_departments,
+      conditions,
+      new_category_name,
+      new_subcategory_name,
+    } = body;
 
     // 1. Validate routing_rule_id
     if (!routing_rule_id) {
@@ -628,12 +640,258 @@ export async function PATCH(request: Request) {
       newOrder = parsedOrder;
     }
 
-    // 5. Conflict prevention when activating a rule
-    if (newStatus === "ACTIVE" && existingRule.status !== "ACTIVE") {
+    // 5. Validate rule_name if provided
+    let newName = existingRule.rule_name;
+    if (rule_name !== undefined) {
+      const validatedNewName = validateRuleName(rule_name);
+      if (!validatedNewName) {
+        return NextResponse.json(
+          { success: false, message: "Rule name cannot be empty." },
+          { status: 400 },
+        );
+      }
+      newName = validatedNewName;
+
+      // Check name uniqueness if changed
+      if (newName.toLowerCase() !== existingRule.rule_name.toLowerCase()) {
+        const nameConflict = await prisma.routing_rules.findFirst({
+          where: {
+            rule_name: { equals: newName, mode: "insensitive" },
+            routing_rule_id: { not: ruleId },
+          },
+        });
+        if (nameConflict) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `A routing rule named "${newName}" already exists. Please choose a unique rule name.`,
+            },
+            { status: 409 },
+          );
+        }
+      }
+    }
+
+    // 6. Validate primary department_id if provided
+    let deptId = existingRule.department_id;
+    let deptName = existingRule.departments.department_name;
+    if (department_id !== undefined && department_id !== null) {
+      const parsedDeptId = validateBigIntId(department_id);
+      if (!parsedDeptId) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "department_id must be a valid integer identifier.",
+          },
+          { status: 400 },
+        );
+      }
+      const department = await prisma.departments.findUnique({
+        where: { department_id: parsedDeptId },
+      });
+      if (department?.status !== "ACTIVE") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Selected target department was not found or is inactive.",
+          },
+          { status: 400 },
+        );
+      }
+      deptId = parsedDeptId;
+      deptName = department.department_name;
+    }
+
+    // 7. Validate category and subcategory if provided
+    let finalCatId: bigint | null = existingRule.category_id;
+    let finalCatName = existingRule.categories?.category_name || "";
+    let finalSubcatId: bigint | null = existingRule.subcategory_id;
+    let finalSubcatName = existingRule.subcategories?.subcategory_name || "";
+
+    if (category_id !== undefined && category_id !== null) {
+      if (category_id === "CUSTOM" && new_category_name) {
+        const existingCat = await prisma.categories.findUnique({
+          where: { category_name: new_category_name.trim() },
+        });
+        if (existingCat) {
+          finalCatId = existingCat.category_id;
+          finalCatName = existingCat.category_name;
+        } else {
+          const newCat = await prisma.categories.create({
+            data: {
+              category_name: new_category_name.trim(),
+              status: "ACTIVE",
+            },
+          });
+          finalCatId = newCat.category_id;
+          finalCatName = newCat.category_name;
+        }
+      } else {
+        const parsedCatId = validateBigIntId(category_id);
+        if (!parsedCatId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "category_id must be a valid integer identifier or CUSTOM.",
+            },
+            { status: 400 },
+          );
+        }
+        const category = await prisma.categories.findUnique({
+          where: { category_id: parsedCatId },
+        });
+        if (category?.status !== "ACTIVE") {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Selected category was not found or is inactive.",
+            },
+            { status: 400 },
+          );
+        }
+        finalCatId = parsedCatId;
+        finalCatName = category.category_name;
+      }
+    }
+
+    if (subcategory_id !== undefined && subcategory_id !== null) {
+      if (subcategory_id === "CUSTOM" && new_subcategory_name && finalCatId) {
+        const existingSub = await prisma.subcategories.findUnique({
+          where: {
+            category_id_subcategory_name: {
+              category_id: finalCatId,
+              subcategory_name: new_subcategory_name.trim(),
+            },
+          },
+        });
+        if (existingSub) {
+          finalSubcatId = existingSub.subcategory_id;
+          finalSubcatName = existingSub.subcategory_name;
+        } else {
+          const newSub = await prisma.subcategories.create({
+            data: {
+              category_id: finalCatId,
+              subcategory_name: new_subcategory_name.trim(),
+              status: "ACTIVE",
+            },
+          });
+          finalSubcatId = newSub.subcategory_id;
+          finalSubcatName = newSub.subcategory_name;
+        }
+      } else {
+        const parsedSubcatId = validateBigIntId(subcategory_id);
+        if (!parsedSubcatId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "subcategory_id must be a valid integer identifier or CUSTOM.",
+            },
+            { status: 400 },
+          );
+        }
+        const subcategory = await prisma.subcategories.findUnique({
+          where: { subcategory_id: parsedSubcatId },
+        });
+        if (subcategory?.status !== "ACTIVE") {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Selected subcategory was not found or is inactive.",
+            },
+            { status: 400 },
+          );
+        }
+        if (subcategory.category_id !== finalCatId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `The selected subcategory ("${subcategory.subcategory_name}") does not belong to category "${finalCatName}".`,
+            },
+            { status: 400 },
+          );
+        }
+        finalSubcatId = parsedSubcatId;
+        finalSubcatName = subcategory.subcategory_name;
+      }
+    }
+
+    // 8. Validate supporting departments if provided
+    let normalizedSupporting = Array.isArray(
+      existingRule.supporting_departments,
+    )
+      ? (existingRule.supporting_departments as string[])
+      : [];
+    if (supporting_departments !== undefined) {
+      const supportingValidation =
+        await validateAndNormalizeSupportingDepartments(
+          supporting_departments,
+          deptId,
+          deptName,
+        );
+      if (supportingValidation.error) {
+        return NextResponse.json(
+          { success: false, message: supportingValidation.error },
+          { status: 400 },
+        );
+      }
+      normalizedSupporting = supportingValidation.departments || [];
+    }
+
+    // 9. Validate conditions and dependency graph if conditions or supporting depts changed
+    let sanitizedConditions =
+      (existingRule.conditions as Record<string, unknown>) || {};
+    if (conditions !== undefined) {
+      const conditionsValidation = validateConditions(conditions);
+      if (conditionsValidation.error) {
+        return NextResponse.json(
+          { success: false, message: conditionsValidation.error },
+          { status: 400 },
+        );
+      }
+      sanitizedConditions = conditionsValidation.conditions || {};
+    }
+
+    const depType =
+      (sanitizedConditions.dependency_type as string) || "PARALLEL";
+    const rawDeps = sanitizedConditions.dependencies as
+      | DepartmentDependencyNode[]
+      | undefined;
+
+    const policyValidation = validateRoutingPolicy({
+      primary_department_name: deptName,
+      primary_department_id: deptId,
+      supporting_departments: normalizedSupporting,
+      dependency_type: depType,
+      dependencies: rawDeps,
+      primary_sla_percent: sanitizedConditions.primary_sla_percent as
+        | number
+        | undefined,
+    });
+
+    if (!policyValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: policyValidation.errors[0],
+          errors: policyValidation.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (policyValidation.normalizedDependencies) {
+      sanitizedConditions.dependencies =
+        policyValidation.normalizedDependencies;
+    }
+
+    // 10. Conflict check when activating or altering taxonomy scope
+    if (newStatus === "ACTIVE") {
       const conflictingRule = await prisma.routing_rules.findFirst({
         where: {
-          category_id: existingRule.category_id,
-          subcategory_id: existingRule.subcategory_id,
+          category_id: finalCatId,
+          subcategory_id: finalSubcatId,
           status: "ACTIVE",
           routing_rule_id: { not: ruleId },
         },
@@ -643,26 +901,21 @@ export async function PATCH(request: Request) {
       });
 
       if (conflictingRule) {
-        const catName = existingRule.categories?.category_name || "Unknown";
-        const subcatName = existingRule.subcategories?.subcategory_name;
-        const scopeDesc = subcatName
-          ? `"${catName} → ${subcatName}"`
-          : `"${catName} (All Subcategories)"`;
+        const scopeDesc = finalSubcatId
+          ? `"${finalCatName} → ${finalSubcatName}"`
+          : `"${finalCatName} (All Subcategories)"`;
 
         return NextResponse.json(
           {
             success: false,
-            message: `Cannot activate rule: an active rule ("${conflictingRule.rule_name}") already routes ${scopeDesc} to ${conflictingRule.departments.department_name}. Please deactivate the competing rule first.`,
+            message: `Cannot update rule: an active rule ("${conflictingRule.rule_name}") already routes ${scopeDesc} to ${conflictingRule.departments.department_name}. Please deactivate the competing rule first.`,
           },
           { status: 409 },
         );
       }
     }
 
-    const validatedNewName = validateRuleName(rule_name);
-    const newName = validatedNewName || existingRule.rule_name;
-
-    // 6. Execute update with full audit snapshot
+    // 11. Execute update with full audit snapshot
     const updated = await prisma.$transaction(async (tx) => {
       const rule = await tx.routing_rules.update({
         where: { routing_rule_id: ruleId },
@@ -670,6 +923,11 @@ export async function PATCH(request: Request) {
           status: newStatus,
           rule_name: newName,
           rule_order: newOrder,
+          department_id: deptId,
+          category_id: finalCatId,
+          subcategory_id: finalSubcatId,
+          supporting_departments: normalizedSupporting,
+          conditions: sanitizedConditions as unknown as Prisma.InputJsonValue,
           updated_at: new Date(),
         },
       });
@@ -700,12 +958,11 @@ export async function PATCH(request: Request) {
             routing_rule_id: rule.routing_rule_id.toString(),
             rule_name: rule.rule_name,
             category_id: rule.category_id?.toString() ?? null,
-            category_name: existingRule.categories?.category_name ?? null,
+            category_name: finalCatName || null,
             subcategory_id: rule.subcategory_id?.toString() ?? null,
-            subcategory_name:
-              existingRule.subcategories?.subcategory_name ?? null,
+            subcategory_name: finalSubcatName || null,
             department_id: rule.department_id.toString(),
-            department_name: existingRule.departments.department_name,
+            department_name: deptName,
             involvement_type: rule.involvement_type,
             supporting_departments: rule.supporting_departments,
             rule_order: rule.rule_order,
@@ -736,12 +993,18 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Routing rule status updated to ${updated.status}.`,
+      message: `Routing rule updated successfully.`,
       rule: {
         routing_rule_id: updated.routing_rule_id.toString(),
         rule_name: updated.rule_name,
-        status: updated.status,
+        category_name: finalCatName || null,
+        subcategory_name: finalSubcatName || null,
+        department_name: deptName,
+        involvement_type: updated.involvement_type,
+        supporting_departments: normalizedSupporting,
         rule_order: updated.rule_order,
+        status: updated.status,
+        conditions: updated.conditions,
       },
     });
   } catch (error) {

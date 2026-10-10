@@ -536,11 +536,16 @@ export function useRuleActions({
 
       const isEditing = Boolean(editingRuleId);
       const method =
-        isEditing && modalRuleType === "priority" ? "PATCH" : "POST";
+        isEditing &&
+        (modalRuleType === "priority" || modalRuleType === "routing")
+          ? "PATCH"
+          : "POST";
       const submitPayload =
         isEditing && modalRuleType === "priority"
           ? { ...payload, priority_rule_id: editingRuleId }
-          : payload;
+          : isEditing && modalRuleType === "routing"
+            ? { ...payload, routing_rule_id: editingRuleId }
+            : payload;
 
       const res = await fetch(endpoint, {
         method,
@@ -573,7 +578,24 @@ export function useRuleActions({
           setPriorityRules((prev) => [...prev, data.rule]);
         }
       } else if (modalRuleType === "routing") {
-        setRoutingRules((prev) => [...prev, data.rule]);
+        if (isEditing) {
+          setRoutingRules((prev) =>
+            prev.map((r) =>
+              r.routing_rule_id === editingRuleId
+                ? {
+                    ...r,
+                    ...data.rule,
+                    conditions: data.rule?.conditions ?? payload.conditions,
+                    supporting_departments:
+                      data.rule?.supporting_departments ??
+                      payload.supporting_departments,
+                  }
+                : r,
+            ),
+          );
+        } else {
+          setRoutingRules((prev) => [...prev, data.rule]);
+        }
       } else if (modalRuleType === "sla") {
         setSlaPolicies((prev) => [...prev, data.policy]);
       } else if (modalRuleType === "reopen") {

@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText } from "lucide-react";
+import { AlertTriangle, FileText, Pencil } from "lucide-react";
 import { useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
@@ -196,6 +196,11 @@ export function RoutingRulesView({
                       <ActionMenu
                         widthClass="w-36"
                         items={[
+                          {
+                            label: "Edit Rule",
+                            icon: <Pencil className="h-3.5 w-3.5" />,
+                            onClick: () => onEdit(r),
+                          },
                           {
                             label: "Delete Rule",
                             variant: "danger" as const,

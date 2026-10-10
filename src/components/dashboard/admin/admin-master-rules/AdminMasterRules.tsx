@@ -11,6 +11,7 @@ import {
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
 import { useRuleActions } from "@/hooks/admin/master-rules/useRuleActions";
 import { useRuleFilters } from "@/hooks/admin/master-rules/useRuleFilters";
+import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 import type { AdminMasterRulesProps } from "@/types/admin/master-rules";
 
 import { AdminRuleConfigModal, ConfirmRuleDeleteModal } from "./modals";
@@ -540,11 +541,17 @@ export function AdminMasterRules({
 
               const cond = r.conditions as {
                 dependency_type?: "PARALLEL" | "SEQUENTIAL";
+                dependencies?: DepartmentDependencyNode[];
               } | null;
               if (cond?.dependency_type) {
                 setDependencyType(cond.dependency_type);
               } else {
                 setDependencyType("PARALLEL");
+              }
+              if (cond?.dependencies && Array.isArray(cond.dependencies)) {
+                setSequentialDependencies(cond.dependencies);
+              } else {
+                setSequentialDependencies([]);
               }
               setRuleModalOpen(true);
             }}

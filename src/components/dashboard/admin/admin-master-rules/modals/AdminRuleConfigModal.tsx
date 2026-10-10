@@ -963,6 +963,123 @@ export function AdminRuleConfigModal({
                                   })}
                                 </div>
                               </div>
+
+                              {/* Department SLA Allocation Config */}
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                <div>
+                                  <label
+                                    htmlFor={`sla-percent-${suppName}`}
+                                    className="block text-[11px] font-medium text-slate-500 mb-0.5"
+                                  >
+                                    SLA % Share:
+                                  </label>
+                                  <input
+                                    id={`sla-percent-${suppName}`}
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    placeholder="e.g. 30"
+                                    value={
+                                      currentDep.sla_percent_allocation ?? ""
+                                    }
+                                    onChange={(e) => {
+                                      const val =
+                                        e.target.value.trim() === ""
+                                          ? null
+                                          : Number(e.target.value);
+                                      if (setSequentialDependencies) {
+                                        setSequentialDependencies((prev) => {
+                                          const exists = prev.some(
+                                            (d) =>
+                                              d.department_name.toLowerCase() ===
+                                              suppName.toLowerCase(),
+                                          );
+                                          if (exists) {
+                                            return prev.map((d) =>
+                                              d.department_name.toLowerCase() ===
+                                              suppName.toLowerCase()
+                                                ? {
+                                                    ...d,
+                                                    sla_percent_allocation: val,
+                                                  }
+                                                : d,
+                                            );
+                                          }
+                                          return [
+                                            ...prev,
+                                            {
+                                              department_name: suppName,
+                                              execution_order:
+                                                currentDep.execution_order,
+                                              prerequisites:
+                                                currentDep.prerequisites,
+                                              sla_percent_allocation: val,
+                                            },
+                                          ];
+                                        });
+                                      }
+                                    }}
+                                    className="h-6 w-full rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none"
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    htmlFor={`duration-mins-${suppName}`}
+                                    className="block text-[11px] font-medium text-slate-500 mb-0.5"
+                                  >
+                                    Fixed Duration (Mins):
+                                  </label>
+                                  <input
+                                    id={`duration-mins-${suppName}`}
+                                    type="number"
+                                    min="1"
+                                    placeholder="Optional (e.g. 720)"
+                                    value={
+                                      currentDep.allocated_duration_minutes ??
+                                      ""
+                                    }
+                                    onChange={(e) => {
+                                      const val =
+                                        e.target.value.trim() === ""
+                                          ? null
+                                          : Number(e.target.value);
+                                      if (setSequentialDependencies) {
+                                        setSequentialDependencies((prev) => {
+                                          const exists = prev.some(
+                                            (d) =>
+                                              d.department_name.toLowerCase() ===
+                                              suppName.toLowerCase(),
+                                          );
+                                          if (exists) {
+                                            return prev.map((d) =>
+                                              d.department_name.toLowerCase() ===
+                                              suppName.toLowerCase()
+                                                ? {
+                                                    ...d,
+                                                    allocated_duration_minutes:
+                                                      val,
+                                                  }
+                                                : d,
+                                            );
+                                          }
+                                          return [
+                                            ...prev,
+                                            {
+                                              department_name: suppName,
+                                              execution_order:
+                                                currentDep.execution_order,
+                                              prerequisites:
+                                                currentDep.prerequisites,
+                                              allocated_duration_minutes: val,
+                                            },
+                                          ];
+                                        });
+                                      }
+                                    }}
+                                    className="h-6 w-full rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           );
                         })}
