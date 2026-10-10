@@ -77,12 +77,24 @@ export function RoutingRulesPanel({
             <div className="col-span-6 sm:col-span-2 flex items-center">
               {rr.supporting_departments &&
               rr.supporting_departments.length > 0 ? (
-                <span
-                  className="text-xs text-slate-600 truncate max-w-full"
-                  title={rr.supporting_departments.join(", ")}
-                >
-                  {rr.supporting_departments.join(", ")}
-                </span>
+                <div className="flex flex-col gap-0.5 truncate max-w-full">
+                  <span
+                    className="text-xs text-slate-600 dark:text-slate-300 truncate max-w-full"
+                    title={rr.supporting_departments.join(", ")}
+                  >
+                    {rr.supporting_departments.join(", ")}
+                  </span>
+                  {(rr.conditions as { dependency_type?: string })
+                    ?.dependency_type === "SEQUENTIAL" ? (
+                    <span className="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                      ⏳ Sequential
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center text-[10px] font-medium text-sky-600 dark:text-sky-400">
+                      ⚡ Parallel
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span className="text-slate-300 font-mono text-xs select-none">
                   &mdash;

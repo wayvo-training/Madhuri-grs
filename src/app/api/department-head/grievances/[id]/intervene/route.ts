@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
+import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -337,13 +339,37 @@ export async function POST(
             },
           });
           if (!existingSupport) {
+            let totalMins =
+              DEFAULT_SLA_DURATIONS_MINUTES[
+                grievance.priority?.toUpperCase() || "MEDIUM"
+              ] || 2880;
+
+            if (grievance.due_at && grievance.created_at) {
+              const diffMinutes = Math.round(
+                (grievance.due_at.getTime() - grievance.created_at.getTime()) /
+                  60000,
+              );
+              if (diffMinutes > 0) totalMins = diffMinutes;
+            }
+
+            const suppMdiData = buildDepartmentMdiData(
+              supportDept.department_id,
+              {
+                involvementType: "SUPPORTING",
+                dependencyType: "PARALLEL",
+                executionOrder: 1,
+                prerequisiteDepartmentIds: [],
+                slaPercentAllocation: 100.0,
+                allocatedDurationMinutes: totalMins,
+                dueAt: grievance.due_at,
+                status: "PENDING_ASSIGNMENT",
+              },
+            );
+
             await tx.grievance_departments.create({
               data: {
                 grievance_id: grievanceId,
-                department_id: supportDept.department_id,
-                involvement_type: "SUPPORTING",
-                status: "PENDING_ASSIGNMENT",
-                assigned_at: new Date(),
+                ...suppMdiData,
               },
             });
 

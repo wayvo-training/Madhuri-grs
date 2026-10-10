@@ -42,7 +42,11 @@ export function AdminGrievanceModal({
       ? grievance.supporting_departments.map((sd) => sd.department_id)
       : [],
   );
+  const [dependencyType, setDependencyType] = useState<
+    "PARALLEL" | "SEQUENTIAL"
+  >("PARALLEL");
 
+  const [isEditingRouting, setIsEditingRouting] = useState(false);
   const [isRouting, setIsRouting] = useState(false);
   const [routingFeedback, setRoutingFeedback] = useState<{
     type: "success" | "error";
@@ -64,6 +68,7 @@ export function AdminGrievanceModal({
           body: JSON.stringify({
             department_id: targetDeptId,
             supporting_department_ids: selectedSupportingDeptIds,
+            dependency_type: dependencyType,
           }),
         },
       );
@@ -162,6 +167,26 @@ export function AdminGrievanceModal({
                     EQUAL
                   </span>
                 )}
+                {grievance.department_name && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingRouting((prev) => !prev);
+                      if (!targetDeptId && grievance.department_name) {
+                        const found = departments.find(
+                          (d) =>
+                            d.department_name === grievance.department_name,
+                        );
+                        if (found) setTargetDeptId(found.department_id);
+                      }
+                    }}
+                    className="ml-auto inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-0.5 text-2xs font-semibold text-amber-800 hover:bg-amber-100 transition cursor-pointer"
+                  >
+                    {isEditingRouting
+                      ? "Cancel"
+                      : "⚙️ Modify Routing / Workflow"}
+                  </button>
+                )}
               </div>
             </div>
             <div>
@@ -228,17 +253,32 @@ export function AdminGrievanceModal({
             </div>
           )}
 
-          {/* Manual Routing Exception Action for Admin */}
-          {!grievance.department_name && (
+          {/* Manual Routing / Re-routing Action for Admin */}
+          {(!grievance.department_name || isEditingRouting) && (
             <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4">
-              <div className="flex items-center gap-2 font-bold text-amber-900">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Manual Routing Exception Workflow</span>
+              <div className="flex items-center justify-between font-bold text-amber-900">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>
+                    {!grievance.department_name
+                      ? "Manual Routing Exception Workflow"
+                      : "Modify Department Routing & Workflow Mode"}
+                  </span>
+                </div>
+                {isEditingRouting && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingRouting(false)}
+                    className="text-xs text-amber-700 hover:text-amber-900 underline font-normal cursor-pointer"
+                  >
+                    Close
+                  </button>
+                )}
               </div>
               <p className="mt-1 text-xs text-amber-700">
-                This grievance requires manual department allocation because
-                automated routing rules did not match. Assign 1 Primary
-                Department and optionally designate Supporting Departments.
+                {!grievance.department_name
+                  ? "This grievance requires manual department allocation because automated routing rules did not match. Assign 1 Primary Department and optionally designate Supporting Departments."
+                  : "Update the primary department assignment, add/remove supporting departments, or adjust the collaboration workflow mode."}
               </p>
 
               <div className="mt-3.5 space-y-3">
@@ -312,6 +352,50 @@ export function AdminGrievanceModal({
                       })}
                   </div>
                 </div>
+
+                {selectedSupportingDeptIds.length > 0 && (
+                  <div>
+                    <p className="block text-xs font-semibold uppercase tracking-wider text-amber-900/80 mb-1.5">
+                      Collaboration Workflow Mode
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDependencyType("PARALLEL")}
+                        className={`flex flex-col p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          dependencyType === "PARALLEL"
+                            ? "bg-amber-100/90 border-amber-400 text-amber-950 font-semibold shadow-2xs"
+                            : "bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="text-xs font-bold flex items-center gap-1">
+                          ⚡ Concurrent (Parallel)
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-normal mt-0.5">
+                          All departments collaborate simultaneously.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDependencyType("SEQUENTIAL")}
+                        className={`flex flex-col p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                          dependencyType === "SEQUENTIAL"
+                            ? "bg-amber-100/90 border-amber-400 text-amber-950 font-semibold shadow-2xs"
+                            : "bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="text-xs font-bold flex items-center gap-1">
+                          ⏳ Sequential (Step-by-Step)
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-normal mt-0.5">
+                          Supporting departments activate after primary
+                          completes.
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end pt-1">
                   <button

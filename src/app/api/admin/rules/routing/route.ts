@@ -5,14 +5,16 @@ import { logger } from "@/lib/logger";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
+  type DepartmentDependencyNode,
+  validateRoutingPolicy,
+} from "@/lib/validations/dependency-graph";
+import {
   validateBigIntId,
   validateConditions,
   validateRuleName,
   validateRuleOrder,
   validateStatus,
 } from "@/lib/validations/rules";
-
-const ALLOWED_INVOLVEMENT_TYPES = ["PRIMARY", "SUPPORTING", "EQUAL"] as const;
 
 /**
  * Normalizes and validates supporting departments against existing active departments.
@@ -106,7 +108,6 @@ export async function POST(request: Request) {
       category_id,
       subcategory_id,
       department_id,
-      involvement_type,
       supporting_departments,
       rule_order,
       conditions,
@@ -313,24 +314,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 5. Validate involvement_type
-    const invType = (involvement_type || "PRIMARY")
-      .toString()
-      .toUpperCase()
-      .trim();
-    if (
-      !ALLOWED_INVOLVEMENT_TYPES.includes(
-        invType as (typeof ALLOWED_INVOLVEMENT_TYPES)[number],
-      )
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Invalid involvement_type "${invType}". Allowed values are: ${ALLOWED_INVOLVEMENT_TYPES.join(", ")}.`,
-        },
-        { status: 400 },
-      );
-    }
+    // 5. Ensure involvement_type is PRIMARY (Routing rules define the lead owner)
+    const invType = "PRIMARY";
 
     // 6. Validate status
     const ruleStatus = validateStatus(status);
@@ -372,7 +357,7 @@ export async function POST(request: Request) {
     }
     const normalizedSupporting = supportingValidation.departments || [];
 
-    // 9. Validate conditions
+    // 9. Validate conditions and multi-department dependency policy
     const conditionsValidation = validateConditions(conditions);
     if (conditionsValidation.error) {
       return NextResponse.json(
@@ -381,6 +366,36 @@ export async function POST(request: Request) {
       );
     }
     const sanitizedConditions = conditionsValidation.conditions || {};
+    const depType =
+      (sanitizedConditions.dependency_type as string) || "PARALLEL";
+    const rawDeps = sanitizedConditions.dependencies as
+      | DepartmentDependencyNode[]
+      | undefined;
+
+    // Comprehensive policy validation: exactly 1 primary, no duplicate supporting, valid prerequisites, no cycles, valid execution order
+    const policyValidation = validateRoutingPolicy({
+      primary_department_name: department.department_name,
+      primary_department_id: deptId,
+      supporting_departments: normalizedSupporting,
+      dependency_type: depType,
+      dependencies: rawDeps,
+    });
+
+    if (!policyValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: policyValidation.errors[0],
+          errors: policyValidation.errors,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (policyValidation.normalizedDependencies) {
+      sanitizedConditions.dependencies =
+        policyValidation.normalizedDependencies;
+    }
 
     // 10. Prevent conflicting rules (Check for active duplicate within same taxonomy scope)
     if (ruleStatus === "ACTIVE") {

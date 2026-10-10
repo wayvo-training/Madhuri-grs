@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
+import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
@@ -16,7 +18,7 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const { department_id, supporting_department_ids } = body;
+    const { department_id, supporting_department_ids, dependency_type } = body;
 
     if (!department_id) {
       return NextResponse.json(
@@ -118,26 +120,48 @@ export async function POST(
         },
       });
 
+      let totalDurationMinutes: number =
+        DEFAULT_SLA_DURATIONS_MINUTES[
+          grievance.priority?.toUpperCase() || "MEDIUM"
+        ] || 2880;
+
+      if (grievance.due_at && grievance.created_at) {
+        const diffMinutes = Math.round(
+          (grievance.due_at.getTime() - grievance.created_at.getTime()) / 60000,
+        );
+        if (diffMinutes > 0) totalDurationMinutes = diffMinutes;
+      }
+
+      const primaryDueAt =
+        grievance.due_at ||
+        new Date(Date.now() + totalDurationMinutes * 60 * 1000);
+
+      const depType =
+        dependency_type === "SEQUENTIAL" ? "SEQUENTIAL" : "PARALLEL";
+
+      const primaryMdiData = buildDepartmentMdiData(primaryDepartmentId, {
+        involvementType: "PRIMARY",
+        dependencyType: "PARALLEL",
+        executionOrder: 1,
+        prerequisiteDepartmentIds: [],
+        slaPercentAllocation: 100.0,
+        allocatedDurationMinutes: totalDurationMinutes,
+        dueAt: primaryDueAt,
+        status: "PENDING_ASSIGNMENT",
+      });
+
       if (existingPrimary) {
         await tx.grievance_departments.update({
           where: {
             grievance_department_id: existingPrimary.grievance_department_id,
           },
-          data: {
-            department_id: primaryDepartmentId,
-            involvement_type: "PRIMARY",
-            status: "PENDING_ASSIGNMENT",
-            assigned_at: new Date(),
-          },
+          data: primaryMdiData,
         });
       } else {
         await tx.grievance_departments.create({
           data: {
             grievance_id: grievanceId,
-            department_id: primaryDepartmentId,
-            involvement_type: "PRIMARY",
-            status: "PENDING_ASSIGNMENT",
-            assigned_at: new Date(),
+            ...primaryMdiData,
           },
         });
       }
@@ -151,14 +175,24 @@ export async function POST(
       });
 
       // 3. Create fresh SUPPORTING entries
-      for (const supp of validSupportingDepts) {
+      for (let i = 0; i < validSupportingDepts.length; i++) {
+        const supp = validSupportingDepts[i];
+        const suppMdiData = buildDepartmentMdiData(supp.department_id, {
+          involvementType: "SUPPORTING",
+          dependencyType: depType,
+          executionOrder: depType === "SEQUENTIAL" ? i + 2 : 1,
+          prerequisiteDepartmentIds:
+            depType === "SEQUENTIAL" ? [primaryDepartmentId] : [],
+          slaPercentAllocation: 100.0,
+          allocatedDurationMinutes: totalDurationMinutes,
+          dueAt: depType === "SEQUENTIAL" ? null : primaryDueAt,
+          status: depType === "SEQUENTIAL" ? "BLOCKED" : "PENDING_ASSIGNMENT",
+        });
+
         await tx.grievance_departments.create({
           data: {
             grievance_id: grievanceId,
-            department_id: supp.department_id,
-            involvement_type: "SUPPORTING",
-            status: "PENDING_ASSIGNMENT",
-            assigned_at: new Date(),
+            ...suppMdiData,
           },
         });
       }

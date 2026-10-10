@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activateNextSequentialDepartments } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -115,6 +116,9 @@ export async function POST(
             completed_at: new Date(),
           },
         });
+
+        // Unblock any downstream sequential departments whose prerequisites are now satisfied
+        await activateNextSequentialDepartments(grievanceId, tx);
       }
 
       // 2. Create Audit Log

@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
+import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { uploadToSupabase } from "@/lib/supabase";
 
@@ -183,12 +184,23 @@ export async function POST(request: Request) {
       const supportingInvolvement =
         mainInvolvement === "EQUAL" ? "EQUAL" : "SUPPORTING";
 
+      const durationMins = targetMinutes || 2880;
+
+      const primaryMdiData = buildDepartmentMdiData(primaryDept.department_id, {
+        involvementType: mainInvolvement,
+        dependencyType: "PARALLEL",
+        executionOrder: 1,
+        prerequisiteDepartmentIds: [],
+        slaPercentAllocation: 100.0,
+        allocatedDurationMinutes: durationMins,
+        dueAt: dueAt,
+        status: "ASSIGNED",
+      });
+
       await prisma.grievance_departments.create({
         data: {
           grievance_id: newGrievance.grievance_id,
-          department_id: primaryDept.department_id,
-          involvement_type: mainInvolvement,
-          status: "ASSIGNED",
+          ...primaryMdiData,
         },
       });
 
@@ -230,12 +242,21 @@ export async function POST(request: Request) {
           });
 
           if (suppDept) {
+            const suppMdiData = buildDepartmentMdiData(suppDept.department_id, {
+              involvementType: supportingInvolvement,
+              dependencyType: "PARALLEL",
+              executionOrder: 1,
+              prerequisiteDepartmentIds: [],
+              slaPercentAllocation: 100.0,
+              allocatedDurationMinutes: durationMins,
+              dueAt: dueAt,
+              status: "PENDING_ASSIGNMENT",
+            });
+
             await prisma.grievance_departments.create({
               data: {
                 grievance_id: newGrievance.grievance_id,
-                department_id: suppDept.department_id,
-                involvement_type: supportingInvolvement,
-                status: "PENDING_ASSIGNMENT",
+                ...suppMdiData,
               },
             });
             departmentIdsToNotify.add(suppDept.department_id);

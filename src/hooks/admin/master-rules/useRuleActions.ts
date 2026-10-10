@@ -1,6 +1,10 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import {
+  type DepartmentDependencyNode,
+  validateRoutingPolicy,
+} from "@/lib/validations/dependency-graph";
 import type {
   DepartmentOption,
   ModalRuleType,
@@ -252,6 +256,12 @@ export function useRuleActions({
   const [selectedSupportingDepts, setSelectedSupportingDepts] = useState<
     string[]
   >([]);
+  const [dependencyType, setDependencyType] = useState<
+    "PARALLEL" | "SEQUENTIAL"
+  >("PARALLEL");
+  const [sequentialDependencies, setSequentialDependencies] = useState<
+    DepartmentDependencyNode[]
+  >([]);
 
   // Priority-specific Taxonomy State
   const [selectedPriorityCatId, setSelectedPriorityCatId] = useState("");
@@ -265,6 +275,9 @@ export function useRuleActions({
   const [atRiskPercent, setAtRiskPercent] = useState("75");
   const [criticalPercent, setCriticalPercent] = useState("90");
   const [escalationPercent, setEscalationPercent] = useState("100");
+  const [departmentalAllocationMode, setDepartmentalAllocationMode] = useState<
+    "FULL" | "EQUAL_SPLIT" | "LEAD_WEIGHTED"
+  >("FULL");
 
   // Reopen-specific State
   const [reopenWindowHours, setReopenWindowHours] = useState("168");
@@ -282,14 +295,18 @@ export function useRuleActions({
     setSelectedDeptId("");
     setSelectedCatId("");
     setSelectedRoutingSubcatId("");
+    setInvolvementType("PRIMARY");
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
     setSelectedSupportingDepts([]);
+    setDependencyType("PARALLEL");
+    setSequentialDependencies([]);
     setDurationHours("24");
     setWarningPercent("50");
     setAtRiskPercent("75");
     setCriticalPercent("90");
     setEscalationPercent("100");
+    setDepartmentalAllocationMode("FULL");
     setNewCategoryName("");
     setNewSubcategoryName("");
   }
@@ -406,14 +423,33 @@ export function useRuleActions({
           (s) => s.subcategory_id === selectedRoutingSubcatId,
         );
 
+        // Pre-save policy validation: exactly 1 primary, no duplicate supporting, valid prerequisites, no cycles, valid execution order
+        const policyValidation = validateRoutingPolicy({
+          primary_department_name: chosenDept?.department_name,
+          primary_department_id: selectedDeptId,
+          supporting_departments: selectedSupportingDepts,
+          dependency_type: dependencyType,
+          dependencies: sequentialDependencies,
+        });
+
+        if (!policyValidation.valid) {
+          toast.error(policyValidation.errors[0]);
+          setIsSubmitting(false);
+          return;
+        }
+
         endpoint = "/api/admin/rules/routing";
         payload = {
           rule_name: ruleName.trim(),
           department_id: selectedDeptId,
           category_id: selectedCatId,
           subcategory_id: selectedRoutingSubcatId,
-          involvement_type: involvementType,
+          involvement_type: "PRIMARY",
           supporting_departments: selectedSupportingDepts,
+          conditions: {
+            dependency_type: dependencyType,
+            dependencies: policyValidation.normalizedDependencies,
+          },
           rule_order: Number.parseInt(ruleOrder, 10) || 10,
           status: ruleStatus,
           department_name: chosenDept?.department_name,
@@ -447,9 +483,12 @@ export function useRuleActions({
             Number.parseFloat(escalationPercent) || 100,
           target_role: "DEPARTMENT_HEAD",
           status: ruleStatus,
+          trigger_condition: {
+            departmental_allocation_mode: departmentalAllocationMode,
+          },
         };
       } else if (modalRuleType === "reopen") {
-        const conditions: any = {};
+        const conditions: Record<string, unknown> = {};
         if (selectedPriorityCatId) {
           if (selectedPriorityCatId !== "CUSTOM") {
             conditions.category_id = selectedPriorityCatId;
@@ -576,6 +615,10 @@ export function useRuleActions({
     setInvolvementType,
     selectedSupportingDepts,
     setSelectedSupportingDepts,
+    dependencyType,
+    setDependencyType,
+    sequentialDependencies,
+    setSequentialDependencies,
     selectedPriorityCatId,
     setSelectedPriorityCatId,
     selectedPrioritySubcatId,
@@ -590,6 +633,8 @@ export function useRuleActions({
     setCriticalPercent,
     escalationPercent,
     setEscalationPercent,
+    departmentalAllocationMode,
+    setDepartmentalAllocationMode,
     reopenWindowHours,
     setReopenWindowHours,
     maxReopens,

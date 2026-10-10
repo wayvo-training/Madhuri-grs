@@ -54,12 +54,8 @@ export function AdminMasterRules({
     statusFilter,
     setStatusFilter,
     deptFilter,
-    setDeptFilter,
     catFilter,
-    setCatFilter,
-    isFiltered,
     handleResetFilters,
-    categoryOptions,
   } = useRuleFilters({ routingRules });
 
   // 3. Rule Actions & Modals State
@@ -95,6 +91,12 @@ export function AdminMasterRules({
     setInvolvementType,
     selectedSupportingDepts,
     setSelectedSupportingDepts,
+    dependencyType,
+    setDependencyType,
+    sequentialDependencies,
+    setSequentialDependencies,
+    departmentalAllocationMode,
+    setDepartmentalAllocationMode,
     selectedPriorityCatId,
     setSelectedPriorityCatId,
     selectedPrioritySubcatId,
@@ -523,8 +525,17 @@ export function AdminMasterRules({
                   .filter((d) =>
                     r.supporting_departments?.includes(d.department_name),
                   )
-                  .map((d) => d.department_id);
+                  .map((d) => d.department_name);
                 setSelectedSupportingDepts(matchingSupports);
+              }
+
+              const cond = r.conditions as {
+                dependency_type?: "PARALLEL" | "SEQUENTIAL";
+              } | null;
+              if (cond?.dependency_type) {
+                setDependencyType(cond.dependency_type);
+              } else {
+                setDependencyType("PARALLEL");
               }
               setRuleModalOpen(true);
             }}
@@ -631,6 +642,12 @@ export function AdminMasterRules({
         setInvolvementType={setInvolvementType}
         selectedSupportingDepts={selectedSupportingDepts}
         setSelectedSupportingDepts={setSelectedSupportingDepts}
+        dependencyType={dependencyType}
+        setDependencyType={setDependencyType}
+        sequentialDependencies={sequentialDependencies}
+        setSequentialDependencies={setSequentialDependencies}
+        departmentalAllocationMode={departmentalAllocationMode}
+        setDepartmentalAllocationMode={setDepartmentalAllocationMode}
         selectedPriorityCatId={selectedPriorityCatId}
         setSelectedPriorityCatId={setSelectedPriorityCatId}
         selectedPrioritySubcatId={selectedPrioritySubcatId}
