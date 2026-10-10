@@ -99,7 +99,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         attachments: (latestResolution.attachments || []).map((att) => ({
           id: att.attachment_id.toString(),
           name: att.file_name,
-          path: att.file_path,
+          path: `/api/attachments/${att.attachment_id}/download`,
           size: att.file_size
             ? `${Math.round(Number(att.file_size) / 1024)} KB`
             : undefined,
@@ -109,8 +109,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     : null;
 
   const primaryGDept = getPrimaryDepartment(grievance);
-  const primaryDept =
-    primaryGDept?.departments?.department_name || "";
+  const primaryDept = primaryGDept?.departments?.department_name || "";
 
   const serializedGrievance: CaseHubGrievance = {
     id: Number(grievance.grievance_id),
@@ -126,7 +125,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     attachments: (grievance.attachments || []).map((att) => ({
       id: att.attachment_id.toString(),
       name: att.file_name,
-      path: att.file_path,
+      path: `/api/attachments/${att.attachment_id}/download`,
       size: att.file_size
         ? `${Math.round(Number(att.file_size) / 1024)} KB`
         : undefined,

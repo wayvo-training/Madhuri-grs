@@ -110,7 +110,7 @@ export function ResolutionForm({
             name: f.name,
             size: `${(f.size / 1024).toFixed(1)} KB`,
             type: f.type || "Document",
-            path: uploadRes.fileUrl || uploadRes.filePath,
+            path: uploadRes.filePath || uploadRes.fileUrl,
             uploadedAt: new Date().toISOString(),
           };
         }),

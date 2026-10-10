@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
 import {
   formatFriendlyDate,
   formatRelativeTime,
@@ -100,7 +101,7 @@ export async function GET(request: Request) {
     return auth.error;
   }
 
-  const { departmentId } = auth;
+  const { user, departmentId } = auth;
   const { searchParams } = new URL(request.url);
   const { page, limit, skip } = getPaginationParams(request, 20);
 
@@ -658,7 +659,26 @@ export async function GET(request: Request) {
             }
           : null,
         auditTrail,
-        attachments: g.attachments.map((a) => ({
+        attachments: filterAuthorizedAttachments(
+          user,
+          g.attachments,
+          {
+            grievance_id: g.grievance_id,
+            submitted_by: g.submitted_by,
+            status: g.status,
+          },
+          (g.grievance_departments || []).map((gd) => ({
+            grievance_department_id: gd.grievance_department_id,
+            department_id: gd.department_id,
+            involvement_type: gd.involvement_type,
+            status: gd.status,
+          })),
+          (g.assignments || []).map((a) => ({
+            staff_id: a.staff_id,
+            grievance_department_id: a.grievance_department_id,
+            assignment_status: a.assignment_status,
+          })),
+        ).map((a) => ({
           id: a.attachment_id.toString(),
           name: a.file_name,
           size: a.file_size
@@ -666,6 +686,7 @@ export async function GET(request: Request) {
             : "150 KB",
           type: a.file_type,
           path: a.file_path,
+          downloadUrl: `/api/attachments/${a.attachment_id}/download`,
           uploadedAt: formatFriendlyDate(a.uploaded_at),
         })),
         internalNotes,

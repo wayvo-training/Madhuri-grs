@@ -342,7 +342,7 @@ export async function POST(request: Request) {
           data: {
             grievance_id: newGrievance.grievance_id,
             file_name: file.name,
-            file_path: uploadResult.publicUrl || uploadResult.path,
+            file_path: uploadResult.path,
             file_type: file.type,
             file_size: BigInt(file.size),
             uploaded_by: user.user_id,

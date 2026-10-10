@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
 import { prisma } from "@/lib/prisma";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
 import {
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     return auth.error;
   }
 
-  const { staffId, departmentId, isAdmin } = auth;
+  const { user, staffId, departmentId, isAdmin } = auth;
 
   try {
     // 1. Fetch Staff User details
@@ -88,6 +89,7 @@ export async function GET(request: Request) {
                 roles: true,
               },
             },
+            grievance_departments: true,
             attachments: true,
             resolutions: {
               orderBy: { submitted_at: "desc" as const },
@@ -199,8 +201,28 @@ export async function GET(request: Request) {
               | "ACCEPTED"
               | "REJECTED"
               | undefined,
-            rejectionReason: latestReview?.rejection_reason || null,
-            attachments: (latestResolution.attachments || []).map((att) => ({
+            attachments: filterAuthorizedAttachments(
+              user,
+              latestResolution.attachments || [],
+              {
+                grievance_id: g.grievance_id,
+                submitted_by: g.submitted_by,
+                status: g.status,
+              },
+              (g.grievance_departments || []).map((gd) => ({
+                grievance_department_id: gd.grievance_department_id,
+                department_id: gd.department_id,
+                involvement_type: gd.involvement_type,
+                status: gd.status,
+              })),
+              [
+                {
+                  staff_id: a.staff_id,
+                  grievance_department_id: a.grievance_department_id,
+                  assignment_status: a.assignment_status,
+                },
+              ],
+            ).map((att) => ({
               id: att.attachment_id.toString(),
               name: att.file_name,
               size: att.file_size
@@ -208,6 +230,7 @@ export async function GET(request: Request) {
                 : "Document",
               type: att.file_type,
               path: att.file_path,
+              downloadUrl: `/api/attachments/${att.attachment_id}/download`,
               uploadedAt: att.uploaded_at
                 ? new Date(att.uploaded_at).toISOString()
                 : new Date().toISOString(),
@@ -215,18 +238,38 @@ export async function GET(request: Request) {
           };
         }
 
-        const attachments = (g.attachments || [])
-          .filter((att) => !att.resolution_id)
-          .map((att) => ({
-            id: att.attachment_id.toString(),
-            name: att.file_name,
-            size: att.file_size
-              ? `${Math.round(Number(att.file_size) / 1024)} KB`
-              : "Document",
-            type: att.file_type,
-            path: att.file_path,
-            uploadedAt: formatRelativeTime(g.created_at),
-          }));
+        const attachments = filterAuthorizedAttachments(
+          user,
+          (g.attachments || []).filter((att) => !att.resolution_id),
+          {
+            grievance_id: g.grievance_id,
+            submitted_by: g.submitted_by,
+            status: g.status,
+          },
+          (g.grievance_departments || []).map((gd) => ({
+            grievance_department_id: gd.grievance_department_id,
+            department_id: gd.department_id,
+            involvement_type: gd.involvement_type,
+            status: gd.status,
+          })),
+          [
+            {
+              staff_id: a.staff_id,
+              grievance_department_id: a.grievance_department_id,
+              assignment_status: a.assignment_status,
+            },
+          ],
+        ).map((att) => ({
+          id: att.attachment_id.toString(),
+          name: att.file_name,
+          size: att.file_size
+            ? `${Math.round(Number(att.file_size) / 1024)} KB`
+            : "Document",
+          type: att.file_type,
+          path: att.file_path,
+          downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+          uploadedAt: formatRelativeTime(g.created_at),
+        }));
 
         // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
         const internalNotes: StaffInternalNote[] = (g.audit_logs || [])

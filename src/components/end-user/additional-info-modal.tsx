@@ -56,7 +56,7 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
             fileName: f.name,
             fileType: f.type || "application/octet-stream",
             fileSize: f.size,
-            filePath: uploadRes.fileUrl || uploadRes.filePath,
+            filePath: uploadRes.filePath || uploadRes.fileUrl,
           };
         }),
       );

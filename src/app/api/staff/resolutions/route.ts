@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import {
   evaluateReopenPolicy,
   requiresHeadManualReview,
@@ -6,6 +7,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
+import { SUPABASE_BUCKET } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   const auth = await resolveStaffAuth(request);
@@ -177,12 +179,15 @@ export async function POST(request: Request) {
     if (Array.isArray(body.attachments) && body.attachments.length > 0) {
       for (const att of body.attachments) {
         if (att.fileName) {
+          const raw = att.filePath || `resolutions/${att.fileName}`;
+          const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
+          const relativeStoragePath = norm.valid ? norm.storagePath : raw;
           await prisma.attachments.create({
             data: {
               grievance_id: gId,
               resolution_id: resolution.resolution_id,
               file_name: att.fileName,
-              file_path: att.filePath || `/uploads/${att.fileName}`,
+              file_path: relativeStoragePath,
               file_type: att.fileType || "application/octet-stream",
               file_size: att.fileSize ? BigInt(att.fileSize) : BigInt(1024),
               uploaded_by: staffId,

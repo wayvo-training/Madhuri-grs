@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -24,7 +25,7 @@ export async function GET(
     return auth.error;
   }
 
-  const { staffId, isAdmin } = auth;
+  const { user, staffId, isAdmin } = auth;
   const { id } = await params;
 
   try {
@@ -36,6 +37,7 @@ export async function GET(
       include: {
         categories: true,
         subcategories: true,
+        grievance_departments: true,
         users: {
           select: {
             first_name: true,
@@ -125,7 +127,32 @@ export async function GET(
     const latestReview = latestResolution?.resolution_reviews?.[0];
     let submittedResolution: StaffResolutionData | null = null;
 
+    const deptContext = (grievance.grievance_departments || []).map((gd) => ({
+      grievance_department_id: gd.grievance_department_id,
+      department_id: gd.department_id,
+      involvement_type: gd.involvement_type,
+      status: gd.status,
+    }));
+    const assignmentContext = (grievance.assignments || []).map((a) => ({
+      staff_id: a.staff_id,
+      grievance_department_id: a.grievance_department_id,
+      assignment_status: a.assignment_status,
+    }));
+    const grievanceContext = {
+      grievance_id: grievance.grievance_id,
+      submitted_by: grievance.submitted_by,
+      status: grievance.status,
+    };
+
     if (latestResolution) {
+      const authorizedResAttachments = filterAuthorizedAttachments(
+        user,
+        latestResolution.attachments || [],
+        grievanceContext,
+        deptContext,
+        assignmentContext,
+      );
+
       submittedResolution = {
         id: latestResolution.resolution_id.toString(),
         submittedByUserId: latestResolution.submitted_by.toString(),
@@ -142,7 +169,7 @@ export async function GET(
           | "REJECTED"
           | undefined,
         rejectionReason: latestReview?.rejection_reason || null,
-        attachments: (latestResolution.attachments || []).map((att) => ({
+        attachments: authorizedResAttachments.map((att) => ({
           id: att.attachment_id.toString(),
           name: att.file_name,
           size: att.file_size
@@ -150,23 +177,31 @@ export async function GET(
             : "Document",
           type: att.file_type,
           path: att.file_path,
+          downloadUrl: `/api/attachments/${att.attachment_id}/download`,
           uploadedAt: att.uploaded_at.toISOString(),
         })),
       };
     }
 
-    const attachments = (grievance.attachments || [])
-      .filter((att) => !att.resolution_id)
-      .map((att) => ({
-        id: att.attachment_id.toString(),
-        name: att.file_name,
-        size: att.file_size
-          ? `${Math.round(Number(att.file_size) / 1024)} KB`
-          : "Document",
-        type: att.file_type,
-        path: att.file_path,
-        uploadedAt: formatRelativeTime(grievance.created_at),
-      }));
+    const authorizedDossierAttachments = filterAuthorizedAttachments(
+      user,
+      (grievance.attachments || []).filter((att) => !att.resolution_id),
+      grievanceContext,
+      deptContext,
+      assignmentContext,
+    );
+
+    const attachments = authorizedDossierAttachments.map((att) => ({
+      id: att.attachment_id.toString(),
+      name: att.file_name,
+      size: att.file_size
+        ? `${Math.round(Number(att.file_size) / 1024)} KB`
+        : "Document",
+      type: att.file_type,
+      path: att.file_path,
+      downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+      uploadedAt: formatRelativeTime(grievance.created_at),
+    }));
 
     // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
     const internalNotes: StaffInternalNote[] = (grievance.audit_logs || [])

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
 
@@ -43,7 +44,7 @@ export async function GET(
     return auth.error;
   }
 
-  const { departmentId, isAdmin } = auth;
+  const { user, departmentId, isAdmin } = auth;
   const { id } = await params;
 
   try {
@@ -108,6 +109,7 @@ export async function GET(
             },
           },
         },
+        grievance_departments: true,
         attachments: true,
         resolutions: {
           orderBy: { submitted_at: "desc" },
@@ -710,8 +712,26 @@ export async function GET(
             "Complainant",
           submitterEmail: grievance.users?.email || "N/A",
           submitterRole: grievance.users?.roles?.role_name || "END_USER",
-          // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
-          attachments: (grievance.attachments || []).map((a: any) => ({
+          attachments: filterAuthorizedAttachments(
+            user,
+            grievance.attachments || [],
+            {
+              grievance_id: grievance.grievance_id,
+              submitted_by: grievance.submitted_by,
+              status: grievance.status,
+            },
+            (grievance.grievance_departments || []).map((gd) => ({
+              grievance_department_id: gd.grievance_department_id,
+              department_id: gd.department_id,
+              involvement_type: gd.involvement_type,
+              status: gd.status,
+            })),
+            (grievance.assignments || []).map((a) => ({
+              staff_id: a.staff_id,
+              grievance_department_id: a.grievance_department_id,
+              assignment_status: a.assignment_status,
+            })),
+          ).map((a) => ({
             id: a.attachment_id.toString(),
             name: a.file_name,
             size: a.file_size
@@ -719,6 +739,7 @@ export async function GET(
               : "N/A",
             type: a.file_type || "Document",
             path: a.file_path,
+            downloadUrl: `/api/attachments/${a.attachment_id}/download`,
             uploadedAt: formatFullDateTime(a.uploaded_at),
           })),
           internalNotes,

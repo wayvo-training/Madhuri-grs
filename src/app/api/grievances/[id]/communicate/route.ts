@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import { getCurrentUser } from "@/lib/auth";
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { SUPABASE_BUCKET } from "@/lib/supabase";
 
 interface IncomingAttachment {
   fileName: string;
@@ -167,11 +169,14 @@ export async function POST(
     // Persist attachments
     if (incomingFiles.length > 0) {
       for (const file of incomingFiles) {
+        const raw = file.filePath || `grievances/${file.fileName}`;
+        const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
+        const relativeStoragePath = norm.valid ? norm.storagePath : raw;
         await prisma.attachments.create({
           data: {
             grievance_id: grievanceId,
             file_name: file.fileName,
-            file_path: file.filePath || `/uploads/${file.fileName}`,
+            file_path: relativeStoragePath,
             file_type: file.fileType || "application/octet-stream",
             file_size: file.fileSize ? BigInt(file.fileSize) : null,
             uploaded_by: userId,
