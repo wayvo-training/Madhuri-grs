@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function POST(
   request: Request,
@@ -96,8 +97,9 @@ export async function POST(
       select: { department_id: true },
     });
     const deptIds = new Set<bigint>();
-    if (grievance.grievance_departments?.department_id) {
-      deptIds.add(grievance.grievance_departments.department_id);
+    const primaryGDept = getPrimaryDepartment(grievance);
+    if (primaryGDept?.department_id) {
+      deptIds.add(primaryGDept.department_id);
     }
     for (const d of involvedDepts) {
       deptIds.add(d.department_id);

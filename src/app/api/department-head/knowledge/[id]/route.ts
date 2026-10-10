@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function PATCH(
   request: Request,
@@ -127,8 +128,7 @@ export async function PATCH(
     let primaryDeptName = "";
 
     // 1. From source grievance departments (if linked to a grievance resolution)
-    const gDept =
-      existingArticle.resolutions?.grievances?.grievance_departments;
+    const gDept = getPrimaryDepartment(existingArticle.resolutions?.grievances);
     if (gDept) {
       allDepartmentIds.add(gDept.department_id);
       if (!primaryDeptName) {

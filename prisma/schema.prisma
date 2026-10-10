@@ -117,19 +117,29 @@ model escalations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model grievance_departments {
-  grievance_department_id BigInt        @id @default(autoincrement())
-  grievance_id            BigInt        @unique(map: "uq_grievance_single_primary", where: raw("((involvement_type)::text = 'PRIMARY'::text)"))
-  department_id           BigInt
-  involvement_type        String        @db.VarChar(20)
-  status                  String        @default("PENDING_ASSIGNMENT") @db.VarChar(30)
-  assigned_at             DateTime?     @db.Timestamptz(6)
-  completed_at            DateTime?     @db.Timestamptz(6)
-  assignments             assignments?
-  attachments             attachments[]
-  departments             departments   @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
-  grievances              grievances    @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  grievance_department_id    BigInt         @id @default(autoincrement())
+  grievance_id               BigInt
+  department_id              BigInt
+  involvement_type           String         @db.VarChar(20)
+  status                     String         @default("PENDING_ASSIGNMENT") @db.VarChar(30)
+  assigned_at                DateTime?      @db.Timestamptz(6)
+  completed_at               DateTime?      @db.Timestamptz(6)
+  allocated_duration_minutes Int?
+  sla_percent_allocation     Decimal        @default(100.00) @db.Decimal(5, 2)
+  due_at                     DateTime?      @db.Timestamptz(6)
+  sla_status                 String         @default("ON_TRACK") @db.VarChar(20)
+  dependency_type            String         @default("PARALLEL") @db.VarChar(20)
+  prerequisite_department_ids Json          @default("[]")
+  execution_order            Int            @default(1)
+  activated_at               DateTime?      @db.Timestamptz(6)
+  assignments                assignments?
+  attachments                attachments[]
+  sla_tracking               sla_tracking[]
+  departments                departments    @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
+  grievances                 grievances     @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([grievance_id, department_id], map: "uq_grievance_department")
+  @@unique([grievance_id, involvement_type], map: "uq_grievance_single_primary", where: raw("((involvement_type)::text = 'PRIMARY'::text)"))
   @@index([department_id], map: "idx_grievance_dept_dept_id")
   @@index([department_id, status], map: "idx_grievance_dept_dept_status")
   @@index([grievance_id], map: "idx_grievance_dept_grievance_id")
@@ -171,7 +181,7 @@ model grievances {
   attachments              attachments[]
   audit_logs               audit_logs[]
   escalations              escalations[]
-  grievance_departments    grievance_departments?
+  grievance_departments    grievance_departments[]
   grievance_status_history grievance_status_history[]
   categories               categories                 @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
   priority_rules           priority_rules?            @relation(fields: [priority_rule_id], references: [priority_rule_id], onUpdate: NoAction)
@@ -408,20 +418,23 @@ model sla_policies {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model sla_tracking {
-  sla_tracking_id BigInt       @id @default(autoincrement())
-  grievance_id    BigInt
-  sla_policy_id   BigInt
-  cycle_number    Int          @default(1)
-  started_at      DateTime     @default(now()) @db.Timestamptz(6)
-  due_at          DateTime     @db.Timestamptz(6)
-  status          String       @default("ON_TRACK") @db.VarChar(20)
-  paused_at       DateTime?    @db.Timestamptz(6)
-  resumed_at      DateTime?    @db.Timestamptz(6)
-  completed_at    DateTime?    @db.Timestamptz(6)
-  grievances      grievances   @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
-  sla_policies    sla_policies @relation(fields: [sla_policy_id], references: [sla_policy_id], onDelete: NoAction, onUpdate: NoAction)
+  sla_tracking_id         BigInt                 @id @default(autoincrement())
+  grievance_id            BigInt
+  grievance_department_id BigInt?
+  sla_policy_id           BigInt
+  cycle_number            Int                    @default(1)
+  started_at              DateTime               @default(now()) @db.Timestamptz(6)
+  due_at                  DateTime               @db.Timestamptz(6)
+  status                  String                 @default("ON_TRACK") @db.VarChar(20)
+  paused_at               DateTime?              @db.Timestamptz(6)
+  resumed_at              DateTime?              @db.Timestamptz(6)
+  completed_at            DateTime?              @db.Timestamptz(6)
+  grievance_departments   grievance_departments? @relation(fields: [grievance_department_id], references: [grievance_department_id], onDelete: Cascade, onUpdate: NoAction)
+  grievances              grievances             @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  sla_policies            sla_policies           @relation(fields: [sla_policy_id], references: [sla_policy_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([grievance_id], map: "idx_sla_tracking_grievance_id")
+  @@index([grievance_department_id], map: "idx_sla_tracking_dept_id")
   @@index([grievance_id, status], map: "idx_sla_tracking_grievance_status")
   @@index([status, due_at], map: "idx_sla_tracking_status_due")
 }

@@ -6,6 +6,7 @@ import {
 } from "@/lib/engines/reopen-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function POST(
   request: Request,
@@ -147,7 +148,8 @@ export async function POST(
     });
 
     // 2. Notify Department Head
-    let deptId = grievance.grievance_departments?.department_id;
+    const primaryGDept = getPrimaryDepartment(grievance);
+    let deptId = primaryGDept?.department_id;
     if (!deptId) {
       const gDept = await prisma.grievance_departments.findFirst({
         where: { grievance_id: grievanceId },

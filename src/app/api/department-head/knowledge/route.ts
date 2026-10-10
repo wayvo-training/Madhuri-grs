@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { KnowledgeSimilarityService } from "@/lib/knowledge/similarity-service";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function GET(request: Request) {
   const auth = await resolveDepartmentHeadAuth(request);
@@ -139,7 +140,7 @@ export async function GET(request: Request) {
           let primaryDeptName = "";
 
           // 1. From source grievance departments
-          const gDept = art.resolutions?.grievances?.grievance_departments;
+          const gDept = getPrimaryDepartment(art.resolutions?.grievances);
           if (gDept) {
             allDepartmentIds.add(gDept.department_id);
             if (!primaryDeptId) {

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function GET(req: NextRequest) {
   try {
@@ -67,8 +68,9 @@ export async function GET(req: NextRequest) {
       currentStage = 4;
     }
 
+    const primaryGDept = getPrimaryDepartment(grievance);
     const primaryDept =
-      grievance.grievance_departments?.departments?.department_name ||
+      primaryGDept?.departments?.department_name ||
       "General Queue";
 
     const assignedHistory = grievance.grievance_status_history.find(

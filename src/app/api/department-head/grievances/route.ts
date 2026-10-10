@@ -9,6 +9,7 @@ import {
 import { calculateSlaConsumption } from "@/lib/engines/sla-engine";
 import { getPaginationParams, paginatedJsonResponse } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 function formatAuditEntryDetails(action: string, newValue: unknown): string {
   if (!newValue) return "Action recorded during grievance processing.";
@@ -553,7 +554,10 @@ export async function GET(request: Request) {
         (d) => d.departments.department_name,
       );
       if (deptList.length === 0 && g.grievance_departments) {
-        deptList.push(g.grievance_departments.departments.department_name);
+        const primaryGDept = getPrimaryDepartment(g);
+        if (primaryGDept?.departments?.department_name) {
+          deptList.push(primaryGDept.departments.department_name);
+        }
       }
       const isCrossDepartment = deptList.length > 1;
 

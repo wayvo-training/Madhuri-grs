@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function GET(request: Request) {
   const auth = await authorizeApi({ role: "ADMIN" });
@@ -223,7 +224,7 @@ export async function GET(request: Request) {
       const primaryDeptName =
         primaryLink?.departments?.department_name ||
         equalLinks[0]?.departments?.department_name ||
-        g.grievance_departments?.departments?.department_name ||
+        getPrimaryDepartment(g)?.departments?.department_name ||
         null;
 
       const otherEqualDepts = equalLinks.slice(1).map((s) => ({

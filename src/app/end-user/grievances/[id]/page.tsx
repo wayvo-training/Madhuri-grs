@@ -8,6 +8,7 @@ import type { EndUserResolutionData } from "@/components/end-user/resolution-car
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 interface PageProps {
   params: Promise<{
@@ -107,8 +108,9 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
       }
     : null;
 
+  const primaryGDept = getPrimaryDepartment(grievance);
   const primaryDept =
-    grievance.grievance_departments?.departments?.department_name || "";
+    primaryGDept?.departments?.department_name || "";
 
   const serializedGrievance: CaseHubGrievance = {
     id: Number(grievance.grievance_id),

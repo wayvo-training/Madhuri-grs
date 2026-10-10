@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/shell";
 import { TrackSearch } from "@/components/end-user/track-search";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 interface PageProps {
   searchParams: Promise<{
@@ -41,11 +42,12 @@ const mapStatusToStage = (status: string) => {
 };
 
 interface GrievanceWithDept {
-  grievance_departments?: {
+  grievance_departments?: Array<{
+    involvement_type?: string;
     departments?: {
       department_name?: string;
     };
-  } | null;
+  }> | null;
 }
 
 interface RawTimelineEvent {
@@ -67,9 +69,10 @@ const getStageInfo = (id: string, grievance: GrievanceWithDept | null) => {
     case "SUBMITTED":
       return { label: "Submitted", desc: "Grievance submitted successfully." };
     case "ROUTED":
+      const primaryGDept = getPrimaryDepartment(grievance);
       return {
         label: "Routed",
-        desc: `Routed to ${grievance?.grievance_departments?.departments?.department_name || "department"}.`,
+        desc: `Routed to ${primaryGDept?.departments?.department_name || "department"}.`,
       };
     case "ASSIGNED":
       return { label: "Assigned", desc: "Assigned for investigation." };
