@@ -5,6 +5,7 @@ import {
 import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export default async function AdminGrievancesPage() {
   const user = await requirePageRole("ADMIN");
@@ -65,7 +66,7 @@ export default async function AdminGrievancesPage() {
         where: {
           OR: [
             { status: "SUBMITTED" },
-            { grievance_departments: { is: null } },
+            { grievance_departments: { none: {} } },
           ],
         },
       }),
@@ -142,11 +143,7 @@ export default async function AdminGrievancesPage() {
       submitted_by_email: g.users.email,
       department_name:
         primaryLink?.departments?.department_name ||
-        (
-          g.grievance_departments as unknown as
-            | { departments: { department_name: string } }[]
-            | undefined
-        )?.[0]?.departments?.department_name ||
+        getPrimaryDepartment(g)?.departments?.department_name ||
         null,
       supporting_departments: supportingLinks.map((s) => ({
         department_id: s.department_id.toString(),

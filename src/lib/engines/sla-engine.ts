@@ -698,7 +698,9 @@ export async function evaluateAllActiveGrievancesSla(
       ...(departmentId
         ? {
             grievance_departments: {
-              department_id: departmentId,
+              some: {
+                department_id: departmentId,
+              },
             },
           }
         : {}),

@@ -68,12 +68,13 @@ const getStageInfo = (id: string, grievance: GrievanceWithDept | null) => {
   switch (id) {
     case "SUBMITTED":
       return { label: "Submitted", desc: "Grievance submitted successfully." };
-    case "ROUTED":
+    case "ROUTED": {
       const primaryGDept = getPrimaryDepartment(grievance);
       return {
         label: "Routed",
         desc: `Routed to ${primaryGDept?.departments?.department_name || "department"}.`,
       };
+    }
     case "ASSIGNED":
       return { label: "Assigned", desc: "Assigned for investigation." };
     case "IN_PROGRESS":

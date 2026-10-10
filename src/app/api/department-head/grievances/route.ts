@@ -114,7 +114,9 @@ export async function GET(request: Request) {
     const conditions: Prisma.grievancesWhereInput[] = [
       {
         grievance_departments: {
-          department_id: departmentId,
+          some: {
+            department_id: departmentId,
+          },
         },
       },
     ];

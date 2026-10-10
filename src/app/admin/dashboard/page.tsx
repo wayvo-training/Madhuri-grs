@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants/chart-colors";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 import type {
   DashboardDepartmentSummary,
   DashboardRecentGrievance,
@@ -22,7 +23,7 @@ export default async function AdminDashboardPage() {
       prisma.grievances.count({
         where: {
           status: "SUBMITTED",
-          grievance_departments: { is: null },
+          grievance_departments: { none: {} },
         },
       }),
       prisma.departments.findMany({
@@ -200,11 +201,7 @@ export default async function AdminDashboardPage() {
         ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
         : "Anonymous",
       department_name:
-        (
-          g.grievance_departments as unknown as {
-            departments?: { department_name?: string };
-          }
-        )?.departments?.department_name || null,
+        getPrimaryDepartment(g)?.departments?.department_name || null,
       category_name: g.categories?.category_name || null,
     }));
 

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     if (tab === "EXCEPTIONS") {
       conditions.push({
         status: "SUBMITTED",
-        grievance_departments: { is: null },
+        grievance_departments: { none: {} },
       });
     } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
       conditions.push({
@@ -90,8 +90,10 @@ export async function GET(request: Request) {
       const depts = department.split(",");
       conditions.push({
         grievance_departments: {
-          departments: {
-            department_name: { in: depts },
+          some: {
+            departments: {
+              department_name: { in: depts },
+            },
           },
         },
       });

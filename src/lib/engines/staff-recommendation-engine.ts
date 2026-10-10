@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export interface RecommendationFactorBreakdown {
   skillScore: number; // max 35
@@ -141,11 +142,15 @@ export async function calculateStaffRecommendations(
     grievance.subcategories?.subcategory_name || ""
   ).toLowerCase();
   const priority = (grievance.priority || "MEDIUM").toUpperCase();
-  const targetDeptId =
-    grievance.grievance_departments?.department_id || departmentId;
+  const targetDeptRecord =
+    grievance.grievance_departments.find(
+      (gd) => gd.department_id === departmentId,
+    ) || getPrimaryDepartment(grievance);
+
+  const targetDeptId = targetDeptRecord?.department_id || departmentId;
 
   // Active assignment if already assigned
-  const activeAssignment = grievance.grievance_departments?.assignments;
+  const activeAssignment = targetDeptRecord?.assignments;
   const currentAssignedUser =
     activeAssignment?.users_assignments_staff_idTousers;
 
@@ -520,8 +525,7 @@ export async function calculateStaffRecommendations(
       slaStatus: grievance.sla_status || "ON_TRACK",
       dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
       departmentName:
-        grievance.grievance_departments?.departments?.department_name ||
-        "Department Queue",
+        targetDeptRecord?.departments?.department_name || "Department Queue",
       assignedStaffId: currentAssignedUser
         ? currentAssignedUser.user_id.toString()
         : null,
