@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       include: { categories: true },
     });
 
-    // Apply Priority Rules
+    // Apply Priority Rules (Calculated strictly on the server)
     const { determinePriority } = await import("@/lib/engines/priority-engine");
     const priorityResult = await determinePriority({
       categoryId: categoryId,
@@ -97,12 +97,7 @@ export async function POST(request: Request) {
       description: problemStatement,
     });
 
-    const priorityLevel =
-      priorityResult.isDefault &&
-      userPriority &&
-      ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(userPriority.toUpperCase())
-        ? userPriority.toUpperCase()
-        : priorityResult.priority || "MEDIUM";
+    const priorityLevel = priorityResult.priority || "MEDIUM";
 
     // Lookup active SLA Policy based on priority
     const slaPolicy = await prisma.sla_policies.findFirst({

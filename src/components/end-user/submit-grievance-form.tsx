@@ -452,7 +452,7 @@ export function SubmitGrievanceForm({
                   </div>
                   <div className="flex items-center justify-between text-2.75 text-slate-400">
                     <span>
-                      Be specific about dates, people involved, and impact.
+                      Be specific about dates, people involved, and details.
                     </span>
                     <span>{description.length}/1000</span>
                   </div>
