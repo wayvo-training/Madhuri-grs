@@ -661,13 +661,23 @@ export async function activateNextSequentialDepartments(
         });
 
         for (const head of deptHeads) {
-          await NotificationService.send({
-            userId: head.user_id,
-            grievanceId: gId,
-            type: "ASSIGNMENT",
-            title: "Department Stage Activated",
-            message: `Prerequisite departments have completed. Grievance is now active for ${blocked.departments.department_name}.`,
+          const existingNotif = await client.notifications.findFirst({
+            where: {
+              user_id: head.user_id,
+              grievance_id: gId,
+              title: "Department Stage Activated",
+            },
           });
+
+          if (!existingNotif) {
+            await NotificationService.send({
+              userId: head.user_id,
+              grievanceId: gId,
+              type: "ASSIGNMENT",
+              title: "Department Stage Activated",
+              message: `Prerequisite departments have completed. Grievance is now active for ${blocked.departments.department_name}.`,
+            });
+          }
         }
       } catch (err) {
         console.error(

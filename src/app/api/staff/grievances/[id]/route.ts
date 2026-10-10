@@ -414,6 +414,9 @@ export async function PATCH(
             assignment_status: "ASSIGNED",
             ...(isAdmin ? {} : { staff_id: staffId }),
           },
+          include: {
+            grievance_departments: true,
+          },
         },
       },
     });
@@ -431,6 +434,18 @@ export async function PATCH(
     ) {
       return NextResponse.json(
         { success: false, message: "Forbidden: Grievance not assigned to you" },
+        { status: 403 },
+      );
+    }
+
+    const activeAssignment = grievance.assignments?.[0];
+    if (activeAssignment?.grievance_departments?.status === "BLOCKED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: Your department is currently BLOCKED waiting for prerequisite departments to complete before investigation can proceed.",
+        },
         { status: 403 },
       );
     }
@@ -453,15 +468,17 @@ export async function PATCH(
             },
           });
 
-          await tx.grievance_departments.updateMany({
-            where: {
-              grievance_id: grievanceId,
-              status: "ASSIGNED",
-            },
-            data: {
-              status: "IN_PROGRESS",
-            },
-          });
+          if (activeAssignment?.grievance_department_id) {
+            await tx.grievance_departments.update({
+              where: {
+                grievance_department_id:
+                  activeAssignment.grievance_department_id,
+              },
+              data: {
+                status: "IN_PROGRESS",
+              },
+            });
+          }
 
           await tx.audit_logs.create({
             data: {

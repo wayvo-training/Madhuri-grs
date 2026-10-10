@@ -56,6 +56,8 @@ export interface GrievanceItem {
   collaboratingDepartments?: string[];
   isPrimaryDepartment?: boolean;
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
+  myDepartmentStatus?: string;
+  isBlocked?: boolean;
   escalationReason?: string;
   escalationLevel?: number;
   // 11-Step SLA Escalation & Resolution Lifecycle

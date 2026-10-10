@@ -103,6 +103,7 @@ export async function POST(request: Request) {
     // In a multi-department collaboration, verify primary or equal co-lead responsibility
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: gId },
+      include: { departments: true },
     });
     const hasMultipleDepts = allInvolvedDepts.length > 1;
     const myInvolvement = myAssignment?.grievance_departments?.involvement_type;
@@ -117,6 +118,45 @@ export async function POST(request: Request) {
             "Forbidden: As a supporting department contributor, please submit your department findings via the Collaboration tab. Only Primary Lead or Equal Co-Lead department officers can submit the final customer resolution.",
         },
         { status: 403 },
+      );
+    }
+
+    // Ensure required supporting departments (sequential dependencies or explicit prerequisites) have completed
+    const primaryRecord = allInvolvedDepts.find(
+      (d) => d.involvement_type === "PRIMARY",
+    );
+    const rawPrereqs = (primaryRecord?.prerequisite_department_ids || []) as (
+      | string
+      | number
+      | bigint
+    )[];
+    const primaryPrereqIds = Array.isArray(rawPrereqs)
+      ? rawPrereqs.map((id) => String(id))
+      : [];
+
+    const incompleteRequiredSupporting = allInvolvedDepts.filter(
+      (d) =>
+        d.involvement_type === "SUPPORTING" &&
+        (d.dependency_type === "SEQUENTIAL" ||
+          primaryPrereqIds.includes(d.department_id.toString())) &&
+        d.status !== "COMPLETED" &&
+        d.status !== "RESOLVED" &&
+        d.status !== "REMOVED",
+    );
+
+    if (incompleteRequiredSupporting.length > 0) {
+      const incompleteNames = incompleteRequiredSupporting
+        .map(
+          (d) =>
+            d.departments?.department_name || `Department ${d.department_id}`,
+        )
+        .join(", ");
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Cannot submit final resolution: Required supporting department(s) [${incompleteNames}] have not completed their findings.`,
+        },
+        { status: 400 },
       );
     }
 

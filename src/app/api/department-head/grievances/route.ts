@@ -627,6 +627,8 @@ export async function GET(request: Request) {
         collaboratingDepartments: deptList,
         isPrimaryDepartment,
         myInvolvementType,
+        myDepartmentStatus: myDeptRecord?.status || "ASSIGNED",
+        isBlocked: myDeptRecord?.status === "BLOCKED",
         escalationReason: latestEscalation?.reason || undefined,
         escalationLevel: latestEscalation?.escalation_level || undefined,
         escalationStage:

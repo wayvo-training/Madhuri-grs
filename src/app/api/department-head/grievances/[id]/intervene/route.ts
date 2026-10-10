@@ -59,6 +59,17 @@ export async function POST(
 
     const grievance = grievanceDept.grievances;
 
+    if (grievanceDept.status === "BLOCKED" && interventionType !== "MONITOR") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Cannot intervene or reassign: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+        },
+        { status: 400 },
+      );
+    }
+
     if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
       return NextResponse.json(
         {
