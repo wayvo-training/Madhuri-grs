@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { prisma } from "@/lib/prisma";
+import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 
 export interface MdiDepartmentOptions {
   involvementType: "PRIMARY" | "SUPPORTING" | "EQUAL";
@@ -21,10 +22,8 @@ export function buildDepartmentMdiData(
   options: MdiDepartmentOptions,
 ) {
   const isSequential = options.dependencyType === "SEQUENTIAL";
-  const isBlocked =
-    isSequential &&
-    (options.executionOrder ?? 1) > 1 &&
-    (options.prerequisiteDepartmentIds?.length ?? 0) > 0;
+  const hasPrereqs = (options.prerequisiteDepartmentIds?.length ?? 0) > 0;
+  const isBlocked = isSequential && hasPrereqs;
 
   return {
     department_id: departmentId,
@@ -44,6 +43,93 @@ export function buildDepartmentMdiData(
   };
 }
 
+/**
+ * Calculates the allocated duration in minutes and percent allocation for a department.
+ * Supports explicit durations, percentage-based allocations, and safe fallbacks.
+ * Does not assume equal distribution or hardcoded percentages.
+ */
+export function calculateDepartmentSlaDuration(
+  totalBudgetMinutes: number,
+  config?: {
+    allocated_duration_minutes?: number | null;
+    allocatedDurationMinutes?: number | null;
+    sla_percent_allocation?: number | null;
+    slaPercentAllocation?: number | null;
+  },
+): {
+  allocatedDurationMinutes: number;
+  slaPercentAllocation: number;
+} {
+  const explicitDuration =
+    config?.allocatedDurationMinutes ?? config?.allocated_duration_minutes;
+  const explicitPercent =
+    config?.slaPercentAllocation ?? config?.sla_percent_allocation;
+
+  // 1. Explicit duration takes precedence if provided and positive
+  if (
+    explicitDuration !== undefined &&
+    explicitDuration !== null &&
+    Number.isFinite(Number(explicitDuration)) &&
+    Number(explicitDuration) > 0
+  ) {
+    const mins = Math.round(Number(explicitDuration));
+    const percent =
+      totalBudgetMinutes > 0
+        ? Math.min(Math.round((mins / totalBudgetMinutes) * 1000) / 10, 100.0)
+        : 100.0;
+    return {
+      allocatedDurationMinutes: mins,
+      slaPercentAllocation: explicitPercent ?? percent,
+    };
+  }
+
+  // 2. Percentage-based allocation if provided and positive
+  if (
+    explicitPercent !== undefined &&
+    explicitPercent !== null &&
+    Number.isFinite(Number(explicitPercent)) &&
+    Number(explicitPercent) > 0
+  ) {
+    const percent = Number(explicitPercent);
+    const mins = Math.max(1, Math.round((totalBudgetMinutes * percent) / 100));
+    return {
+      allocatedDurationMinutes: mins,
+      slaPercentAllocation: percent,
+    };
+  }
+
+  // 3. Fallback: full overall budget duration
+  return {
+    allocatedDurationMinutes: totalBudgetMinutes,
+    slaPercentAllocation: 100.0,
+  };
+}
+
+/**
+ * Calculates a department's deadline capped strictly by the overall grievance deadline.
+ * Department SLA clock starts strictly at activated_at.
+ * Blocked departments return null.
+ */
+export function calculateDepartmentDeadline(
+  activatedAt: Date | null,
+  allocatedDurationMinutes: number,
+  grievanceDueAt: Date | null,
+): Date | null {
+  if (!activatedAt) {
+    return null;
+  }
+
+  const durationMs = allocatedDurationMinutes * 60 * 1000;
+  const targetEnd = new Date(activatedAt.getTime() + durationMs);
+
+  // Department deadline must never exceed overall grievance deadline
+  if (grievanceDueAt && targetEnd > grievanceDueAt) {
+    return grievanceDueAt;
+  }
+
+  return targetEnd;
+}
+
 export interface RoutingCalculationInput {
   categoryId?: bigint | number | string | null;
   subcategoryId?: bigint | number | string | null;
@@ -56,6 +142,7 @@ export interface RoutingCalculationResult {
   supportingDepartments: string[];
   supportingDepartmentIds: bigint[];
   dependencyType?: "PARALLEL" | "SEQUENTIAL";
+  dependencies?: DepartmentDependencyNode[];
   routingRuleId: bigint;
   matchedRuleName: string;
   matchType: "EXACT_SUBCATEGORY" | "CATEGORY_FALLBACK";
@@ -174,6 +261,12 @@ export async function determineDepartmentRouting(
             dependency_type?: "PARALLEL" | "SEQUENTIAL";
           }
         )?.dependency_type || "PARALLEL",
+      dependencies:
+        (
+          exactMatch.conditions as {
+            dependencies?: DepartmentDependencyNode[];
+          }
+        )?.dependencies || undefined,
       routingRuleId: exactMatch.routing_rule_id,
       matchedRuleName: exactMatch.rule_name,
       matchType: "EXACT_SUBCATEGORY",
@@ -208,6 +301,12 @@ export async function determineDepartmentRouting(
             dependency_type?: "PARALLEL" | "SEQUENTIAL";
           }
         )?.dependency_type || "PARALLEL",
+      dependencies:
+        (
+          categoryMatch.conditions as {
+            dependencies?: DepartmentDependencyNode[];
+          }
+        )?.dependencies || undefined,
       routingRuleId: categoryMatch.routing_rule_id,
       matchedRuleName: categoryMatch.rule_name,
       matchType: "CATEGORY_FALLBACK",
@@ -229,6 +328,7 @@ export async function populateGrievanceDepartments(
   tx?: Prisma.TransactionClient,
   options?: {
     dependencyType?: "PARALLEL" | "SEQUENTIAL";
+    dependencies?: DepartmentDependencyNode[];
   },
 ): Promise<{ primaryDeptId: bigint; supportingDeptIds: bigint[] }> {
   const gId = BigInt(grievanceId);
@@ -239,6 +339,7 @@ export async function populateGrievanceDepartments(
     mainInvolvement === "EQUAL" ? "EQUAL" : "SUPPORTING";
   const dependencyType =
     options?.dependencyType || routing.dependencyType || "PARALLEL";
+  const configuredDeps = options?.dependencies || routing.dependencies || [];
 
   const executeInTx = async (client: Prisma.TransactionClient) => {
     // 1. Fetch grievance details to calculate SLA durations
@@ -259,7 +360,24 @@ export async function populateGrievanceDepartments(
       if (diffMinutes > 0) totalDurationMinutes = diffMinutes;
     }
 
+    const primaryDepNode = configuredDeps.find(
+      (n) =>
+        (n.department_id &&
+          n.department_id.toString() === primaryDeptId.toString()) ||
+        (n.department_name &&
+          n.department_name.toLowerCase() ===
+            routing.departmentName?.toLowerCase()),
+    );
+    const primaryAlloc = calculateDepartmentSlaDuration(
+      totalDurationMinutes,
+      primaryDepNode,
+    );
     const primaryDueAt =
+      calculateDepartmentDeadline(
+        new Date(),
+        primaryAlloc.allocatedDurationMinutes,
+        grievance?.due_at || null,
+      ) ||
       grievance?.due_at ||
       new Date(Date.now() + totalDurationMinutes * 60 * 1000);
 
@@ -268,8 +386,8 @@ export async function populateGrievanceDepartments(
       dependencyType: "PARALLEL",
       executionOrder: 1,
       prerequisiteDepartmentIds: [],
-      slaPercentAllocation: 100.0,
-      allocatedDurationMinutes: totalDurationMinutes,
+      slaPercentAllocation: primaryAlloc.slaPercentAllocation,
+      allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
       dueAt: primaryDueAt,
       status: "PENDING_ASSIGNMENT",
     });
@@ -298,32 +416,129 @@ export async function populateGrievanceDepartments(
       });
     }
 
-    // 3. Clear old partner entries for this ticket
-    await client.grievance_departments.deleteMany({
+    // Fetch active departments for name/id resolution
+    const activeDepartments = await client.departments.findMany({
+      where: { status: "ACTIVE" },
+      select: { department_id: true, department_name: true },
+    });
+
+    // 3. Preserve audit history: soft-remove removed supporting departments with history, delete empty placeholders
+    const existingPartners = await client.grievance_departments.findMany({
       where: {
         grievance_id: gId,
         involvement_type: { in: ["SUPPORTING", "EQUAL"] },
         department_id: { not: primaryDeptId },
       },
+      include: {
+        assignments: true,
+        attachments: true,
+      },
     });
 
-    // 4. Insert fresh partner entries (SUPPORTING or EQUAL)
+    const existingPartnerMap = new Map(
+      existingPartners.map((p) => [p.department_id.toString(), p]),
+    );
+
+    for (const partner of existingPartners) {
+      if (!supportingDeptIds.includes(partner.department_id)) {
+        const hasHistory =
+          partner.assignments !== null ||
+          partner.attachments.length > 0 ||
+          partner.status === "COMPLETED";
+
+        if (hasHistory) {
+          await client.grievance_departments.update({
+            where: { grievance_department_id: partner.grievance_department_id },
+            data: { status: "REMOVED" },
+          });
+        } else {
+          await client.grievance_departments.delete({
+            where: { grievance_department_id: partner.grievance_department_id },
+          });
+        }
+      }
+    }
+
+    // 4. Upsert fresh partner entries (SUPPORTING or EQUAL) with dependency awareness
     for (let i = 0; i < supportingDeptIds.length; i++) {
       const suppId = supportingDeptIds[i];
-      if (suppId !== primaryDeptId) {
-        const suppMdiData = buildDepartmentMdiData(suppId, {
-          involvementType: partnerInvolvement,
-          dependencyType,
-          executionOrder: dependencyType === "SEQUENTIAL" ? i + 2 : 1,
-          prerequisiteDepartmentIds:
-            dependencyType === "SEQUENTIAL" ? [primaryDeptId] : [],
-          slaPercentAllocation: 100.0,
-          allocatedDurationMinutes: totalDurationMinutes,
-          dueAt: dependencyType === "SEQUENTIAL" ? null : primaryDueAt,
-          status:
-            dependencyType === "SEQUENTIAL" ? "BLOCKED" : "PENDING_ASSIGNMENT",
-        });
+      if (suppId === primaryDeptId) continue;
 
+      const suppDept = activeDepartments.find(
+        (d) => d.department_id === suppId,
+      );
+      const depNode = configuredDeps.find(
+        (n) =>
+          (n.department_id &&
+            n.department_id.toString() === suppId.toString()) ||
+          (suppDept &&
+            n.department_name.toLowerCase() ===
+              suppDept.department_name.toLowerCase()),
+      );
+
+      let executionOrder = 1;
+      let prereqDepartmentIds: bigint[] = [];
+      let isBlocked = false;
+
+      if (dependencyType === "SEQUENTIAL") {
+        if (depNode) {
+          executionOrder = depNode.execution_order || i + 2;
+          for (const prereqStr of depNode.prerequisites || []) {
+            const trimmed = prereqStr.trim();
+            if (!trimmed) continue;
+            const matchedDept = activeDepartments.find(
+              (d) =>
+                d.department_id.toString() === trimmed ||
+                d.department_name.toLowerCase() === trimmed.toLowerCase(),
+            );
+            if (
+              matchedDept &&
+              !prereqDepartmentIds.includes(matchedDept.department_id)
+            ) {
+              prereqDepartmentIds.push(matchedDept.department_id);
+            }
+          }
+          isBlocked = prereqDepartmentIds.length > 0;
+        } else {
+          // Default sequential: waits for primary department
+          executionOrder = i + 2;
+          prereqDepartmentIds = [primaryDeptId];
+          isBlocked = true;
+        }
+      }
+
+      const suppAlloc = calculateDepartmentSlaDuration(
+        totalDurationMinutes,
+        depNode,
+      );
+      const suppDueAt = isBlocked
+        ? null
+        : calculateDepartmentDeadline(
+            new Date(),
+            suppAlloc.allocatedDurationMinutes,
+            grievance?.due_at || null,
+          );
+
+      const suppMdiData = buildDepartmentMdiData(suppId, {
+        involvementType: partnerInvolvement,
+        dependencyType,
+        executionOrder,
+        prerequisiteDepartmentIds: prereqDepartmentIds,
+        slaPercentAllocation: suppAlloc.slaPercentAllocation,
+        allocatedDurationMinutes: suppAlloc.allocatedDurationMinutes,
+        dueAt: suppDueAt,
+        status: isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT",
+      });
+
+      const existingRecord = existingPartnerMap.get(suppId.toString());
+      if (existingRecord) {
+        await client.grievance_departments.update({
+          where: {
+            grievance_department_id: existingRecord.grievance_department_id,
+          },
+          data: suppMdiData,
+        });
+      } else {
         await client.grievance_departments.create({
           data: {
             grievance_id: gId,
@@ -347,6 +562,8 @@ export async function populateGrievanceDepartments(
 
 /**
  * Unblocks any sequential departments for a grievance once their prerequisite departments have completed.
+ * Uses AND semantics: all prerequisites must be completed or resolved.
+ * Caps department due_at to the overall grievance deadline.
  */
 export async function activateNextSequentialDepartments(
   grievanceId: bigint | number | string,
@@ -359,12 +576,15 @@ export async function activateNextSequentialDepartments(
     where: { grievance_id: gId },
     include: {
       departments: { select: { department_name: true } },
+      grievances: {
+        select: { due_at: true, created_at: true, priority: true },
+      },
     },
   });
 
   const completedDeptIds = new Set(
     allDepts
-      .filter((d) => d.status === "COMPLETED")
+      .filter((d) => d.status === "COMPLETED" || d.status === "RESOLVED")
       .map((d) => d.department_id.toString()),
   );
 
@@ -380,12 +600,38 @@ export async function activateNextSequentialDepartments(
       ? (rawPrereqs as (number | string | bigint)[]).map((id) => String(id))
       : [];
 
+    // AND semantics: all prerequisites must be completed
     const allPrereqsCompleted =
       prereqIds.length > 0 && prereqIds.every((id) => completedDeptIds.has(id));
 
     if (allPrereqsCompleted) {
-      const durationMins = blocked.allocated_duration_minutes || 2880;
-      const newDueAt = new Date(Date.now() + durationMins * 60 * 1000);
+      const now = new Date();
+      let totalBudgetMinutes =
+        DEFAULT_SLA_DURATIONS_MINUTES[
+          blocked.grievances?.priority?.toUpperCase() || "MEDIUM"
+        ] || 2880;
+
+      if (blocked.grievances?.due_at && blocked.grievances?.created_at) {
+        const diff = Math.round(
+          (blocked.grievances.due_at.getTime() -
+            blocked.grievances.created_at.getTime()) /
+            60000,
+        );
+        if (diff > 0) totalBudgetMinutes = diff;
+      }
+
+      const slaCalc = calculateDepartmentSlaDuration(totalBudgetMinutes, {
+        allocated_duration_minutes: blocked.allocated_duration_minutes,
+        sla_percent_allocation: blocked.sla_percent_allocation
+          ? Number(blocked.sla_percent_allocation)
+          : null,
+      });
+
+      const newDueAt = calculateDepartmentDeadline(
+        now,
+        slaCalc.allocatedDurationMinutes,
+        blocked.grievances?.due_at || null,
+      );
 
       await client.grievance_departments.update({
         where: {
@@ -393,7 +639,7 @@ export async function activateNextSequentialDepartments(
         },
         data: {
           status: "PENDING_ASSIGNMENT",
-          activated_at: new Date(),
+          activated_at: now,
           due_at: newDueAt,
         },
       });

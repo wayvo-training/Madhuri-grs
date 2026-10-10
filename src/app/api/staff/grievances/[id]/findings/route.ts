@@ -81,6 +81,17 @@ export async function POST(
       );
     }
 
+    if (myDeptRecord?.status === "BLOCKED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: Your department is currently BLOCKED waiting for prerequisite departments to complete before investigation can proceed.",
+        },
+        { status: 403 },
+      );
+    }
+
     const deptName =
       myDeptRecord?.departments?.department_name || "Supporting Department";
     const authorUser = await prisma.users.findUnique({

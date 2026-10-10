@@ -721,3 +721,68 @@ export async function evaluateAllActiveGrievancesSla(
     results,
   };
 }
+
+/**
+ * Calculates SLA consumption for an individual grievance department.
+ * Blocked departments return 0% consumption and ON_TRACK.
+ * Elapsed time is measured strictly from activated_at (or frozen at completedAt).
+ */
+export function calculateDepartmentSlaConsumption(
+  activatedAt: Date | null,
+  dueAt: Date | null,
+  allocatedDurationMinutes: number,
+  completedAt?: Date | null,
+  now: Date = new Date(),
+): {
+  totalDurationMinutes: number;
+  elapsedMinutes: number;
+  consumptionPercent: number;
+  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
+} {
+  if (!activatedAt) {
+    return {
+      totalDurationMinutes: allocatedDurationMinutes,
+      elapsedMinutes: 0,
+      consumptionPercent: 0,
+      slaStatus: "ON_TRACK",
+    };
+  }
+
+  const effectiveEnd = completedAt || now;
+  const elapsedMs = Math.max(0, effectiveEnd.getTime() - activatedAt.getTime());
+  const elapsedMinutes = Math.round(elapsedMs / (60 * 1000));
+
+  let totalDuration = allocatedDurationMinutes;
+  if (dueAt) {
+    const diff = Math.round(
+      (dueAt.getTime() - activatedAt.getTime()) / (60 * 1000),
+    );
+    if (diff > 0) totalDuration = diff;
+  }
+
+  if (totalDuration <= 0) {
+    return {
+      totalDurationMinutes: 0,
+      elapsedMinutes,
+      consumptionPercent: 100,
+      slaStatus: "BREACHED",
+    };
+  }
+
+  const rawPercent = (elapsedMinutes / totalDuration) * 100;
+  const consumptionPercent = Math.min(Math.round(rawPercent * 10) / 10, 999);
+
+  let slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" = "ON_TRACK";
+  if (consumptionPercent >= 100) {
+    slaStatus = "BREACHED";
+  } else if (consumptionPercent >= 75) {
+    slaStatus = "AT_RISK";
+  }
+
+  return {
+    totalDurationMinutes: totalDuration,
+    elapsedMinutes,
+    consumptionPercent,
+    slaStatus,
+  };
+}

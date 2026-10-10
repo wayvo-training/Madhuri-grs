@@ -95,6 +95,50 @@ export async function POST(
       },
     });
 
+    // Route reopened grievance to Primary Department first
+    const primaryDeptRecord = getPrimaryDepartment(grievance);
+    if (primaryDeptRecord) {
+      const pRecord = primaryDeptRecord as {
+        grievance_department_id: bigint;
+        department_id: bigint;
+      };
+      await prisma.grievance_departments.update({
+        where: {
+          grievance_department_id: pRecord.grievance_department_id,
+        },
+        data: {
+          status: "PENDING_ASSIGNMENT",
+        },
+      });
+
+      // Ensure dependent sequential departments are reset to BLOCKED while Primary re-investigates
+      const otherDepts = await prisma.grievance_departments.findMany({
+        where: {
+          grievance_id: grievanceId,
+          grievance_department_id: { not: pRecord.grievance_department_id },
+          dependency_type: "SEQUENTIAL",
+        },
+      });
+
+      for (const d of otherDepts) {
+        const rawPrereqs = d.prerequisite_department_ids;
+        const prereqIds = Array.isArray(rawPrereqs)
+          ? (rawPrereqs as (number | string | bigint)[]).map((id) => String(id))
+          : [];
+
+        if (prereqIds.includes(pRecord.department_id.toString())) {
+          await prisma.grievance_departments.update({
+            where: { grievance_department_id: d.grievance_department_id },
+            data: {
+              status: "BLOCKED",
+              activated_at: null,
+              due_at: null,
+            },
+          });
+        }
+      }
+    }
+
     // Fetch assigned staff before revoking so we can notify them
     const activeAssignments = await prisma.assignments.findMany({
       where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" },

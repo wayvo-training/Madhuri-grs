@@ -3,9 +3,13 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
-import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
+import {
+  buildDepartmentMdiData,
+  populateGrievanceDepartments,
+} from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { uploadToSupabase } from "@/lib/supabase";
+import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 
 export async function POST(request: Request) {
   try {
@@ -173,31 +177,48 @@ export async function POST(request: Request) {
 
     // If there is an active routing rule and active department, assign it
     if (activeRule && primaryDept) {
-      const mainInvolvement =
-        (activeRule.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
-        "PRIMARY";
-      const supportingInvolvement =
-        mainInvolvement === "EQUAL" ? "EQUAL" : "SUPPORTING";
+      const supportingDeptNames = Array.isArray(
+        activeRule.supporting_departments,
+      )
+        ? (activeRule.supporting_departments as string[])
+        : [];
 
-      const durationMins = targetMinutes || 2880;
+      const supportingDepts =
+        supportingDeptNames.length > 0
+          ? await prisma.departments.findMany({
+              where: {
+                department_name: { in: supportingDeptNames },
+                status: "ACTIVE",
+              },
+              select: { department_id: true, department_name: true },
+            })
+          : [];
 
-      const primaryMdiData = buildDepartmentMdiData(primaryDept.department_id, {
-        involvementType: mainInvolvement,
-        dependencyType: "PARALLEL",
-        executionOrder: 1,
-        prerequisiteDepartmentIds: [],
-        slaPercentAllocation: 100.0,
-        allocatedDurationMinutes: durationMins,
-        dueAt: dueAt,
-        status: "ASSIGNED",
-      });
+      const cond = activeRule.conditions as {
+        dependency_type?: "PARALLEL" | "SEQUENTIAL";
+        dependencies?: DepartmentDependencyNode[];
+      } | null;
 
-      await prisma.grievance_departments.create({
-        data: {
-          grievance_id: newGrievance.grievance_id,
-          ...primaryMdiData,
+      await populateGrievanceDepartments(
+        newGrievance.grievance_id,
+        {
+          departmentId: primaryDept.department_id,
+          departmentName: primaryDept.department_name,
+          involvementType:
+            (activeRule.involvement_type as
+              | "PRIMARY"
+              | "SUPPORTING"
+              | "EQUAL") || "PRIMARY",
+          supportingDepartments: supportingDepts.map((d) => d.department_name),
+          supportingDepartmentIds: supportingDepts.map((d) => d.department_id),
+          dependencyType: cond?.dependency_type || "PARALLEL",
+          dependencies: cond?.dependencies,
+          routingRuleId: activeRule.routing_rule_id,
+          matchedRuleName: activeRule.rule_name,
+          matchType: "EXACT_SUBCATEGORY",
         },
-      });
+        prisma,
+      );
 
       // Log SUBMITTED and ROUTED in status history
       await prisma.grievance_status_history.create({
@@ -222,41 +243,8 @@ export async function POST(request: Request) {
 
       const departmentIdsToNotify = new Set<bigint>();
       departmentIdsToNotify.add(primaryDept.department_id);
-
-      // Also attach supporting or co-equal departments:
-      if (
-        activeRule.supporting_departments &&
-        Array.isArray(activeRule.supporting_departments)
-      ) {
-        for (const suppName of activeRule.supporting_departments) {
-          const suppDept = await prisma.departments.findFirst({
-            where: {
-              department_name: suppName as string,
-              status: "ACTIVE",
-            },
-          });
-
-          if (suppDept) {
-            const suppMdiData = buildDepartmentMdiData(suppDept.department_id, {
-              involvementType: supportingInvolvement,
-              dependencyType: "PARALLEL",
-              executionOrder: 1,
-              prerequisiteDepartmentIds: [],
-              slaPercentAllocation: 100.0,
-              allocatedDurationMinutes: durationMins,
-              dueAt: dueAt,
-              status: "PENDING_ASSIGNMENT",
-            });
-
-            await prisma.grievance_departments.create({
-              data: {
-                grievance_id: newGrievance.grievance_id,
-                ...suppMdiData,
-              },
-            });
-            departmentIdsToNotify.add(suppDept.department_id);
-          }
-        }
+      for (const sd of supportingDepts) {
+        departmentIdsToNotify.add(sd.department_id);
       }
 
       // Notify department heads

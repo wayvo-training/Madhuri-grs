@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
-import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
+import {
+  buildDepartmentMdiData,
+  calculateDepartmentDeadline,
+  calculateDepartmentSlaDuration,
+} from "@/lib/engines/routing-engine";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
+import {
+  type DepartmentDependencyNode,
+  validateRoutingPolicy,
+} from "@/lib/validations/dependency-graph";
 
 export async function POST(
   request: Request,
@@ -18,7 +26,12 @@ export async function POST(
 
   try {
     const body = await request.json();
-    const { department_id, supporting_department_ids, dependency_type } = body;
+    const {
+      department_id,
+      supporting_department_ids,
+      dependency_type,
+      dependencies,
+    } = body;
 
     if (!department_id) {
       return NextResponse.json(
@@ -91,6 +104,34 @@ export async function POST(
       }
     }
 
+    // Validate sequential dependencies if provided
+    if (
+      dependency_type === "SEQUENTIAL" &&
+      Array.isArray(dependencies) &&
+      dependencies.length > 0
+    ) {
+      const policyValidation = validateRoutingPolicy({
+        primary_department_name: primaryDept.department_name,
+        primary_department_id: primaryDepartmentId,
+        supporting_departments: validSupportingDepts.map(
+          (d) => d.department_name,
+        ),
+        dependency_type: "SEQUENTIAL",
+        dependencies,
+      });
+
+      if (!policyValidation.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: policyValidation.errors[0],
+            errors: policyValidation.errors,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Verify grievance exists
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
@@ -132,7 +173,28 @@ export async function POST(
         if (diffMinutes > 0) totalDurationMinutes = diffMinutes;
       }
 
+      const primaryDepNode = Array.isArray(dependencies)
+        ? dependencies.find(
+            (n: DepartmentDependencyNode) =>
+              (n.department_id &&
+                n.department_id.toString() ===
+                  primaryDepartmentId.toString()) ||
+              (n.department_name &&
+                n.department_name.toLowerCase() ===
+                  primaryDept.department_name.toLowerCase()),
+          )
+        : undefined;
+
+      const primaryAlloc = calculateDepartmentSlaDuration(
+        totalDurationMinutes,
+        primaryDepNode,
+      );
       const primaryDueAt =
+        calculateDepartmentDeadline(
+          new Date(),
+          primaryAlloc.allocatedDurationMinutes,
+          grievance.due_at,
+        ) ||
         grievance.due_at ||
         new Date(Date.now() + totalDurationMinutes * 60 * 1000);
 
@@ -144,8 +206,8 @@ export async function POST(
         dependencyType: "PARALLEL",
         executionOrder: 1,
         prerequisiteDepartmentIds: [],
-        slaPercentAllocation: 100.0,
-        allocatedDurationMinutes: totalDurationMinutes,
+        slaPercentAllocation: primaryAlloc.slaPercentAllocation,
+        allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
         dueAt: primaryDueAt,
         status: "PENDING_ASSIGNMENT",
       });
@@ -166,35 +228,141 @@ export async function POST(
         });
       }
 
-      // 2. Clear old SUPPORTING entries for this ticket
-      await tx.grievance_departments.deleteMany({
+      // 2. Preserve audit history: soft-remove removed supporting departments with history, delete empty placeholders
+      const existingSupporting = await tx.grievance_departments.findMany({
         where: {
           grievance_id: grievanceId,
           involvement_type: "SUPPORTING",
         },
+        include: {
+          assignments: true,
+          attachments: true,
+        },
       });
 
-      // 3. Create fresh SUPPORTING entries
+      const existingSuppMap = new Map(
+        existingSupporting.map((s) => [s.department_id.toString(), s]),
+      );
+      const newSuppIds = new Set(
+        validSupportingDepts.map((d) => d.department_id),
+      );
+
+      for (const supp of existingSupporting) {
+        if (!newSuppIds.has(supp.department_id)) {
+          const hasHistory =
+            supp.assignments !== null ||
+            supp.attachments.length > 0 ||
+            supp.status === "COMPLETED";
+
+          if (hasHistory) {
+            await tx.grievance_departments.update({
+              where: { grievance_department_id: supp.grievance_department_id },
+              data: { status: "REMOVED" },
+            });
+          } else {
+            await tx.grievance_departments.delete({
+              where: { grievance_department_id: supp.grievance_department_id },
+            });
+          }
+        }
+      }
+
+      // 3. Upsert fresh SUPPORTING entries
       for (let i = 0; i < validSupportingDepts.length; i++) {
         const supp = validSupportingDepts[i];
+        const depNode = Array.isArray(dependencies)
+          ? dependencies.find(
+              (n: DepartmentDependencyNode) =>
+                (n.department_id &&
+                  n.department_id.toString() ===
+                    supp.department_id.toString()) ||
+                (n.department_name &&
+                  n.department_name.toLowerCase() ===
+                    supp.department_name.toLowerCase()),
+            )
+          : undefined;
+
+        let executionOrder = 1;
+        let prereqDepartmentIds: bigint[] = [];
+        let isBlocked = false;
+
+        if (depType === "SEQUENTIAL") {
+          if (depNode) {
+            executionOrder = depNode.execution_order || i + 2;
+            for (const prereqStr of depNode.prerequisites || []) {
+              const trimmed = String(prereqStr).trim();
+              if (!trimmed) continue;
+              if (
+                trimmed === primaryDepartmentId.toString() ||
+                trimmed.toLowerCase() ===
+                  primaryDept.department_name.toLowerCase()
+              ) {
+                if (!prereqDepartmentIds.includes(primaryDepartmentId)) {
+                  prereqDepartmentIds.push(primaryDepartmentId);
+                }
+              } else {
+                const matchedOther = validSupportingDepts.find(
+                  (d) =>
+                    d.department_id.toString() === trimmed ||
+                    d.department_name.toLowerCase() === trimmed.toLowerCase(),
+                );
+                if (
+                  matchedOther &&
+                  !prereqDepartmentIds.includes(matchedOther.department_id)
+                ) {
+                  prereqDepartmentIds.push(matchedOther.department_id);
+                }
+              }
+            }
+            isBlocked = prereqDepartmentIds.length > 0;
+          } else {
+            executionOrder = i + 2;
+            prereqDepartmentIds = [primaryDepartmentId];
+            isBlocked = true;
+          }
+        }
+
+        const suppAlloc = calculateDepartmentSlaDuration(
+          totalDurationMinutes,
+          depNode,
+        );
+        const suppDueAt = isBlocked
+          ? null
+          : calculateDepartmentDeadline(
+              new Date(),
+              suppAlloc.allocatedDurationMinutes,
+              grievance.due_at,
+            );
+
         const suppMdiData = buildDepartmentMdiData(supp.department_id, {
           involvementType: "SUPPORTING",
           dependencyType: depType,
-          executionOrder: depType === "SEQUENTIAL" ? i + 2 : 1,
-          prerequisiteDepartmentIds:
-            depType === "SEQUENTIAL" ? [primaryDepartmentId] : [],
-          slaPercentAllocation: 100.0,
-          allocatedDurationMinutes: totalDurationMinutes,
-          dueAt: depType === "SEQUENTIAL" ? null : primaryDueAt,
-          status: depType === "SEQUENTIAL" ? "BLOCKED" : "PENDING_ASSIGNMENT",
+          executionOrder,
+          prerequisiteDepartmentIds: prereqDepartmentIds,
+          slaPercentAllocation: suppAlloc.slaPercentAllocation,
+          allocatedDurationMinutes: suppAlloc.allocatedDurationMinutes,
+          dueAt: suppDueAt,
+          status: isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT",
         });
 
-        await tx.grievance_departments.create({
-          data: {
-            grievance_id: grievanceId,
-            ...suppMdiData,
-          },
-        });
+        const existingRecord = existingSuppMap.get(
+          supp.department_id.toString(),
+        );
+        if (existingRecord) {
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: existingRecord.grievance_department_id,
+            },
+            data: suppMdiData,
+          });
+        } else {
+          await tx.grievance_departments.create({
+            data: {
+              grievance_id: grievanceId,
+              ...suppMdiData,
+            },
+          });
+        }
       }
 
       // 4. Update grievance status to ROUTED and increment manual review counter

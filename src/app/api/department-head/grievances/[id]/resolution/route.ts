@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
+import { activateNextSequentialDepartments } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -200,6 +201,18 @@ export async function POST(
             },
           },
         });
+
+        // Mark department stage as completed and trigger next sequential department activation
+        await tx.grievance_departments.update({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+          },
+          data: {
+            status: "COMPLETED",
+            completed_at: new Date(),
+          },
+        });
+        await activateNextSequentialDepartments(grievanceId, tx);
       } else if (latestResolution) {
         // Standard Staff Resolution Review by Department Head
         await tx.resolution_reviews.create({
@@ -250,6 +263,18 @@ export async function POST(
               },
             },
           });
+
+          // Mark department stage as completed and trigger next sequential department activation
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: grievanceDept.grievance_department_id,
+            },
+            data: {
+              status: "COMPLETED",
+              completed_at: new Date(),
+            },
+          });
+          await activateNextSequentialDepartments(grievanceId, tx);
         } else {
           // Returned to staff for clarification / rework
           await tx.grievances.update({
