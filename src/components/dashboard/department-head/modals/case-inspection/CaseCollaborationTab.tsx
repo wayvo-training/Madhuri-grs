@@ -7,7 +7,7 @@ import type { GrievanceItem } from "@/types/department-head";
 
 interface CaseCollaborationTabProps {
   currentGrievance: GrievanceItem;
-  onAddInternalNote: (
+  onAddCollaborationNote: (
     grievance: GrievanceItem,
     note: string,
     parentId?: string,
@@ -18,7 +18,7 @@ interface CaseCollaborationTabProps {
 
 export function CaseCollaborationTab({
   currentGrievance,
-  onAddInternalNote,
+  onAddCollaborationNote,
   onGrievanceUpdated,
 }: CaseCollaborationTabProps) {
   const [newNote, setNewNote] = useState("");
@@ -35,10 +35,12 @@ export function CaseCollaborationTab({
         return res.json();
       })
       .then((json) => {
-        if (isMounted && json?.success && Array.isArray(json.notes)) {
+        if (isMounted && json?.success) {
           onGrievanceUpdated({
             ...grievanceRef.current,
-            internalNotes: json.notes,
+            collaborationNotes: json.collaborationNotes || [],
+            internalNotes:
+              json.internalNotes || grievanceRef.current.internalNotes || [],
           });
         }
       })
@@ -58,7 +60,7 @@ export function CaseCollaborationTab({
     setNewNote("");
     setIsSubmitting(true);
     try {
-      const updated = await onAddInternalNote(currentGrievance, noteText);
+      const updated = await onAddCollaborationNote(currentGrievance, noteText);
       if (updated) {
         onGrievanceUpdated(updated);
       }
@@ -68,7 +70,7 @@ export function CaseCollaborationTab({
   };
 
   const departments = currentGrievance.departmentsInvolved || [];
-  const notes = currentGrievance.internalNotes || [];
+  const notes = currentGrievance.collaborationNotes || [];
 
   return (
     <div className="space-y-6 text-xs animate-in fade-in duration-150">
@@ -202,29 +204,42 @@ export function CaseCollaborationTab({
               No collaborative notes posted yet. Post the first message above.
             </div>
           ) : (
-            notes.map((n) => (
-              <div
-                key={n.id}
-                className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-1.5 shadow-2xs"
-              >
-                <div className="flex items-center justify-between text-[11px]">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900">
-                      {n.author}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
-                      {n.role}
+            notes.map((n) => {
+              const isFindings = n.note.includes("[Department Findings");
+              return (
+                <div
+                  key={n.id}
+                  className={`rounded-xl border p-3.5 space-y-1.5 shadow-2xs ${
+                    isFindings
+                      ? "border-emerald-300 bg-emerald-50/60"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-900">
+                        {n.author}
+                      </span>
+                      {isFindings ? (
+                        <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[9px] font-bold border border-emerald-200">
+                          Supporting Findings
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                          {n.role}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-slate-400 text-[10px]">
+                      {n.timestamp}
                     </span>
                   </div>
-                  <span className="text-slate-400 text-[10px]">
-                    {n.timestamp}
-                  </span>
+                  <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                    {n.note}
+                  </p>
                 </div>
-                <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
-                  {n.note}
-                </p>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

@@ -25,7 +25,7 @@ export async function GET(
     return auth.error;
   }
 
-  const { user, staffId, isAdmin } = auth;
+  const { user, staffId, departmentId, isAdmin } = auth;
   const { id } = await params;
 
   try {
@@ -82,6 +82,7 @@ export async function GET(
                 first_name: true,
                 last_name: true,
                 roles: true,
+                department_id: true,
               },
             },
           },
@@ -214,60 +215,99 @@ export async function GET(
       uploadedAt: formatRelativeTime(grievance.created_at),
     }));
 
-    // Extract two-way internal case notes from audit logs (chronological: oldest to newest)
+    // Extract internal and collaboration notes from audit logs (chronological: oldest to newest)
+    const formatStaffNoteItem = (l: (typeof grievance.audit_logs)[0]) => {
+      const user = l.users;
+      const userRole = user?.roles?.role_name;
+      const val = l.new_value as {
+        note?: string;
+        details?: string;
+        author?: string;
+        role?: string;
+        parentId?: string;
+        replyToAuthor?: string;
+        scope?: string;
+        department_id?: string | number;
+        departmentName?: string;
+      } | null;
+
+      const roleDisplay =
+        val?.role ||
+        (userRole === "DEPARTMENT_HEAD"
+          ? "Department Head"
+          : userRole === "STAFF"
+            ? "Staff"
+            : userRole || "Staff");
+
+      const rawName = user
+        ? `${user.first_name} ${user.last_name || ""}`.trim()
+        : "User";
+
+      const authorDisplay =
+        val?.author ||
+        (userRole === "DEPARTMENT_HEAD"
+          ? `Department Head — ${rawName}`
+          : userRole === "STAFF"
+            ? `Staff — ${rawName}`
+            : rawName);
+
+      return {
+        id: l.audit_log_id.toString(),
+        author: authorDisplay,
+        role: roleDisplay,
+        timestamp: formatRelativeTime(l.created_at),
+        note: val?.note || val?.details || String(l.new_value || ""),
+        parentId: val?.parentId || undefined,
+        replyToAuthor: val?.replyToAuthor || undefined,
+        createdAt: l.created_at.toISOString(),
+      };
+    };
+
     const internalNotes: StaffInternalNote[] = (grievance.audit_logs || [])
-      .filter(
-        (l) =>
+      .filter((l) => {
+        const val = l.new_value as {
+          scope?: string;
+          department_id?: string | number;
+        } | null;
+        const isCollab =
+          l.action === "COLLABORATION_NOTE_ADDED" ||
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val?.scope === "COLLABORATION";
+        if (isCollab) return false;
+
+        const isInternalAction =
           l.action === "HOD_DIRECTIVE_NOTE" ||
           l.action === "INVESTIGATION_NOTE_ADDED" ||
           l.action === "INTERNAL_NOTE_ADDED" ||
-          l.action === "HEAD_DIRECTIVE_ISSUED",
-      )
+          l.action === "HEAD_DIRECTIVE_ISSUED";
+        if (!isInternalAction) return false;
+
+        if (!isAdmin && departmentId) {
+          const authorDeptId =
+            l.users?.department_id?.toString() ||
+            (val?.department_id ? String(val.department_id) : null);
+          if (authorDeptId && authorDeptId !== departmentId.toString()) {
+            return false;
+          }
+        }
+        return true;
+      })
       .slice()
       .reverse()
-      .map((l) => {
-        const user = l.users;
-        const userRole = user?.roles?.role_name;
-        const val = l.new_value as {
-          note?: string;
-          details?: string;
-          author?: string;
-          role?: string;
-          parentId?: string;
-          replyToAuthor?: string;
-        } | null;
+      .map(formatStaffNoteItem);
 
-        const roleDisplay =
-          val?.role ||
-          (userRole === "DEPARTMENT_HEAD"
-            ? "Department Head"
-            : userRole === "STAFF"
-              ? "Staff"
-              : userRole || "Staff");
-
-        const rawName = user
-          ? `${user.first_name} ${user.last_name || ""}`.trim()
-          : "User";
-
-        const authorDisplay =
-          val?.author ||
-          (userRole === "DEPARTMENT_HEAD"
-            ? `Department Head — ${rawName}`
-            : userRole === "STAFF"
-              ? `Staff — ${rawName}`
-              : rawName);
-
-        return {
-          id: l.audit_log_id.toString(),
-          author: authorDisplay,
-          role: roleDisplay,
-          timestamp: formatRelativeTime(l.created_at),
-          note: val?.note || val?.details || String(l.new_value || ""),
-          parentId: val?.parentId || undefined,
-          replyToAuthor: val?.replyToAuthor || undefined,
-          createdAt: l.created_at.toISOString(),
-        };
-      });
+    const collaborationNotes: StaffInternalNote[] = (grievance.audit_logs || [])
+      .filter((l) => {
+        const val = l.new_value as { scope?: string } | null;
+        return (
+          l.action === "COLLABORATION_NOTE_ADDED" ||
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val?.scope === "COLLABORATION"
+        );
+      })
+      .slice()
+      .reverse()
+      .map(formatStaffNoteItem);
 
     const auditTrail: StaffAuditItem[] = (grievance.audit_logs || []).map(
       (log) => {
@@ -394,6 +434,7 @@ export async function GET(
       submittedResolution,
       attachments,
       internalNotes,
+      collaborationNotes,
       auditTrail,
       departmentsInvolved,
       myInvolvementType,
@@ -711,6 +752,10 @@ export async function PATCH(
             note: noteContent,
             author: authorDisplay,
             role: "Staff",
+            department_id: staffUser.department_id
+              ? staffUser.department_id.toString()
+              : null,
+            scope: "INTERNAL",
             details: noteContent,
             parentId: body.parentId?.trim() || null,
             replyToAuthor: body.replyToAuthor?.trim() || null,
@@ -718,43 +763,28 @@ export async function PATCH(
         },
       });
 
-      // Notify all involved Department Heads and collaborating assigned staff
-      const involvedDepts = await prisma.grievance_departments.findMany({
-        where: { grievance_id: grievanceId },
-        include: {
-          assignments: {
-            where: { assignment_status: "ASSIGNED" },
-          },
-        },
-      });
-
-      const userIdsToNotify = new Set<bigint>();
-      for (const d of involvedDepts) {
-        if (d.assignments?.staff_id && d.assignments.staff_id !== staffId) {
-          userIdsToNotify.add(d.assignments.staff_id);
-        }
+      // Notify strictly the Department Head of this staff member's department
+      if (staffUser.department_id) {
         const deptHeads = await prisma.users.findMany({
           where: {
-            department_id: d.department_id,
+            department_id: staffUser.department_id,
             roles: { role_name: "DEPARTMENT_HEAD" },
             status: "ACTIVE",
           },
         });
         for (const dh of deptHeads) {
           if (dh.user_id !== staffId) {
-            userIdsToNotify.add(dh.user_id);
+            await NotificationService.send({
+              userId: dh.user_id,
+              grievanceId,
+              type: "HEAD_INTERNAL_NOTE",
+              title: body.parentId
+                ? "Internal Discussion Reply"
+                : "Internal Discussion Note",
+              message: `${authorDisplay} posted an internal ${body.parentId ? "reply" : "note"} on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+            });
           }
         }
-      }
-
-      for (const uId of userIdsToNotify) {
-        await NotificationService.send({
-          userId: uId,
-          grievanceId,
-          type: "HEAD_INTERNAL_NOTE",
-          title: "Cross-Department Collaboration Note",
-          message: `${authorDisplay} posted a collaboration update on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? noteContent.substring(0, 60) + "..." : noteContent}"`,
-        });
       }
 
       // Confirm to the staff member who logged the note

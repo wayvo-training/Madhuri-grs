@@ -125,6 +125,8 @@ export async function GET(
       return authResult.error;
     }
 
+    const { deptId, isAdmin } = authResult;
+
     const logs = await prisma.audit_logs.findMany({
       where: {
         grievance_id: grievanceId,
@@ -134,14 +136,18 @@ export async function GET(
             "INVESTIGATION_NOTE_ADDED",
             "INTERNAL_NOTE_ADDED",
             "HEAD_DIRECTIVE_ISSUED",
+            "COLLABORATION_NOTE_ADDED",
+            "SUPPORTING_FINDINGS_SUBMITTED",
           ],
         },
       },
       include: {
         users: {
           select: {
+            user_id: true,
             first_name: true,
             last_name: true,
+            department_id: true,
             roles: true,
           },
         },
@@ -149,7 +155,23 @@ export async function GET(
       orderBy: { created_at: "asc" },
     });
 
-    const notes = logs.map((l) => {
+    interface NoteItem {
+      id: string;
+      author: string;
+      role: string;
+      timestamp: string;
+      note: string;
+      parentId?: string;
+      replyToAuthor?: string;
+      createdAt: string;
+      scope?: string;
+      departmentName?: string;
+    }
+
+    const internalNotes: NoteItem[] = [];
+    const collaborationNotes: NoteItem[] = [];
+
+    for (const l of logs) {
       const u = l.users;
       const uRole = u?.roles?.role_name;
 
@@ -188,24 +210,50 @@ export async function GET(
               ? `Admin — ${rawName}`
               : rawName);
 
-      return {
+      const noteText =
+        (val?.note as string) ||
+        (val?.details as string) ||
+        String(l.new_value || "");
+
+      const noteItem: NoteItem = {
         id: l.audit_log_id.toString(),
         author: authorDisplay,
         role: roleDisplay,
         timestamp: formatRelativeTime(l.created_at),
-        note:
-          (val?.note as string) ||
-          (val?.details as string) ||
-          String(l.new_value || ""),
+        note: noteText,
         parentId: (val?.parentId as string) || undefined,
         replyToAuthor: (val?.replyToAuthor as string) || undefined,
         createdAt: l.created_at.toISOString(),
+        scope: (val?.scope as string) || "INTERNAL",
+        departmentName: (val?.departmentName as string) || undefined,
       };
-    });
+
+      const isCollab =
+        l.action === "COLLABORATION_NOTE_ADDED" ||
+        l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+        val?.scope === "COLLABORATION";
+
+      if (isCollab) {
+        collaborationNotes.push(noteItem);
+      } else {
+        // Internal note: only include if it belongs to the requesting user's department
+        if (!isAdmin && deptId) {
+          const authorDeptId =
+            u?.department_id?.toString() ||
+            (val?.department_id ? String(val.department_id) : null);
+          if (authorDeptId && authorDeptId !== deptId.toString()) {
+            continue;
+          }
+        }
+        internalNotes.push(noteItem);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      notes,
+      internalNotes,
+      collaborationNotes,
+      notes: internalNotes,
     });
   } catch (error) {
     console.error(
@@ -238,15 +286,18 @@ export async function POST(
       return authResult.error;
     }
 
-    const { user, userRole, userId } = authResult;
+    const { user, userRole, userId, deptId } = authResult;
     const body = (await request.json()) as {
       note?: string;
       parentId?: string;
       replyToAuthor?: string;
+      scope?: "INTERNAL" | "COLLABORATION";
     };
     const noteText = body?.note?.trim();
     const parentId = body?.parentId?.trim() || undefined;
     const replyToAuthor = body?.replyToAuthor?.trim() || undefined;
+    const scope =
+      body?.scope === "COLLABORATION" ? "COLLABORATION" : "INTERNAL";
 
     if (!noteText) {
       return NextResponse.json(
@@ -254,6 +305,14 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    const userDept = deptId
+      ? await prisma.departments.findUnique({
+          where: { department_id: deptId },
+          select: { department_name: true },
+        })
+      : null;
+    const deptName = userDept?.department_name || "Department";
 
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
@@ -267,14 +326,19 @@ export async function POST(
         : userRole === "STAFF"
           ? "Staff"
           : "Admin";
-    const authorDisplay = `${roleDisplay} — ${authorRawName}`;
+    const authorDisplay =
+      scope === "COLLABORATION"
+        ? `${roleDisplay} — ${authorRawName} (${deptName})`
+        : `${roleDisplay} — ${authorRawName}`;
 
     const action =
-      userRole === "DEPARTMENT_HEAD"
-        ? "HOD_DIRECTIVE_NOTE"
-        : userRole === "STAFF"
-          ? "INVESTIGATION_NOTE_ADDED"
-          : "INTERNAL_NOTE_ADDED";
+      scope === "COLLABORATION"
+        ? "COLLABORATION_NOTE_ADDED"
+        : userRole === "DEPARTMENT_HEAD"
+          ? "HOD_DIRECTIVE_NOTE"
+          : userRole === "STAFF"
+            ? "INVESTIGATION_NOTE_ADDED"
+            : "INTERNAL_NOTE_ADDED";
 
     const createdAudit = await prisma.audit_logs.create({
       data: {
@@ -287,6 +351,9 @@ export async function POST(
           note: noteText,
           author: authorDisplay,
           role: roleDisplay,
+          department_id: deptId ? deptId.toString() : null,
+          departmentName: deptName,
+          scope,
           details: noteText,
           stage: grievance?.status || "IN_PROGRESS",
           parentId: parentId || null,
@@ -295,21 +362,8 @@ export async function POST(
       },
     });
 
-    // Preserve existing notification behavior:
-    // If Department Head posts a directive/reply, notify assigned Staff
-    if (userRole === "DEPARTMENT_HEAD") {
-      const assignment = await prisma.assignments.findFirst({
-        where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" },
-        orderBy: { assigned_at: "desc" },
-      });
-      if (assignment && assignment.staff_id !== userId) {
-        await NotificationService.notifyInternalNote(
-          grievanceId,
-          assignment.staff_id,
-        );
-      }
-    } else if (userRole === "STAFF") {
-      // If Staff posts an internal note/reply, notify involved Department Heads
+    if (scope === "COLLABORATION") {
+      // Notify all involved departments' heads and assigned staff
       const involvedDepts = await prisma.grievance_departments.findMany({
         where: { grievance_id: grievanceId },
         include: {
@@ -343,30 +397,76 @@ export async function POST(
           userId: uId,
           grievanceId,
           type: "HEAD_INTERNAL_NOTE",
-          title: parentId
-            ? "Internal Discussion Reply"
-            : "Internal Discussion Note",
-          message: `${authorDisplay} posted an internal ${
-            parentId ? "reply" : "note"
-          } on grievance ${grievance?.grievance_number || id}: "${
-            noteText.length > 60 ? noteText.substring(0, 60) + "..." : noteText
+          title: `Collaboration Update (${grievance?.grievance_number || id})`,
+          message: `${authorDisplay} posted in Collaboration: "${
+            noteText.length > 60 ? `${noteText.substring(0, 60)}...` : noteText
           }"`,
         });
       }
+    } else {
+      // Scope is INTERNAL: strictly notify only members of the same department
+      if (userRole === "DEPARTMENT_HEAD" && deptId) {
+        const assignment = await prisma.assignments.findFirst({
+          where: {
+            grievance_id: grievanceId,
+            assignment_status: "ASSIGNED",
+            grievance_departments: { department_id: deptId },
+          },
+          orderBy: { assigned_at: "desc" },
+        });
+        if (assignment && assignment.staff_id !== userId) {
+          await NotificationService.notifyInternalNote(
+            grievanceId,
+            assignment.staff_id,
+          );
+        }
+      } else if (userRole === "STAFF" && deptId) {
+        const deptHeads = await prisma.users.findMany({
+          where: {
+            department_id: deptId,
+            roles: { role_name: "DEPARTMENT_HEAD" },
+            status: "ACTIVE",
+          },
+        });
+        for (const dh of deptHeads) {
+          if (dh.user_id !== userId) {
+            await NotificationService.send({
+              userId: dh.user_id,
+              grievanceId,
+              type: "HEAD_INTERNAL_NOTE",
+              title: parentId
+                ? "Internal Discussion Reply"
+                : "Internal Discussion Note",
+              message: `${authorDisplay} posted an internal ${
+                parentId ? "reply" : "note"
+              } on grievance ${grievance?.grievance_number || id}: "${
+                noteText.length > 60
+                  ? `${noteText.substring(0, 60)}...`
+                  : noteText
+              }"`,
+            });
+          }
+        }
+      }
     }
 
-    // Confirm to the author (Department Head / Staff) that their note/reply was posted
+    // Confirm to the author that their note was posted
     await NotificationService.send({
       userId,
       grievanceId,
       type: "HEAD_INTERNAL_NOTE",
-      title: parentId ? "Discussion Reply Logged" : "Internal Note Logged",
-      message: `You added an internal ${parentId ? "reply" : "note"} to grievance ${grievance?.grievance_number || id}.`,
+      title:
+        scope === "COLLABORATION"
+          ? "Collaboration Note Logged"
+          : parentId
+            ? "Discussion Reply Logged"
+            : "Internal Note Logged",
+      message: `You added a ${scope === "COLLABORATION" ? "collaboration note" : `internal ${parentId ? "reply" : "note"}`} to grievance ${grievance?.grievance_number || id}.`,
     });
 
     return NextResponse.json({
       success: true,
-      message: `Added internal ${parentId ? "reply" : "note"} to ${
+      message: `Added ${scope === "COLLABORATION" ? "collaboration note" : `internal ${parentId ? "reply" : "note"}`} to ${
         grievance?.grievance_number || id
       }`,
       note: {
@@ -378,6 +478,8 @@ export async function POST(
         parentId,
         replyToAuthor,
         createdAt: createdAudit.created_at.toISOString(),
+        scope,
+        departmentName: deptName,
       },
     });
   } catch (error) {
@@ -386,9 +488,7 @@ export async function POST(
       {
         success: false,
         message:
-          error instanceof Error
-            ? error.message
-            : "Failed to record internal note",
+          error instanceof Error ? error.message : "Failed to record note",
       },
       { status: 500 },
     );

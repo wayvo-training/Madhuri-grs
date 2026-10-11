@@ -103,6 +103,7 @@ export function DepartmentHeadOverviewInner({
     handleEscalationSubmit: executeEscalationSubmit,
     handleResolutionSubmit: executeResolutionSubmit,
     handleAddInternalNote,
+    handleAddCollaborationNote,
     handleDownloadDocument,
   } = useGrievanceActions({
     currentHodName,
@@ -238,12 +239,6 @@ export function DepartmentHeadOverviewInner({
   );
 
   const handleOpenResolutionModal = useCallback((item: GrievanceItem) => {
-    if (item.isPrimaryDepartment === false) {
-      toast.error(
-        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
-      );
-      return;
-    }
     setResolutionModalGrievance(item);
     setResolutionDecision("APPROVE");
     setResolutionFeedback("");
@@ -557,6 +552,7 @@ export function DepartmentHeadOverviewInner({
             handleOpenProposeKbModal(item);
           }}
           onAddInternalNote={handleAddInternalNote}
+          onAddCollaborationNote={handleAddCollaborationNote}
         />
       )}
 

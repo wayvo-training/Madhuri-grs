@@ -101,7 +101,7 @@ export async function GET(request: Request) {
     return auth.error;
   }
 
-  const { user, departmentId } = auth;
+  const { user, departmentId, isAdmin } = auth;
   const { searchParams } = new URL(request.url);
   const { page, limit, skip } = getPaginationParams(request, 20);
 
@@ -396,60 +396,105 @@ export async function GET(request: Request) {
       const latestEscalation = g.escalations[0];
       const latestResolution = g.resolutions[0];
 
-      // Extract two-way internal notes from audit logs (chronological: oldest to newest)
+      // Extract two-way internal notes (department-private, strictly for viewing department)
+      const parseLogVal = (
+        l: (typeof g.audit_logs)[0],
+      ): Record<string, unknown> => {
+        if (typeof l.new_value === "string") {
+          try {
+            return JSON.parse(l.new_value);
+          } catch {
+            return { note: l.new_value };
+          }
+        } else if (l.new_value && typeof l.new_value === "object") {
+          return l.new_value as Record<string, unknown>;
+        }
+        return {};
+      };
+
+      const formatLogNote = (
+        l: (typeof g.audit_logs)[0],
+        val: Record<string, unknown>,
+      ) => {
+        const u = l.users;
+        const uRole = u?.roles?.role_name;
+        const roleDisplay =
+          (val?.role as string) ||
+          (uRole === "DEPARTMENT_HEAD"
+            ? "Department Head"
+            : uRole === "STAFF"
+              ? "Staff"
+              : uRole || "Staff");
+        const rawName = u
+          ? `${u.first_name} ${u.last_name || ""}`.trim()
+          : "User";
+        const authorDisplay =
+          (val?.author as string) ||
+          (uRole === "DEPARTMENT_HEAD"
+            ? `Department Head — ${rawName}`
+            : uRole === "STAFF"
+              ? `Staff — ${rawName}`
+              : rawName);
+
+        return {
+          id: l.audit_log_id.toString(),
+          author: authorDisplay,
+          role: roleDisplay,
+          timestamp: formatRelativeTime(l.created_at),
+          note:
+            (val?.note as string) ||
+            (val?.details as string) ||
+            String(l.new_value || ""),
+          parentId: (val?.parentId as string) || undefined,
+          replyToAuthor: (val?.replyToAuthor as string) || undefined,
+          createdAt: l.created_at.toISOString(),
+          scope: (val?.scope as string) || "INTERNAL",
+          departmentName: (val?.departmentName as string) || undefined,
+        };
+      };
+
       const internalNotes = g.audit_logs
-        .filter(
-          (l) =>
+        .filter((l) => {
+          const val = parseLogVal(l);
+          const isCollab =
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+            val.scope === "COLLABORATION";
+          if (isCollab) return false;
+
+          const isInternalAction =
             l.action === "HOD_DIRECTIVE_NOTE" ||
             l.action === "INVESTIGATION_NOTE_ADDED" ||
             l.action === "INTERNAL_NOTE_ADDED" ||
-            l.action === "HEAD_DIRECTIVE_ISSUED",
-        )
+            l.action === "HEAD_DIRECTIVE_ISSUED";
+          if (!isInternalAction) return false;
+
+          if (!isAdmin && departmentId) {
+            const authorDeptId =
+              l.users?.department_id?.toString() ||
+              (val.department_id ? String(val.department_id) : null);
+            if (authorDeptId && authorDeptId !== departmentId.toString()) {
+              return false;
+            }
+          }
+          return true;
+        })
         .slice()
         .reverse()
-        .map((l) => {
-          const user = l.users;
-          const userRole = user?.roles?.role_name;
-          const val = l.new_value as {
-            note?: string;
-            details?: string;
-            author?: string;
-            role?: string;
-            parentId?: string;
-            replyToAuthor?: string;
-          } | null;
+        .map((l) => formatLogNote(l, parseLogVal(l)));
 
-          const roleDisplay =
-            val?.role ||
-            (userRole === "DEPARTMENT_HEAD"
-              ? "Department Head"
-              : userRole === "STAFF"
-                ? "Staff"
-                : userRole || "Staff");
-
-          const rawName = user
-            ? `${user.first_name} ${user.last_name || ""}`.trim()
-            : "User";
-
-          const authorDisplay =
-            val?.author ||
-            (userRole === "DEPARTMENT_HEAD"
-              ? `Department Head — ${rawName}`
-              : userRole === "STAFF"
-                ? `Staff — ${rawName}`
-                : rawName);
-
-          return {
-            id: l.audit_log_id.toString(),
-            author: authorDisplay,
-            role: roleDisplay,
-            timestamp: formatRelativeTime(l.created_at),
-            note: val?.note || val?.details || String(l.new_value || ""),
-            parentId: val?.parentId || undefined,
-            replyToAuthor: val?.replyToAuthor || undefined,
-            createdAt: l.created_at.toISOString(),
-          };
-        });
+      const collaborationNotes = g.audit_logs
+        .filter((l) => {
+          const val = parseLogVal(l);
+          return (
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+            val.scope === "COLLABORATION"
+          );
+        })
+        .slice()
+        .reverse()
+        .map((l) => formatLogNote(l, parseLogVal(l)));
 
       const auditTrail = g.audit_logs.map((l) => {
         const user = l.users;
@@ -705,6 +750,7 @@ export async function GET(request: Request) {
           uploadedAt: formatFriendlyDate(a.uploaded_at),
         })),
         internalNotes,
+        collaborationNotes,
       };
     });
 

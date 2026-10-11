@@ -453,6 +453,7 @@ export function useGrievanceActions({
               note: trimmedNote,
               parentId,
               replyToAuthor,
+              scope: "INTERNAL",
             }),
           },
         );
@@ -465,6 +466,84 @@ export function useGrievanceActions({
         loadData(undefined, true);
       } catch (err) {
         console.error("Failed to persist internal note to database:", err);
+      }
+
+      return updatedGrievance;
+    },
+    [currentHodName, loadData, setGrievances, showSuccess],
+  );
+
+  const handleAddCollaborationNote = useCallback(
+    async (
+      grievance: GrievanceItem,
+      noteText: string,
+      parentId?: string,
+      replyToAuthor?: string,
+    ) => {
+      const trimmedNote = noteText.trim();
+      if (!trimmedNote) return;
+
+      const headDisplayName = currentHodName.startsWith("Department Head")
+        ? currentHodName
+        : `Department Head — ${currentHodName}`;
+
+      const newNoteObj = {
+        id: `collab-note-${Date.now()}`,
+        author: headDisplayName,
+        role: "Department Head",
+        timestamp: "Just now",
+        note: trimmedNote,
+        parentId,
+        replyToAuthor,
+      };
+
+      const newAudit: EscalationAuditRecord = {
+        id: `aud-${Date.now()}-collab-note`,
+        timestamp: "Just now",
+        actor: headDisplayName,
+        action: "Cross-Department Collaboration Note",
+        details: trimmedNote,
+        stage: grievance.status,
+      };
+
+      const updatedGrievance: GrievanceItem = {
+        ...grievance,
+        collaborationNotes: [
+          ...(grievance.collaborationNotes || []),
+          newNoteObj,
+        ],
+        auditTrail: [newAudit, ...(grievance.auditTrail || [])],
+      };
+
+      setGrievances((prev) =>
+        prev.map((g) => (g.id === grievance.id ? updatedGrievance : g)),
+      );
+
+      showSuccess(`Added collaboration note to ${grievance.ticketCode}`, 4000);
+
+      try {
+        const res = await fetch(
+          `/api/department-head/grievances/${grievance.id}/notes`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              note: trimmedNote,
+              parentId,
+              replyToAuthor,
+              scope: "COLLABORATION",
+            }),
+          },
+        );
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson?.note?.id) {
+            newNoteObj.id = resJson.note.id;
+          }
+        }
+        loadData(undefined, true);
+      } catch (err) {
+        console.error("Failed to persist collaboration note to database:", err);
       }
 
       return updatedGrievance;
@@ -499,6 +578,7 @@ export function useGrievanceActions({
     handleEscalationSubmit,
     handleResolutionSubmit,
     handleAddInternalNote,
+    handleAddCollaborationNote,
     handleDownloadDocument,
   };
 }

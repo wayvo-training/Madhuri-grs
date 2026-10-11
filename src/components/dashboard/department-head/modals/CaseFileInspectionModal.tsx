@@ -39,6 +39,12 @@ export interface CaseFileInspectionModalProps {
     parentId?: string,
     replyToAuthor?: string,
   ) => Promise<GrievanceItem | undefined>;
+  onAddCollaborationNote?: (
+    grievance: GrievanceItem,
+    note: string,
+    parentId?: string,
+    replyToAuthor?: string,
+  ) => Promise<GrievanceItem | undefined>;
 }
 
 export function CaseFileInspectionModal({
@@ -57,6 +63,7 @@ export function CaseFileInspectionModal({
   onReviewResolutionClick,
   onProposeKbClick,
   onAddInternalNote,
+  onAddCollaborationNote,
 }: CaseFileInspectionModalProps) {
   const [activeTab, setActiveTab] = useState<CaseDrawerTab>(initialTab);
   const [currentGrievance, setCurrentGrievance] =
@@ -91,6 +98,20 @@ export function CaseFileInspectionModal({
                     json.data.internalNotes ||
                     json.data.grievance?.internalNotes,
                 }
+              : {}),
+            ...(json.data.collaborationNotes
+              ? {
+                  collaborationNotes: json.data.collaborationNotes,
+                }
+              : {}),
+            ...(json.data.isBlocked !== undefined
+              ? { isBlocked: json.data.isBlocked }
+              : {}),
+            ...(json.data.blockedReason
+              ? { blockedReason: json.data.blockedReason }
+              : {}),
+            ...(json.data.prerequisiteDepartments
+              ? { prerequisiteDepartments: json.data.prerequisiteDepartments }
               : {}),
             ...(json.data.grievance?.submittedResolution
               ? { submittedResolution: json.data.grievance.submittedResolution }
@@ -231,9 +252,7 @@ export function CaseFileInspectionModal({
             >
               <span>Collaboration</span>
               <span className="rounded-full bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
-                {currentGrievance.departmentsInvolved?.length ||
-                  caseProgressData?.departmentsInvolved?.length ||
-                  0}
+                {currentGrievance.collaborationNotes?.length || 0}
               </span>
             </button>
           )}
@@ -286,7 +305,9 @@ export function CaseFileInspectionModal({
                   currentGrievance.departmentsInvolved ||
                   caseProgressData?.departmentsInvolved,
               }}
-              onAddInternalNote={onAddInternalNote}
+              onAddCollaborationNote={
+                onAddCollaborationNote || onAddInternalNote
+              }
               onGrievanceUpdated={setCurrentGrievance}
             />
           )}

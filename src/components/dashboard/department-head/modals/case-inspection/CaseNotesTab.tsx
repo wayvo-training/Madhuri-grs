@@ -42,10 +42,14 @@ export function CaseNotesTab({
         return res.json();
       })
       .then((json) => {
-        if (isMounted && json?.success && Array.isArray(json.notes)) {
+        if (isMounted && json?.success) {
           onGrievanceUpdated({
             ...grievanceRef.current,
-            internalNotes: json.notes,
+            internalNotes: json.internalNotes || json.notes || [],
+            collaborationNotes:
+              json.collaborationNotes ||
+              grievanceRef.current.collaborationNotes ||
+              [],
           });
         }
       })
@@ -233,11 +237,12 @@ export function CaseNotesTab({
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
             <MessageSquare className="h-4 w-4 text-[#0F766E]" />
-            Internal Discussion
+            Department Internal Discussion
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Private case communication between authorized grievance participants
-            for investigation, coordination, and resolution.
+            Private strictly to your department — visible only to your
+            Department Head and assigned investigating staff. Not visible to
+            collaborating departments or complainant.
           </p>
         </div>
         <span className="rounded-full bg-teal-50 dark:bg-slate-800 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-slate-700 px-2.5 py-0.5 text-xs font-semibold">

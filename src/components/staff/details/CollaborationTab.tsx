@@ -24,9 +24,11 @@ export function CollaborationTab({
   onAddNote,
 }: CollaborationTabProps) {
   const departments = grievance.departmentsInvolved || [];
-  const crossDeptNotes = (grievance.internalNotes || []).filter(
-    (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
-  );
+  const crossDeptNotes =
+    grievance.collaborationNotes ||
+    (grievance.internalNotes || []).filter(
+      (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
+    );
 
   const [noteText, setNoteText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -119,21 +121,37 @@ export function CollaborationTab({
           {/* Notes Feed */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[280px] overflow-y-auto space-y-3">
             {crossDeptNotes.length > 0 ? (
-              crossDeptNotes.map((note) => (
-                <div key={note.id} className="text-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-slate-800 text-xs">
-                      {note.author}
-                    </span>
-                    <span className="text-[10px] text-slate-500 font-medium">
-                      {note.timestamp}
-                    </span>
+              crossDeptNotes.map((note) => {
+                const isFindings = note.note.includes("[Department Findings");
+                return (
+                  <div key={note.id} className="text-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-800 text-xs">
+                          {note.author}
+                        </span>
+                        {isFindings && (
+                          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.2 text-[9px] font-bold border border-emerald-200">
+                            Findings
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {note.timestamp}
+                      </span>
+                    </div>
+                    <div
+                      className={`p-3 rounded-lg text-slate-700 shadow-2xs whitespace-pre-wrap text-xs leading-relaxed ${
+                        isFindings
+                          ? "bg-emerald-50/70 border border-emerald-200 font-sans"
+                          : "bg-white border border-slate-200"
+                      }`}
+                    >
+                      {note.note}
+                    </div>
                   </div>
-                  <div className="p-3 bg-white border border-slate-200 rounded-lg text-slate-700 shadow-2xs whitespace-pre-wrap text-xs leading-relaxed">
-                    {note.note}
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center text-xs text-slate-400 py-6">
                 No cross-department communication yet. Use the box below to

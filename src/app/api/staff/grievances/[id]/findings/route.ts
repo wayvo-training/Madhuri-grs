@@ -149,19 +149,25 @@ export async function POST(
         },
       });
 
-      // 3. Post to Investigation Notes for Collaboration Timeline
+      // 3. Post to Cross-Department Collaboration Timeline
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,
           user_id: staffId,
-          action: "INVESTIGATION_NOTE_ADDED",
+          action: "COLLABORATION_NOTE_ADDED",
           entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
             note: formattedNote,
             author: `Staff — ${authorName} (${deptName})`,
             role: "Staff",
-            details: formattedNote,
+            department_id: myDeptRecord
+              ? myDeptRecord.department_id.toString()
+              : null,
+            departmentName: deptName,
+            scope: "COLLABORATION",
+            isFindings: true,
+            details: `Supporting departmental findings submitted by ${authorName} (${deptName}).`,
           },
         },
       });

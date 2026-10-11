@@ -91,6 +91,7 @@ export async function GET(
                 user_id: true,
                 first_name: true,
                 last_name: true,
+                department_id: true,
                 roles: true,
               },
             },
@@ -361,7 +362,28 @@ export async function GET(
             : "Within SLA",
     };
 
-    // 3. Current Stage & Stepper
+    // 3. Current Stage & Stepper (Department-Scoped)
+    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
+    const rawPrereqs = Array.isArray(myDeptRecord?.prerequisite_department_ids)
+      ? (
+          myDeptRecord.prerequisite_department_ids as (
+            | number
+            | string
+            | bigint
+          )[]
+        ).map(String)
+      : [];
+    const prereqDepts = rawDepartments.filter((d) =>
+      rawPrereqs.includes(d.department_id.toString()),
+    );
+    const prereqNames = prereqDepts.map(
+      (d) => d.departments?.department_name || "Supporting Department",
+    );
+    const prereqSummary =
+      prereqNames.length > 0
+        ? prereqNames.join(", ")
+        : "Prerequisite Department";
+
     let currentStageKey = "SUBMITTED";
     let currentStageLabel = "Grievance Registered";
     let currentStageNumber = 1;
@@ -373,7 +395,15 @@ export async function GET(
       st === "REOPENED" ||
       st === "REOPEN_REVIEW";
 
-    if (st === "CLOSED" || st === "RESOLVED") {
+    if (isDeptBlocked) {
+      currentStageKey = "BLOCKED";
+      currentStageLabel = `Blocked — Waiting on ${prereqSummary} findings`;
+      currentStageNumber = 2;
+    } else if (myDeptRecord?.status === "COMPLETED") {
+      currentStageKey = "COMPLETED";
+      currentStageLabel = "Department Findings Submitted (Completed)";
+      currentStageNumber = 3;
+    } else if (st === "CLOSED" || st === "RESOLVED") {
       currentStageKey = "CLOSED";
       currentStageLabel = "Grievance Closed";
       currentStageNumber = 4;
@@ -417,7 +447,7 @@ export async function GET(
     } else {
       currentStageKey = "SUBMITTED";
       currentStageLabel =
-        st === "ROUTED"
+        st === "ROUTED" || myDeptRecord?.status === "PENDING_ASSIGNMENT"
           ? "Pending Staff Assignment"
           : isReopened
             ? "Reopened — Pending Assignment"
@@ -425,37 +455,122 @@ export async function GET(
       currentStageNumber = 1;
     }
 
-    const progressSteps = [
-      {
-        key: "SUBMITTED",
-        label: "Submitted",
-        isComplete: true,
-        isCurrent: currentStageNumber === 1,
-      },
-      {
-        key: "ASSIGNED",
-        label: "Assigned",
-        isComplete: currentStageNumber >= 2,
-        isCurrent: currentStageNumber === 2,
-      },
-      {
-        key: "INVESTIGATION",
-        label: "Investigation",
-        isComplete: currentStageNumber >= 3,
-        isCurrent: currentStageNumber === 3,
-      },
-      {
-        key: "RESOLUTION",
-        label:
-          st === "AWAITING_USER_RESPONSE"
-            ? "Awaiting Response"
-            : st === "CLOSED" || st === "RESOLVED"
-              ? "Grievance Closed"
-              : "Resolution Review",
-        isComplete: currentStageNumber >= 4,
-        isCurrent: currentStageNumber === 4,
-      },
-    ];
+    const progressSteps = isDeptBlocked
+      ? [
+          {
+            key: "SUBMITTED",
+            label: "Submitted",
+            isComplete: true,
+            isCurrent: false,
+          },
+          {
+            key: "BLOCKED",
+            label: "Blocked (Waiting on Prerequisite)",
+            isComplete: false,
+            isCurrent: true,
+            isBlocked: true,
+          },
+          {
+            key: "INVESTIGATION",
+            label: "Investigation",
+            isComplete: false,
+            isCurrent: false,
+          },
+          {
+            key: "RESOLUTION",
+            label: "Resolution",
+            isComplete: false,
+            isCurrent: false,
+          },
+        ]
+      : myDeptRecord?.status === "COMPLETED"
+        ? [
+            {
+              key: "SUBMITTED",
+              label: "Submitted",
+              isComplete: true,
+              isCurrent: false,
+            },
+            {
+              key: "ASSIGNED",
+              label: "Assigned",
+              isComplete: true,
+              isCurrent: false,
+            },
+            {
+              key: "INVESTIGATION",
+              label: "Findings Completed",
+              isComplete: true,
+              isCurrent: true,
+            },
+            {
+              key: "RESOLUTION",
+              label: "Lead Dept Resolution",
+              isComplete: false,
+              isCurrent: false,
+            },
+          ]
+        : !hasAssignedOfficer &&
+            (st === "ROUTED" ||
+              st === "SUBMITTED" ||
+              myDeptRecord?.status === "PENDING_ASSIGNMENT")
+          ? [
+              {
+                key: "SUBMITTED",
+                label: "Submitted",
+                isComplete: true,
+                isCurrent: false,
+              },
+              {
+                key: "ASSIGNED",
+                label: "Pending Assignment",
+                isComplete: false,
+                isCurrent: true,
+              },
+              {
+                key: "INVESTIGATION",
+                label: "Investigation",
+                isComplete: false,
+                isCurrent: false,
+              },
+              {
+                key: "RESOLUTION",
+                label: "Resolution Review",
+                isComplete: false,
+                isCurrent: false,
+              },
+            ]
+          : [
+              {
+                key: "SUBMITTED",
+                label: "Submitted",
+                isComplete: true,
+                isCurrent: currentStageNumber === 1,
+              },
+              {
+                key: "ASSIGNED",
+                label: "Assigned",
+                isComplete: currentStageNumber >= 2,
+                isCurrent: currentStageNumber === 2,
+              },
+              {
+                key: "INVESTIGATION",
+                label: "Investigation",
+                isComplete: currentStageNumber >= 3,
+                isCurrent: currentStageNumber === 3,
+              },
+              {
+                key: "RESOLUTION",
+                label:
+                  st === "AWAITING_USER_RESPONSE"
+                    ? "Awaiting Response"
+                    : st === "CLOSED" || st === "RESOLVED"
+                      ? "Grievance Closed"
+                      : "Resolution Review",
+                isComplete: currentStageNumber >= 4,
+                isCurrent: currentStageNumber === 4,
+              },
+            ];
 
     // 4. Activity Timeline
     // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
@@ -585,65 +700,107 @@ export async function GET(
       };
     });
 
-    // Extract internal notes (chronological: oldest to newest)
+    // Helper to parse audit log new_value
+    const parseLogVal = (
+      l: (typeof grievance.audit_logs)[0],
+    ): Record<string, unknown> => {
+      if (typeof l.new_value === "string") {
+        try {
+          return JSON.parse(l.new_value);
+        } catch {
+          return { note: l.new_value };
+        }
+      } else if (l.new_value && typeof l.new_value === "object") {
+        return l.new_value as Record<string, unknown>;
+      }
+      return {};
+    };
+
+    const formatNoteItem = (
+      l: (typeof grievance.audit_logs)[0],
+      val: Record<string, unknown>,
+    ) => {
+      const user = l.users;
+      const userRole = user?.roles?.role_name;
+      const roleDisplay =
+        (val?.role as string) ||
+        (userRole === "DEPARTMENT_HEAD"
+          ? "Department Head"
+          : userRole === "STAFF"
+            ? "Staff"
+            : userRole || "Staff");
+
+      const rawName = user
+        ? `${user.first_name} ${user.last_name || ""}`.trim()
+        : "User";
+
+      const authorDisplay =
+        (val?.author as string) ||
+        (userRole === "DEPARTMENT_HEAD"
+          ? `Department Head — ${rawName}`
+          : userRole === "STAFF"
+            ? `Staff — ${rawName}`
+            : rawName);
+
+      return {
+        id: l.audit_log_id.toString(),
+        author: authorDisplay,
+        role: roleDisplay,
+        timestamp: formatRelativeTime(l.created_at),
+        note:
+          (val?.note as string) ||
+          (val?.details as string) ||
+          String(l.new_value || ""),
+        parentId: (val?.parentId as string) || undefined,
+        replyToAuthor: (val?.replyToAuthor as string) || undefined,
+        createdAt: l.created_at.toISOString(),
+      };
+    };
+
+    // Extract internal notes (department-private, strictly for user's department)
     const internalNotes = (grievance.audit_logs || [])
-      .filter(
-        (l) =>
+      .filter((l) => {
+        const val = parseLogVal(l);
+        const isCollab =
+          l.action === "COLLABORATION_NOTE_ADDED" ||
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val.scope === "COLLABORATION";
+        if (isCollab) return false;
+
+        const isInternalAction =
           l.action === "HOD_DIRECTIVE_NOTE" ||
           l.action === "INVESTIGATION_NOTE_ADDED" ||
           l.action === "INTERNAL_NOTE_ADDED" ||
-          l.action === "HEAD_DIRECTIVE_ISSUED",
-      )
+          l.action === "HEAD_DIRECTIVE_ISSUED";
+        if (!isInternalAction) return false;
+
+        if (!isAdmin && departmentId) {
+          const authorDeptId =
+            l.users?.department_id?.toString() ||
+            (val.department_id ? String(val.department_id) : null);
+          if (authorDeptId && authorDeptId !== departmentId.toString()) {
+            return false;
+          }
+        }
+        return true;
+      })
       .slice()
       .reverse()
-      .map((l) => {
-        const user = l.users;
-        const userRole = user?.roles?.role_name;
-        let val: Record<string, unknown> = {};
-        if (typeof l.new_value === "string") {
-          try {
-            val = JSON.parse(l.new_value);
-          } catch {
-            val = { note: l.new_value };
-          }
-        } else if (l.new_value && typeof l.new_value === "object") {
-          val = l.new_value as Record<string, unknown>;
-        }
+      .map((l) => formatNoteItem(l, parseLogVal(l)));
 
-        const roleDisplay =
-          (val?.role as string) ||
-          (userRole === "DEPARTMENT_HEAD"
-            ? "Department Head"
-            : userRole === "STAFF"
-              ? "Staff"
-              : userRole || "Staff");
-
-        const rawName = user
-          ? `${user.first_name} ${user.last_name || ""}`.trim()
-          : "User";
-
-        const authorDisplay =
-          (val?.author as string) ||
-          (userRole === "DEPARTMENT_HEAD"
-            ? `Department Head — ${rawName}`
-            : userRole === "STAFF"
-              ? `Staff — ${rawName}`
-              : rawName);
-
-        return {
-          id: l.audit_log_id.toString(),
-          author: authorDisplay,
-          role: roleDisplay,
-          timestamp: formatRelativeTime(l.created_at),
-          note:
-            (val?.note as string) ||
-            (val?.details as string) ||
-            String(l.new_value || ""),
-          parentId: (val?.parentId as string) || undefined,
-          replyToAuthor: (val?.replyToAuthor as string) || undefined,
-          createdAt: l.created_at.toISOString(),
-        };
-      });
+    // Extract collaboration notes (cross-department, visible to all involved departments)
+    const collaborationNotes = (grievance.audit_logs || [])
+      .filter((l) => {
+        const val = parseLogVal(l);
+        return (
+          l.action === "COLLABORATION_NOTE_ADDED" ||
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val.scope === "COLLABORATION"
+        );
+      })
+      .slice()
+      .reverse()
+      .map((l) => formatNoteItem(l, parseLogVal(l)));
 
     // 5. Latest Activity
     const latestEvent = timeline[0] || null;
@@ -785,6 +942,11 @@ export async function GET(
               }
             )?.knowledge_articles?.length ?? 0) > 0,
         },
+        isBlocked: isDeptBlocked,
+        blockedReason: isDeptBlocked
+          ? `Waiting for findings from ${prereqSummary} before investigation can begin.`
+          : undefined,
+        prerequisiteDepartments: prereqNames,
         currentStage: {
           key: currentStageKey,
           label: currentStageLabel,
@@ -803,6 +965,7 @@ export async function GET(
         latestActivity,
         timeline,
         internalNotes,
+        collaborationNotes,
         departmentsInvolved,
         hodIntervention,
       },

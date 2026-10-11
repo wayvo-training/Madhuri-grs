@@ -42,8 +42,16 @@ export function CaseProgressTab({
     currentGrievance.status === "REOPENED" ||
     (currentGrievance.reopenCount || 0) > 0;
 
-  const fallbackStageNumber =
-    st === "CLOSED" || st === "RESOLVED"
+  const isBlocked = Boolean(
+    caseProgressData?.isBlocked ||
+      currentGrievance.isBlocked ||
+      currentGrievance.status === "BLOCKED" ||
+      caseProgressData?.currentStage?.key === "BLOCKED",
+  );
+
+  const fallbackStageNumber = isBlocked
+    ? 2
+    : st === "CLOSED" || st === "RESOLVED"
       ? 4
       : st === "UNDER_REVIEW"
         ? 4
@@ -58,50 +66,82 @@ export function CaseProgressTab({
 
   const currentStageLabel =
     caseProgressData?.currentStage?.label ||
-    (st === "CLOSED"
-      ? "Grievance Closed"
-      : st === "UNDER_REVIEW"
-        ? "Resolution Submitted — Pending HOD Approval"
-        : st === "ESCALATED"
-          ? isCaseReopened
-            ? "Reopened — Escalated for Intervention"
-            : "Under Active Investigation (Escalated)"
-          : st === "IN_PROGRESS" || st === "REOPENED"
+    (isBlocked
+      ? "Blocked — Waiting on prerequisite findings"
+      : st === "CLOSED"
+        ? "Grievance Closed"
+        : st === "UNDER_REVIEW"
+          ? "Resolution Submitted — Pending HOD Approval"
+          : st === "ESCALATED"
             ? isCaseReopened
-              ? "Reopened — Under Active Investigation"
-              : "Under Active Investigation"
-            : isAssigned || st === "ASSIGNED"
+              ? "Reopened — Escalated for Intervention"
+              : "Under Active Investigation (Escalated)"
+            : st === "IN_PROGRESS" || st === "REOPENED"
               ? isCaseReopened
-                ? `Reopened — Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
-                : `Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
-              : "Pending Staff Assignment");
+                ? "Reopened — Under Active Investigation"
+                : "Under Active Investigation"
+              : isAssigned || st === "ASSIGNED"
+                ? isCaseReopened
+                  ? `Reopened — Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
+                  : `Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
+                : "Pending Staff Assignment");
 
-  const steps = caseProgressData?.currentStage?.progressSteps || [
-    {
-      key: "SUBMITTED",
-      label: "Submitted",
-      isComplete: true,
-      isCurrent: stageNumber === 1,
-    },
-    {
-      key: "ASSIGNED",
-      label: "Assigned",
-      isComplete: stageNumber >= 2,
-      isCurrent: stageNumber === 2,
-    },
-    {
-      key: "INVESTIGATION",
-      label: "Investigation",
-      isComplete: stageNumber >= 3,
-      isCurrent: stageNumber === 3,
-    },
-    {
-      key: "RESOLUTION",
-      label: st === "CLOSED" ? "Grievance Closed" : "Resolution",
-      isComplete: stageNumber >= 4,
-      isCurrent: stageNumber === 4,
-    },
-  ];
+  const steps =
+    caseProgressData?.currentStage?.progressSteps ||
+    (isBlocked
+      ? [
+          {
+            key: "SUBMITTED",
+            label: "Submitted",
+            isComplete: true,
+            isCurrent: false,
+          },
+          {
+            key: "BLOCKED",
+            label: "Blocked (Waiting on Prerequisite)",
+            isComplete: false,
+            isCurrent: true,
+            isBlocked: true,
+          },
+          {
+            key: "INVESTIGATION",
+            label: "Investigation",
+            isComplete: false,
+            isCurrent: false,
+          },
+          {
+            key: "RESOLUTION",
+            label: "Resolution",
+            isComplete: false,
+            isCurrent: false,
+          },
+        ]
+      : [
+          {
+            key: "SUBMITTED",
+            label: "Submitted",
+            isComplete: true,
+            isCurrent: stageNumber === 1,
+          },
+          {
+            key: "ASSIGNED",
+            label: "Assigned",
+            isComplete: stageNumber >= 2,
+            isCurrent: stageNumber === 2,
+          },
+          {
+            key: "INVESTIGATION",
+            label: "Investigation",
+            isComplete: stageNumber >= 3,
+            isCurrent: stageNumber === 3,
+          },
+          {
+            key: "RESOLUTION",
+            label: st === "CLOSED" ? "Grievance Closed" : "Resolution",
+            isComplete: stageNumber >= 4,
+            isCurrent: stageNumber === 4,
+          },
+        ]);
 
   const isSlaExtensionActive = Boolean(
     currentGrievance.hodIntervention?.actionType === "EXTEND_SLA" ||
@@ -207,13 +247,34 @@ export function CaseProgressTab({
 
   return (
     <>
+      {/* Blocked Department Warning Banner */}
+      {isBlocked && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 space-y-1.5 shadow-2xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>
+              Department Investigation Blocked — Prerequisite Dependency Pending
+            </span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            {caseProgressData?.blockedReason ||
+              currentGrievance.blockedReason ||
+              "This grievance requires findings from prerequisite departments before your department can begin active investigation. Staff assignment will unlock automatically once prerequisite findings are submitted."}
+          </p>
+        </div>
+      )}
+
       {/* Current Progress Stepper */}
       <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
             Current Progress
           </span>
-          <span className="text-xs font-semibold text-emerald-800 text-right truncate max-w-full sm:max-w-[70%]">
+          <span
+            className={`text-xs font-semibold text-right truncate max-w-full sm:max-w-[70%] ${
+              isBlocked ? "text-amber-800" : "text-emerald-800"
+            }`}
+          >
             Stage {stageNumber} of {steps.length}: {currentStageLabel}
           </span>
         </div>
@@ -221,7 +282,9 @@ export function CaseProgressTab({
         <div className="relative flex items-start justify-between pt-2 pb-10 px-3 sm:px-6">
           <div className="absolute left-6.5 sm:left-9.5 right-6.5 sm:right-9.5 top-5.5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-600 transition-all duration-300 rounded-full"
+              className={`h-full transition-all duration-300 rounded-full ${
+                isBlocked ? "bg-amber-500" : "bg-emerald-600"
+              }`}
               style={{
                 width: `${Math.min(100, Math.max(0, ((stageNumber - 1) / (steps.length - 1)) * 100))}%`,
               }}
@@ -229,6 +292,9 @@ export function CaseProgressTab({
           </div>
 
           {steps.map((step, idx) => {
+            const isStepBlocked = Boolean(
+              step.isBlocked || (isBlocked && step.key === "BLOCKED"),
+            );
             const isPastOrCurrent = idx < stageNumber;
             const isCurrent = idx === stageNumber - 1;
             return (
@@ -238,12 +304,16 @@ export function CaseProgressTab({
               >
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-bold transition ${
-                    isPastOrCurrent
-                      ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs"
-                      : "border-slate-300 bg-white text-slate-400"
-                  } ${isCurrent ? "ring-3 ring-emerald-100" : ""}`}
+                    isStepBlocked
+                      ? "border-amber-500 bg-amber-500 text-white shadow-2xs ring-3 ring-amber-100"
+                      : isPastOrCurrent
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs"
+                        : "border-slate-300 bg-white text-slate-400"
+                  } ${!isStepBlocked && isCurrent ? "ring-3 ring-emerald-100" : ""}`}
                 >
-                  {isPastOrCurrent ? (
+                  {isStepBlocked ? (
+                    <ShieldAlert className="h-3.5 w-3.5 stroke-2" />
+                  ) : isPastOrCurrent ? (
                     <Check className="h-3.5 w-3.5 stroke-3" />
                   ) : (
                     <span>{idx + 1}</span>
@@ -252,9 +322,11 @@ export function CaseProgressTab({
                 <div className="absolute top-full mt-1.5 w-27.5 sm:w-27.5 left-1/2 -translate-x-1/2 flex justify-center">
                   <span
                     className={`text-[11px] sm:text-xs text-center line-clamp-2 leading-tight ${
-                      isPastOrCurrent
-                        ? "font-semibold text-slate-900"
-                        : "font-medium text-slate-400"
+                      isStepBlocked
+                        ? "font-bold text-amber-900"
+                        : isPastOrCurrent
+                          ? "font-semibold text-slate-900"
+                          : "font-medium text-slate-400"
                     }`}
                   >
                     {step.label}
@@ -495,9 +567,11 @@ export function CaseProgressTab({
                 <p className="text-xs text-slate-500">
                   {isClosedOrResolved
                     ? "Case completed without active staff assignment."
-                    : "No staff member currently assigned to this grievance."}
+                    : isBlocked
+                      ? "Staff assignment is on hold while prerequisite findings are being prepared."
+                      : "No staff member currently assigned to this grievance."}
                 </p>
-                {!isClosedOrResolved && (
+                {!isClosedOrResolved && !isBlocked && (
                   <button
                     type="button"
                     onClick={() => onAssignClick(currentGrievance)}
@@ -506,6 +580,12 @@ export function CaseProgressTab({
                     <UserPlus className="h-3.5 w-3.5" />
                     <span>Assign Staff Now</span>
                   </button>
+                )}
+                {isBlocked && (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+                    <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+                    <span>Assignment unlocks upon prerequisite completion</span>
+                  </span>
                 )}
               </div>
             )}

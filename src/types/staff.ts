@@ -116,6 +116,7 @@ export interface StaffGrievanceItem {
   submittedResolution?: StaffResolutionData | null;
   attachments?: StaffAttachmentItem[];
   internalNotes?: StaffInternalNote[];
+  collaborationNotes?: StaffInternalNote[];
   auditTrail?: StaffAuditItem[];
   departmentsInvolved?: StaffInvolvedDepartment[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";

@@ -161,9 +161,14 @@ export function GrievanceCard({
                 Findings Submitted
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 border border-amber-200">
-                Supporting Dept · Lead Resolves
-              </span>
+              <button
+                type="button"
+                onClick={() => onResolve(grievance)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs transition cursor-pointer bg-amber-600 hover:bg-amber-700"
+              >
+                <FileCheck2 className="h-3.5 w-3.5" />
+                <span>Submit Findings</span>
+              </button>
             ))}
         </div>
       </div>

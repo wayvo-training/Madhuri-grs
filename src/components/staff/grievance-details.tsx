@@ -404,12 +404,20 @@ export function GrievanceDetails({
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 border border-amber-200">
-                      <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
-                      Supporting Dept · Lead Dept Submits Final Resolution
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenResolutionForm) {
+                        onOpenResolutionForm(grievance);
+                      } else {
+                        onOpenResolveModal?.();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Submit Department Findings</span>
+                  </button>
                 )}
               </>
             )}

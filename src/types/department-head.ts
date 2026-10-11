@@ -118,6 +118,9 @@ export interface GrievanceItem {
     uploadedAt?: string;
   }[];
   internalNotes?: InternalNoteItem[];
+  collaborationNotes?: InternalNoteItem[];
+  blockedReason?: string;
+  prerequisiteDepartments?: string[];
   departmentsInvolved?: {
     id: string;
     departmentName: string;
@@ -210,6 +213,9 @@ export interface DocumentPreviewData {
 
 export interface CaseProgressData {
   grievance?: Record<string, unknown>;
+  isBlocked?: boolean;
+  blockedReason?: string;
+  prerequisiteDepartments?: string[];
   currentStage?: {
     key: string;
     label: string;
@@ -219,6 +225,7 @@ export interface CaseProgressData {
       label: string;
       isComplete: boolean;
       isCurrent?: boolean;
+      isBlocked?: boolean;
     }[];
   };
   assignment?: {
