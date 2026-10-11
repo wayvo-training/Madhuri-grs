@@ -2,9 +2,23 @@ export interface DepartmentDependencyNode {
   department_name: string;
   department_id?: string;
   execution_order: number;
+  stage?: number;
   prerequisites: string[]; // Names or IDs of prerequisite departments
+  involvement_type?: "PRIMARY" | "EQUAL" | "SUPPORT" | "SUPPORTING";
   sla_percent_allocation?: number | null;
   allocated_duration_minutes?: number | null;
+}
+
+export interface DerivedOrderNode {
+  department_name: string;
+  department_id?: string;
+  execution_order: number;
+  stage: number;
+  prerequisites: string[];
+  involvement_type?: "PRIMARY" | "EQUAL" | "SUPPORT" | "SUPPORTING";
+  sla_percent_allocation?: number | null;
+  allocated_duration_minutes?: number | null;
+  is_starting_department: boolean;
 }
 
 export interface RoutingPolicyValidationInput {
@@ -21,6 +35,210 @@ export interface RoutingPolicyValidationResult {
   valid: boolean;
   errors: string[];
   normalizedDependencies?: DepartmentDependencyNode[];
+  derivedOrder?: DerivedOrderNode[];
+}
+
+/**
+ * Derives a deterministic execution order and execution stages from a directed dependency graph.
+ *
+ * Requirements:
+ * 1. Kahn's algorithm for topological sorting. Insertion order does not determine execution order.
+ * 2. Deterministic order if multiple valid topological orders exist:
+ *    - Priority: Stage ascending -> Primary department first -> original input list order.
+ * 3. Detects dependency cycles, self-dependencies, and invalid department references.
+ * 4. Identifies independent starting departments (Stage 1, 0 prerequisites).
+ * 5. Returns derived execution order (1, 2, 3...) and stage (1, 2, 3...).
+ */
+export function deriveTopologicalOrder(
+  allDepartments: {
+    name: string;
+    id?: string;
+    isPrimary: boolean;
+    involvementType?: "PRIMARY" | "EQUAL" | "SUPPORT" | "SUPPORTING";
+  }[],
+  depMap: Map<string, DepartmentDependencyNode>,
+): {
+  valid: boolean;
+  errors: string[];
+  derivedOrder: DerivedOrderNode[];
+} {
+  const errors: string[] = [];
+  const allNamesLower = new Set(
+    allDepartments.map((d) => d.name.toLowerCase().trim()),
+  );
+  const allDeptsMap = new Map(
+    allDepartments.map((d) => [d.name.toLowerCase().trim(), d]),
+  );
+
+  // 1. Build clean prerequisites map and validate references / self-dependencies
+  const prereqMap = new Map<string, string[]>();
+
+  for (const dept of allDepartments) {
+    const lower = dept.name.toLowerCase().trim();
+    const custom = depMap.get(lower);
+
+    let rawPrereqs: string[] = [];
+    if (custom && Array.isArray(custom.prerequisites)) {
+      rawPrereqs = custom.prerequisites
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+    } else if (!dept.isPrimary) {
+      // Backward compatibility fallback for legacy rules without explicit prerequisites array
+      const primaryDept = allDepartments.find((d) => d.isPrimary);
+      rawPrereqs = primaryDept ? [primaryDept.name] : [];
+    }
+
+    for (const prereq of rawPrereqs) {
+      const pLower = prereq.toLowerCase();
+      if (pLower === lower) {
+        errors.push(
+          `Department "${dept.name}" cannot have itself as a prerequisite.`,
+        );
+      } else if (!allNamesLower.has(pLower)) {
+        errors.push(
+          `Prerequisite "${prereq}" for department "${dept.name}" is not part of this routing policy.`,
+        );
+      }
+    }
+
+    // Deduplicate prerequisites (case-insensitive) and preserve canonical casing
+    const seenP = new Set<string>();
+    const cleanPrereqs: string[] = [];
+    for (const p of rawPrereqs) {
+      const pLower = p.toLowerCase();
+      if (!seenP.has(pLower) && allNamesLower.has(pLower) && pLower !== lower) {
+        seenP.add(pLower);
+        const canonical = allDeptsMap.get(pLower)?.name || p;
+        cleanPrereqs.push(canonical);
+      }
+    }
+
+    prereqMap.set(lower, cleanPrereqs);
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors, derivedOrder: [] };
+  }
+
+  // 2. Build adjacency list and in-degrees
+  const inDegree = new Map<string, number>();
+  const adjList = new Map<string, string[]>();
+
+  for (const dept of allDepartments) {
+    const lower = dept.name.toLowerCase().trim();
+    inDegree.set(lower, prereqMap.get(lower)?.length || 0);
+    adjList.set(lower, []);
+  }
+
+  for (const dept of allDepartments) {
+    const dependentLower = dept.name.toLowerCase().trim();
+    const prereqs = prereqMap.get(dependentLower) || [];
+    for (const p of prereqs) {
+      adjList.get(p.toLowerCase())?.push(dependentLower);
+    }
+  }
+
+  // 3. Track execution stages
+  const stageMap = new Map<string, number>();
+  for (const dept of allDepartments) {
+    const lower = dept.name.toLowerCase().trim();
+    if ((inDegree.get(lower) ?? 0) === 0) {
+      stageMap.set(lower, 1);
+    }
+  }
+
+  // 4. Collect initial ready list (nodes with in-degree 0)
+  const readyList: string[] = [];
+  for (const dept of allDepartments) {
+    const lower = dept.name.toLowerCase().trim();
+    if ((inDegree.get(lower) ?? 0) === 0) {
+      readyList.push(lower);
+    }
+  }
+
+  const sortedOrderLower: string[] = [];
+
+  // 5. Deterministic Kahn's algorithm
+  while (readyList.length > 0) {
+    // Deterministic comparator:
+    // 1. Stage ascending
+    // 2. Primary department first
+    // 3. Original list order in allDepartments
+    readyList.sort((a, b) => {
+      const stageA = stageMap.get(a) ?? 1;
+      const stageB = stageMap.get(b) ?? 1;
+      if (stageA !== stageB) return stageA - stageB;
+
+      const isPrimaryA = allDeptsMap.get(a)?.isPrimary ? 1 : 0;
+      const isPrimaryB = allDeptsMap.get(b)?.isPrimary ? 1 : 0;
+      if (isPrimaryA !== isPrimaryB) return isPrimaryB - isPrimaryA;
+
+      const idxA = allDepartments.findIndex(
+        (d) => d.name.toLowerCase().trim() === a,
+      );
+      const idxB = allDepartments.findIndex(
+        (d) => d.name.toLowerCase().trim() === b,
+      );
+      return idxA - idxB;
+    });
+
+    const currentLower = readyList.shift();
+    if (!currentLower) break;
+
+    sortedOrderLower.push(currentLower);
+    const currentStage = stageMap.get(currentLower) ?? 1;
+
+    const neighbors = adjList.get(currentLower) || [];
+    for (const nbrLower of neighbors) {
+      const currentNbrStage = stageMap.get(nbrLower) ?? 1;
+      stageMap.set(nbrLower, Math.max(currentNbrStage, currentStage + 1));
+
+      const newDeg = (inDegree.get(nbrLower) ?? 1) - 1;
+      inDegree.set(nbrLower, newDeg);
+      if (newDeg === 0) {
+        readyList.push(nbrLower);
+      }
+    }
+  }
+
+  // 6. Detect cycles or graphs without valid topological order
+  if (sortedOrderLower.length < allDepartments.length) {
+    const cyclicNodes = allDepartments
+      .filter((d) => (inDegree.get(d.name.toLowerCase().trim()) ?? 0) > 0)
+      .map((d) => d.name);
+
+    errors.push(
+      `Dependency cycle detected involving department(s): ${cyclicNodes.join(", ")}. Prerequisites must form a directed acyclic workflow without circular loops.`,
+    );
+
+    return { valid: false, errors, derivedOrder: [] };
+  }
+
+  // 7. Assemble final derived order
+  const derivedOrder: DerivedOrderNode[] = sortedOrderLower.map(
+    (lower, index) => {
+      const deptInfo = allDeptsMap.get(lower)!;
+      const custom = depMap.get(lower);
+      const stage = stageMap.get(lower) ?? 1;
+      const prereqs = prereqMap.get(lower) || [];
+
+      return {
+        department_name: deptInfo.name,
+        department_id: deptInfo.id || custom?.department_id,
+        execution_order: index + 1,
+        stage,
+        prerequisites: prereqs,
+        involvement_type:
+          custom?.involvement_type ||
+          (deptInfo.isPrimary ? "PRIMARY" : "SUPPORT"),
+        sla_percent_allocation: custom?.sla_percent_allocation,
+        allocated_duration_minutes: custom?.allocated_duration_minutes,
+        is_starting_department: prereqs.length === 0,
+      };
+    },
+  );
+
+  return { valid: true, errors: [], derivedOrder };
 }
 
 /**
@@ -28,9 +246,11 @@ export interface RoutingPolicyValidationResult {
  * 1. Exactly one primary lead department is specified.
  * 2. No duplicate supporting departments.
  * 3. Primary department cannot also be a supporting department.
- * 4. Valid prerequisites (all prerequisites must be participating departments, no self-dependencies, primary has no prerequisites).
- * 5. No dependency cycles (DAG validation via topological sorting / Kahn's algorithm).
- * 6. Valid execution order (positive integers, execution order strictly respects prerequisite dependencies).
+ * 4. Valid prerequisites (all prerequisites must be participating departments, no self-dependencies).
+ * 5. Dependency-driven sequential execution order derived via topological sorting (Kahn's algorithm).
+ * 6. Departments with no prerequisites activate first (Stage 1); unmet prerequisites remain BLOCKED.
+ * 7. Circular dependency rejection.
+ * 8. Valid SLA allocations (percentages between 1-100, sum <= 100%, positive durations).
  */
 export function validateRoutingPolicy(
   input: RoutingPolicyValidationInput,
@@ -81,184 +301,124 @@ export function validateRoutingPolicy(
     );
   }
 
-  // If there are fatal primary/supporting department errors, return early
+  // If there are fatal primary department errors, return early
   if (errors.length > 0 && !primaryName && !primaryId) {
     return { valid: false, errors };
   }
 
   const isSequential = input.dependency_type === "SEQUENTIAL";
-  const allParticipatingNames = new Set<string>();
-  if (primaryName) allParticipatingNames.add(primaryName.toLowerCase());
-  for (const supp of normalizedSupporting) {
-    allParticipatingNames.add(supp.toLowerCase());
-  }
-
   const rawDeps = input.dependencies || [];
   const depMap = new Map<string, DepartmentDependencyNode>();
 
   for (const dep of rawDeps) {
     if (!dep.department_name) continue;
-    depMap.set(dep.department_name.toLowerCase(), dep);
+    depMap.set(dep.department_name.toLowerCase().trim(), dep);
   }
 
   const normalizedDeps: DepartmentDependencyNode[] = [];
-  const orderMap = new Map<string, number>();
+  let derivedOrder: DerivedOrderNode[] = [];
 
   if (!isSequential) {
+    // PARALLEL workflow: all departments execute concurrently at Step 1, Stage 1
     for (const suppName of normalizedSupporting) {
       const custom = depMap.get(suppName.toLowerCase());
       normalizedDeps.push({
         department_name: suppName,
         department_id: custom?.department_id,
         execution_order: 1,
+        stage: 1,
         prerequisites: [],
+        involvement_type: custom?.involvement_type || "SUPPORT",
         sla_percent_allocation: custom?.sla_percent_allocation,
         allocated_duration_minutes: custom?.allocated_duration_minutes,
       });
     }
+
+    derivedOrder = [
+      ...(primaryName
+        ? [
+            {
+              department_name: primaryName,
+              department_id: primaryId || undefined,
+              execution_order: 1,
+              stage: 1,
+              prerequisites: [],
+              involvement_type: "PRIMARY" as const,
+              sla_percent_allocation: input.primary_sla_percent,
+              allocated_duration_minutes: input.primary_duration_minutes,
+              is_starting_department: true,
+            },
+          ]
+        : []),
+      ...normalizedDeps.map((d) => ({
+        ...d,
+        stage: d.stage ?? 1,
+        is_starting_department: true,
+      })),
+    ];
   } else {
-    // 3. For Sequential workflows, validate prerequisites and execution order
-    // Primary department is always execution order 1 with 0 prerequisites
-    if (primaryName) {
-      orderMap.set(primaryName.toLowerCase(), 1);
+    // SEQUENTIAL workflow: derive execution order and stages from topological sort
+    const allDepartments: {
+      name: string;
+      id?: string;
+      isPrimary: boolean;
+      involvementType?: "PRIMARY" | "EQUAL" | "SUPPORT" | "SUPPORTING";
+    }[] = [
+      ...(primaryName
+        ? [
+            {
+              name: primaryName,
+              id: primaryId || undefined,
+              isPrimary: true,
+              involvementType: "PRIMARY" as const,
+            },
+          ]
+        : []),
+      ...normalizedSupporting.map((name) => {
+        const custom = depMap.get(name.toLowerCase());
+        return {
+          name,
+          id: custom?.department_id,
+          isPrimary: false,
+          involvementType: custom?.involvement_type || "SUPPORT",
+        };
+      }),
+    ];
+
+    const topoResult = deriveTopologicalOrder(allDepartments, depMap);
+    if (!topoResult.valid) {
+      errors.push(...topoResult.errors);
+      return { valid: false, errors, derivedOrder: [] };
     }
 
-    for (let i = 0; i < normalizedSupporting.length; i++) {
-      const suppName = normalizedSupporting[i];
-      const suppLower = suppName.toLowerCase();
-      const custom = depMap.get(suppLower);
+    derivedOrder = topoResult.derivedOrder;
+    const derivedMap = new Map(
+      derivedOrder.map((node) => [
+        node.department_name.toLowerCase().trim(),
+        node,
+      ]),
+    );
 
-      const execOrder =
-        custom &&
-        Number.isInteger(custom.execution_order) &&
-        custom.execution_order > 0
-          ? custom.execution_order
-          : i + 2; // Default to step 2, 3, etc.
+    // Map derived execution orders & stages back into normalizedDependencies for supporting departments
+    for (const suppName of normalizedSupporting) {
+      const derived = derivedMap.get(suppName.toLowerCase());
+      const custom = depMap.get(suppName.toLowerCase());
 
-      const prereqs =
-        custom &&
-        Array.isArray(custom.prerequisites) &&
-        custom.prerequisites.length > 0
-          ? custom.prerequisites.map((p) => p.trim()).filter(Boolean)
-          : primaryName
-            ? [primaryName]
-            : [];
-
-      orderMap.set(suppLower, execOrder);
       normalizedDeps.push({
         department_name: suppName,
         department_id: custom?.department_id,
-        execution_order: execOrder,
-        prerequisites: prereqs,
+        execution_order: derived?.execution_order ?? 2,
+        stage: derived?.stage ?? 2,
+        prerequisites:
+          derived?.prerequisites ?? (primaryName ? [primaryName] : []),
+        involvement_type: custom?.involvement_type || "SUPPORT",
         sla_percent_allocation: custom?.sla_percent_allocation,
         allocated_duration_minutes: custom?.allocated_duration_minutes,
       });
     }
-
-    // 4. Validate Prerequisites existence & self-dependency
-    for (const node of normalizedDeps) {
-      const nodeLower = node.department_name.toLowerCase();
-
-      for (const prereq of node.prerequisites) {
-        const prereqLower = prereq.toLowerCase();
-
-        // Self-dependency check
-        if (prereqLower === nodeLower) {
-          errors.push(
-            `Department "${node.department_name}" cannot have itself as a prerequisite.`,
-          );
-          continue;
-        }
-
-        // Check if prerequisite is part of participating departments
-        if (!allParticipatingNames.has(prereqLower)) {
-          errors.push(
-            `Prerequisite "${prereq}" for department "${node.department_name}" is not part of this routing policy.`,
-          );
-        }
-      }
-    }
-
-    // 5. Dependency Cycle Detection (Kahn's Algorithm / Topological Sort)
-    // Construct graph: all participating departments
-    const allNodesList = primaryName
-      ? [primaryName, ...normalizedSupporting]
-      : normalizedSupporting;
-
-    const inDegree = new Map<string, number>();
-    const adjList = new Map<string, string[]>();
-
-    for (const name of allNodesList) {
-      const lower = name.toLowerCase();
-      inDegree.set(lower, 0);
-      adjList.set(lower, []);
-    }
-
-    // Build edges: prereq -> dependent
-    for (const node of normalizedDeps) {
-      const dependentLower = node.department_name.toLowerCase();
-      for (const prereq of node.prerequisites) {
-        const prereqLower = prereq.toLowerCase();
-        if (adjList.has(prereqLower)) {
-          adjList.get(prereqLower)?.push(dependentLower);
-          inDegree.set(dependentLower, (inDegree.get(dependentLower) ?? 0) + 1);
-        }
-      }
-    }
-
-    // Enqueue nodes with in-degree 0
-    const queue: string[] = [];
-    for (const [nameLower, deg] of inDegree.entries()) {
-      if (deg === 0) {
-        queue.push(nameLower);
-      }
-    }
-
-    let visitedCount = 0;
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (!current) break;
-      visitedCount++;
-
-      const neighbors = adjList.get(current) || [];
-      for (const nbr of neighbors) {
-        const newDeg = (inDegree.get(nbr) ?? 1) - 1;
-        inDegree.set(nbr, newDeg);
-        if (newDeg === 0) {
-          queue.push(nbr);
-        }
-      }
-    }
-
-    if (visitedCount < allNodesList.length) {
-      const cyclicNodes = Array.from(inDegree.entries())
-        .filter(([, deg]) => deg > 0)
-        .map(([lower]) => {
-          const found = allNodesList.find((n) => n.toLowerCase() === lower);
-          return found || lower;
-        });
-
-      errors.push(
-        `Dependency cycle detected involving department(s): ${cyclicNodes.join(", ")}. Prerequisites must form a directed acyclic workflow without circular loops.`,
-      );
-    }
-
-    // 6. Validate Execution Order against Prerequisites
-    for (const node of normalizedDeps) {
-      const nodeOrder = orderMap.get(node.department_name.toLowerCase()) ?? 1;
-
-      for (const prereq of node.prerequisites) {
-        const prereqOrder = orderMap.get(prereq.toLowerCase()) ?? 1;
-        if (nodeOrder <= prereqOrder) {
-          errors.push(
-            `Invalid execution order: "${node.department_name}" (Step ${nodeOrder}) must have a higher execution order than its prerequisite "${prereq}" (Step ${prereqOrder}).`,
-          );
-        }
-      }
-    }
   }
 
-  // 7. Validate SLA allocations: reject negative values, invalid ranges, and totals exceeding 100%
+  // Validate SLA allocations: reject negative values, invalid ranges, and totals exceeding 100%
   let totalConfiguredPercent = input.primary_sla_percent ?? 0;
   if (
     input.primary_sla_percent !== undefined &&
@@ -318,5 +478,6 @@ export function validateRoutingPolicy(
     valid: errors.length === 0,
     errors,
     normalizedDependencies: normalizedDeps,
+    derivedOrder,
   };
 }

@@ -1,7 +1,18 @@
-import { Loader2, X } from "lucide-react";
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+"use client";
+
+import { Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   type DepartmentDependencyNode,
+  type DerivedOrderNode,
   validateRoutingPolicy,
 } from "@/lib/validations/dependency-graph";
 import type { ModalRuleType } from "@/types/admin/master-rules";
@@ -93,6 +104,16 @@ interface AdminRuleConfigModalProps {
   onSubmit: (event: FormEvent) => void;
 }
 
+export interface ParticipatingDepartmentRow {
+  rowId: string;
+  department_id: string;
+  department_name: string;
+  involvement_type: "PRIMARY" | "EQUAL" | "SUPPORT";
+  prerequisites: string[];
+  sla_percent_allocation?: number | null;
+  allocated_duration_minutes?: number | null;
+}
+
 export function AdminRuleConfigModal({
   open,
   onClose,
@@ -158,6 +179,314 @@ export function AdminRuleConfigModal({
   categories,
   onSubmit,
 }: AdminRuleConfigModalProps) {
+  const [participatingRows, setParticipatingRows] = useState<
+    ParticipatingDepartmentRow[]
+  >([]);
+  const lastInitKey = useRef<string>("");
+
+  useEffect(() => {
+    if (!open || modalRuleType !== "routing") {
+      lastInitKey.current = "";
+      return;
+    }
+    const currentKey = `${editingRuleId ?? "new"}-${open}`;
+    if (lastInitKey.current === currentKey) {
+      return;
+    }
+    lastInitKey.current = currentKey;
+
+    const rows: ParticipatingDepartmentRow[] = [];
+    const leadDept = departments.find(
+      (d) => d.department_id === selectedDeptId,
+    );
+    const leadDepNode = leadDept
+      ? sequentialDependencies?.find(
+          (s) => s.department_name === leadDept.department_name,
+        )
+      : undefined;
+
+    // 1. Primary department row
+    rows.push({
+      rowId: `row-primary-${Date.now()}`,
+      department_id: selectedDeptId || "",
+      department_name: leadDept?.department_name || "",
+      involvement_type: "PRIMARY",
+      prerequisites: leadDepNode?.prerequisites || [],
+      sla_percent_allocation: leadDepNode?.sla_percent_allocation,
+      allocated_duration_minutes: leadDepNode?.allocated_duration_minutes,
+    });
+
+    // 2. Supporting departments
+    selectedSupportingDepts.forEach((suppName, idx) => {
+      const suppDept = departments.find((d) => d.department_name === suppName);
+      const depNode = sequentialDependencies?.find(
+        (s) => s.department_name === suppName,
+      );
+      rows.push({
+        rowId: `row-supp-${idx}-${suppName}`,
+        department_id: suppDept?.department_id || "",
+        department_name: suppName,
+        involvement_type:
+          depNode?.involvement_type === "EQUAL" ? "EQUAL" : "SUPPORT",
+        prerequisites: depNode?.prerequisites || [],
+        sla_percent_allocation: depNode?.sla_percent_allocation,
+        allocated_duration_minutes: depNode?.allocated_duration_minutes,
+      });
+    });
+
+    // 3. Extra nodes in sequentialDependencies if any
+    sequentialDependencies?.forEach((depNode, idx) => {
+      const already = rows.some(
+        (r) => r.department_name === depNode.department_name,
+      );
+      if (!already && depNode.department_name) {
+        const dObj = departments.find(
+          (d) => d.department_name === depNode.department_name,
+        );
+        rows.push({
+          rowId: `row-extra-${idx}-${depNode.department_name}`,
+          department_id: dObj?.department_id || "",
+          department_name: depNode.department_name,
+          involvement_type:
+            depNode.involvement_type === "PRIMARY"
+              ? "PRIMARY"
+              : depNode.involvement_type === "EQUAL"
+                ? "EQUAL"
+                : "SUPPORT",
+          prerequisites: depNode.prerequisites || [],
+          sla_percent_allocation: depNode.sla_percent_allocation,
+          allocated_duration_minutes: depNode.allocated_duration_minutes,
+        });
+      }
+    });
+
+    setParticipatingRows(rows);
+  }, [
+    open,
+    editingRuleId,
+    modalRuleType,
+    selectedDeptId,
+    selectedSupportingDepts,
+    sequentialDependencies,
+    departments,
+  ]);
+
+  const syncRowsToParent = (updatedRows: ParticipatingDepartmentRow[]) => {
+    setParticipatingRows(updatedRows);
+
+    const primaryRow = updatedRows.find(
+      (r) => r.involvement_type === "PRIMARY",
+    );
+    if (primaryRow) {
+      setSelectedDeptId(primaryRow.department_id);
+    } else if (updatedRows.length > 0) {
+      updatedRows[0].involvement_type = "PRIMARY";
+      setSelectedDeptId(updatedRows[0].department_id);
+    } else {
+      setSelectedDeptId("");
+    }
+
+    const nonPrimaryRows = updatedRows.filter(
+      (r) => r !== primaryRow && r.department_name.trim() !== "",
+    );
+    setSelectedSupportingDepts(nonPrimaryRows.map((r) => r.department_name));
+
+    if (setSequentialDependencies) {
+      const nodes: DepartmentDependencyNode[] = updatedRows
+        .filter((r) => r.department_name.trim() !== "")
+        .map((r, idx) => ({
+          department_name: r.department_name,
+          execution_order: idx + 1,
+          stage: 1,
+          prerequisites: r.prerequisites || [],
+          involvement_type: r.involvement_type,
+          sla_percent_allocation: r.sla_percent_allocation,
+          allocated_duration_minutes: r.allocated_duration_minutes,
+        }));
+      setSequentialDependencies(nodes);
+    }
+  };
+
+  const handleDepartmentChange = (rowId: string, newDeptId: string) => {
+    const deptObj = departments.find((d) => d.department_id === newDeptId);
+    const oldRow = participatingRows.find((r) => r.rowId === rowId);
+    const oldDeptName = oldRow?.department_name;
+
+    const updated = participatingRows.map((r) => {
+      if (r.rowId === rowId) {
+        return {
+          ...r,
+          department_id: newDeptId,
+          department_name: deptObj?.department_name || "",
+          prerequisites: r.prerequisites.filter(
+            (p) => p !== deptObj?.department_name,
+          ),
+        };
+      }
+      if (oldDeptName && r.prerequisites.includes(oldDeptName)) {
+        return {
+          ...r,
+          prerequisites: r.prerequisites
+            .filter((p) => p !== oldDeptName)
+            .concat(deptObj ? [deptObj.department_name] : []),
+        };
+      }
+      return r;
+    });
+    syncRowsToParent(updated);
+  };
+
+  const handleInvolvementChange = (
+    rowId: string,
+    newType: "PRIMARY" | "EQUAL" | "SUPPORT",
+  ) => {
+    let updated = [...participatingRows];
+    if (newType === "PRIMARY") {
+      updated = updated.map((r) =>
+        r.rowId === rowId
+          ? { ...r, involvement_type: "PRIMARY" as const }
+          : r.involvement_type === "PRIMARY"
+            ? { ...r, involvement_type: "SUPPORT" as const }
+            : r,
+      );
+    } else {
+      const currentPrimary = updated.find((r) => r.rowId === rowId);
+      if (currentPrimary && currentPrimary.involvement_type === "PRIMARY") {
+        const otherRow = updated.find((r) => r.rowId !== rowId);
+        if (otherRow) {
+          otherRow.involvement_type = "PRIMARY";
+        }
+      }
+      updated = updated.map((r) =>
+        r.rowId === rowId ? { ...r, involvement_type: newType } : r,
+      );
+    }
+    syncRowsToParent(updated);
+  };
+
+  const handleAddDepartment = () => {
+    const availableDept = departments.find(
+      (d) =>
+        !participatingRows.some((r) => r.department_id === d.department_id),
+    );
+    const hasPrimary = participatingRows.some(
+      (r) => r.involvement_type === "PRIMARY",
+    );
+    const newRow: ParticipatingDepartmentRow = {
+      rowId: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      department_id: availableDept?.department_id || "",
+      department_name: availableDept?.department_name || "",
+      involvement_type: hasPrimary ? "SUPPORT" : "PRIMARY",
+      prerequisites: [],
+      sla_percent_allocation: null,
+      allocated_duration_minutes: null,
+    };
+    const updated = [...participatingRows, newRow];
+    syncRowsToParent(updated);
+  };
+
+  const handleRemoveDepartment = (rowId: string) => {
+    if (participatingRows.length <= 1) return;
+    const removedRow = participatingRows.find((r) => r.rowId === rowId);
+    const removedName = removedRow?.department_name;
+
+    let updated = participatingRows.filter((r) => r.rowId !== rowId);
+
+    if (removedRow?.involvement_type === "PRIMARY" && updated.length > 0) {
+      updated = updated.map((r, idx) =>
+        idx === 0 ? { ...r, involvement_type: "PRIMARY" as const } : r,
+      );
+    }
+
+    if (removedName) {
+      updated = updated.map((r) => ({
+        ...r,
+        prerequisites: r.prerequisites.filter((p) => p !== removedName),
+      }));
+    }
+
+    syncRowsToParent(updated);
+  };
+
+  const handleTogglePrerequisite = (rowId: string, prereqDeptName: string) => {
+    const updated = participatingRows.map((r) => {
+      if (r.rowId !== rowId) return r;
+      const exists = r.prerequisites.includes(prereqDeptName);
+      const newPrereqs = exists
+        ? r.prerequisites.filter((p) => p !== prereqDeptName)
+        : [...r.prerequisites, prereqDeptName];
+      return { ...r, prerequisites: newPrereqs };
+    });
+    syncRowsToParent(updated);
+  };
+
+  const handleLinearChain = () => {
+    const validRows = participatingRows.filter(
+      (r) => r.department_name.trim() !== "",
+    );
+    const updated = participatingRows.map((r) => {
+      const idx = validRows.findIndex((vr) => vr.rowId === r.rowId);
+      if (idx <= 0) {
+        return { ...r, prerequisites: [] };
+      }
+      return { ...r, prerequisites: [validRows[idx - 1].department_name] };
+    });
+    syncRowsToParent(updated);
+  };
+
+  const handleMakeAllIndependent = () => {
+    const updated = participatingRows.map((r) => ({
+      ...r,
+      prerequisites: [],
+    }));
+    syncRowsToParent(updated);
+  };
+
+  // Topological sorting derivation & validation
+  const activeNodesForTopologicalSort: DepartmentDependencyNode[] =
+    useMemo(() => {
+      return participatingRows
+        .filter((r) => r.department_name.trim() !== "")
+        .map((r, idx) => ({
+          department_name: r.department_name,
+          execution_order: idx + 1,
+          stage: 1,
+          prerequisites: r.prerequisites || [],
+          involvement_type: r.involvement_type,
+          sla_percent_allocation: r.sla_percent_allocation,
+          allocated_duration_minutes: r.allocated_duration_minutes,
+        }));
+    }, [participatingRows]);
+
+  const topologicalResult = useMemo(() => {
+    const primaryRow = participatingRows.find(
+      (r) => r.involvement_type === "PRIMARY",
+    );
+    const nonPrimaryRows = participatingRows.filter(
+      (r) => r !== primaryRow && r.department_name.trim() !== "",
+    );
+
+    return validateRoutingPolicy({
+      primary_department_name: primaryRow?.department_name || undefined,
+      primary_department_id: primaryRow?.department_id || undefined,
+      supporting_departments: nonPrimaryRows.map((r) => r.department_name),
+      dependency_type: "SEQUENTIAL",
+      dependencies: activeNodesForTopologicalSort,
+    });
+  }, [participatingRows, activeNodesForTopologicalSort]);
+
+  // Group derived order by stage
+  const stagesGrouped = useMemo(() => {
+    const map = new Map<number, DerivedOrderNode[]>();
+    for (const item of topologicalResult.derivedOrder || []) {
+      const st = item.stage ?? 1;
+      const arr = map.get(st) || [];
+      arr.push(item);
+      map.set(st, arr);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a - b);
+  }, [topologicalResult]);
+
   if (!open) return null;
 
   return (
@@ -449,71 +778,47 @@ export function AdminRuleConfigModal({
 
           {modalRuleType === "routing" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    htmlFor="dept-target-select"
-                    className="block font-semibold text-slate-700"
+              {/* Rule-Level Execution Mode Selector */}
+              <div className="space-y-1.5">
+                <span className="block font-semibold text-slate-700 dark:text-slate-200 text-xs">
+                  Rule Execution Mode *
+                </span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setDependencyType?.("PARALLEL")}
+                    className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer ${
+                      dependencyType === "PARALLEL"
+                        ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
                   >
-                    Primary Lead Department *
-                  </label>
-                  <select
-                    id="dept-target-select"
-                    value={selectedDeptId}
-                    required
-                    onChange={(e) => {
-                      setSelectedDeptId(e.target.value);
-                      setSelectedSupportingDepts((prev) =>
-                        prev.filter((d) => {
-                          const dept = departments.find(
-                            (item) => item.department_id === e.target.value,
-                          );
-                          return dept ? d !== dept.department_name : true;
-                        }),
-                      );
-                    }}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      ⚡ Parallel (Concurrent)
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1 leading-snug">
+                      All participating departments activate simultaneously upon
+                      assignment.
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDependencyType?.("SEQUENTIAL")}
+                    className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer ${
+                      dependencyType === "SEQUENTIAL"
+                        ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    }`}
                   >
-                    <option value="">-- Select Department --</option>
-                    {departments.map((d) => (
-                      <option key={d.department_id} value={d.department_id}>
-                        {d.department_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <span className="block font-semibold text-slate-700 dark:text-slate-300">
-                    Lead Role Assignment
-                  </span>
-                  <div className="mt-1 flex h-9 w-full items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/40 dark:border-emerald-800/60 px-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      PRIMARY (Lead Owner)
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      ⛓️ Sequential (Dependency-Driven)
                     </span>
-                    <span className="rounded-md bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-300 tracking-wider">
-                      Fixed Lead
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1 leading-snug">
+                      Departments activate only after configured prerequisite
+                      departments resolve.
                     </span>
-                  </div>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    Routing rule defines the primary accountable lead
-                    department.
-                  </p>
-                </div>
-              </div>
-
-              {/* SLA Policy Architecture Notice */}
-              <div className="rounded-xl border border-sky-200/80 dark:border-sky-800/50 bg-sky-50/60 dark:bg-sky-950/30 p-2.5 text-xs text-slate-600 dark:text-slate-300 flex items-start gap-2">
-                <span className="text-sm">ℹ️</span>
-                <div>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    SLA Architecture Notice:
-                  </span>{" "}
-                  Routing rules determine participating departments and workflow
-                  dependencies. Overall SLA duration targets and department time
-                  allocations are defined under the{" "}
-                  <strong>SLA Policy tab</strong>.
+                  </button>
                 </div>
               </div>
 
@@ -620,511 +925,362 @@ export function AdminRuleConfigModal({
                 </div>
               </div>
 
-              <div>
-                <span className="block font-semibold text-slate-700 mb-1">
-                  Supporting Department(s)
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {departments
-                    .filter((d) => d.department_id !== selectedDeptId)
-                    .map((d) => {
-                      const isChecked = selectedSupportingDepts.includes(
-                        d.department_name,
-                      );
-                      return (
-                        <button
-                          key={d.department_id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedSupportingDepts((prev) => {
-                              const updated = isChecked
-                                ? prev.filter(
-                                    (name) => name !== d.department_name,
-                                  )
-                                : [...prev, d.department_name];
-                              return updated;
-                            });
-                          }}
-                          className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border cursor-pointer ${
-                            isChecked
-                              ? "bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-700/60 text-sky-700 dark:text-sky-300 font-semibold"
-                              : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              isChecked
-                                ? "bg-sky-500 dark:bg-sky-400"
-                                : "bg-slate-300 dark:bg-slate-500"
-                            }`}
-                          />
-                          {d.department_name}
-                        </button>
-                      );
-                    })}
+              {/* 3. Repeatable Participating Department Cards */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
+                      Participating Departments & Involvement Roles
+                    </span>
+                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                      {participatingRows.length} department
+                      {participatingRows.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddDepartment}
+                    disabled={
+                      participatingRows.length >= departments.length &&
+                      departments.length > 0
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-300 dark:border-teal-700 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition disabled:opacity-50 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Department</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {participatingRows.map((row, index) => {
+                    const candidateDepts = participatingRows.filter(
+                      (other) =>
+                        other.rowId !== row.rowId &&
+                        other.department_name.trim() !== "",
+                    );
+
+                    return (
+                      <div
+                        key={row.rowId}
+                        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-3.5 space-y-3"
+                      >
+                        {/* Header of Department Card */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Department #{index + 1}
+                            </span>
+                            {row.involvement_type === "PRIMARY" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                PRIMARY LEAD
+                              </span>
+                            ) : row.involvement_type === "EQUAL" ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-300 dark:border-purple-700/60 px-2 py-0.5 text-[10px] font-bold text-purple-800 dark:text-purple-300">
+                                ⚖ EQUAL CO-OWNER
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-950/70 border border-sky-300 dark:border-sky-700/60 px-2 py-0.5 text-[10px] font-bold text-sky-800 dark:text-sky-300">
+                                SUPPORTING
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDepartment(row.rowId)}
+                            disabled={participatingRows.length <= 1}
+                            className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 cursor-pointer"
+                            title={
+                              participatingRows.length <= 1
+                                ? "At least one department is required"
+                                : "Remove department"
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Fields: Department & Involvement Type */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label
+                              htmlFor={`dept-select-${row.rowId}`}
+                              className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                              Department *
+                            </label>
+                            <select
+                              id={`dept-select-${row.rowId}`}
+                              value={row.department_id}
+                              required
+                              onChange={(e) =>
+                                handleDepartmentChange(
+                                  row.rowId,
+                                  e.target.value,
+                                )
+                              }
+                              className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                            >
+                              <option value="">-- Select Department --</option>
+                              {departments.map((d) => {
+                                const isAlready = participatingRows.some(
+                                  (other) =>
+                                    other.rowId !== row.rowId &&
+                                    other.department_id === d.department_id,
+                                );
+                                return (
+                                  <option
+                                    key={d.department_id}
+                                    value={d.department_id}
+                                    disabled={isAlready}
+                                  >
+                                    {d.department_name}
+                                    {isAlready ? " (already selected)" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor={`involvement-select-${row.rowId}`}
+                              className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300"
+                            >
+                              Involvement Role *
+                            </label>
+                            <select
+                              id={`involvement-select-${row.rowId}`}
+                              value={row.involvement_type}
+                              required
+                              onChange={(e) =>
+                                handleInvolvementChange(
+                                  row.rowId,
+                                  e.target.value as
+                                    | "PRIMARY"
+                                    | "EQUAL"
+                                    | "SUPPORT",
+                                )
+                              }
+                              className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                            >
+                              <option value="PRIMARY">
+                                PRIMARY (Lead Owner)
+                              </option>
+                              <option value="EQUAL">
+                                EQUAL (Equal Co-owner)
+                              </option>
+                              <option value="SUPPORT">
+                                SUPPORT (Supporting)
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Prerequisites Selector (Sequential Mode) */}
+                        {dependencyType === "SEQUENTIAL" && (
+                          <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-slate-800">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                                Prerequisites (Departments that must complete
+                                first with AND logic):
+                              </span>
+                              {row.prerequisites.length === 0 ? (
+                                <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                                  ● Independent Starter (Stage 1)
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded">
+                                  Requires {row.prerequisites.length}{" "}
+                                  prerequisite
+                                  {row.prerequisites.length !== 1 ? "s" : ""}
+                                </span>
+                              )}
+                            </div>
+
+                            {candidateDepts.length === 0 ? (
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
+                                Add another department to configure
+                                prerequisites.
+                              </p>
+                            ) : (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {candidateDepts.map((cand) => {
+                                  const isPrereq = row.prerequisites.includes(
+                                    cand.department_name,
+                                  );
+                                  return (
+                                    <button
+                                      key={cand.rowId}
+                                      type="button"
+                                      onClick={() =>
+                                        handleTogglePrerequisite(
+                                          row.rowId,
+                                          cand.department_name,
+                                        )
+                                      }
+                                      className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border cursor-pointer ${
+                                        isPrereq
+                                          ? "bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 font-semibold shadow-2xs"
+                                          : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                                      }`}
+                                    >
+                                      <span>{isPrereq ? "✓" : "+"}</span>
+                                      <span>{cand.department_name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              {selectedSupportingDepts.length > 0 && setDependencyType && (
-                <div className="space-y-3">
-                  <div>
-                    <span className="block font-semibold text-slate-700 dark:text-slate-200 mb-1.5 text-xs">
-                      Multi-Department Collaboration Mode
+              {/* 4. Execution Flow Visualization & Dependency Validation */}
+              {dependencyType === "PARALLEL" ? (
+                <div className="rounded-xl border border-teal-200 dark:border-teal-800/60 bg-teal-50/40 dark:bg-teal-950/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
+                    <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
+                      Parallel Activation Summary
                     </span>
-                    <div className="grid grid-cols-2 gap-2">
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    All configured departments activate concurrently at Stage 1
+                    upon grievance assignment:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {participatingRows
+                      .filter((r) => r.department_name)
+                      .map((r) => (
+                        <span
+                          key={r.rowId}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-2xs"
+                        >
+                          <span className="font-semibold">
+                            {r.department_name}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold px-1 rounded ${
+                              r.involvement_type === "PRIMARY"
+                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                                : r.involvement_type === "EQUAL"
+                                  ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
+                                  : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
+                            }`}
+                          >
+                            {r.involvement_type}
+                          </span>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Presets and DAG Validation status */}
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => setDependencyType("PARALLEL")}
-                        className={`flex flex-col p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                          dependencyType === "PARALLEL"
-                            ? "bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-900 dark:text-sky-200 font-semibold shadow-2xs"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
-                        }`}
+                        onClick={handleLinearChain}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
                       >
-                        <span className="text-xs font-bold flex items-center gap-1">
-                          ⚡ Concurrent (Parallel)
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                          Lead and supporting departments work simultaneously.
-                        </span>
+                        ⛓️ Linear Chain (1 → 2 → 3)
                       </button>
-
                       <button
                         type="button"
-                        onClick={() => {
-                          setDependencyType("SEQUENTIAL");
-                          // Ensure sequential dependencies are initialized
-                          if (
-                            setSequentialDependencies &&
-                            sequentialDependencies.length === 0
-                          ) {
-                            const leadName =
-                              departments.find(
-                                (d) => d.department_id === selectedDeptId,
-                              )?.department_name || "";
-                            setSequentialDependencies(
-                              selectedSupportingDepts.map((name, i) => ({
-                                department_name: name,
-                                execution_order: i + 2,
-                                prerequisites: leadName ? [leadName] : [],
-                              })),
-                            );
-                          }
-                        }}
-                        className={`flex flex-col p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                          dependencyType === "SEQUENTIAL"
-                            ? "bg-sky-50 dark:bg-sky-950/60 border-sky-400 text-sky-900 dark:text-sky-200 font-semibold shadow-2xs"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
-                        }`}
+                        onClick={handleMakeAllIndependent}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
                       >
-                        <span className="text-xs font-bold flex items-center gap-1">
-                          ⏳ Sequential (Step-by-Step)
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                          Supporting departments activate in configured order
-                          after prerequisites finish.
-                        </span>
+                        ⚡ Make All Independent
                       </button>
                     </div>
+
+                    {!topologicalResult.valid ? (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 dark:text-rose-300">
+                        ⚠ Dependency Issue Detected
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                        ✓ Valid DAG Workflow ({stagesGrouped.length} Stage
+                        {stagesGrouped.length !== 1 ? "s" : ""})
+                      </span>
+                    )}
                   </div>
 
-                  {/* Interactive Sequential Workflow & Dependency Builder */}
-                  {dependencyType === "SEQUENTIAL" && (
-                    <div className="rounded-xl border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-950/20 p-3 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                            Sequential Execution & Prerequisites Workflow
-                          </span>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Configure execution stages and prerequisites for
-                            each participating department.
-                          </p>
-                        </div>
-                        {setSequentialDependencies && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const leadName =
-                                departments.find(
-                                  (d) => d.department_id === selectedDeptId,
-                                )?.department_name || "";
-                              setSequentialDependencies(
-                                selectedSupportingDepts.map((name, idx) => ({
-                                  department_name: name,
-                                  execution_order: idx + 2,
-                                  prerequisites:
-                                    idx === 0
-                                      ? leadName
-                                        ? [leadName]
-                                        : []
-                                      : [selectedSupportingDepts[idx - 1]],
-                                })),
-                              );
-                            }}
-                            className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 px-2 py-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-50 shadow-2xs transition"
-                          >
-                            ⚡ Auto-Cascade (Linear Chain)
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Step 1: Fixed Lead Department */}
-                      <div className="flex items-center justify-between rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/60 dark:bg-emerald-950/40 p-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white font-bold text-2xs">
-                            1
-                          </span>
-                          <span className="font-semibold text-emerald-900 dark:text-emerald-200">
-                            {departments.find(
-                              (d) => d.department_id === selectedDeptId,
-                            )?.department_name || "Lead Department"}
-                          </span>
-                          <span className="rounded bg-emerald-200/70 dark:bg-emerald-900 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">
-                            Primary Lead
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-500">
-                          Initiates Workflow · 0 Prerequisites
-                        </span>
-                      </div>
-
-                      {/* Supporting Departments Dependencies List */}
-                      <div className="space-y-2">
-                        {selectedSupportingDepts.map((suppName, idx) => {
-                          const leadName =
-                            departments.find(
-                              (d) => d.department_id === selectedDeptId,
-                            )?.department_name || "";
-                          const currentDep = sequentialDependencies.find(
-                            (d) =>
-                              d.department_name.toLowerCase() ===
-                              suppName.toLowerCase(),
-                          ) || {
-                            department_name: suppName,
-                            execution_order: idx + 2,
-                            prerequisites: leadName ? [leadName] : [],
-                          };
-
-                          const availablePrereqs = [
-                            ...(leadName ? [leadName] : []),
-                            ...selectedSupportingDepts.filter(
-                              (s) => s !== suppName,
-                            ),
-                          ];
-
-                          return (
-                            <div
-                              key={suppName}
-                              className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2.5 text-xs shadow-2xs space-y-2"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-2xs">
-                                    {currentDep.execution_order}
-                                  </span>
-                                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                                    {suppName}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-1.5">
-                                  <label
-                                    htmlFor={`order-select-${suppName}`}
-                                    className="text-[11px] text-slate-500"
-                                  >
-                                    Step:
-                                  </label>
-                                  <select
-                                    id={`order-select-${suppName}`}
-                                    value={currentDep.execution_order}
-                                    onChange={(e) => {
-                                      const newOrder = Number.parseInt(
-                                        e.target.value,
-                                        10,
-                                      );
-                                      if (setSequentialDependencies) {
-                                        setSequentialDependencies((prev) => {
-                                          const exists = prev.some(
-                                            (d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase(),
-                                          );
-                                          if (exists) {
-                                            return prev.map((d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase()
-                                                ? {
-                                                    ...d,
-                                                    execution_order: newOrder,
-                                                  }
-                                                : d,
-                                            );
-                                          }
-                                          return [
-                                            ...prev,
-                                            {
-                                              department_name: suppName,
-                                              execution_order: newOrder,
-                                              prerequisites:
-                                                currentDep.prerequisites,
-                                            },
-                                          ];
-                                        });
-                                      }
-                                    }}
-                                    className="h-6 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                                  >
-                                    {[2, 3, 4, 5, 6, 7, 8, 9, 10]
-                                      .slice(
-                                        0,
-                                        selectedSupportingDepts.length + 1,
-                                      )
-                                      .map((stepNum) => (
-                                        <option key={stepNum} value={stepNum}>
-                                          Step {stepNum}
-                                        </option>
-                                      ))}
-                                  </select>
-                                </div>
-                              </div>
-
-                              <div>
-                                <span className="block text-[11px] font-medium text-slate-500 mb-1">
-                                  Waits for Completion of:
-                                </span>
-                                <div className="flex flex-wrap gap-1">
-                                  {availablePrereqs.map((prereqName) => {
-                                    const isPrereq =
-                                      currentDep.prerequisites.some(
-                                        (p) =>
-                                          p.toLowerCase() ===
-                                          prereqName.toLowerCase(),
-                                      );
-                                    return (
-                                      <button
-                                        key={prereqName}
-                                        type="button"
-                                        onClick={() => {
-                                          if (setSequentialDependencies) {
-                                            setSequentialDependencies(
-                                              (prev) => {
-                                                const newPrereqs = isPrereq
-                                                  ? currentDep.prerequisites.filter(
-                                                      (p) =>
-                                                        p.toLowerCase() !==
-                                                        prereqName.toLowerCase(),
-                                                    )
-                                                  : [
-                                                      ...currentDep.prerequisites,
-                                                      prereqName,
-                                                    ];
-
-                                                const exists = prev.some(
-                                                  (d) =>
-                                                    d.department_name.toLowerCase() ===
-                                                    suppName.toLowerCase(),
-                                                );
-                                                if (exists) {
-                                                  return prev.map((d) =>
-                                                    d.department_name.toLowerCase() ===
-                                                    suppName.toLowerCase()
-                                                      ? {
-                                                          ...d,
-                                                          prerequisites:
-                                                            newPrereqs,
-                                                        }
-                                                      : d,
-                                                  );
-                                                }
-                                                return [
-                                                  ...prev,
-                                                  {
-                                                    department_name: suppName,
-                                                    execution_order:
-                                                      currentDep.execution_order,
-                                                    prerequisites: newPrereqs,
-                                                  },
-                                                ];
-                                              },
-                                            );
-                                          }
-                                        }}
-                                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-2xs transition border cursor-pointer ${
-                                          isPrereq
-                                            ? "bg-amber-100 dark:bg-amber-900/60 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-semibold"
-                                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100"
-                                        }`}
-                                      >
-                                        <span>{isPrereq ? "✓" : "+"}</span>
-                                        {prereqName}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              {/* Department SLA Allocation Config */}
-                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                                <div>
-                                  <label
-                                    htmlFor={`sla-percent-${suppName}`}
-                                    className="block text-[11px] font-medium text-slate-500 mb-0.5"
-                                  >
-                                    SLA % Share:
-                                  </label>
-                                  <input
-                                    id={`sla-percent-${suppName}`}
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    placeholder="e.g. 30"
-                                    value={
-                                      currentDep.sla_percent_allocation ?? ""
-                                    }
-                                    onChange={(e) => {
-                                      const val =
-                                        e.target.value.trim() === ""
-                                          ? null
-                                          : Number(e.target.value);
-                                      if (setSequentialDependencies) {
-                                        setSequentialDependencies((prev) => {
-                                          const exists = prev.some(
-                                            (d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase(),
-                                          );
-                                          if (exists) {
-                                            return prev.map((d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase()
-                                                ? {
-                                                    ...d,
-                                                    sla_percent_allocation: val,
-                                                  }
-                                                : d,
-                                            );
-                                          }
-                                          return [
-                                            ...prev,
-                                            {
-                                              department_name: suppName,
-                                              execution_order:
-                                                currentDep.execution_order,
-                                              prerequisites:
-                                                currentDep.prerequisites,
-                                              sla_percent_allocation: val,
-                                            },
-                                          ];
-                                        });
-                                      }
-                                    }}
-                                    className="h-6 w-full rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                                  />
-                                </div>
-                                <div>
-                                  <label
-                                    htmlFor={`duration-mins-${suppName}`}
-                                    className="block text-[11px] font-medium text-slate-500 mb-0.5"
-                                  >
-                                    Fixed Duration (Mins):
-                                  </label>
-                                  <input
-                                    id={`duration-mins-${suppName}`}
-                                    type="number"
-                                    min="1"
-                                    placeholder="Optional (e.g. 720)"
-                                    value={
-                                      currentDep.allocated_duration_minutes ??
-                                      ""
-                                    }
-                                    onChange={(e) => {
-                                      const val =
-                                        e.target.value.trim() === ""
-                                          ? null
-                                          : Number(e.target.value);
-                                      if (setSequentialDependencies) {
-                                        setSequentialDependencies((prev) => {
-                                          const exists = prev.some(
-                                            (d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase(),
-                                          );
-                                          if (exists) {
-                                            return prev.map((d) =>
-                                              d.department_name.toLowerCase() ===
-                                              suppName.toLowerCase()
-                                                ? {
-                                                    ...d,
-                                                    allocated_duration_minutes:
-                                                      val,
-                                                  }
-                                                : d,
-                                            );
-                                          }
-                                          return [
-                                            ...prev,
-                                            {
-                                              department_name: suppName,
-                                              execution_order:
-                                                currentDep.execution_order,
-                                              prerequisites:
-                                                currentDep.prerequisites,
-                                              allocated_duration_minutes: val,
-                                            },
-                                          ];
-                                        });
-                                      }
-                                    }}
-                                    className="h-6 w-full rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Real-time DAG & Prerequisite Validation Result Indicator */}
-                      {(() => {
-                        const leadName =
-                          departments.find(
-                            (d) => d.department_id === selectedDeptId,
-                          )?.department_name || "";
-                        const val = validateRoutingPolicy({
-                          primary_department_name: leadName,
-                          primary_department_id: selectedDeptId,
-                          supporting_departments: selectedSupportingDepts,
-                          dependency_type: "SEQUENTIAL",
-                          dependencies: sequentialDependencies,
-                        });
-
-                        if (!val.valid) {
-                          return (
-                            <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:bg-rose-950/40 p-2 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-1.5">
-                              <span className="font-bold">⚠️</span>
-                              <div>
-                                <span className="font-semibold">
-                                  Validation Error:
-                                </span>{" "}
-                                {val.errors[0]}
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/30 p-2 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                            <span className="font-bold">✓</span>
-                            <span>
-                              Valid execution sequence: Verified Directed
-                              Acyclic Graph (DAG) with no circular dependencies.
-                            </span>
-                          </div>
-                        );
-                      })()}
+                  {!topologicalResult.valid && (
+                    <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-2.5 text-xs text-rose-700 dark:text-rose-300">
+                      {topologicalResult.errors[0] ||
+                        "A circular dependency exists between the configured departments. Prerequisites must not loop."}
                     </div>
                   )}
+
+                  {/* Derived Execution Flow Card */}
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        Derived Execution Flow
+                      </span>
+                    </div>
+
+                    {stagesGrouped.length === 0 ? (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        Select departments to generate the execution flow.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {stagesGrouped.map(([stageNum, depts], sIdx) => (
+                          <div key={stageNum} className="space-y-1.5">
+                            {sIdx > 0 && (
+                              <div className="flex items-center justify-center py-0.5 text-slate-400 dark:text-slate-500 text-xs">
+                                <span>↓ then next stage activates</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs shadow-2xs">
+                              <span className="rounded-md bg-teal-100 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:text-teal-300 whitespace-nowrap">
+                                Stage {stageNum}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {depts.map((d) => (
+                                  <span
+                                    key={d.department_name}
+                                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 px-2 py-0.5 text-xs text-slate-800 dark:text-slate-200"
+                                  >
+                                    <span className="font-semibold">
+                                      {d.department_name}
+                                    </span>
+                                    <span
+                                      className={`text-[9px] font-bold px-1 rounded ${
+                                        d.involvement_type === "PRIMARY"
+                                          ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                                          : d.involvement_type === "EQUAL"
+                                            ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
+                                            : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
+                                      }`}
+                                    >
+                                      {d.involvement_type || "SUPPORT"}
+                                    </span>
+                                    {d.prerequisites &&
+                                      d.prerequisites.length > 0 && (
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                                          (after {d.prerequisites.join(" & ")})
+                                        </span>
+                                      )}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

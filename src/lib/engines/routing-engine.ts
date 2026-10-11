@@ -519,8 +519,14 @@ export async function populateGrievanceDepartments(
             grievance?.due_at || null,
           );
 
+      const partnerInv = depNode?.involvement_type
+        ? depNode.involvement_type === "EQUAL"
+          ? ("EQUAL" as const)
+          : ("SUPPORTING" as const)
+        : partnerInvolvement;
+
       const suppMdiData = buildDepartmentMdiData(suppId, {
-        involvementType: partnerInvolvement,
+        involvementType: partnerInv,
         dependencyType,
         executionOrder,
         prerequisiteDepartmentIds: prereqDepartmentIds,
