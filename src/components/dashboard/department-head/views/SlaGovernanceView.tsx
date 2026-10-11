@@ -477,6 +477,10 @@ export function SlaGovernanceView({
                               </span>
                             )}
                           </div>
+                        ) : item.isBlocked || item.status === "BLOCKED" ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
+                            Blocked
+                          </span>
                         ) : (
                           <span className="text-sm text-slate-700">
                             {item.assignedStaffName || "Unassigned"}
@@ -486,6 +490,11 @@ export function SlaGovernanceView({
 
                       <td className="py-2 px-3 align-top">
                         <StatusBadge status={item.status} />
+                        {item.status === "BLOCKED" && (
+                          <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                            Waiting for Prerequisite
+                          </span>
+                        )}
                         {hasAuthority && !isClosedOrResolved && (
                           <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
                             Head Intervention Active

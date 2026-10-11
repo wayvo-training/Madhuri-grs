@@ -202,16 +202,12 @@ export async function GET(
     const myDeptRecord = rawDepartments.find(
       (d) => d.department_id === departmentId,
     );
-    const primaryAssignment =
-      (myDeptRecord
-        ? allDeptAssignments.find(
-            (a) =>
-              a.grievance_department_id ===
-              myDeptRecord.grievance_department_id,
-          )
-        : null) ||
-      allDeptAssignments[0] ||
-      grievance.assignments?.[0];
+    const primaryAssignment = myDeptRecord
+      ? allDeptAssignments.find(
+          (a) =>
+            a.grievance_department_id === myDeptRecord.grievance_department_id,
+        ) || null
+      : allDeptAssignments[0] || grievance.assignments?.[0] || null;
 
     const assignedUser = primaryAssignment?.users_assignments_staff_idTousers;
     const assignment = {
@@ -219,7 +215,9 @@ export async function GET(
       staffId: assignedUser ? assignedUser.user_id.toString() : null,
       staffName: assignedUser
         ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
-        : "Unassigned",
+        : myDeptRecord?.status === "BLOCKED"
+          ? "Blocked (Waiting for Prerequisite)"
+          : "Unassigned",
       designation: assignedUser?.roles?.role_name || "Investigating Officer",
       email: assignedUser?.email || null,
       assignedAt: primaryAssignment?.assigned_at
@@ -228,7 +226,9 @@ export async function GET(
       assignedAtRelative: primaryAssignment?.assigned_at
         ? formatRelativeTime(primaryAssignment.assigned_at)
         : null,
-      status: primaryAssignment?.assignment_status || "PENDING",
+      status:
+        primaryAssignment?.assignment_status ||
+        (myDeptRecord?.status === "BLOCKED" ? "BLOCKED" : "PENDING"),
     };
 
     // Check if there is an HOD intervention (specifically SLA extension)

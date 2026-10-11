@@ -10,7 +10,9 @@ export type GrievanceStatus =
   | "REOPENED"
   | "REOPEN_REVIEW"
   | "CLOSED"
-  | "ESCALATED";
+  | "ESCALATED"
+  | "BLOCKED"
+  | "PENDING_ASSIGNMENT";
 
 export type SlaStatus = "ON_TRACK" | "AT_RISK" | "BREACHED";
 
@@ -101,6 +103,19 @@ export function StatusBadge({ status }: { status: GrievanceStatus | string }) {
       return (
         <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/80 px-2.5 py-0.5 text-sm font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300">
           Reopened
+        </span>
+      );
+    case "BLOCKED":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-sm font-semibold text-amber-900 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-600 dark:bg-amber-500" />
+          Blocked
+        </span>
+      );
+    case "PENDING_ASSIGNMENT":
+      return (
+        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/70 px-2.5 py-0.5 text-sm font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300">
+          Pending Assignment
         </span>
       );
     default:

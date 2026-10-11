@@ -40,7 +40,9 @@ export interface GrievanceItem {
     | "REOPENED"
     | "ESCALATED"
     | "CLOSED"
-    | "RESOLVED";
+    | "RESOLVED"
+    | "BLOCKED"
+    | "PENDING_ASSIGNMENT";
   slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
   slaDeadline: string;
   slaTimeLeft: string;

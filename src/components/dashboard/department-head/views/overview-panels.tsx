@@ -157,7 +157,8 @@ export function AttentionRequiredPanel({
   const renderSortHeader = (label: string, key: SortKey) => {
     const isActive = sortKey === key;
     return (
-      <div
+      <button
+        type="button"
         className="flex items-center gap-1 cursor-pointer select-none hover:text-black transition"
         onClick={() => handleSort(key)}
       >
@@ -173,7 +174,7 @@ export function AttentionRequiredPanel({
         ) : (
           <ArrowUpDown className="w-3 h-3 text-slate-400 hover:text-black" />
         )}
-      </div>
+      </button>
     );
   };
 
@@ -295,7 +296,13 @@ export function AttentionRequiredPanel({
                         To:{" "}
                       </span>
                       <span className="text-[13px] font-medium text-slate-700">
-                        {item.assignedStaffName || (
+                        {item.isBlocked || item.status === "BLOCKED" ? (
+                          <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+                            Blocked
+                          </span>
+                        ) : item.assignedStaffName ? (
+                          item.assignedStaffName
+                        ) : (
                           <span className="italic text-[13px] text-slate-400 font-normal">
                             Unassigned
                           </span>

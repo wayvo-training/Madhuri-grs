@@ -56,15 +56,21 @@ export function CaseInspectionFooter({
 }: CaseInspectionFooterProps) {
   const [isDirectiveModalOpen, setIsDirectiveModalOpen] = useState(false);
 
-  const staffEmail =
-    caseProgressData?.assignment?.email ||
-    staffList.find(
-      (s: StaffMember) => s.id === currentGrievance.assignedStaffId,
-    )?.email;
-  const staffName =
-    caseProgressData?.assignment?.staffName ||
-    currentGrievance.assignedStaffName ||
-    "Staff Member";
+  const isBlocked = Boolean(
+    currentGrievance.isBlocked || currentGrievance.status === "BLOCKED",
+  );
+
+  const staffEmail = isBlocked
+    ? null
+    : caseProgressData?.assignment?.email ||
+      staffList.find(
+        (s: StaffMember) => s.id === currentGrievance.assignedStaffId,
+      )?.email;
+  const staffName = isBlocked
+    ? "Blocked"
+    : caseProgressData?.assignment?.staffName ||
+      currentGrievance.assignedStaffName ||
+      "Staff Member";
 
   const headSenderName = currentHodName || hodName || "Department Head";
   const headSenderEmail = (currentHodEmail || hodEmail || "").trim();
@@ -120,7 +126,11 @@ export function CaseInspectionFooter({
                 className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
               >
                 <UserCheck className="h-3.5 w-3.5 text-slate-500" />
-                <span>Change Assignment</span>
+                <span>
+                  {currentGrievance.assignedStaffId
+                    ? "Change Assignment"
+                    : "Assign Staff"}
+                </span>
               </button>
             )}
 

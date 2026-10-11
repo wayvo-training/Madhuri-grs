@@ -321,6 +321,13 @@ export async function GET(request: Request) {
         (a) => a.grievance_id === g.grievance_id,
       );
 
+      const relatedDepts = allDeptRecords.filter(
+        (d) => d.grievance_id === g.grievance_id,
+      );
+      const myDeptRecord = departmentId
+        ? relatedDepts.find((d) => d.department_id === departmentId)
+        : null;
+
       // Find assignment in this head's department
       const myDeptAssignment = departmentId
         ? grievanceAssignments.find(
@@ -337,9 +344,12 @@ export async function GET(request: Request) {
           )
         : null;
 
-      const activeAssignment =
-        myDeptAssignment || g.assignments[0] || grievanceAssignments[0];
-      const assignedStaff = activeAssignment?.users_assignments_staff_idTousers;
+      // When a department head is viewing, only their department's staff counts as their active assignee
+      const activeAssignment = departmentId
+        ? myDeptAssignment
+        : g.assignments[0] || grievanceAssignments[0] || null;
+      const assignedStaff =
+        activeAssignment?.users_assignments_staff_idTousers || null;
 
       // Compute display name for Assigned To column
       let resolvedAssignedStaffName: string | null = null;
@@ -377,6 +387,10 @@ export async function GET(request: Request) {
       } else if (assignedStaff) {
         resolvedAssignedStaffName =
           `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+      } else if (myDeptRecord?.status === "BLOCKED") {
+        resolvedAssignedStaffName = "Blocked";
+      } else {
+        resolvedAssignedStaffName = "Unassigned";
       }
 
       const latestEscalation = g.escalations[0];
@@ -550,9 +564,6 @@ export async function GET(request: Request) {
       }
 
       // Check cross-department collaboration and involvement
-      const relatedDepts = allDeptRecords.filter(
-        (d) => d.grievance_id === g.grievance_id,
-      );
       const deptList: string[] = relatedDepts.map(
         (d) => d.departments.department_name,
       );
@@ -564,9 +575,6 @@ export async function GET(request: Request) {
       }
       const isCrossDepartment = deptList.length > 1;
 
-      const myDeptRecord = relatedDepts.find(
-        (d) => d.department_id === departmentId,
-      );
       const myInvolvementType =
         (myDeptRecord?.involvement_type as
           | "PRIMARY"
@@ -591,7 +599,7 @@ export async function GET(request: Request) {
         submitterRole: g.users.roles?.role_name || "Employee",
         submitterEmail: g.users.email,
         priority: g.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
-        status: g.status as
+        status: (myDeptRecord?.status === "BLOCKED" ? "BLOCKED" : g.status) as
           | "SUBMITTED"
           | "ROUTED"
           | "ASSIGNED"
@@ -599,7 +607,9 @@ export async function GET(request: Request) {
           | "UNDER_REVIEW"
           | "REOPENED"
           | "ESCALATED"
-          | "CLOSED",
+          | "CLOSED"
+          | "BLOCKED"
+          | "PENDING_ASSIGNMENT",
         slaStatus: (g.sla_status || "ON_TRACK") as
           | "ON_TRACK"
           | "AT_RISK"
