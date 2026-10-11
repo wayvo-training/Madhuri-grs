@@ -31,6 +31,20 @@ export interface UseRuleActionsParams {
   >;
 }
 
+export interface SlaNotificationRecipients {
+  warning: string[];
+  at_risk: string[];
+  critical: string[];
+  escalation: string[];
+}
+
+export const DEFAULT_SLA_RECIPIENTS: SlaNotificationRecipients = {
+  warning: ["ASSIGNED_STAFF"],
+  at_risk: ["ASSIGNED_STAFF", "ALL_DEPT_HEADS"],
+  critical: ["ASSIGNED_STAFF", "ALL_DEPT_HEADS"],
+  escalation: ["PRIMARY_DEPT_HEAD", "ADMIN"],
+};
+
 export function useRuleActions({
   departments,
   categories,
@@ -45,15 +59,13 @@ export function useRuleActions({
   const [actionNotice, setActionNotice] = useState<RuleFeedback | null>(null);
 
   const showNotice = useCallback((type: "success" | "error", text: string) => {
-    setActionNotice({ type, text });
+    setActionNotice(null);
+    toast.dismiss();
     if (type === "success") {
-      toast.success(text);
+      toast.success(text, { id: "rule-action-toast" });
     } else {
-      toast.error(text);
+      toast.error(text, { id: "rule-action-toast" });
     }
-    setTimeout(() => {
-      setActionNotice((prev) => (prev?.text === text ? null : prev));
-    }, 5000);
   }, []);
 
   // Delete Confirmation Modal State
@@ -194,10 +206,9 @@ export function useRuleActions({
             ),
           );
         }
-        toast.error(data.message || "Failed to update rule status.");
+        showNotice("error", data.message || "Failed to update rule status.");
         return;
       }
-      toast.success(data.message || "Rule status updated successfully.");
       showNotice(
         "success",
         `Rule status changed to ${nextStatus.toLowerCase()}.`,
@@ -230,7 +241,9 @@ export function useRuleActions({
           ),
         );
       }
-      toast.error("Network error updating rule status. Please try again.");
+      toast.error("Network error updating rule status. Please try again.", {
+        id: "rule-action-toast",
+      });
     }
   }
 
@@ -258,7 +271,7 @@ export function useRuleActions({
   >([]);
   const [dependencyType, setDependencyType] = useState<
     "PARALLEL" | "SEQUENTIAL"
-  >("PARALLEL");
+  >("SEQUENTIAL");
   const [sequentialDependencies, setSequentialDependencies] = useState<
     DepartmentDependencyNode[]
   >([]);
@@ -278,6 +291,9 @@ export function useRuleActions({
   const [departmentalAllocationMode, setDepartmentalAllocationMode] = useState<
     "FULL" | "EQUAL_SPLIT" | "LEAD_WEIGHTED"
   >("FULL");
+  const [slaRecipients, setSlaRecipients] = useState<SlaNotificationRecipients>(
+    DEFAULT_SLA_RECIPIENTS,
+  );
 
   // Reopen-specific State
   const [reopenWindowHours, setReopenWindowHours] = useState("168");
@@ -299,7 +315,7 @@ export function useRuleActions({
     setSelectedPriorityCatId("");
     setSelectedPrioritySubcatId("");
     setSelectedSupportingDepts([]);
-    setDependencyType("PARALLEL");
+    setDependencyType("SEQUENTIAL");
     setSequentialDependencies([]);
     setDurationHours("24");
     setWarningPercent("50");
@@ -307,6 +323,7 @@ export function useRuleActions({
     setCriticalPercent("90");
     setEscalationPercent("100");
     setDepartmentalAllocationMode("FULL");
+    setSlaRecipients(DEFAULT_SLA_RECIPIENTS);
     setNewCategoryName("");
     setNewSubcategoryName("");
   }
@@ -359,6 +376,7 @@ export function useRuleActions({
         if (!isDefault && !selectedPriorityCatId && !keywords.trim()) {
           toast.error(
             "Category or trigger keywords are required. Every priority rule must define a Category or keywords (or be set as Default Fallback).",
+            { id: "rule-action-toast" },
           );
           setIsSubmitting(false);
           return;
@@ -407,7 +425,8 @@ export function useRuleActions({
         };
       } else if (modalRuleType === "routing") {
         if (!selectedDeptId || !selectedCatId || !selectedRoutingSubcatId) {
-          toast.error(
+          showNotice(
+            "error",
             "Primary Department, Category, and Subcategory are strictly required.",
           );
           setIsSubmitting(false);
@@ -434,10 +453,61 @@ export function useRuleActions({
         });
 
         if (!policyValidation.valid) {
-          toast.error(policyValidation.errors[0]);
+          showNotice("error", policyValidation.errors[0]);
           setIsSubmitting(false);
           return;
         }
+
+        // Validate percentage sum across all participating departments strictly equals 100%
+        if (sequentialDependencies && sequentialDependencies.length > 0) {
+          const hasOwner = sequentialDependencies.some(
+            (d) =>
+              d.involvement_type === "PRIMARY" ||
+              d.involvement_type === "EQUAL",
+          );
+          if (!hasOwner) {
+            showNotice(
+              "error",
+              "Cannot have only supporting departments. At least one department must be PRIMARY or EQUAL.",
+            );
+            setIsSubmitting(false);
+            return;
+          }
+
+          const missingPct = sequentialDependencies.find(
+            (d) =>
+              d.department_name &&
+              (d.sla_percent_allocation == null ||
+                Number(d.sla_percent_allocation) <= 0),
+          );
+          if (missingPct) {
+            showNotice(
+              "error",
+              `Please specify a valid SLA percentage (> 0%) for department "${missingPct.department_name}".`,
+            );
+            setIsSubmitting(false);
+            return;
+          }
+
+          const totalPct = sequentialDependencies.reduce(
+            (sum, d) => sum + (Number(d.sla_percent_allocation) || 0),
+            0,
+          );
+          if (Math.round(totalPct) !== 100) {
+            showNotice(
+              "error",
+              `Total SLA percentage allocation across all participating departments must equal exactly 100% (currently ${totalPct}%). Please adjust them to equal 100%.`,
+            );
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        const leadDeptNode = sequentialDependencies?.find(
+          (d) =>
+            d.involvement_type === "PRIMARY" || d.involvement_type === "EQUAL",
+        );
+        const resolvedInvolvement = leadDeptNode?.involvement_type || "PRIMARY";
 
         endpoint = "/api/admin/rules/routing";
         payload = {
@@ -445,11 +515,14 @@ export function useRuleActions({
           department_id: selectedDeptId,
           category_id: selectedCatId,
           subcategory_id: selectedRoutingSubcatId,
-          involvement_type: "PRIMARY",
+          involvement_type: resolvedInvolvement,
           supporting_departments: selectedSupportingDepts,
           conditions: {
             dependency_type: dependencyType,
             dependencies: policyValidation.normalizedDependencies,
+            primary_sla_percent: leadDeptNode?.sla_percent_allocation ?? null,
+            primary_duration_minutes:
+              leadDeptNode?.allocated_duration_minutes ?? null,
           },
           rule_order: Number.parseInt(ruleOrder, 10) || 10,
           status: ruleStatus,
@@ -484,7 +557,15 @@ export function useRuleActions({
             Number.parseFloat(escalationPercent) || 100,
           target_role: "DEPARTMENT_HEAD",
           status: ruleStatus,
+          notification_recipients: slaRecipients,
           trigger_condition: {
+            warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
+            at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
+            critical_threshold_percent:
+              Number.parseFloat(criticalPercent) || 90,
+            escalation_threshold_percent:
+              Number.parseFloat(escalationPercent) || 100,
+            notification_recipients: slaRecipients,
             departmental_allocation_mode: departmentalAllocationMode,
           },
         };
@@ -537,7 +618,9 @@ export function useRuleActions({
       const isEditing = Boolean(editingRuleId);
       const method =
         isEditing &&
-        (modalRuleType === "priority" || modalRuleType === "routing")
+        (modalRuleType === "priority" ||
+          modalRuleType === "routing" ||
+          modalRuleType === "sla")
           ? "PATCH"
           : "POST";
       const submitPayload =
@@ -545,7 +628,9 @@ export function useRuleActions({
           ? { ...payload, priority_rule_id: editingRuleId }
           : isEditing && modalRuleType === "routing"
             ? { ...payload, routing_rule_id: editingRuleId }
-            : payload;
+            : isEditing && modalRuleType === "sla"
+              ? { ...payload, sla_policy_id: editingRuleId }
+              : payload;
 
       const res = await fetch(endpoint, {
         method,
@@ -555,7 +640,6 @@ export function useRuleActions({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to save policy rule.");
         showNotice("error", data.message || "Failed to save policy rule.");
         setIsSubmitting(false);
         return;
@@ -597,12 +681,19 @@ export function useRuleActions({
           setRoutingRules((prev) => [...prev, data.rule]);
         }
       } else if (modalRuleType === "sla") {
-        setSlaPolicies((prev) => [...prev, data.policy]);
+        if (isEditing) {
+          setSlaPolicies((prev) =>
+            prev.map((s) =>
+              s.sla_policy_id === editingRuleId ? { ...s, ...data.policy } : s,
+            ),
+          );
+        } else {
+          setSlaPolicies((prev) => [...prev, data.policy]);
+        }
       } else if (modalRuleType === "reopen") {
         setReopenPolicies((prev) => [...prev, data.policy]);
       }
 
-      toast.success(data.message || "Rule saved successfully.");
       showNotice(
         "success",
         data.message || `Policy '${ruleName}' has been configured and saved.`,
@@ -615,7 +706,9 @@ export function useRuleActions({
       }, 1000);
     } catch (err) {
       console.error("Rule creation failed:", err);
-      toast.error("Network error occurred while saving rule.");
+      toast.error("Network error occurred while saving rule.", {
+        id: "rule-action-toast",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -680,6 +773,8 @@ export function useRuleActions({
     setEscalationPercent,
     departmentalAllocationMode,
     setDepartmentalAllocationMode,
+    slaRecipients,
+    setSlaRecipients,
     reopenWindowHours,
     setReopenWindowHours,
     maxReopens,

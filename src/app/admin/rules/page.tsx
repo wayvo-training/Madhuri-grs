@@ -9,51 +9,93 @@ import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
+async function fetchRulesPageData(maxAttempts = 3) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      // Batch 1: Core reference lookup tables
+      const [departments, rawCategories] = await Promise.all([
+        prisma.departments.findMany({
+          where: { status: "ACTIVE" },
+          select: {
+            department_id: true,
+            department_name: true,
+          },
+          orderBy: { department_name: "asc" },
+        }),
+        prisma.categories.findMany({
+          where: { status: "ACTIVE" },
+          include: {
+            subcategories: {
+              where: { status: "ACTIVE" },
+              select: { subcategory_id: true, subcategory_name: true },
+              orderBy: { subcategory_name: "asc" },
+            },
+          },
+          orderBy: { category_name: "asc" },
+        }),
+      ]);
+
+      // Batch 2: Rule configuration tables
+      const [
+        rawPriorityRules,
+        rawRoutingRules,
+        rawSlaPolicies,
+        rawReopenPolicies,
+      ] = await Promise.all([
+        prisma.priority_rules.findMany({ orderBy: { rule_order: "asc" } }),
+        prisma.routing_rules.findMany({
+          include: {
+            departments: true,
+            categories: true,
+            subcategories: true,
+          },
+          orderBy: { rule_order: "asc" },
+        }),
+        prisma.sla_policies.findMany({
+          orderBy: { target_duration_minutes: "asc" },
+        }),
+        prisma.reopen_policies.findMany({ orderBy: { created_at: "desc" } }),
+      ]);
+
+      return {
+        departments,
+        rawCategories,
+        rawPriorityRules,
+        rawRoutingRules,
+        rawSlaPolicies,
+        rawReopenPolicies,
+      };
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(
+        `[AdminRulesPage] Database connection attempt ${attempt}/${maxAttempts} failed: ${msg}`,
+      );
+
+      if (attempt < maxAttempts) {
+        // Linear backoff before retry
+        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export default async function AdminRulesPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const [
+  const {
+    departments,
+    rawCategories,
     rawPriorityRules,
     rawRoutingRules,
     rawSlaPolicies,
     rawReopenPolicies,
-    rawCategories,
-    departments,
-  ] = await Promise.all([
-    prisma.priority_rules.findMany({ orderBy: { rule_order: "asc" } }),
-    prisma.routing_rules.findMany({
-      include: {
-        departments: true,
-        categories: true,
-        subcategories: true,
-      },
-      orderBy: { rule_order: "asc" },
-    }),
-    prisma.sla_policies.findMany({
-      orderBy: { target_duration_minutes: "asc" },
-    }),
-    prisma.reopen_policies.findMany({ orderBy: { created_at: "desc" } }),
-    prisma.categories.findMany({
-      where: { status: "ACTIVE" },
-      include: {
-        subcategories: {
-          where: { status: "ACTIVE" },
-          select: { subcategory_id: true, subcategory_name: true },
-          orderBy: { subcategory_name: "asc" },
-        },
-      },
-      orderBy: { category_name: "asc" },
-    }),
-    prisma.departments.findMany({
-      where: { status: "ACTIVE" },
-      select: {
-        department_id: true,
-        department_name: true,
-      },
-      orderBy: { department_name: "asc" },
-    }),
-  ]);
+  } = await fetchRulesPageData();
 
   const serializedDepartments = departments.map((d) => ({
     department_id: d.department_id.toString(),
@@ -118,6 +160,7 @@ export default async function AdminRulesPage() {
             : s.escalation_threshold_percent.toString(),
         target_role: s.target_role,
         status: s.status,
+        trigger_condition: s.trigger_condition,
       };
     },
   );

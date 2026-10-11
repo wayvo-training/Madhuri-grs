@@ -1,6 +1,5 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
@@ -61,8 +60,6 @@ export function AdminMasterRules({
 
   // 3. Rule Actions & Modals State
   const {
-    actionNotice,
-    setActionNotice,
     deleteModal,
     setDeleteModal,
     confirmDelete,
@@ -132,6 +129,8 @@ export function AdminMasterRules({
     handleCreateRule,
     keywords,
     setKeywords,
+    slaRecipients,
+    setSlaRecipients,
   } = useRuleActions({
     departments,
     categories,
@@ -166,19 +165,6 @@ export function AdminMasterRules({
           title="Master Governance & Rules"
           action={
             <div className="flex items-center gap-3 shrink-0 flex-nowrap">
-              {activeTab === "priority" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetForm();
-                    setModalRuleType("priority");
-                    setRuleModalOpen(true);
-                  }}
-                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
-                >
-                  + Create Priority Rule
-                </button>
-              )}
               {activeTab === "routing" && (
                 <button
                   type="button"
@@ -190,6 +176,19 @@ export function AdminMasterRules({
                   className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
                 >
                   + Create Routing Rule
+                </button>
+              )}
+              {activeTab === "priority" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setModalRuleType("priority");
+                    setRuleModalOpen(true);
+                  }}
+                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                >
+                  + Create Priority Rule
                 </button>
               )}
               {activeTab === "sla" && (
@@ -223,42 +222,15 @@ export function AdminMasterRules({
         />
       </div>
 
-      {/* Global Action Banner */}
-      {actionNotice && (
-        <div
-          className={`mx-5 sm:mx-6 mt-4 flex items-center justify-between gap-2 rounded-xl border p-3 text-xs animate-in fade-in duration-150 ${
-            actionNotice.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-rose-200 bg-rose-50 text-rose-800"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {actionNotice.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600" />
-            )}
-            <span className="font-medium">{actionNotice.text}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActionNotice(null)}
-            className="text-slate-400 hover:text-slate-600 transition cursor-pointer p-0.5"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 px-5 sm:px-6 mt-2 overflow-x-auto no-scrollbar">
         {[
+          { id: "routing", label: "Routing Rules", count: routingRules.length },
           {
             id: "priority",
             label: "Priority Rules",
             count: priorityRules.length,
           },
-          { id: "routing", label: "Routing Rules", count: routingRules.length },
           { id: "sla", label: "SLA Policies", count: slaPolicies.length },
           {
             id: "reopen",
@@ -542,6 +514,8 @@ export function AdminMasterRules({
               const cond = r.conditions as {
                 dependency_type?: "PARALLEL" | "SEQUENTIAL";
                 dependencies?: DepartmentDependencyNode[];
+                primary_sla_percent?: number | null;
+                primary_duration_minutes?: number | null;
               } | null;
               if (cond?.dependency_type) {
                 setDependencyType(cond.dependency_type);
@@ -549,7 +523,24 @@ export function AdminMasterRules({
                 setDependencyType("PARALLEL");
               }
               if (cond?.dependencies && Array.isArray(cond.dependencies)) {
-                setSequentialDependencies(cond.dependencies);
+                const hasLead = cond.dependencies.some(
+                  (d) => d.department_name === r.department_name,
+                );
+                if (!hasLead && r.department_name) {
+                  const leadNode: DepartmentDependencyNode = {
+                    department_name: r.department_name,
+                    execution_order: 1,
+                    stage: 1,
+                    prerequisites: [],
+                    involvement_type: "PRIMARY",
+                    sla_percent_allocation: cond.primary_sla_percent ?? null,
+                    allocated_duration_minutes:
+                      cond.primary_duration_minutes ?? null,
+                  };
+                  setSequentialDependencies([leadNode, ...cond.dependencies]);
+                } else {
+                  setSequentialDependencies(cond.dependencies);
+                }
               } else {
                 setSequentialDependencies([]);
               }
@@ -587,6 +578,22 @@ export function AdminMasterRules({
               setEscalationPercent(
                 p.escalation_threshold_percent?.toString() || "100",
               );
+
+              try {
+                const tc = p.trigger_condition as
+                  | {
+                      notification_recipients?: {
+                        warning: string[];
+                        at_risk: string[];
+                        critical: string[];
+                        escalation: string[];
+                      };
+                    }
+                  | undefined;
+                if (tc?.notification_recipients) {
+                  setSlaRecipients(tc.notification_recipients);
+                }
+              } catch (_e) {}
 
               setRuleModalOpen(true);
             }}
@@ -691,6 +698,8 @@ export function AdminMasterRules({
         newSubcategoryName={newSubcategoryName}
         setNewSubcategoryName={setNewSubcategoryName}
         isSubmitting={isSubmitting}
+        slaRecipients={slaRecipients}
+        setSlaRecipients={setSlaRecipients}
         departments={departments}
         categories={categories}
         onSubmit={handleCreateRule}
