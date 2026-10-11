@@ -32,7 +32,13 @@ export async function GET(
       include: {
         grievances: {
           include: {
-            grievance_departments: true,
+            categories: true,
+            subcategories: true,
+            grievance_departments: {
+              include: {
+                departments: true,
+              },
+            },
             assignments: {
               where: {
                 assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
@@ -63,10 +69,15 @@ export async function GET(
         grievance_id: grievance.grievance_id,
         submitted_by: grievance.submitted_by,
         status: grievance.status,
+        title: grievance.title,
+        description: grievance.description,
+        categoryName: grievance.categories?.category_name,
+        subcategoryName: grievance.subcategories?.subcategory_name,
       },
       grievanceDepartments: grievance.grievance_departments.map((gd) => ({
         grievance_department_id: gd.grievance_department_id,
         department_id: gd.department_id,
+        department_name: gd.departments?.department_name || "",
         involvement_type: gd.involvement_type,
         status: gd.status,
       })),

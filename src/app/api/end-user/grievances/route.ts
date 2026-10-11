@@ -320,8 +320,30 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle File Uploads to Supabase Storage
+    // Handle File Uploads to Supabase Storage with Intelligent Department Visibility Classification
     if (files && files.length > 0) {
+      const participatingDepts = await prisma.grievance_departments.findMany({
+        where: { grievance_id: newGrievance.grievance_id },
+        include: { departments: true },
+      });
+
+      const participatingDeptProfiles = participatingDepts.map((gd) => ({
+        department_id: gd.department_id,
+        department_name: gd.departments.department_name,
+        involvement_type: gd.involvement_type,
+      }));
+
+      const categoryRec = categoryId
+        ? await prisma.categories.findUnique({
+            where: { category_id: BigInt(categoryId) },
+          })
+        : null;
+      const subcategoryRec = subcategoryId
+        ? await prisma.subcategories.findUnique({
+            where: { subcategory_id: BigInt(subcategoryId) },
+          })
+        : null;
+
       for (const file of files) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);

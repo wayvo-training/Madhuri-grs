@@ -1,4 +1,8 @@
 import type { AuthUser } from "@/lib/auth";
+import {
+  classifyAttachmentForDepartments,
+  type DepartmentProfile,
+} from "./document-classifier";
 
 export interface AttachmentRecord {
   attachment_id: bigint | number;
@@ -18,6 +22,10 @@ export interface GrievanceContext {
   submitted_by?: bigint | number | null;
   user_id?: bigint | number | null; // Complainant / citizen submitter
   status: string;
+  title?: string;
+  description?: string;
+  categoryName?: string;
+  subcategoryName?: string;
 }
 
 export interface GrievanceDepartmentContext {
@@ -25,6 +33,10 @@ export interface GrievanceDepartmentContext {
   department_id: bigint | number;
   involvement_type: string; // "PRIMARY" | "SUPPORTING" | "EQUAL"
   status: string;
+  department_name?: string;
+  departments?: {
+    department_name: string;
+  };
 }
 
 export interface AssignmentContext {
@@ -150,7 +162,117 @@ export function checkAttachmentAccess(
     }
   }
 
-  // 4. Primary Lead Department Head & Staff access
+  // 4. Own department upload (e.g. supporting department uploaded its own findings evidence)
+  const isOwnDeptUpload =
+    (userDeptRecord &&
+      attachment.grievance_department_id &&
+      BigInt(attachment.grievance_department_id) ===
+        BigInt(userDeptRecord.grievance_department_id)) ||
+    assignments.some(
+      (a) =>
+        BigInt(a.staff_id) === currentUserId &&
+        (a.assignment_status === "ASSIGNED" ||
+          a.assignment_status === "COMPLETED") &&
+        attachment.grievance_department_id &&
+        BigInt(a.grievance_department_id) ===
+          BigInt(attachment.grievance_department_id),
+    );
+
+  if (isOwnDeptUpload) {
+    return {
+      allowed: true,
+      reason:
+        "Department officers have access to evidence uploaded by their own department.",
+    };
+  }
+
+  // 5. Department Grants or Dynamic In-Memory Classification (Document Visibility)
+  const thisAttachmentGrants = departmentGrants.filter(
+    (g) => BigInt(g.attachment_id) === BigInt(attachment.attachment_id),
+  );
+
+  let targetDepartmentIds: bigint[] | null = null;
+
+  if (thisAttachmentGrants.length > 0) {
+    targetDepartmentIds = thisAttachmentGrants.map((g) =>
+      BigInt(g.department_id),
+    );
+  } else if (grievanceDepartments.length > 1) {
+    const deptProfiles: DepartmentProfile[] = grievanceDepartments.map((gd) => {
+      const dId = BigInt(gd.department_id);
+      const dIdStr = dId.toString();
+      const deptName =
+        (gd.department_name && gd.department_name.trim()) ||
+        (gd.departments?.department_name &&
+          gd.departments.department_name.trim()) ||
+        (dIdStr === "1"
+          ? "Human Resources"
+          : dIdStr === "2"
+            ? "Finance"
+            : dIdStr === "3"
+              ? "Facilities"
+              : dIdStr === "4"
+                ? "Management"
+                : dIdStr === "5"
+                  ? "Compliance"
+                  : `Department ${dIdStr}`);
+      return {
+        department_id: dId,
+        department_name: deptName,
+        involvement_type: gd.involvement_type,
+      };
+    });
+
+    const classification = classifyAttachmentForDepartments({
+      fileName: attachment.file_name,
+      fileType: attachment.file_type,
+      fileSize: attachment.file_size ? Number(attachment.file_size) : undefined,
+      categoryName: grievance.categoryName,
+      subcategoryName: grievance.subcategoryName,
+      grievanceTitle: grievance.title,
+      grievanceDescription: grievance.description,
+      participatingDepartments: deptProfiles,
+    });
+
+    targetDepartmentIds = classification.targetDepartmentIds;
+  }
+
+  if (targetDepartmentIds !== null && targetDepartmentIds.length > 0) {
+    const isDeptGranted = Boolean(
+      userDeptId && targetDepartmentIds.some((id) => id === userDeptId),
+    );
+
+    const isAssignedToGrantedDept = assignments.some((a) => {
+      if (BigInt(a.staff_id) !== currentUserId) return false;
+      if (
+        a.assignment_status !== "ASSIGNED" &&
+        a.assignment_status !== "COMPLETED"
+      )
+        return false;
+      const gd = grievanceDepartments.find(
+        (d) =>
+          BigInt(d.grievance_department_id) ===
+          BigInt(a.grievance_department_id),
+      );
+      if (!gd) return false;
+      return targetDepartmentIds?.some((id) => id === BigInt(gd.department_id));
+    });
+
+    if (isDeptGranted || isAssignedToGrantedDept) {
+      return {
+        allowed: true,
+        reason: "Access granted based on department document visibility.",
+      };
+    }
+
+    return {
+      allowed: false,
+      reason:
+        "Forbidden: Access to this document is restricted to other designated departments.",
+    };
+  }
+
+  // 6. Unrestricted Primary Lead access for unclassified / legacy attachments
   if (isPrimaryOrEqual) {
     return {
       allowed: true,
@@ -159,7 +281,7 @@ export function checkAttachmentAccess(
     };
   }
 
-  // 5. Staff member actively assigned specifically to the Primary or Equal department
+  // 7. Staff member actively assigned specifically to the Primary or Equal department
   const isAssignedToPrimaryOrEqual = assignments.some((a) => {
     if (BigInt(a.staff_id) !== currentUserId) return false;
     if (
@@ -185,68 +307,7 @@ export function checkAttachmentAccess(
     };
   }
 
-  // 6. Own department upload (e.g. supporting department uploaded its own findings evidence)
-  const isOwnDeptUpload =
-    (userDeptRecord &&
-      attachment.grievance_department_id &&
-      BigInt(attachment.grievance_department_id) ===
-        BigInt(userDeptRecord.grievance_department_id)) ||
-    assignments.some(
-      (a) =>
-        BigInt(a.staff_id) === currentUserId &&
-        (a.assignment_status === "ASSIGNED" ||
-          a.assignment_status === "COMPLETED") &&
-        attachment.grievance_department_id &&
-        BigInt(a.grievance_department_id) ===
-          BigInt(attachment.grievance_department_id),
-    );
-
-  if (isOwnDeptUpload) {
-    return {
-      allowed: true,
-      reason:
-        "Department officers have access to evidence uploaded by their own department.",
-    };
-  }
-
-  // 7. Explicit Department Grants (Phase 6B)
-  const isDeptGranted = Boolean(
-    userDeptId &&
-      departmentGrants.some(
-        (g) =>
-          BigInt(g.attachment_id) === BigInt(attachment.attachment_id) &&
-          BigInt(g.department_id) === userDeptId,
-      ),
-  );
-
-  const isAssignedToGrantedDept = assignments.some((a) => {
-    if (BigInt(a.staff_id) !== currentUserId) return false;
-    if (
-      a.assignment_status !== "ASSIGNED" &&
-      a.assignment_status !== "COMPLETED"
-    )
-      return false;
-    const gd = grievanceDepartments.find(
-      (d) =>
-        BigInt(d.grievance_department_id) === BigInt(a.grievance_department_id),
-    );
-    if (!gd) return false;
-    return departmentGrants.some(
-      (g) =>
-        BigInt(g.attachment_id) === BigInt(attachment.attachment_id) &&
-        BigInt(g.department_id) === BigInt(gd.department_id),
-    );
-  });
-
-  if (isDeptGranted || isAssignedToGrantedDept) {
-    return {
-      allowed: true,
-      reason:
-        "Access explicitly granted to department by Lead Department / Admin.",
-    };
-  }
-
-  // 8. Default deny for Supporting Departments on citizen-uploaded attachments (PRIMARY_ONLY default)
+  // 8. Default deny for Supporting Departments on ungranted citizen attachments
   return {
     allowed: false,
     reason:

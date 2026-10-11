@@ -89,7 +89,11 @@ export async function GET(request: Request) {
                 roles: true,
               },
             },
-            grievance_departments: true,
+            grievance_departments: {
+              include: {
+                departments: true,
+              },
+            },
             attachments: true,
             resolutions: {
               orderBy: { submitted_at: "desc" as const },
@@ -212,6 +216,7 @@ export async function GET(request: Request) {
               (g.grievance_departments || []).map((gd) => ({
                 grievance_department_id: gd.grievance_department_id,
                 department_id: gd.department_id,
+                department_name: gd.departments?.department_name || "",
                 involvement_type: gd.involvement_type,
                 status: gd.status,
               })),
@@ -249,6 +254,7 @@ export async function GET(request: Request) {
           (g.grievance_departments || []).map((gd) => ({
             grievance_department_id: gd.grievance_department_id,
             department_id: gd.department_id,
+            department_name: gd.departments?.department_name || "",
             involvement_type: gd.involvement_type,
             status: gd.status,
           })),

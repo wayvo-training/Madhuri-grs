@@ -37,7 +37,11 @@ export async function GET(
       include: {
         categories: true,
         subcategories: true,
-        grievance_departments: true,
+        grievance_departments: {
+          include: {
+            departments: true,
+          },
+        },
         users: {
           select: {
             first_name: true,
@@ -130,6 +134,7 @@ export async function GET(
     const deptContext = (grievance.grievance_departments || []).map((gd) => ({
       grievance_department_id: gd.grievance_department_id,
       department_id: gd.department_id,
+      department_name: gd.departments?.department_name || "",
       involvement_type: gd.involvement_type,
       status: gd.status,
     }));
@@ -186,7 +191,13 @@ export async function GET(
     const authorizedDossierAttachments = filterAuthorizedAttachments(
       user,
       (grievance.attachments || []).filter((att) => !att.resolution_id),
-      grievanceContext,
+      {
+        ...grievanceContext,
+        title: grievance.title,
+        description: grievance.description,
+        categoryName: grievance.categories?.category_name,
+        subcategoryName: grievance.subcategories?.subcategory_name,
+      },
       deptContext,
       assignmentContext,
     );

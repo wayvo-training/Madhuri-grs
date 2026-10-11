@@ -60,11 +60,21 @@ export function NotificationDrawer({
         ? { "x-user-id": userId }
         : { "x-user-id": "1" };
       const res = await fetch("/api/notifications", { headers });
+      if (!res.ok) {
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setNotifications(data.notifications);
       }
     } catch (error) {
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        // Silently skip transient polling / dev server reconnection errors
+        return;
+      }
       console.error("Failed to load notifications", error);
     } finally {
       setIsLoading(false);

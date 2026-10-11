@@ -109,7 +109,11 @@ export async function GET(
             },
           },
         },
-        grievance_departments: true,
+        grievance_departments: {
+          include: {
+            departments: true,
+          },
+        },
         attachments: true,
         resolutions: {
           orderBy: { submitted_at: "desc" },
@@ -719,14 +723,19 @@ export async function GET(
               grievance_id: grievance.grievance_id,
               submitted_by: grievance.submitted_by,
               status: grievance.status,
+              title: grievance.title,
+              description: grievance.description,
+              categoryName: grievance.categories?.category_name,
+              subcategoryName: grievance.subcategories?.subcategory_name,
             },
-            (grievance.grievance_departments || []).map((gd) => ({
+            (rawDepartments || []).map((gd) => ({
               grievance_department_id: gd.grievance_department_id,
               department_id: gd.department_id,
+              department_name: gd.departments?.department_name || "",
               involvement_type: gd.involvement_type,
               status: gd.status,
             })),
-            (grievance.assignments || []).map((a) => ({
+            (allDeptAssignments || []).map((a) => ({
               staff_id: a.staff_id,
               grievance_department_id: a.grievance_department_id,
               assignment_status: a.assignment_status,

@@ -82,6 +82,9 @@ export function CaseFileInspectionModal({
           setCaseProgressData(json.data);
           setCurrentGrievance((prev) => ({
             ...prev,
+            ...(json.data.grievance?.attachments
+              ? { attachments: json.data.grievance.attachments }
+              : {}),
             ...(json.data.internalNotes || json.data.grievance?.internalNotes
               ? {
                   internalNotes:
