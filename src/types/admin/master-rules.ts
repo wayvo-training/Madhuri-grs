@@ -36,6 +36,7 @@ export interface SerializedSlaPolicy {
   escalation_threshold_percent: string;
   target_role: string;
   status: string;
+  trigger_condition?: unknown;
 }
 
 export interface SerializedReopenPolicy {

@@ -315,11 +315,49 @@ export function validateRoutingPolicy(
     depMap.set(dep.department_name.toLowerCase().trim(), dep);
   }
 
+  const primaryCustom = primaryName
+    ? depMap.get(primaryName.toLowerCase())
+    : undefined;
+  const effectivePrimarySlaPercent =
+    input.primary_sla_percent ?? primaryCustom?.sla_percent_allocation;
+  const effectivePrimaryDuration =
+    input.primary_duration_minutes ?? primaryCustom?.allocated_duration_minutes;
+
+  // Ensure depMap has the primary department's SLA allocation
+  if (primaryName) {
+    const existing = depMap.get(primaryName.toLowerCase());
+    depMap.set(primaryName.toLowerCase(), {
+      department_name: primaryName,
+      department_id: primaryId ? primaryId.toString() : existing?.department_id,
+      execution_order: existing?.execution_order ?? 1,
+      prerequisites: existing?.prerequisites ?? [],
+      involvement_type: existing?.involvement_type || "PRIMARY",
+      sla_percent_allocation: effectivePrimarySlaPercent ?? null,
+      allocated_duration_minutes: effectivePrimaryDuration ?? null,
+    });
+  }
+
   const normalizedDeps: DepartmentDependencyNode[] = [];
   let derivedOrder: DerivedOrderNode[] = [];
 
   if (!isSequential) {
-    // PARALLEL workflow: all departments execute concurrently at Step 1, Stage 1
+    // PARALLEL workflow: primary department executes at Step 1, Stage 1
+    if (primaryName) {
+      normalizedDeps.push({
+        department_name: primaryName,
+        department_id: primaryId
+          ? primaryId.toString()
+          : primaryCustom?.department_id,
+        execution_order: 1,
+        stage: 1,
+        prerequisites: [],
+        involvement_type: primaryCustom?.involvement_type || "PRIMARY",
+        sla_percent_allocation: effectivePrimarySlaPercent ?? null,
+        allocated_duration_minutes: effectivePrimaryDuration ?? null,
+      });
+    }
+
+    // All supporting departments execute concurrently at Step 1, Stage 1
     for (const suppName of normalizedSupporting) {
       const custom = depMap.get(suppName.toLowerCase());
       normalizedDeps.push({
@@ -329,33 +367,16 @@ export function validateRoutingPolicy(
         stage: 1,
         prerequisites: [],
         involvement_type: custom?.involvement_type || "SUPPORT",
-        sla_percent_allocation: custom?.sla_percent_allocation,
-        allocated_duration_minutes: custom?.allocated_duration_minutes,
+        sla_percent_allocation: custom?.sla_percent_allocation ?? null,
+        allocated_duration_minutes: custom?.allocated_duration_minutes ?? null,
       });
     }
 
-    derivedOrder = [
-      ...(primaryName
-        ? [
-            {
-              department_name: primaryName,
-              department_id: primaryId || undefined,
-              execution_order: 1,
-              stage: 1,
-              prerequisites: [],
-              involvement_type: "PRIMARY" as const,
-              sla_percent_allocation: input.primary_sla_percent,
-              allocated_duration_minutes: input.primary_duration_minutes,
-              is_starting_department: true,
-            },
-          ]
-        : []),
-      ...normalizedDeps.map((d) => ({
-        ...d,
-        stage: d.stage ?? 1,
-        is_starting_department: true,
-      })),
-    ];
+    derivedOrder = normalizedDeps.map((d) => ({
+      ...d,
+      stage: 1,
+      is_starting_department: true,
+    }));
   } else {
     // SEQUENTIAL workflow: derive execution order and stages from topological sort
     const allDepartments: {
@@ -368,7 +389,7 @@ export function validateRoutingPolicy(
         ? [
             {
               name: primaryName,
-              id: primaryId || undefined,
+              id: primaryId ? primaryId.toString() : undefined,
               isPrimary: true,
               involvementType: "PRIMARY" as const,
             },
@@ -399,6 +420,23 @@ export function validateRoutingPolicy(
       ]),
     );
 
+    // Primary department in normalizedDependencies
+    if (primaryName) {
+      const derivedPrimary = derivedMap.get(primaryName.toLowerCase());
+      normalizedDeps.push({
+        department_name: primaryName,
+        department_id: primaryId
+          ? primaryId.toString()
+          : primaryCustom?.department_id,
+        execution_order: derivedPrimary?.execution_order ?? 1,
+        stage: derivedPrimary?.stage ?? 1,
+        prerequisites: derivedPrimary?.prerequisites ?? [],
+        involvement_type: primaryCustom?.involvement_type || "PRIMARY",
+        sla_percent_allocation: effectivePrimarySlaPercent ?? null,
+        allocated_duration_minutes: effectivePrimaryDuration ?? null,
+      });
+    }
+
     // Map derived execution orders & stages back into normalizedDependencies for supporting departments
     for (const suppName of normalizedSupporting) {
       const derived = derivedMap.get(suppName.toLowerCase());
@@ -412,29 +450,14 @@ export function validateRoutingPolicy(
         prerequisites:
           derived?.prerequisites ?? (primaryName ? [primaryName] : []),
         involvement_type: custom?.involvement_type || "SUPPORT",
-        sla_percent_allocation: custom?.sla_percent_allocation,
-        allocated_duration_minutes: custom?.allocated_duration_minutes,
+        sla_percent_allocation: custom?.sla_percent_allocation ?? null,
+        allocated_duration_minutes: custom?.allocated_duration_minutes ?? null,
       });
     }
   }
 
   // Validate SLA allocations: reject negative values, invalid ranges, and totals exceeding 100%
-  let totalConfiguredPercent = input.primary_sla_percent ?? 0;
-  if (
-    input.primary_sla_percent !== undefined &&
-    input.primary_sla_percent !== null
-  ) {
-    if (
-      !Number.isFinite(input.primary_sla_percent) ||
-      input.primary_sla_percent <= 0 ||
-      input.primary_sla_percent > 100
-    ) {
-      errors.push(
-        `Invalid primary SLA percentage "${input.primary_sla_percent}". Must be a number between 1 and 100 (cannot be negative or zero).`,
-      );
-    }
-  }
-
+  let totalConfiguredPercent = 0;
   for (const node of normalizedDeps) {
     if (
       node.sla_percent_allocation !== undefined &&

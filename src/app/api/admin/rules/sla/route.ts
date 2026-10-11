@@ -106,6 +106,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const notificationRecipients =
+      body.notification_recipients ||
+      body.trigger_condition?.notification_recipients;
+
     const policy = await prisma.$transaction(async (tx) => {
       const created = await tx.sla_policies.create({
         data: {
@@ -120,6 +124,9 @@ export async function POST(request: Request) {
             at_risk_threshold_percent: atRiskPercent,
             critical_threshold_percent: critPercent,
             escalation_threshold_percent: escPercent,
+            ...(notificationRecipients
+              ? { notification_recipients: notificationRecipients }
+              : {}),
           },
           target_role: tgtRole,
           status: requestedStatus,
@@ -157,6 +164,7 @@ export async function POST(request: Request) {
         at_risk_threshold_percent: atRiskPercent.toString(),
         critical_threshold_percent: critPercent.toString(),
         escalation_threshold_percent: escPercent.toString(),
+        trigger_condition: policy.trigger_condition,
         target_role: policy.target_role,
         status: policy.status,
       },
@@ -179,14 +187,174 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { sla_policy_id, status } = body;
 
-    if (!sla_policy_id || !status) {
+    if (!sla_policy_id) {
       return NextResponse.json(
-        { success: false, message: "Policy ID and status are required." },
+        { success: false, message: "Policy ID is required." },
         { status: 400 },
       );
     }
 
     const policyId = BigInt(sla_policy_id);
+
+    // If this is a full policy update (policy_name is provided)
+    if (body.policy_name) {
+      const {
+        policy_name,
+        priority_level,
+        sla_type,
+        target_duration_minutes,
+        warning_threshold_percent,
+        at_risk_threshold_percent,
+        critical_threshold_percent,
+        escalation_threshold_percent,
+        target_role,
+      } = body;
+
+      const trimmedName = policy_name?.trim();
+      if (!trimmedName || !target_duration_minutes) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Policy name and target duration are required.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const requestedStatus =
+        status === "INACTIVE"
+          ? "INACTIVE"
+          : status === "ACTIVE"
+            ? "ACTIVE"
+            : undefined;
+      const slaTypeVal = sla_type || "RESOLUTION";
+
+      // 1. Check duplicate policy name (excluding current policy)
+      const nameConflict = await prisma.sla_policies.findFirst({
+        where: {
+          sla_policy_id: { not: policyId },
+          policy_name: { equals: trimmedName, mode: "insensitive" },
+        },
+      });
+
+      if (nameConflict) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `An SLA policy named "${trimmedName}" already exists. Please choose a unique policy name.`,
+          },
+          { status: 409 },
+        );
+      }
+
+      // 2. Check active priority scope conflict (excluding current policy)
+      const effectiveStatus =
+        requestedStatus ||
+        (
+          await prisma.sla_policies.findUnique({
+            where: { sla_policy_id: policyId },
+          })
+        )?.status;
+
+      if (effectiveStatus === "ACTIVE" && priority_level) {
+        const scopeConflict = await prisma.sla_policies.findFirst({
+          where: {
+            sla_policy_id: { not: policyId },
+            status: "ACTIVE",
+            priority_level: priority_level,
+            sla_type: slaTypeVal,
+          },
+        });
+
+        if (scopeConflict) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `An active SLA policy for "${priority_level}" priority already exists ("${scopeConflict.policy_name}"). Please update or deactivate the existing policy instead of creating a conflicting duplicate.`,
+            },
+            { status: 409 },
+          );
+        }
+      }
+
+      const durationNum = Number(target_duration_minutes);
+      const warnPercent = Number(warning_threshold_percent) || 50;
+      const atRiskPercent = Number(at_risk_threshold_percent) || 75;
+      const critPercent = Number(critical_threshold_percent) || 90;
+      const escPercent = Number(escalation_threshold_percent) || 100;
+      const tgtRole = target_role || "DEPARTMENT_HEAD";
+      const notificationRecipients =
+        body.notification_recipients ||
+        body.trigger_condition?.notification_recipients;
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const policy = await tx.sla_policies.update({
+          where: { sla_policy_id: policyId },
+          data: {
+            policy_name: trimmedName,
+            priority_level: priority_level || null,
+            sla_type: slaTypeVal,
+            target_duration_minutes: durationNum,
+            warning_threshold_percent: warnPercent,
+            escalation_threshold_percent: escPercent,
+            trigger_condition: {
+              warning_threshold_percent: warnPercent,
+              at_risk_threshold_percent: atRiskPercent,
+              critical_threshold_percent: critPercent,
+              escalation_threshold_percent: escPercent,
+              ...(notificationRecipients
+                ? { notification_recipients: notificationRecipients }
+                : {}),
+            },
+            target_role: tgtRole,
+            ...(requestedStatus ? { status: requestedStatus } : {}),
+          },
+        });
+
+        await tx.audit_logs.create({
+          data: {
+            user_id: user.user_id,
+            action: "UPDATE_SLA_POLICY",
+            entity_type: "SLA_POLICY",
+            entity_id: policy.sla_policy_id,
+            new_value: {
+              policy_name: policy.policy_name,
+              target_duration_minutes: policy.target_duration_minutes,
+              priority_level: policy.priority_level,
+            },
+          },
+        });
+
+        return policy;
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "SLA policy updated successfully.",
+        policy: {
+          sla_policy_id: updated.sla_policy_id.toString(),
+          policy_name: updated.policy_name,
+          priority_level: updated.priority_level,
+          sla_type: updated.sla_type,
+          target_duration_minutes: updated.target_duration_minutes,
+          warning_threshold_percent: warnPercent.toString(),
+          at_risk_threshold_percent: atRiskPercent.toString(),
+          critical_threshold_percent: critPercent.toString(),
+          escalation_threshold_percent: escPercent.toString(),
+          trigger_condition: updated.trigger_condition,
+          target_role: updated.target_role,
+          status: updated.status,
+        },
+      });
+    }
+
+    // Status-only toggle
+    if (!status) {
+      return NextResponse.json(
+        { success: false, message: "Policy status is required." },
+        { status: 400 },
+      );
+    }
 
     if (status === "ACTIVE") {
       const policyToActivate = await prisma.sla_policies.findUnique({

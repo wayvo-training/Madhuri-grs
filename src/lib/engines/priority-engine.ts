@@ -94,28 +94,21 @@ export function evaluateRuleMatch(
   const hasSubcatScope = Boolean(ruleSubcatId || ruleSubcatName);
   const hasCatScope = Boolean(ruleCatId || ruleCatName);
 
-  // 1. Both Category and Subcategory specified
-  if (hasCatScope && hasSubcatScope) {
-    if (matchesCategory && matchesSubcategory) {
-      return true;
-    }
-  }
-  // 2. Only Subcategory specified
-  else if (hasSubcatScope) {
-    if (matchesSubcategory) {
-      return true;
-    }
-  }
-  // 3. Only Category specified
-  else if (hasCatScope) {
-    if (matchesCategory) {
-      return true;
-    }
+  // 1. Category Scope: Category-specific rules must strictly match their configured category
+  if (hasCatScope && !matchesCategory) {
+    return false;
   }
 
-  // 4. Keyword matching against Title and Description
+  // 2. Subcategory Scope: Subcategory-specific rules must strictly match their configured subcategory
+  if (hasSubcatScope && !matchesSubcategory) {
+    return false;
+  }
+
+  // 3. Keyword matching against Title and Description (case-insensitively)
   const rawKeywords = cond.contains || cond.keywords;
-  if (Array.isArray(rawKeywords) && rawKeywords.length > 0) {
+  const hasKeywords = Array.isArray(rawKeywords) && rawKeywords.length > 0;
+
+  if (hasKeywords) {
     const fullText =
       `${input.title || ""} ${input.description || ""}`.toLowerCase();
     const hasKeyword = rawKeywords.some((kw) => {
@@ -123,12 +116,15 @@ export function evaluateRuleMatch(
       const trimmed = kw.trim().toLowerCase();
       return trimmed.length > 0 && fullText.includes(trimmed);
     });
-    if (hasKeyword) {
-      return true;
+    if (!hasKeyword) {
+      return false;
     }
+  } else if (!hasCatScope && !hasSubcatScope) {
+    // Ordinary rules with neither taxonomy scope nor keywords cannot match
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 /**

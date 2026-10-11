@@ -395,6 +395,16 @@ export async function POST(request: Request) {
     if (policyValidation.normalizedDependencies) {
       sanitizedConditions.dependencies =
         policyValidation.normalizedDependencies;
+      const leadNode = policyValidation.normalizedDependencies.find(
+        (d) =>
+          d.involvement_type === "PRIMARY" || d.involvement_type === "EQUAL",
+      );
+      if (leadNode) {
+        sanitizedConditions.primary_sla_percent =
+          leadNode.sla_percent_allocation ?? null;
+        sanitizedConditions.primary_duration_minutes =
+          leadNode.allocated_duration_minutes ?? null;
+      }
     }
 
     // 10. Prevent conflicting rules (Check for active duplicate within same taxonomy scope)
@@ -884,6 +894,16 @@ export async function PATCH(request: Request) {
     if (policyValidation.normalizedDependencies) {
       sanitizedConditions.dependencies =
         policyValidation.normalizedDependencies;
+      const leadNode = policyValidation.normalizedDependencies.find(
+        (d) =>
+          d.involvement_type === "PRIMARY" || d.involvement_type === "EQUAL",
+      );
+      if (leadNode) {
+        sanitizedConditions.primary_sla_percent =
+          leadNode.sla_percent_allocation ?? null;
+        sanitizedConditions.primary_duration_minutes =
+          leadNode.allocated_duration_minutes ?? null;
+      }
     }
 
     // 10. Conflict check when activating or altering taxonomy scope
