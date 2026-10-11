@@ -12,6 +12,8 @@ export interface MdiDepartmentOptions {
   allocatedDurationMinutes?: number | null;
   dueAt?: Date | null;
   status?: string;
+  activatedAt?: Date | null;
+  assignedAt?: Date | null;
 }
 
 /**
@@ -23,13 +25,20 @@ export function buildDepartmentMdiData(
 ) {
   const isSequential = options.dependencyType === "SEQUENTIAL";
   const hasPrereqs = (options.prerequisiteDepartmentIds?.length ?? 0) > 0;
-  const isBlocked = isSequential && hasPrereqs;
+  const isBlocked =
+    options.status === "BLOCKED" || (isSequential && hasPrereqs);
+
+  const activatedAt = isBlocked
+    ? null
+    : options.activatedAt !== undefined
+      ? options.activatedAt
+      : new Date();
 
   return {
     department_id: departmentId,
     involvement_type: options.involvementType,
     status: options.status ?? (isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT"),
-    assigned_at: new Date(),
+    assigned_at: options.assignedAt ?? new Date(),
     allocated_duration_minutes: options.allocatedDurationMinutes ?? null,
     sla_percent_allocation: options.slaPercentAllocation ?? 100.0,
     due_at: isBlocked ? null : (options.dueAt ?? null),
@@ -39,7 +48,7 @@ export function buildDepartmentMdiData(
       ? options.prerequisiteDepartmentIds.map((id) => Number(id))
       : [],
     execution_order: options.executionOrder ?? 1,
-    activated_at: isBlocked ? null : new Date(),
+    activated_at: activatedAt,
   };
 }
 
@@ -330,7 +339,12 @@ export async function populateGrievanceDepartments(
     dependencyType?: "PARALLEL" | "SEQUENTIAL";
     dependencies?: DepartmentDependencyNode[];
   },
-): Promise<{ primaryDeptId: bigint; supportingDeptIds: bigint[] }> {
+): Promise<{
+  primaryDeptId: bigint;
+  supportingDeptIds: bigint[];
+  activatedDeptIds: bigint[];
+  blockedDeptIds: bigint[];
+}> {
   const gId = BigInt(grievanceId);
   const primaryDeptId = routing.departmentId;
   const supportingDeptIds = routing.supportingDepartmentIds || [];
@@ -360,6 +374,21 @@ export async function populateGrievanceDepartments(
       if (diffMinutes > 0) totalDurationMinutes = diffMinutes;
     }
 
+    // Fetch active departments for name/id resolution
+    const activeDepartments = await client.departments.findMany({
+      where: { status: "ACTIVE" },
+      select: { department_id: true, department_name: true },
+    });
+
+    // Constrain participating departments strictly to primary + valid supporting departments
+    const participatingDeptIds = [
+      primaryDeptId,
+      ...supportingDeptIds.filter((id) => id !== primaryDeptId),
+    ];
+    const participatingDepts = activeDepartments.filter((d) =>
+      participatingDeptIds.includes(d.department_id),
+    );
+
     const primaryDepNode = configuredDeps.find(
       (n) =>
         (n.department_id &&
@@ -368,29 +397,41 @@ export async function populateGrievanceDepartments(
           n.department_name.toLowerCase() ===
             routing.departmentName?.toLowerCase()),
     );
+
+    let primaryExecutionOrder = 1;
+    const primaryPrereqDepartmentIds: bigint[] = [];
+    let isPrimaryBlocked = false;
+
+    if (dependencyType === "SEQUENTIAL" && primaryDepNode) {
+      primaryExecutionOrder = primaryDepNode.execution_order ?? 1;
+      const rawPrereqs = (primaryDepNode.prerequisites || [])
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+
+      if (rawPrereqs.length > 0) {
+        // Has configured prerequisites -> starts BLOCKED
+        isPrimaryBlocked = true;
+        for (const prereqStr of rawPrereqs) {
+          const matchedDept = participatingDepts.find(
+            (d) =>
+              (d.department_id.toString() === prereqStr ||
+                d.department_name.toLowerCase() === prereqStr.toLowerCase()) &&
+              d.department_id !== primaryDeptId,
+          );
+          if (
+            matchedDept &&
+            !primaryPrereqDepartmentIds.includes(matchedDept.department_id)
+          ) {
+            primaryPrereqDepartmentIds.push(matchedDept.department_id);
+          }
+        }
+      }
+    }
+
     const primaryAlloc = calculateDepartmentSlaDuration(
       totalDurationMinutes,
       primaryDepNode,
     );
-    const primaryDueAt =
-      calculateDepartmentDeadline(
-        new Date(),
-        primaryAlloc.allocatedDurationMinutes,
-        grievance?.due_at || null,
-      ) ||
-      grievance?.due_at ||
-      new Date(Date.now() + totalDurationMinutes * 60 * 1000);
-
-    const primaryMdiData = buildDepartmentMdiData(primaryDeptId, {
-      involvementType: mainInvolvement,
-      dependencyType: "PARALLEL",
-      executionOrder: 1,
-      prerequisiteDepartmentIds: [],
-      slaPercentAllocation: primaryAlloc.slaPercentAllocation,
-      allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
-      dueAt: primaryDueAt,
-      status: "PENDING_ASSIGNMENT",
-    });
 
     // 2. Main department (Primary or Equal co-lead): upsert in grievance_departments
     const existingMain = await client.grievance_departments.findFirst({
@@ -398,6 +439,53 @@ export async function populateGrievanceDepartments(
         grievance_id: gId,
         involvement_type: { in: ["PRIMARY", "EQUAL"] },
       },
+    });
+
+    const isSamePrimary =
+      existingMain && existingMain.department_id === primaryDeptId;
+
+    let primaryStatus = isPrimaryBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
+    let primaryActivatedAt: Date | null = isPrimaryBlocked ? null : new Date();
+    let primaryDueAt: Date | null = isPrimaryBlocked
+      ? null
+      : calculateDepartmentDeadline(
+          primaryActivatedAt,
+          primaryAlloc.allocatedDurationMinutes,
+          grievance?.due_at || null,
+        ) ||
+        grievance?.due_at ||
+        new Date(Date.now() + totalDurationMinutes * 60 * 1000);
+
+    if (isSamePrimary && existingMain) {
+      // Preserve completed / resolved status
+      if (
+        existingMain.status === "COMPLETED" ||
+        existingMain.status === "RESOLVED"
+      ) {
+        primaryStatus = existingMain.status;
+      } else if (existingMain.status !== "BLOCKED" && !isPrimaryBlocked) {
+        primaryStatus = existingMain.status;
+      }
+
+      // Preserve existing SLA timestamps if active
+      if (existingMain.activated_at && !isPrimaryBlocked) {
+        primaryActivatedAt = existingMain.activated_at;
+        primaryDueAt = existingMain.due_at ?? primaryDueAt;
+      }
+    }
+
+    const primaryMdiData = buildDepartmentMdiData(primaryDeptId, {
+      involvementType: mainInvolvement,
+      dependencyType,
+      executionOrder: primaryExecutionOrder,
+      prerequisiteDepartmentIds: primaryPrereqDepartmentIds,
+      slaPercentAllocation: primaryAlloc.slaPercentAllocation,
+      allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
+      dueAt: primaryDueAt,
+      status: primaryStatus,
+      activatedAt: primaryActivatedAt,
+      assignedAt:
+        isSamePrimary && existingMain ? existingMain.assigned_at : undefined,
     });
 
     if (existingMain) {
@@ -415,12 +503,6 @@ export async function populateGrievanceDepartments(
         },
       });
     }
-
-    // Fetch active departments for name/id resolution
-    const activeDepartments = await client.departments.findMany({
-      where: { status: "ACTIVE" },
-      select: { department_id: true, department_name: true },
-    });
 
     // 3. Preserve audit history: soft-remove removed supporting departments with history, delete empty placeholders
     const existingPartners = await client.grievance_departments.findMany({
@@ -460,6 +542,15 @@ export async function populateGrievanceDepartments(
     }
 
     // 4. Upsert fresh partner entries (SUPPORTING or EQUAL) with dependency awareness
+    const activatedDeptIds: bigint[] = [];
+    const blockedDeptIds: bigint[] = [];
+
+    if (primaryStatus === "BLOCKED") {
+      blockedDeptIds.push(primaryDeptId);
+    } else {
+      activatedDeptIds.push(primaryDeptId);
+    }
+
     for (let i = 0; i < supportingDeptIds.length; i++) {
       const suppId = supportingDeptIds[i];
       if (suppId === primaryDeptId) continue;
@@ -483,22 +574,28 @@ export async function populateGrievanceDepartments(
       if (dependencyType === "SEQUENTIAL") {
         if (depNode) {
           executionOrder = depNode.execution_order || i + 2;
-          for (const prereqStr of depNode.prerequisites || []) {
-            const trimmed = prereqStr.trim();
-            if (!trimmed) continue;
-            const matchedDept = activeDepartments.find(
-              (d) =>
-                d.department_id.toString() === trimmed ||
-                d.department_name.toLowerCase() === trimmed.toLowerCase(),
-            );
-            if (
-              matchedDept &&
-              !prereqDepartmentIds.includes(matchedDept.department_id)
-            ) {
-              prereqDepartmentIds.push(matchedDept.department_id);
+          const rawPrereqs = (depNode.prerequisites || [])
+            .map((p) => p.trim())
+            .filter((p) => p.length > 0);
+
+          if (rawPrereqs.length > 0) {
+            isBlocked = true;
+            for (const prereqStr of rawPrereqs) {
+              const matchedDept = participatingDepts.find(
+                (d) =>
+                  (d.department_id.toString() === prereqStr ||
+                    d.department_name.toLowerCase() ===
+                      prereqStr.toLowerCase()) &&
+                  d.department_id !== suppId,
+              );
+              if (
+                matchedDept &&
+                !prereqDepartmentIds.includes(matchedDept.department_id)
+              ) {
+                prereqDepartmentIds.push(matchedDept.department_id);
+              }
             }
           }
-          isBlocked = prereqDepartmentIds.length > 0;
         } else {
           // Default sequential: waits for primary department
           executionOrder = i + 2;
@@ -511,13 +608,34 @@ export async function populateGrievanceDepartments(
         totalDurationMinutes,
         depNode,
       );
-      const suppDueAt = isBlocked
+
+      const existingRecord = existingPartnerMap.get(suppId.toString());
+
+      let suppStatus = isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
+      let suppActivatedAt: Date | null = isBlocked ? null : new Date();
+      let suppDueAt: Date | null = isBlocked
         ? null
         : calculateDepartmentDeadline(
-            new Date(),
+            suppActivatedAt,
             suppAlloc.allocatedDurationMinutes,
             grievance?.due_at || null,
           );
+
+      if (existingRecord) {
+        if (
+          existingRecord.status === "COMPLETED" ||
+          existingRecord.status === "RESOLVED"
+        ) {
+          suppStatus = existingRecord.status;
+        } else if (existingRecord.status !== "BLOCKED" && !isBlocked) {
+          suppStatus = existingRecord.status;
+        }
+
+        if (existingRecord.activated_at && !isBlocked) {
+          suppActivatedAt = existingRecord.activated_at;
+          suppDueAt = existingRecord.due_at ?? suppDueAt;
+        }
+      }
 
       const partnerInv = depNode?.involvement_type
         ? depNode.involvement_type === "EQUAL"
@@ -533,10 +651,17 @@ export async function populateGrievanceDepartments(
         slaPercentAllocation: suppAlloc.slaPercentAllocation,
         allocatedDurationMinutes: suppAlloc.allocatedDurationMinutes,
         dueAt: suppDueAt,
-        status: isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT",
+        status: suppStatus,
+        activatedAt: suppActivatedAt,
+        assignedAt: existingRecord ? existingRecord.assigned_at : undefined,
       });
 
-      const existingRecord = existingPartnerMap.get(suppId.toString());
+      if (suppStatus === "BLOCKED") {
+        blockedDeptIds.push(suppId);
+      } else {
+        activatedDeptIds.push(suppId);
+      }
+
       if (existingRecord) {
         await client.grievance_departments.update({
           where: {
@@ -557,6 +682,8 @@ export async function populateGrievanceDepartments(
     return {
       primaryDeptId,
       supportingDeptIds: supportingDeptIds.filter((id) => id !== primaryDeptId),
+      activatedDeptIds,
+      blockedDeptIds,
     };
   };
 

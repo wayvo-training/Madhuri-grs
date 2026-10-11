@@ -200,6 +200,12 @@ export function DepartmentHeadOverviewInner({
         );
         return;
       }
+      if (item.isBlocked || item.myDepartmentStatus === "BLOCKED") {
+        toast.error(
+          "Cannot assign staff: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+        );
+        return;
+      }
       setAssignModalGrievance(item);
     },
     [],

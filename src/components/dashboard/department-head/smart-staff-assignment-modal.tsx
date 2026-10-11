@@ -23,6 +23,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { PriorityBadge } from "@/components/dashboard/badges";
 import type { StaffRecommendationResult } from "@/lib/engines/staff-recommendation-engine";
@@ -256,6 +257,10 @@ export function SmartStaffAssignmentModal({
   const shouldHideModal =
     grievance.status === "CLOSED" || grievance.status === "RESOLVED";
 
+  const isBlocked = Boolean(
+    grievance.isBlocked || grievance.myDepartmentStatus === "BLOCKED",
+  );
+
   const isReassignment = Boolean(
     grievance.assignedStaffId || grievance.assignedStaffName,
   );
@@ -451,6 +456,12 @@ export function SmartStaffAssignmentModal({
 
   const handleOpenConfirm = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isBlocked) {
+      toast.error(
+        "Cannot assign staff: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+      );
+      return;
+    }
     if (!selectedStaffId || !selectedCandidate) return;
 
     if (selectedCandidate.activeWorkload >= 10) {
@@ -465,6 +476,14 @@ export function SmartStaffAssignmentModal({
   };
 
   const handleExecuteAssignment = async () => {
+    if (isBlocked) {
+      toast.error(
+        "Cannot assign staff: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+      );
+      setShowConfirmModal(false);
+      return;
+    }
+
     if (!selectedStaffId || !selectedCandidate) return;
 
     if (selectedCandidate.activeWorkload >= 10) {
@@ -494,11 +513,20 @@ export function SmartStaffAssignmentModal({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to complete grievance assignment",
-        );
+        const errorMsg =
+          data.message || "Failed to complete grievance assignment";
+        toast.error(errorMsg);
+        setErrorMsg(errorMsg);
+        setIsSubmitting(false);
+        setShowConfirmModal(false);
+        return;
       }
 
+      toast.success(
+        isReassignment
+          ? `Grievance reassigned to ${selectedCandidate.name}`
+          : `Grievance assigned to ${selectedCandidate.name}`,
+      );
       setShowConfirmModal(false);
       onAssignmentSuccess(
         selectedCandidate.staffId,
@@ -508,10 +536,10 @@ export function SmartStaffAssignmentModal({
         selectedCandidate.rawReasons,
       );
     } catch (err) {
-      console.error("Assignment error:", err);
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to assign grievance",
-      );
+      const fallbackMsg =
+        err instanceof Error ? err.message : "Failed to assign grievance";
+      toast.error(fallbackMsg);
+      setErrorMsg(fallbackMsg);
       setIsSubmitting(false);
       setShowConfirmModal(false);
     }
@@ -560,6 +588,23 @@ export function SmartStaffAssignmentModal({
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+          {isBlocked && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-semibold text-amber-900">
+                  Staff Assignment Currently Blocked
+                </p>
+                <p className="text-amber-800 leading-relaxed">
+                  This department is waiting for prerequisite departments to
+                  complete their findings before assignment can proceed. Once
+                  prerequisite stages are submitted, this department will
+                  automatically activate.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* 1. Grievance Context Banner */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2">
             <div className="flex items-start justify-between gap-3">
@@ -1004,7 +1049,7 @@ export function SmartStaffAssignmentModal({
 
             <button
               type="button"
-              disabled={!selectedStaffId || isSubmitting}
+              disabled={!selectedStaffId || isSubmitting || isBlocked}
               onClick={handleOpenConfirm}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >

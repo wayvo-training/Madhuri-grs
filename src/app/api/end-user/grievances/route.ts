@@ -3,10 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
-import {
-  buildDepartmentMdiData,
-  populateGrievanceDepartments,
-} from "@/lib/engines/routing-engine";
+import { populateGrievanceDepartments } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { uploadToSupabase } from "@/lib/supabase";
 import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
@@ -199,7 +196,7 @@ export async function POST(request: Request) {
         dependencies?: DepartmentDependencyNode[];
       } | null;
 
-      await populateGrievanceDepartments(
+      const popResult = await populateGrievanceDepartments(
         newGrievance.grievance_id,
         {
           departmentId: primaryDept.department_id,
@@ -241,11 +238,10 @@ export async function POST(request: Request) {
         },
       });
 
-      const departmentIdsToNotify = new Set<bigint>();
-      departmentIdsToNotify.add(primaryDept.department_id);
-      for (const sd of supportingDepts) {
-        departmentIdsToNotify.add(sd.department_id);
-      }
+      // Send initial assignment notifications ONLY to departments eligible to start (excluding blocked)
+      const departmentIdsToNotify = new Set<bigint>(
+        popResult.activatedDeptIds || [],
+      );
 
       // Notify department heads
       if (departmentIdsToNotify.size > 0) {

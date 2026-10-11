@@ -151,6 +151,8 @@ export async function POST(
       );
     }
 
+    let isPrimaryBlocked = false;
+
     // Perform database transaction for manual routing exception
     await prisma.$transaction(async (tx) => {
       // 1. Handle primary department assignment
@@ -189,27 +191,94 @@ export async function POST(
         totalDurationMinutes,
         primaryDepNode,
       );
-      const primaryDueAt =
-        calculateDepartmentDeadline(
-          new Date(),
-          primaryAlloc.allocatedDurationMinutes,
-          grievance.due_at,
-        ) ||
-        grievance.due_at ||
-        new Date(Date.now() + totalDurationMinutes * 60 * 1000);
-
       const depType =
         dependency_type === "SEQUENTIAL" ? "SEQUENTIAL" : "PARALLEL";
 
+      const allActiveDepts = [primaryDept, ...validSupportingDepts];
+      let primaryExecutionOrder = 1;
+      const primaryPrereqIds: bigint[] = [];
+
+      if (depType === "SEQUENTIAL" && primaryDepNode) {
+        primaryExecutionOrder = primaryDepNode.execution_order ?? 1;
+        const rawPrereqs = (primaryDepNode.prerequisites || [])
+          .map((p: string) => p.trim())
+          .filter((p: string) => p.length > 0);
+
+        if (rawPrereqs.length > 0) {
+          isPrimaryBlocked = true;
+          for (const p of rawPrereqs) {
+            const matched = allActiveDepts.find(
+              (d) =>
+                (d.department_id.toString() === p ||
+                  d.department_name.toLowerCase() === p.toLowerCase()) &&
+                d.department_id !== primaryDepartmentId,
+            );
+            if (matched && !primaryPrereqIds.includes(matched.department_id)) {
+              primaryPrereqIds.push(matched.department_id);
+            }
+          }
+        }
+      }
+
+      const isSamePrimary =
+        existingPrimary &&
+        existingPrimary.department_id === primaryDepartmentId;
+
+      if (
+        isSamePrimary &&
+        (existingPrimary.status === "COMPLETED" ||
+          existingPrimary.status === "RESOLVED") &&
+        isPrimaryBlocked
+      ) {
+        throw new Error(
+          `Cannot block primary department "${primaryDept.department_name}" because it has already completed investigation.`,
+        );
+      }
+
+      let primaryStatus = isPrimaryBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
+      let primaryActivatedAt: Date | null = isPrimaryBlocked
+        ? null
+        : new Date();
+      let primaryDueAt: Date | null = isPrimaryBlocked
+        ? null
+        : calculateDepartmentDeadline(
+            primaryActivatedAt,
+            primaryAlloc.allocatedDurationMinutes,
+            grievance.due_at,
+          ) ||
+          grievance.due_at ||
+          new Date(Date.now() + totalDurationMinutes * 60 * 1000);
+
+      if (isSamePrimary && existingPrimary) {
+        if (
+          existingPrimary.status === "COMPLETED" ||
+          existingPrimary.status === "RESOLVED"
+        ) {
+          primaryStatus = existingPrimary.status;
+        } else if (existingPrimary.status !== "BLOCKED" && !isPrimaryBlocked) {
+          primaryStatus = existingPrimary.status;
+        }
+
+        if (existingPrimary.activated_at && !isPrimaryBlocked) {
+          primaryActivatedAt = existingPrimary.activated_at;
+          primaryDueAt = existingPrimary.due_at ?? primaryDueAt;
+        }
+      }
+
       const primaryMdiData = buildDepartmentMdiData(primaryDepartmentId, {
         involvementType: "PRIMARY",
-        dependencyType: "PARALLEL",
-        executionOrder: 1,
-        prerequisiteDepartmentIds: [],
+        dependencyType: depType,
+        executionOrder: primaryExecutionOrder,
+        prerequisiteDepartmentIds: primaryPrereqIds,
         slaPercentAllocation: primaryAlloc.slaPercentAllocation,
         allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
         dueAt: primaryDueAt,
-        status: "PENDING_ASSIGNMENT",
+        status: primaryStatus,
+        activatedAt: primaryActivatedAt,
+        assignedAt:
+          isSamePrimary && existingPrimary
+            ? existingPrimary.assigned_at
+            : undefined,
       });
 
       if (existingPrimary) {
@@ -289,32 +358,28 @@ export async function POST(
         if (depType === "SEQUENTIAL") {
           if (depNode) {
             executionOrder = depNode.execution_order || i + 2;
-            for (const prereqStr of depNode.prerequisites || []) {
-              const trimmed = String(prereqStr).trim();
-              if (!trimmed) continue;
-              if (
-                trimmed === primaryDepartmentId.toString() ||
-                trimmed.toLowerCase() ===
-                  primaryDept.department_name.toLowerCase()
-              ) {
-                if (!prereqDepartmentIds.includes(primaryDepartmentId)) {
-                  prereqDepartmentIds.push(primaryDepartmentId);
-                }
-              } else {
-                const matchedOther = validSupportingDepts.find(
+            const rawPrereqs = (depNode.prerequisites || [])
+              .map((p: string) => p.trim())
+              .filter((p: string) => p.length > 0);
+
+            if (rawPrereqs.length > 0) {
+              isBlocked = true;
+              for (const prereqStr of rawPrereqs) {
+                const matched = allActiveDepts.find(
                   (d) =>
-                    d.department_id.toString() === trimmed ||
-                    d.department_name.toLowerCase() === trimmed.toLowerCase(),
+                    (d.department_id.toString() === prereqStr ||
+                      d.department_name.toLowerCase() ===
+                        prereqStr.toLowerCase()) &&
+                    d.department_id !== supp.department_id,
                 );
                 if (
-                  matchedOther &&
-                  !prereqDepartmentIds.includes(matchedOther.department_id)
+                  matched &&
+                  !prereqDepartmentIds.includes(matched.department_id)
                 ) {
-                  prereqDepartmentIds.push(matchedOther.department_id);
+                  prereqDepartmentIds.push(matched.department_id);
                 }
               }
             }
-            isBlocked = prereqDepartmentIds.length > 0;
           } else {
             executionOrder = i + 2;
             prereqDepartmentIds = [primaryDepartmentId];
@@ -322,17 +387,51 @@ export async function POST(
           }
         }
 
+        const existingRecord = existingSuppMap.get(
+          supp.department_id.toString(),
+        );
+
+        if (
+          existingRecord &&
+          (existingRecord.status === "COMPLETED" ||
+            existingRecord.status === "RESOLVED") &&
+          isBlocked
+        ) {
+          throw new Error(
+            `Cannot block department "${supp.department_name}" because it has already completed investigation.`,
+          );
+        }
+
         const suppAlloc = calculateDepartmentSlaDuration(
           totalDurationMinutes,
           depNode,
         );
-        const suppDueAt = isBlocked
+
+        let suppStatus = isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
+        let suppActivatedAt: Date | null = isBlocked ? null : new Date();
+        let suppDueAt: Date | null = isBlocked
           ? null
           : calculateDepartmentDeadline(
-              new Date(),
+              suppActivatedAt,
               suppAlloc.allocatedDurationMinutes,
               grievance.due_at,
             );
+
+        if (existingRecord) {
+          if (
+            existingRecord.status === "COMPLETED" ||
+            existingRecord.status === "RESOLVED"
+          ) {
+            suppStatus = existingRecord.status;
+          } else if (existingRecord.status !== "BLOCKED" && !isBlocked) {
+            suppStatus = existingRecord.status;
+          }
+
+          if (existingRecord.activated_at && !isBlocked) {
+            suppActivatedAt = existingRecord.activated_at;
+            suppDueAt = existingRecord.due_at ?? suppDueAt;
+          }
+        }
 
         const suppMdiData = buildDepartmentMdiData(supp.department_id, {
           involvementType: "SUPPORTING",
@@ -342,12 +441,11 @@ export async function POST(
           slaPercentAllocation: suppAlloc.slaPercentAllocation,
           allocatedDurationMinutes: suppAlloc.allocatedDurationMinutes,
           dueAt: suppDueAt,
-          status: isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT",
+          status: suppStatus,
+          activatedAt: suppActivatedAt,
+          assignedAt: existingRecord ? existingRecord.assigned_at : undefined,
         });
 
-        const existingRecord = existingSuppMap.get(
-          supp.department_id.toString(),
-        );
         if (existingRecord) {
           await tx.grievance_departments.update({
             where: {
@@ -421,7 +519,7 @@ export async function POST(
       },
     });
 
-    if (primaryHead) {
+    if (primaryHead && !isPrimaryBlocked) {
       await NotificationService.send({
         userId: primaryHead.user_id,
         grievanceId: grievanceId,
@@ -461,9 +559,10 @@ export async function POST(
     });
   } catch (error) {
     console.error("Manual routing exception failed:", error);
-    return NextResponse.json(
-      { success: false, message: "Internal server error during routing." },
-      { status: 500 },
-    );
+    const msg =
+      error instanceof Error
+        ? error.message
+        : "Internal server error during routing.";
+    return NextResponse.json({ success: false, message: msg }, { status: 400 });
   }
 }
