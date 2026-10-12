@@ -403,8 +403,10 @@ export function CaseProgressTab({
         </div>
 
         {/* Right: Assignment */}
-        {caseProgressData?.departmentsInvolved &&
-        caseProgressData.departmentsInvolved.length > 1 ? (
+        {(caseProgressData?.departmentsInvolved &&
+          caseProgressData.departmentsInvolved.length > 1) ||
+        (currentGrievance?.departmentsInvolved &&
+          currentGrievance.departmentsInvolved.length > 1) ? (
           <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -413,7 +415,11 @@ export function CaseProgressTab({
               </span>
             </div>
             <div className="space-y-3">
-              {caseProgressData.departmentsInvolved.map((dept) => (
+              {(
+                caseProgressData?.departmentsInvolved ||
+                currentGrievance?.departmentsInvolved ||
+                []
+              ).map((dept) => (
                 <div key={dept.id} className="text-xs space-y-1">
                   <div className="flex items-center justify-between font-semibold text-slate-900">
                     <span>{dept.departmentName}</span>

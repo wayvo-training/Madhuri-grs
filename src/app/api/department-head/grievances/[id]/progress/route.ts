@@ -250,12 +250,60 @@ export async function GET(
         (myDeptRecord?.status === "BLOCKED" ? "BLOCKED" : "PENDING"),
     };
 
-    // Check if there is an HOD intervention (specifically SLA extension)
-    const interventionLog = (grievance.audit_logs || []).find(
-      (l: { action?: string }) =>
-        l.action === "HOD_INTERVENTION_TAKEN" ||
-        l.action === "Step 6: Intervention Action Taken",
-    );
+    // Check if there is an HOD intervention strictly scoped to this department in multi-dept cases
+    const isMultiDeptCase = rawDepartments.length > 1;
+    const interventionLog = (grievance.audit_logs || []).find((l) => {
+      if (
+        l.action !== "HOD_INTERVENTION_TAKEN" &&
+        l.action !== "Step 6: Intervention Action Taken"
+      ) {
+        return false;
+      }
+
+      if (!isMultiDeptCase || !departmentId) {
+        return true;
+      }
+
+      let parsedVal: Record<string, unknown> | null = null;
+      if (l.new_value) {
+        if (typeof l.new_value === "string") {
+          try {
+            parsedVal = JSON.parse(l.new_value);
+          } catch {
+            parsedVal = null;
+          }
+        } else if (typeof l.new_value === "object") {
+          parsedVal = l.new_value as Record<string, unknown>;
+        }
+      }
+
+      if (
+        typeof parsedVal?.targetDepartment === "string" &&
+        myDeptRecord?.departments?.department_name
+      ) {
+        const target = parsedVal.targetDepartment.toLowerCase().trim();
+        const currDept = myDeptRecord.departments.department_name
+          .toLowerCase()
+          .trim();
+        return target.includes(currDept) || currDept.includes(target);
+      }
+
+      if (parsedVal?.departmentId || parsedVal?.department_id) {
+        return (
+          BigInt(String(parsedVal.departmentId || parsedVal.department_id)) ===
+          departmentId
+        );
+      }
+
+      if (
+        l.users?.department_id &&
+        BigInt(l.users.department_id) === departmentId
+      ) {
+        return true;
+      }
+
+      return false;
+    });
     let ivData: Record<string, unknown> | null = null;
     if (interventionLog?.new_value) {
       if (typeof interventionLog.new_value === "string") {
@@ -605,133 +653,159 @@ export async function GET(
               },
             ];
 
-    // 4. Activity Timeline
-    // biome-ignore lint/suspicious/noExplicitAny: complex prisma type
-    const timeline = (grievance.audit_logs || []).map((log: any) => {
-      const user = log.users;
-      const actorRole = user?.roles?.role_name || "System";
+    const timeline = (grievance.audit_logs || []).map(
+      (log: (typeof grievance.audit_logs)[0]) => {
+        const user = log.users;
+        const actorRole = user?.roles?.role_name || "System";
 
-      let val: Record<string, unknown> = {};
-      if (typeof log.new_value === "string") {
-        try {
-          val = JSON.parse(log.new_value);
-        } catch {
-          val = { details: log.new_value };
+        let val: Record<string, unknown> = {};
+        if (typeof log.new_value === "string") {
+          try {
+            val = JSON.parse(log.new_value);
+          } catch {
+            val = { details: log.new_value };
+          }
+        } else if (log.new_value && typeof log.new_value === "object") {
+          val = log.new_value as Record<string, unknown>;
         }
-      } else if (log.new_value && typeof log.new_value === "object") {
-        val = log.new_value as Record<string, unknown>;
-      }
 
-      let title = log.action
-        .toLowerCase()
-        .split("_")
-        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
+        let title = log.action
+          .toLowerCase()
+          .split("_")
+          .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
 
-      let description =
-        (val.details as string) ||
-        (val.note as string) ||
-        (val.remarks as string) ||
-        (val.outcome as string) ||
-        "";
-
-      // Professional formatting
-      const act = log.action.toUpperCase();
-      if (act.includes("ASSIGN")) {
-        title = "Grievance Assigned";
-        description = val.details
-          ? String(val.details)
-          : `Assigned to ${assignment.staffName}`;
-      } else if (act.includes("HOD_INTERVENTION")) {
-        title = "Department Head Intervention";
-      } else if (
-        act === "HOD_DIRECTIVE_NOTE" ||
-        act === "HEAD_DIRECTIVE_ISSUED"
-      ) {
-        title = "Internal Note";
-        description =
+        let description =
+          (val.details as string) ||
           (val.note as string) ||
-          (val.details as string) ||
-          "Department Head internal note.";
-      } else if (
-        act === "INVESTIGATION_NOTE_ADDED" ||
-        act === "INTERNAL_NOTE_ADDED"
-      ) {
-        title = "Investigation Note";
-        description =
-          (val.note as string) ||
-          (val.details as string) ||
-          "Staff investigation note.";
-      } else if (act.includes("ACCEPT_RESOLUTION") || act.includes("APPROVE")) {
-        title = "Resolution Approved & Case Closed";
-      } else if (act.includes("REJECT_RESOLUTION") || act.includes("REOPEN")) {
-        title = "Resolution Rejected — Grievance Reopened";
-        description =
-          (val.reason as string) ||
-          (val.details as string) ||
-          "Previous resolution was rejected and case reopened for re-investigation.";
-      } else if (act.includes("SUBMIT_RESOLUTION")) {
-        title = "Resolution Findings Submitted";
-      } else if (act.includes("SLA_100") || act.includes("BREACH")) {
-        title = "SLA Deadline Breached (Escalated)";
-        description =
-          (val.details as string) ||
-          "SLA resolution deadline elapsed without resolution.";
-      } else if (act.includes("SLA_75") || act.includes("AT_RISK")) {
-        title = "SLA 75% Warning (Head Review Required)";
-        description =
-          (val.note as string) ||
-          (val.details as string) ||
-          "Automated SLA threshold warning: Case approached 75% elapsed SLA.";
-      } else if (act.includes("APPEAL_PANEL")) {
-        title = "Appeal Review Panel Convened";
-        description =
-          (val.details as string) || "Independent evaluation panel convened.";
-      } else if (
-        act.includes("CONTRIBUTION_AUDIT") ||
-        act.includes("AUDIT_VERIFIED")
-      ) {
-        title = "Deliverables Audit Verified";
-        description =
-          (val.details as string) || "Audit verification conducted.";
-      } else if (act.includes("SCORECARD")) {
-        title = "Scorecard Rating Recomputed";
-        description =
-          (val.details as string) || "Evaluation rating recomputed.";
-      } else if (act.includes("ROUTE")) {
-        title = "Department Routing";
-        description =
-          (val.details as string) ||
-          "Grievance triaged and routed into department queue.";
-      } else if (act.includes("CREATE") || act.includes("SUBMIT")) {
-        title = "Grievance Submitted";
-        description =
-          (val.details as string) ||
-          `Submitted by ${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim();
-      }
+          (val.remarks as string) ||
+          (val.outcome as string) ||
+          "";
 
-      let actor = "System";
-      if (user) {
-        const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
-        if (actorRole === "DEPARTMENT_HEAD") {
-          actor = `Department Head — ${rawName}`;
-        } else if (actorRole === "STAFF") {
-          actor = `Staff — ${rawName}`;
-        } else {
-          actor = `${rawName} (${actorRole})`;
+        // Professional formatting
+        const act = log.action.toUpperCase();
+        if (act.includes("ASSIGN")) {
+          title = "Grievance Assigned";
+          description = val.details
+            ? String(val.details)
+            : `Assigned to ${assignment.staffName}`;
+        } else if (act.includes("HOD_INTERVENTION")) {
+          title = "Department Head Intervention";
+        } else if (
+          act === "HOD_DIRECTIVE_NOTE" ||
+          act === "HEAD_DIRECTIVE_ISSUED"
+        ) {
+          title = "Internal Note";
+          description =
+            (val.note as string) ||
+            (val.details as string) ||
+            "Department Head internal note.";
+        } else if (
+          act === "INVESTIGATION_NOTE_ADDED" ||
+          act === "INTERNAL_NOTE_ADDED"
+        ) {
+          title = "Investigation Note";
+          description =
+            (val.note as string) ||
+            (val.details as string) ||
+            "Staff investigation note.";
+        } else if (
+          act.includes("ACCEPT_RESOLUTION") ||
+          act.includes("APPROVE")
+        ) {
+          title = "Resolution Approved & Case Closed";
+        } else if (
+          act.includes("REJECT_RESOLUTION") ||
+          act.includes("REOPEN")
+        ) {
+          title = "Resolution Rejected — Grievance Reopened";
+          description =
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Previous resolution was rejected and case reopened for re-investigation.";
+        } else if (act.includes("SUBMIT_RESOLUTION")) {
+          title = "Resolution Findings Submitted";
+        } else if (act.includes("SLA_100") || act.includes("BREACH")) {
+          title = "SLA Deadline Breached (Escalated)";
+          description =
+            (val.details as string) ||
+            "SLA resolution deadline elapsed without resolution.";
+        } else if (act.includes("SLA_75") || act.includes("AT_RISK")) {
+          title = "SLA 75% Warning (Head Review Required)";
+          description =
+            (val.note as string) ||
+            (val.details as string) ||
+            "Automated SLA threshold warning: Case approached 75% elapsed SLA.";
+        } else if (act.includes("APPEAL_PANEL")) {
+          title = "Appeal Review Panel Convened";
+          description =
+            (val.details as string) || "Independent evaluation panel convened.";
+        } else if (
+          act.includes("CONTRIBUTION_AUDIT") ||
+          act.includes("AUDIT_VERIFIED")
+        ) {
+          title = "Deliverables Audit Verified";
+          description =
+            (val.details as string) || "Audit verification conducted.";
+        } else if (act.includes("SCORECARD")) {
+          title = "Scorecard Rating Recomputed";
+          description =
+            (val.details as string) || "Evaluation rating recomputed.";
+        } else if (
+          act.includes("FINDINGS") ||
+          act === "SUPPORTING_FINDINGS_SUBMITTED"
+        ) {
+          title = "Department Findings Submitted";
+          description =
+            (val.findings as string) ||
+            (val.details as string) ||
+            "Supporting departmental investigation findings submitted.";
+        } else if (
+          act.includes("SUBMIT_RESOLUTION") ||
+          act.includes("RESOLUTION_SUBMITTED")
+        ) {
+          title = "Resolution Findings Submitted";
+        } else if (act.includes("ROUTE")) {
+          title = "Department Routing";
+          description =
+            (val.details as string) ||
+            "Grievance triaged and routed into department queue.";
+        } else if (
+          act === "GRIEVANCE_CREATED" ||
+          act === "GRIEVANCE_SUBMITTED" ||
+          act === "CREATE" ||
+          act === "SUBMIT" ||
+          act.includes("CREATE")
+        ) {
+          title = "Grievance Submitted";
+          description =
+            (val.details as string) ||
+            `Submitted by ${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim();
         }
-      }
 
-      return {
-        id: log.audit_log_id.toString(),
-        timestamp: formatFullDateTime(log.created_at),
-        relativeTime: formatRelativeTime(log.created_at),
-        title,
-        description:
-          description || "Action recorded in grievance governance trail.",
-        actor,
-      };
-    });
+        let actor = "System";
+        if (user) {
+          const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+          if (actorRole === "DEPARTMENT_HEAD") {
+            actor = `Department Head — ${rawName}`;
+          } else if (actorRole === "STAFF") {
+            actor = `Staff — ${rawName}`;
+          } else {
+            actor = `${rawName} (${actorRole})`;
+          }
+        }
+
+        return {
+          id: log.audit_log_id.toString(),
+          timestamp: formatFullDateTime(log.created_at),
+          relativeTime: formatRelativeTime(log.created_at),
+          title,
+          description:
+            description || "Action recorded in grievance governance trail.",
+          actor,
+        };
+      },
+    );
 
     // Helper to parse audit log new_value
     const parseLogVal = (

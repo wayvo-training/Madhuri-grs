@@ -136,7 +136,12 @@ export function CaseInspectionHeader({
                     <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-[#0F766E] text-white">
                       Head Intervention Active
                     </span>
-                    <span>Resolution Authority Assumed</span>
+                    <span>
+                      Resolution Authority Assumed
+                      {hodIntervention.targetDepartment
+                        ? ` (${hodIntervention.targetDepartment})`
+                        : ""}
+                    </span>
                   </div>
                   <p className="text-[11px] font-medium text-teal-900 leading-snug">
                     Department Head is now responsible for reviewing the
@@ -155,6 +160,9 @@ export function CaseInspectionHeader({
                     <span>
                       Current Head Intervention &ndash;{" "}
                       {hodIntervention.actionLabel}
+                      {hodIntervention.targetDepartment
+                        ? ` (${hodIntervention.targetDepartment})`
+                        : ""}
                     </span>
                   </div>
                   {(hodIntervention.note ||

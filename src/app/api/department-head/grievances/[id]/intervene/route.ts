@@ -36,6 +36,7 @@ export async function POST(
         ...(isAdmin ? {} : { department_id: departmentId }),
       },
       include: {
+        departments: true,
         grievances: {
           include: {
             assignments: {
@@ -509,7 +510,10 @@ export async function POST(
               ? user.user_id.toString()
               : undefined,
             targetStaffName: targetStaffName || undefined,
-            targetDepartment: targetDeptName || undefined,
+            departmentId: grievanceDept.department_id.toString(),
+            department_id: grievanceDept.department_id.toString(),
+            targetDepartment:
+              grievanceDept.departments?.department_name || undefined,
             extensionHours:
               interventionType === "EXTEND_SLA" ? hours : undefined,
             newDueAt: newExtendedDueAt

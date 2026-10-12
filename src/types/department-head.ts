@@ -53,7 +53,8 @@ export interface GrievanceItem {
     | "CLOSED"
     | "RESOLVED"
     | "BLOCKED"
-    | "PENDING_ASSIGNMENT";
+    | "PENDING_ASSIGNMENT"
+    | "COMPLETED";
   slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
   slaDeadline: string;
   slaTimeLeft: string;
@@ -276,6 +277,7 @@ export interface CaseProgressData {
     status: string;
     assignedStaff?: string | null;
   }[];
+  hodIntervention?: GrievanceItem["hodIntervention"];
 }
 
 export interface DepartmentMetricsSummary {

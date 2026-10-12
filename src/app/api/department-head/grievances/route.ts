@@ -603,12 +603,61 @@ export async function GET(request: Request) {
         };
       });
 
-      // Find any HOD intervention record from audit logs
-      const interventionLog = g.audit_logs.find(
-        (l) =>
-          l.action === "HOD_INTERVENTION_TAKEN" ||
-          l.action === "Step 6: Intervention Action Taken",
-      );
+      // Find any HOD intervention record from audit logs strictly scoped to this department in multi-dept cases
+      const isMultiDeptCase = relatedDepts.length > 1;
+      const interventionLog = g.audit_logs.find((l) => {
+        if (
+          l.action !== "HOD_INTERVENTION_TAKEN" &&
+          l.action !== "Step 6: Intervention Action Taken"
+        ) {
+          return false;
+        }
+
+        if (!isMultiDeptCase || !departmentId) {
+          return true;
+        }
+
+        let parsedVal: Record<string, unknown> | null = null;
+        if (l.new_value) {
+          if (typeof l.new_value === "string") {
+            try {
+              parsedVal = JSON.parse(l.new_value);
+            } catch {
+              parsedVal = null;
+            }
+          } else if (typeof l.new_value === "object") {
+            parsedVal = l.new_value as Record<string, unknown>;
+          }
+        }
+
+        if (
+          typeof parsedVal?.targetDepartment === "string" &&
+          myDeptRecord?.departments?.department_name
+        ) {
+          const target = parsedVal.targetDepartment.toLowerCase().trim();
+          const currDept = myDeptRecord.departments.department_name
+            .toLowerCase()
+            .trim();
+          return target.includes(currDept) || currDept.includes(target);
+        }
+
+        if (parsedVal?.departmentId || parsedVal?.department_id) {
+          return (
+            BigInt(
+              String(parsedVal.departmentId || parsedVal.department_id),
+            ) === departmentId
+          );
+        }
+
+        if (
+          l.users?.department_id &&
+          BigInt(l.users.department_id) === departmentId
+        ) {
+          return true;
+        }
+
+        return false;
+      });
       let hodIntervention = null;
       if (interventionLog?.new_value) {
         let iv: Record<string, unknown> = {};
@@ -697,15 +746,16 @@ export async function GET(request: Request) {
       let resolvedStatus: GrievanceItem["status"] =
         g.status as GrievanceItem["status"];
       if (myDeptRecord) {
-        if (
-          g.status === "CLOSED" ||
-          g.status === "RESOLVED" ||
-          g.status === "UNDER_REVIEW" ||
-          g.status === "ESCALATED"
-        ) {
+        if (g.status === "CLOSED" || g.status === "RESOLVED") {
           resolvedStatus = g.status as GrievanceItem["status"];
+        } else if (myDeptRecord.status === "COMPLETED") {
+          resolvedStatus = "COMPLETED";
         } else if (myDeptRecord.status === "BLOCKED") {
           resolvedStatus = "BLOCKED";
+        } else if (g.status === "ESCALATED") {
+          resolvedStatus = "ESCALATED";
+        } else if (g.status === "UNDER_REVIEW") {
+          resolvedStatus = "UNDER_REVIEW";
         } else if (
           myDeptRecord.status === "PENDING_ASSIGNMENT" ||
           !myDeptAssignment
@@ -715,11 +765,6 @@ export async function GET(request: Request) {
           resolvedStatus = "ASSIGNED";
         } else if (myDeptRecord.status === "IN_PROGRESS") {
           resolvedStatus = "IN_PROGRESS";
-        } else if (myDeptRecord.status === "COMPLETED") {
-          resolvedStatus =
-            g.status === "CLOSED" || g.status === "RESOLVED"
-              ? (g.status as GrievanceItem["status"])
-              : "IN_PROGRESS";
         } else {
           resolvedStatus = myDeptAssignment ? "ASSIGNED" : "PENDING_ASSIGNMENT";
         }
@@ -740,17 +785,23 @@ export async function GET(request: Request) {
         submitterEmail: g.users.email,
         priority: g.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
         status: resolvedStatus,
-        slaStatus: (g.sla_status || "ON_TRACK") as
-          | "ON_TRACK"
-          | "AT_RISK"
-          | "BREACHED",
+        slaStatus:
+          myDeptRecord?.status === "COMPLETED"
+            ? "ON_TRACK"
+            : ((g.sla_status || "ON_TRACK") as
+                | "ON_TRACK"
+                | "AT_RISK"
+                | "BREACHED"),
         slaDeadline: formatFriendlyDate(g.due_at),
-        slaTimeLeft: formatSlaTimeLeft(
-          g.due_at,
-          g.sla_status,
-          g.priority,
-          g.created_at,
-        ),
+        slaTimeLeft:
+          myDeptRecord?.status === "COMPLETED"
+            ? "Completed"
+            : formatSlaTimeLeft(
+                g.due_at,
+                g.sla_status,
+                g.priority,
+                g.created_at,
+              ),
         slaConsumptionPercent: calculateSlaConsumption(
           g.created_at,
           g.due_at,

@@ -178,7 +178,11 @@ export function CaseFileInspectionModal({
           priority={currentGrievance.priority}
           slaState={slaState}
           status={currentGrievance.status}
-          hodIntervention={currentGrievance.hodIntervention}
+          hodIntervention={
+            caseProgressData?.hodIntervention !== undefined
+              ? caseProgressData.hodIntervention
+              : currentGrievance.hodIntervention
+          }
           departmentsInvolved={
             currentGrievance.departmentsInvolved ||
             caseProgressData?.departmentsInvolved
