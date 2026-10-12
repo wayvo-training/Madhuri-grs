@@ -64,6 +64,17 @@ export interface StaffAuditItem {
   grievanceNumber?: string;
 }
 
+export interface SupportingDepartmentFinding {
+  id: string;
+  departmentName: string;
+  submittedBy: string;
+  findings: string;
+  actionTaken?: string;
+  notes?: string;
+  createdAt: string;
+  timestamp: string;
+}
+
 export interface StaffResolutionData {
   id?: string;
   submittedByUserId?: string;
@@ -117,6 +128,7 @@ export interface StaffGrievanceItem {
   attachments?: StaffAttachmentItem[];
   internalNotes?: StaffInternalNote[];
   collaborationNotes?: StaffInternalNote[];
+  supportingFindings?: SupportingDepartmentFinding[];
   auditTrail?: StaffAuditItem[];
   departmentsInvolved?: StaffInvolvedDepartment[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";

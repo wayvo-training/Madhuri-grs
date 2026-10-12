@@ -122,7 +122,6 @@ export function CollaborationTab({
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-h-[280px] overflow-y-auto space-y-3">
             {crossDeptNotes.length > 0 ? (
               crossDeptNotes.map((note) => {
-                const isFindings = note.note.includes("[Department Findings");
                 return (
                   <div key={note.id} className="text-sm">
                     <div className="flex items-center justify-between mb-1">
@@ -130,23 +129,15 @@ export function CollaborationTab({
                         <span className="font-semibold text-slate-800 text-xs">
                           {note.author}
                         </span>
-                        {isFindings && (
-                          <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.2 text-[9px] font-bold border border-emerald-200">
-                            Findings
-                          </span>
-                        )}
+                        <span className="rounded-full bg-slate-100 px-1.5 py-0.2 text-[9px] font-semibold text-slate-600">
+                          {note.role}
+                        </span>
                       </div>
                       <span className="text-[10px] text-slate-500 font-medium">
                         {note.timestamp}
                       </span>
                     </div>
-                    <div
-                      className={`p-3 rounded-lg text-slate-700 shadow-2xs whitespace-pre-wrap text-xs leading-relaxed ${
-                        isFindings
-                          ? "bg-emerald-50/70 border border-emerald-200 font-sans"
-                          : "bg-white border border-slate-200"
-                      }`}
-                    >
+                    <div className="p-3 rounded-lg text-slate-700 shadow-2xs whitespace-pre-wrap text-xs leading-relaxed bg-white border border-slate-200">
                       {note.note}
                     </div>
                   </div>

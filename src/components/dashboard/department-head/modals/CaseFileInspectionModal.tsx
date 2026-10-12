@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import type {
   CaseDrawerTab,
   CaseProgressData,
@@ -256,6 +257,27 @@ export function CaseFileInspectionModal({
               </span>
             </button>
           )}
+          {((currentGrievance.departmentsInvolved &&
+            currentGrievance.departmentsInvolved.length > 1) ||
+            (caseProgressData?.departmentsInvolved &&
+              (caseProgressData.departmentsInvolved as unknown[]).length > 1) ||
+            (currentGrievance.supportingFindings &&
+              currentGrievance.supportingFindings.length > 0)) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("findings")}
+              className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "findings"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span>Department Findings</span>
+              <span className="rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-bold">
+                {currentGrievance.supportingFindings?.length || 0}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Drawer Body */}
@@ -309,6 +331,12 @@ export function CaseFileInspectionModal({
                 onAddCollaborationNote || onAddInternalNote
               }
               onGrievanceUpdated={setCurrentGrievance}
+            />
+          )}
+
+          {activeTab === "findings" && (
+            <DepartmentFindingsTab
+              findings={currentGrievance.supportingFindings || []}
             />
           )}
         </div>

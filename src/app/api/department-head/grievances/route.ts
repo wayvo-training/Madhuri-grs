@@ -11,6 +11,10 @@ import { calculateSlaConsumption } from "@/lib/engines/sla-engine";
 import { getPaginationParams, paginatedJsonResponse } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
+import type {
+  GrievanceItem,
+  SupportingDepartmentFinding,
+} from "@/types/department-head";
 
 function formatAuditEntryDetails(action: string, newValue: unknown): string {
   if (!newValue) return "Action recorded during grievance processing.";
@@ -456,11 +460,13 @@ export async function GET(request: Request) {
       const internalNotes = g.audit_logs
         .filter((l) => {
           const val = parseLogVal(l);
-          const isCollab =
+          const isCollabOrFinding =
             l.action === "COLLABORATION_NOTE_ADDED" ||
             l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
-            val.scope === "COLLABORATION";
-          if (isCollab) return false;
+            val.scope === "COLLABORATION" ||
+            val.isFindings === true ||
+            String(val.note || "").includes("[Department Findings");
+          if (isCollabOrFinding) return false;
 
           const isInternalAction =
             l.action === "HOD_DIRECTIVE_NOTE" ||
@@ -486,15 +492,73 @@ export async function GET(request: Request) {
       const collaborationNotes = g.audit_logs
         .filter((l) => {
           const val = parseLogVal(l);
+          const isFinding =
+            l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+            val.isFindings === true ||
+            String(val.note || "").includes("[Department Findings");
+          if (isFinding) return false;
+
           return (
             l.action === "COLLABORATION_NOTE_ADDED" ||
-            l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
             val.scope === "COLLABORATION"
           );
         })
         .slice()
         .reverse()
         .map((l) => formatLogNote(l, parseLogVal(l)));
+
+      const supportingFindings: SupportingDepartmentFinding[] = g.audit_logs
+        .filter((l) => {
+          const val = parseLogVal(l);
+          return (
+            l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+            val.isFindings === true ||
+            String(val.note || "").includes("[Department Findings")
+          );
+        })
+        .slice()
+        .reverse()
+        .map((l) => {
+          const val = parseLogVal(l);
+          const u = l.users;
+          const authorName = u
+            ? `${u.first_name} ${u.last_name || ""}`.trim()
+            : (val.submittedBy as string) || "Staff Member";
+          const deptName =
+            (val.department as string) ||
+            (val.departmentName as string) ||
+            "Supporting Department";
+
+          let findings = (val.findings as string) || "";
+          let actionTaken = (val.actionTaken as string) || "";
+          let notes = (val.notes as string) || "";
+
+          if (!findings && typeof val.note === "string") {
+            const noteStr = val.note;
+            const findingsMatch = noteStr.match(
+              /Findings:\s*([\s\S]*?)(?=\n\nAction Taken:|$)/,
+            );
+            const actionMatch = noteStr.match(
+              /Action Taken:\s*([\s\S]*?)(?=\n\nNotes:|$)/,
+            );
+            const notesMatch = noteStr.match(/Notes:\s*([\s\S]*?)$/);
+            if (findingsMatch) findings = findingsMatch[1].trim();
+            if (actionMatch) actionTaken = actionMatch[1].trim();
+            if (notesMatch) notes = notesMatch[1].trim();
+            if (!findings) findings = noteStr;
+          }
+
+          return {
+            id: l.audit_log_id.toString(),
+            departmentName: deptName,
+            submittedBy: (val.submittedBy as string) || authorName,
+            findings,
+            actionTaken: actionTaken || undefined,
+            notes: notes || undefined,
+            createdAt: l.created_at.toISOString(),
+            timestamp: formatRelativeTime(l.created_at),
+          };
+        });
 
       const auditTrail = g.audit_logs.map((l) => {
         const user = l.users;
@@ -630,6 +694,37 @@ export async function GET(request: Request) {
         myInvolvementType === "EQUAL" ||
         !departmentId;
 
+      let resolvedStatus: GrievanceItem["status"] =
+        g.status as GrievanceItem["status"];
+      if (myDeptRecord) {
+        if (
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED" ||
+          g.status === "UNDER_REVIEW" ||
+          g.status === "ESCALATED"
+        ) {
+          resolvedStatus = g.status as GrievanceItem["status"];
+        } else if (myDeptRecord.status === "BLOCKED") {
+          resolvedStatus = "BLOCKED";
+        } else if (
+          myDeptRecord.status === "PENDING_ASSIGNMENT" ||
+          !myDeptAssignment
+        ) {
+          resolvedStatus = "PENDING_ASSIGNMENT";
+        } else if (myDeptRecord.status === "ASSIGNED") {
+          resolvedStatus = "ASSIGNED";
+        } else if (myDeptRecord.status === "IN_PROGRESS") {
+          resolvedStatus = "IN_PROGRESS";
+        } else if (myDeptRecord.status === "COMPLETED") {
+          resolvedStatus =
+            g.status === "CLOSED" || g.status === "RESOLVED"
+              ? (g.status as GrievanceItem["status"])
+              : "IN_PROGRESS";
+        } else {
+          resolvedStatus = myDeptAssignment ? "ASSIGNED" : "PENDING_ASSIGNMENT";
+        }
+      }
+
       return {
         id: g.grievance_id.toString(),
         ticketCode: g.grievance_number,
@@ -644,17 +739,7 @@ export async function GET(request: Request) {
         submitterRole: g.users.roles?.role_name || "Employee",
         submitterEmail: g.users.email,
         priority: g.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
-        status: (myDeptRecord?.status === "BLOCKED" ? "BLOCKED" : g.status) as
-          | "SUBMITTED"
-          | "ROUTED"
-          | "ASSIGNED"
-          | "IN_PROGRESS"
-          | "UNDER_REVIEW"
-          | "REOPENED"
-          | "ESCALATED"
-          | "CLOSED"
-          | "BLOCKED"
-          | "PENDING_ASSIGNMENT",
+        status: resolvedStatus,
         slaStatus: (g.sla_status || "ON_TRACK") as
           | "ON_TRACK"
           | "AT_RISK"
@@ -751,6 +836,7 @@ export async function GET(request: Request) {
         })),
         internalNotes,
         collaborationNotes,
+        supportingFindings,
       };
     });
 

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import type {
+  CaseDrawerTab,
   EscalationAuditRecord,
   EscalationInterventionType,
   GrievanceItem,
@@ -107,8 +108,8 @@ interface DepartmentHeadState {
   setActionSuccessMessage: (v: string | null) => void;
   selectedCaseFile: GrievanceItem | null;
   setSelectedCaseFile: (v: GrievanceItem | null) => void;
-  caseDrawerTab: "progress" | "statement" | "notes" | "audit";
-  setCaseDrawerTab: (v: "progress" | "statement" | "notes" | "audit") => void;
+  caseDrawerTab: CaseDrawerTab | "audit";
+  setCaseDrawerTab: (v: CaseDrawerTab | "audit") => void;
   newInternalNote: string;
   setNewInternalNote: (v: string) => void;
   caseProgressLoading: boolean;
@@ -254,9 +255,9 @@ export function DepartmentHeadProvider({
   >(null);
   const [selectedCaseFile, setSelectedCaseFile] =
     useState<GrievanceItem | null>(null);
-  const [caseDrawerTab, setCaseDrawerTab] = useState<
-    "progress" | "statement" | "notes" | "audit"
-  >("progress");
+  const [caseDrawerTab, setCaseDrawerTab] = useState<CaseDrawerTab | "audit">(
+    "progress",
+  );
   const [newInternalNote, setNewInternalNote] = useState("");
   const [caseProgressLoading, setCaseProgressLoading] = useState(false);
   const [previewDocument, setPreviewDocument] =

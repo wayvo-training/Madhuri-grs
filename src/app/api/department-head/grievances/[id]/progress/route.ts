@@ -416,11 +416,30 @@ export async function GET(
       currentStageLabel = "Awaiting Complainant Response";
       currentStageNumber = 3;
     } else if (
-      st === "IN_PROGRESS" ||
-      st === "INVESTIGATING" ||
-      st === "ESCALATED" ||
-      st === "REOPENED" ||
-      st === "REOPEN_REVIEW"
+      myDeptRecord &&
+      (myDeptRecord.status === "PENDING_ASSIGNMENT" ||
+        (!hasAssignedOfficer && myDeptRecord.status !== "IN_PROGRESS"))
+    ) {
+      currentStageKey = "SUBMITTED";
+      currentStageLabel = "Pending Staff Assignment";
+      currentStageNumber = 1;
+    } else if (myDeptRecord && myDeptRecord.status === "ASSIGNED") {
+      currentStageKey = "ASSIGNED";
+      const officerName = assignedUser
+        ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
+        : "Investigating Officer";
+      currentStageLabel = isReopened
+        ? `Reopened — Assigned to ${officerName}`
+        : `Assigned to ${officerName}`;
+      currentStageNumber = 2;
+    } else if (
+      myDeptRecord?.status === "IN_PROGRESS" ||
+      (!myDeptRecord &&
+        (st === "IN_PROGRESS" ||
+          st === "INVESTIGATING" ||
+          st === "ESCALATED" ||
+          st === "REOPENED" ||
+          st === "REOPEN_REVIEW"))
     ) {
       currentStageKey = "INVESTIGATION";
       currentStageLabel =

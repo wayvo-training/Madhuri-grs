@@ -19,6 +19,17 @@ export interface InternalNoteItem {
   createdAt?: string;
 }
 
+export interface SupportingDepartmentFinding {
+  id: string;
+  departmentName: string;
+  submittedBy: string;
+  findings: string;
+  actionTaken?: string;
+  notes?: string;
+  createdAt: string;
+  timestamp: string;
+}
+
 export interface GrievanceItem {
   id: string;
   ticketCode: string;
@@ -119,6 +130,7 @@ export interface GrievanceItem {
   }[];
   internalNotes?: InternalNoteItem[];
   collaborationNotes?: InternalNoteItem[];
+  supportingFindings?: SupportingDepartmentFinding[];
   blockedReason?: string;
   prerequisiteDepartments?: string[];
   departmentsInvolved?: {
@@ -188,7 +200,8 @@ export type CaseDrawerTab =
   | "statement"
   | "notes"
   | "activity"
-  | "collaboration";
+  | "collaboration"
+  | "findings";
 
 export interface DepartmentHeadOverviewProps {
   departmentName?: string;

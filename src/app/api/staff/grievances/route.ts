@@ -79,7 +79,37 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const items: StaffGrievanceItem[] = assignments.map((a) => {
+    // Deduplicate assignments by grievance_id
+    const uniqueAssignments: typeof assignments = [];
+    const seenGrievanceIds = new Set<string>();
+
+    const sortedAssignments = [...assignments]
+      .filter((a) => Boolean(a.grievances))
+      .sort((a, b) => {
+        if (
+          a.assignment_status === "ASSIGNED" &&
+          b.assignment_status !== "ASSIGNED"
+        )
+          return -1;
+        if (
+          b.assignment_status === "ASSIGNED" &&
+          a.assignment_status !== "ASSIGNED"
+        )
+          return 1;
+        return (
+          new Date(b.assigned_at).getTime() - new Date(a.assigned_at).getTime()
+        );
+      });
+
+    for (const a of sortedAssignments) {
+      const gid = a.grievance_id.toString();
+      if (!seenGrievanceIds.has(gid)) {
+        seenGrievanceIds.add(gid);
+        uniqueAssignments.push(a);
+      }
+    }
+
+    const items: StaffGrievanceItem[] = uniqueAssignments.map((a) => {
       const g = a.grievances;
       const submitter = g.users;
       const submitterFullName = submitter

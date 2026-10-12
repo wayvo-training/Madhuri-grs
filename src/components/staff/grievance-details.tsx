@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
+import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import {
   buildGmailComposeUrl,
@@ -32,7 +33,13 @@ interface GrievanceDetailsProps {
   staffName: string;
   staffEmail: string;
   isOpen?: boolean;
-  initialTab?: "statement" | "investigation" | "resolution" | "activity";
+  initialTab?:
+    | "statement"
+    | "investigation"
+    | "resolution"
+    | "activity"
+    | "collaboration"
+    | "findings";
   hodEmail?: string;
   hodName?: string;
   onClose: () => void;
@@ -87,7 +94,12 @@ export function GrievanceDetails({
   onOpenDocumentPreview,
 }: GrievanceDetailsProps) {
   const [activeTab, setActiveTab] = useState<
-    "statement" | "investigation" | "resolution" | "collaboration" | "activity"
+    | "statement"
+    | "investigation"
+    | "resolution"
+    | "collaboration"
+    | "activity"
+    | "findings"
   >(initialTab);
   const [isStarting, setIsStarting] = useState(false);
   const [autoOpenRequestModal, setAutoOpenRequestModal] = useState(false);
@@ -287,6 +299,25 @@ export function GrievanceDetails({
                 <span>Collaboration</span>
               </button>
             )}
+          {((grievance.departmentsInvolved &&
+            grievance.departmentsInvolved.length > 1) ||
+            (grievance.supportingFindings &&
+              grievance.supportingFindings.length > 0)) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("findings")}
+              className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "findings"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span>Department Findings</span>
+              <span className="rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-bold">
+                {grievance.supportingFindings?.length || 0}
+              </span>
+            </button>
+          )}
           {grievance.hasResolution && (
             <button
               type="button"
@@ -322,6 +353,12 @@ export function GrievanceDetails({
 
           {activeTab === "collaboration" && (
             <CollaborationTab grievance={grievance} onAddNote={onAddNote} />
+          )}
+
+          {activeTab === "findings" && (
+            <DepartmentFindingsTab
+              findings={grievance.supportingFindings || []}
+            />
           )}
 
           {activeTab === "investigation" && (

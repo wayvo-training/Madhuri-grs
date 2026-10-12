@@ -132,7 +132,7 @@ export async function POST(
         await activateNextSequentialDepartments(grievanceId, tx);
       }
 
-      // 2. Create Audit Log
+      // 2. Create Audit Log for Department Findings
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,
@@ -145,35 +145,13 @@ export async function POST(
             submittedBy: authorName,
             findings: findings.trim(),
             actionTaken: actionTaken.trim(),
-          },
-        },
-      });
-
-      // 3. Post to Cross-Department Collaboration Timeline
-      await tx.audit_logs.create({
-        data: {
-          grievance_id: grievanceId,
-          user_id: staffId,
-          action: "COLLABORATION_NOTE_ADDED",
-          entity_type: "GRIEVANCE",
-          entity_id: grievanceId,
-          new_value: {
-            note: formattedNote,
-            author: `Staff — ${authorName} (${deptName})`,
-            role: "Staff",
-            department_id: myDeptRecord
-              ? myDeptRecord.department_id.toString()
-              : null,
-            departmentName: deptName,
-            scope: "COLLABORATION",
-            isFindings: true,
-            details: `Supporting departmental findings submitted by ${authorName} (${deptName}).`,
+            notes: notes.trim(),
           },
         },
       });
     });
 
-    // 4. Notify Primary Department Lead and Primary HOD
+    // 3. Notify Primary Department Lead and Primary HOD
     const primaryRecord = allInvolvedDepts.find(
       (d) => d.involvement_type === "PRIMARY",
     );
@@ -185,7 +163,7 @@ export async function POST(
         grievanceId,
         type: "HEAD_INTERNAL_NOTE",
         title: `Department Findings Submitted (${grievance.grievance_number})`,
-        message: `${authorName} (${deptName}) has submitted departmental findings for ${grievance.grievance_number}. Review in Collaboration Tab to compile the final resolution.`,
+        message: `${authorName} (${deptName}) has submitted departmental findings for ${grievance.grievance_number}. Review in the Department Findings tab to compile the final resolution.`,
       });
     }
 

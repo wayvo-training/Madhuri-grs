@@ -228,9 +228,18 @@ export async function GET(
         departmentName: (val?.departmentName as string) || undefined,
       };
 
+      const isFinding =
+        l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+        val?.isFindings === true ||
+        String(val?.note || "").includes("[Department Findings");
+
+      if (isFinding) {
+        // Findings belong on dedicated Department Findings tab, not in discussion notes
+        continue;
+      }
+
       const isCollab =
         l.action === "COLLABORATION_NOTE_ADDED" ||
-        l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
         val?.scope === "COLLABORATION";
 
       if (isCollab) {

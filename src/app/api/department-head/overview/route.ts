@@ -64,14 +64,23 @@ export async function GET(request: Request) {
       }
 
       const hasActiveAssignment = g.assignments.length > 0;
+      const isDeptBlocked = dg.status === "BLOCKED";
+      const isDeptPending =
+        dg.status === "PENDING_ASSIGNMENT" || !hasActiveAssignment;
+
       if (
-        !hasActiveAssignment ||
-        g.status === "SUBMITTED" ||
-        g.status === "ROUTED"
+        !isDeptBlocked &&
+        (isDeptPending || g.status === "SUBMITTED" || g.status === "ROUTED")
       ) {
         unassignedCount++;
-      }
-      if (g.status === "IN_PROGRESS" || g.status === "ASSIGNED") {
+      } else if (
+        !isDeptBlocked &&
+        hasActiveAssignment &&
+        (dg.status === "IN_PROGRESS" ||
+          dg.status === "ASSIGNED" ||
+          g.status === "IN_PROGRESS" ||
+          g.status === "ASSIGNED")
+      ) {
         inProgressCount++;
       }
       if (g.sla_status === "AT_RISK" && g.status !== "ESCALATED") {

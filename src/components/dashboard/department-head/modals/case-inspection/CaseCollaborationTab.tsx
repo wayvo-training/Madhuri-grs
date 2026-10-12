@@ -205,30 +205,19 @@ export function CaseCollaborationTab({
             </div>
           ) : (
             notes.map((n) => {
-              const isFindings = n.note.includes("[Department Findings");
               return (
                 <div
                   key={n.id}
-                  className={`rounded-xl border p-3.5 space-y-1.5 shadow-2xs ${
-                    isFindings
-                      ? "border-emerald-300 bg-emerald-50/60"
-                      : "border-slate-200 bg-white"
-                  }`}
+                  className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-1.5 shadow-2xs"
                 >
                   <div className="flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-slate-900">
                         {n.author}
                       </span>
-                      {isFindings ? (
-                        <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[9px] font-bold border border-emerald-200">
-                          Supporting Findings
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
-                          {n.role}
-                        </span>
-                      )}
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                        {n.role}
+                      </span>
                     </div>
                     <span className="text-slate-400 text-[10px]">
                       {n.timestamp}

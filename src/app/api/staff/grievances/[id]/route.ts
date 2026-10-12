@@ -14,6 +14,7 @@ import type {
   StaffInternalNote,
   StaffPriority,
   StaffResolutionData,
+  SupportingDepartmentFinding,
 } from "@/types/staff";
 
 export async function GET(
@@ -268,12 +269,16 @@ export async function GET(
         const val = l.new_value as {
           scope?: string;
           department_id?: string | number;
+          isFindings?: boolean;
+          note?: string;
         } | null;
-        const isCollab =
+        const isCollabOrFinding =
           l.action === "COLLABORATION_NOTE_ADDED" ||
           l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
-          val?.scope === "COLLABORATION";
-        if (isCollab) return false;
+          val?.scope === "COLLABORATION" ||
+          val?.isFindings === true ||
+          String(val?.note || "").includes("[Department Findings");
+        if (isCollabOrFinding) return false;
 
         const isInternalAction =
           l.action === "HOD_DIRECTIVE_NOTE" ||
@@ -298,16 +303,83 @@ export async function GET(
 
     const collaborationNotes: StaffInternalNote[] = (grievance.audit_logs || [])
       .filter((l) => {
-        const val = l.new_value as { scope?: string } | null;
+        const val = l.new_value as {
+          scope?: string;
+          isFindings?: boolean;
+          note?: string;
+        } | null;
+        const isFinding =
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val?.isFindings === true ||
+          String(val?.note || "").includes("[Department Findings");
+        if (isFinding) return false;
+
         return (
           l.action === "COLLABORATION_NOTE_ADDED" ||
-          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
           val?.scope === "COLLABORATION"
         );
       })
       .slice()
       .reverse()
       .map(formatStaffNoteItem);
+
+    const supportingFindings: SupportingDepartmentFinding[] = (
+      grievance.audit_logs || []
+    )
+      .filter((l) => {
+        const val = l.new_value as {
+          isFindings?: boolean;
+          note?: string;
+        } | null;
+        return (
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val?.isFindings === true ||
+          String(val?.note || "").includes("[Department Findings")
+        );
+      })
+      .slice()
+      .reverse()
+      .map((l) => {
+        const val = l.new_value as Record<string, unknown> | null;
+        const u = l.users;
+        const authorName = u
+          ? `${u.first_name} ${u.last_name || ""}`.trim()
+          : (val?.submittedBy as string) || "Staff Member";
+        const deptName =
+          (val?.department as string) ||
+          (val?.departmentName as string) ||
+          "Supporting Department";
+
+        let findings = (val?.findings as string) || "";
+        let actionTaken = (val?.actionTaken as string) || "";
+        let notes = (val?.notes as string) || "";
+
+        if (!findings && typeof val?.note === "string") {
+          const noteStr = val.note;
+          const findingsMatch = noteStr.match(
+            /Findings:\s*([\s\S]*?)(?=\n\nAction Taken:|$)/,
+          );
+          const actionMatch = noteStr.match(
+            /Action Taken:\s*([\s\S]*?)(?=\n\nNotes:|$)/,
+          );
+          const notesMatch = noteStr.match(/Notes:\s*([\s\S]*?)$/);
+          if (findingsMatch) findings = findingsMatch[1].trim();
+          if (actionMatch) actionTaken = actionMatch[1].trim();
+          if (notesMatch) notes = notesMatch[1].trim();
+          if (!findings) findings = noteStr;
+        }
+
+        return {
+          id: l.audit_log_id.toString(),
+          departmentName: deptName,
+          submittedBy: (val?.submittedBy as string) || authorName,
+          findings,
+          actionTaken: actionTaken || undefined,
+          notes: notes || undefined,
+          createdAt: l.created_at.toISOString(),
+          timestamp: formatRelativeTime(l.created_at),
+        };
+      });
 
     const auditTrail: StaffAuditItem[] = (grievance.audit_logs || []).map(
       (log) => {
@@ -410,7 +482,11 @@ export async function GET(
       subcategoryId: grievance.subcategory_id?.toString(),
       priority:
         (grievance.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-      status: grievance.status as StaffGrievanceItem["status"],
+      status: (myDept?.status === "ASSIGNED"
+        ? "ASSIGNED"
+        : myDept?.status === "IN_PROGRESS"
+          ? "IN_PROGRESS"
+          : grievance.status) as StaffGrievanceItem["status"],
       reopenCount: grievance.reopen_count || 0,
       manualReviewCount: grievance.manual_review_count || 0,
       slaStatus: slaCalc.state,
@@ -435,6 +511,7 @@ export async function GET(
       attachments,
       internalNotes,
       collaborationNotes,
+      supportingFindings,
       auditTrail,
       departmentsInvolved,
       myInvolvementType,
@@ -538,22 +615,31 @@ export async function PATCH(
     }
 
     if (body.action === "START_INVESTIGATION") {
-      if (grievance.status === "ASSIGNED" || grievance.status === "REOPENED") {
-        await prisma.$transaction(async (tx) => {
-          await tx.grievances.update({
-            where: { grievance_id: grievanceId },
-            data: { status: "IN_PROGRESS" },
-          });
+      const canStart =
+        grievance.status === "ASSIGNED" ||
+        grievance.status === "REOPENED" ||
+        grievance.status === "IN_PROGRESS" ||
+        activeAssignment?.grievance_departments?.status === "ASSIGNED" ||
+        activeAssignment?.assignment_status === "ASSIGNED";
 
-          await tx.grievance_status_history.create({
-            data: {
-              grievance_id: grievanceId,
-              old_status: grievance.status,
-              new_status: "IN_PROGRESS",
-              changed_by: staffId,
-              remarks: "Investigation initiated by assigned staff",
-            },
-          });
+      if (canStart) {
+        await prisma.$transaction(async (tx) => {
+          if (grievance.status !== "IN_PROGRESS") {
+            await tx.grievances.update({
+              where: { grievance_id: grievanceId },
+              data: { status: "IN_PROGRESS" },
+            });
+
+            await tx.grievance_status_history.create({
+              data: {
+                grievance_id: grievanceId,
+                old_status: grievance.status,
+                new_status: "IN_PROGRESS",
+                changed_by: staffId,
+                remarks: "Investigation initiated by assigned staff",
+              },
+            });
+          }
 
           if (activeAssignment?.grievance_department_id) {
             await tx.grievance_departments.update({
