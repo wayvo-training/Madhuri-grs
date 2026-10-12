@@ -494,6 +494,15 @@ export async function GET(request: Request) {
           };
         });
 
+      const activeDept = g.grievance_departments?.find(
+        (gd) =>
+          gd.status === "IN_PROGRESS" ||
+          gd.status === "ASSIGNED" ||
+          gd.status === "PENDING_ASSIGNMENT",
+      );
+      const activeDepartmentName =
+        activeDept?.departments?.department_name || undefined;
+
       return {
         id: g.grievance_id.toString(),
         grievanceNumber: g.grievance_number,
@@ -502,11 +511,14 @@ export async function GET(request: Request) {
         category: g.categories?.category_name || "General",
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-        status: (a.grievance_departments?.status === "ASSIGNED"
-          ? "ASSIGNED"
-          : a.grievance_departments?.status === "IN_PROGRESS"
-            ? "IN_PROGRESS"
-            : g.status) as StaffGrievanceItem["status"],
+        status: (a.grievance_departments?.status === "COMPLETED" ||
+        a.assignment_status === "COMPLETED"
+          ? "COMPLETED"
+          : a.grievance_departments?.status === "ASSIGNED"
+            ? "ASSIGNED"
+            : a.grievance_departments?.status === "IN_PROGRESS"
+              ? "IN_PROGRESS"
+              : g.status) as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,
@@ -534,45 +546,58 @@ export async function GET(request: Request) {
         isPrimaryOwner,
         myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
         isMyDepartmentCompleted:
-          a.grievance_departments?.status === "COMPLETED",
+          a.grievance_departments?.status === "COMPLETED" ||
+          a.assignment_status === "COMPLETED",
+        overallStatus: g.status,
+        activeDepartmentName,
       };
     });
 
     // 5. Aggregate KPIs
+    const isItemFinishedForMe = (item: StaffGrievanceItem) =>
+      item.status === "CLOSED" ||
+      item.status === "COMPLETED" ||
+      item.isMyDepartmentCompleted;
+
     const activeGrievances = grievanceItems.filter(
-      (item) => item.status !== "CLOSED",
+      (item) => !isItemFinishedForMe(item),
     ).length;
 
     const slaAtRisk = grievanceItems.filter(
-      (item) => item.slaStatus === "AT_RISK" && item.status !== "CLOSED",
+      (item) => item.slaStatus === "AT_RISK" && !isItemFinishedForMe(item),
     ).length;
 
     const slaBreached = grievanceItems.filter(
-      (item) => item.slaStatus === "BREACHED" && item.status !== "CLOSED",
+      (item) => item.slaStatus === "BREACHED" && !isItemFinishedForMe(item),
     ).length;
 
     const resolutionPending = grievanceItems.filter(
       (item) =>
         (item.status === "ASSIGNED" || item.status === "IN_PROGRESS") &&
-        !item.hasResolution,
+        !item.hasResolution &&
+        !isItemFinishedForMe(item),
     ).length;
 
     const reopenedCount = grievanceItems.filter(
-      (item) => item.reopenCount > 0 || item.status === "REOPENED",
+      (item) =>
+        (item.reopenCount > 0 || item.status === "REOPENED") &&
+        !isItemFinishedForMe(item),
     ).length;
 
     const completedCount = grievanceItems.filter(
       (item) =>
         item.status === "CLOSED" ||
         item.status === "RESOLVED" ||
-        item.status === "UNDER_REVIEW",
+        item.status === "UNDER_REVIEW" ||
+        item.status === "COMPLETED" ||
+        item.isMyDepartmentCompleted,
     ).length;
 
     // 6. Attention Grievances (requiring immediate action: breached, at risk, critical, reopened)
     const attentionGrievances = grievanceItems
       .filter(
         (item) =>
-          item.status !== "CLOSED" &&
+          !isItemFinishedForMe(item) &&
           (item.slaStatus === "BREACHED" ||
             item.slaStatus === "AT_RISK" ||
             item.priority === "CRITICAL" ||

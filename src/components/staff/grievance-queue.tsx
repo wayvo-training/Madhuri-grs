@@ -112,15 +112,25 @@ export function GrievanceQueue({
       all: grievances.length,
       in_progress: grievances.filter(
         (g) =>
-          g.status === "IN_PROGRESS" ||
-          g.status === "ASSIGNED" ||
-          g.status === "WAITING_ON_USER",
+          !g.isMyDepartmentCompleted &&
+          g.status !== "COMPLETED" &&
+          (g.status === "IN_PROGRESS" ||
+            g.status === "ASSIGNED" ||
+            g.status === "WAITING_ON_USER"),
       ).length,
       at_risk: grievances.filter(
-        (g) => g.slaStatus === "AT_RISK" && g.status !== "CLOSED",
+        (g) =>
+          g.slaStatus === "AT_RISK" &&
+          g.status !== "CLOSED" &&
+          g.status !== "COMPLETED" &&
+          !g.isMyDepartmentCompleted,
       ).length,
       breached: grievances.filter(
-        (g) => g.slaStatus === "BREACHED" && g.status !== "CLOSED",
+        (g) =>
+          g.slaStatus === "BREACHED" &&
+          g.status !== "CLOSED" &&
+          g.status !== "COMPLETED" &&
+          !g.isMyDepartmentCompleted,
       ).length,
       reopened: grievances.filter(
         (g) =>
@@ -131,7 +141,9 @@ export function GrievanceQueue({
         (g) =>
           g.status === "CLOSED" ||
           g.status === "RESOLVED" ||
-          g.status === "UNDER_REVIEW",
+          g.status === "UNDER_REVIEW" ||
+          g.status === "COMPLETED" ||
+          g.isMyDepartmentCompleted,
       ).length,
     };
   }, [grievances]);
@@ -269,18 +281,30 @@ export function GrievanceQueue({
       // 1. Tab-level filter (preserves initialTab functionality from dashboard)
       if (activeTab === "in_progress") {
         if (
-          item.status !== "IN_PROGRESS" &&
-          item.status !== "ASSIGNED" &&
-          item.status !== "WAITING_ON_USER"
+          item.isMyDepartmentCompleted ||
+          item.status === "COMPLETED" ||
+          (item.status !== "IN_PROGRESS" &&
+            item.status !== "ASSIGNED" &&
+            item.status !== "WAITING_ON_USER")
         ) {
           return false;
         }
       } else if (activeTab === "at_risk") {
-        if (item.slaStatus !== "AT_RISK" || item.status === "CLOSED") {
+        if (
+          item.slaStatus !== "AT_RISK" ||
+          item.status === "CLOSED" ||
+          item.status === "COMPLETED" ||
+          item.isMyDepartmentCompleted
+        ) {
           return false;
         }
       } else if (activeTab === "breached") {
-        if (item.slaStatus !== "BREACHED" || item.status === "CLOSED") {
+        if (
+          item.slaStatus !== "BREACHED" ||
+          item.status === "CLOSED" ||
+          item.status === "COMPLETED" ||
+          item.isMyDepartmentCompleted
+        ) {
           return false;
         }
       } else if (activeTab === "reopened") {
@@ -291,7 +315,9 @@ export function GrievanceQueue({
         if (
           item.status !== "CLOSED" &&
           item.status !== "RESOLVED" &&
-          item.status !== "UNDER_REVIEW"
+          item.status !== "UNDER_REVIEW" &&
+          item.status !== "COMPLETED" &&
+          !item.isMyDepartmentCompleted
         ) {
           return false;
         }
@@ -564,7 +590,28 @@ export function GrievanceQueue({
 
                     {/* Status */}
                     <td className="py-3 px-3">
-                      {item.status === "WAITING_ON_USER" ? (
+                      {item.isMyDepartmentCompleted ||
+                      item.status === "COMPLETED" ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                            {item.myInvolvementType === "SUPPORTING"
+                              ? "Findings Submitted"
+                              : "Work Completed"}
+                          </span>
+                          {item.overallStatus &&
+                            item.overallStatus !== "COMPLETED" &&
+                            item.overallStatus !== "CLOSED" &&
+                            item.overallStatus !== "RESOLVED" && (
+                              <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                                Case: {item.overallStatus.replace(/_/g, " ")}
+                                {item.activeDepartmentName
+                                  ? ` (${item.activeDepartmentName})`
+                                  : ""}
+                              </span>
+                            )}
+                        </div>
+                      ) : item.status === "WAITING_ON_USER" ? (
                         <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Waiting on User

@@ -18,7 +18,8 @@ export type StaffGrievanceStatus =
   | "REOPEN_REVIEW"
   | "CLOSED"
   | "RESOLVED"
-  | "ESCALATED";
+  | "ESCALATED"
+  | "COMPLETED";
 
 export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
 
@@ -135,6 +136,8 @@ export interface StaffGrievanceItem {
   isPrimaryOwner?: boolean;
   myDepartmentStatus?: string;
   isMyDepartmentCompleted?: boolean;
+  overallStatus?: string;
+  activeDepartmentName?: string;
 }
 
 export interface StaffMemberProfile {

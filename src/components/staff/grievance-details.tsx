@@ -213,6 +213,19 @@ export function GrievanceDetails({
                         : "Low"}
                 </span>
                 <StatusBadge status={grievance.status} />
+                {grievance.overallStatus &&
+                  (grievance.isMyDepartmentCompleted ||
+                    grievance.status === "COMPLETED") &&
+                  grievance.overallStatus !== "COMPLETED" &&
+                  grievance.overallStatus !== "CLOSED" &&
+                  grievance.overallStatus !== "RESOLVED" && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                      Case: {grievance.overallStatus.replace(/_/g, " ")}
+                      {grievance.activeDepartmentName
+                        ? ` (${grievance.activeDepartmentName})`
+                        : ""}
+                    </span>
+                  )}
               </div>
             </div>
 

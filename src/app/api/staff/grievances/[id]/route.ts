@@ -471,6 +471,28 @@ export async function GET(
       myInvolvementType === "EQUAL" ||
       isAdmin;
 
+    const isMyDeptCompleted =
+      myDept?.status === "COMPLETED" ||
+      currentAssignment?.assignment_status === "COMPLETED";
+
+    const activeDept = departmentsInvolved.find(
+      (d) =>
+        d.status === "IN_PROGRESS" ||
+        d.status === "ASSIGNED" ||
+        d.status === "PENDING_ASSIGNMENT",
+    );
+    const activeDepartmentName = activeDept?.departmentName;
+
+    const effectiveStatus = (
+      isMyDeptCompleted
+        ? "COMPLETED"
+        : myDept?.status === "ASSIGNED"
+          ? "ASSIGNED"
+          : myDept?.status === "IN_PROGRESS"
+            ? "IN_PROGRESS"
+            : grievance.status
+    ) as StaffGrievanceItem["status"];
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -482,11 +504,7 @@ export async function GET(
       subcategoryId: grievance.subcategory_id?.toString(),
       priority:
         (grievance.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-      status: (myDept?.status === "ASSIGNED"
-        ? "ASSIGNED"
-        : myDept?.status === "IN_PROGRESS"
-          ? "IN_PROGRESS"
-          : grievance.status) as StaffGrievanceItem["status"],
+      status: effectiveStatus,
       reopenCount: grievance.reopen_count || 0,
       manualReviewCount: grievance.manual_review_count || 0,
       slaStatus: slaCalc.state,
@@ -517,7 +535,9 @@ export async function GET(
       myInvolvementType,
       isPrimaryOwner,
       myDepartmentStatus: myDept?.status || "ASSIGNED",
-      isMyDepartmentCompleted: myDept?.status === "COMPLETED",
+      isMyDepartmentCompleted: isMyDeptCompleted,
+      overallStatus: grievance.status,
+      activeDepartmentName,
     };
 
     return NextResponse.json({

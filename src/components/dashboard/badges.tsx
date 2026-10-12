@@ -12,7 +12,8 @@ export type GrievanceStatus =
   | "CLOSED"
   | "ESCALATED"
   | "BLOCKED"
-  | "PENDING_ASSIGNMENT";
+  | "PENDING_ASSIGNMENT"
+  | "COMPLETED";
 
 export type SlaStatus = "ON_TRACK" | "AT_RISK" | "BREACHED";
 
@@ -59,6 +60,13 @@ export function StatusBadge({ status }: { status: GrievanceStatus | string }) {
         <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-sm font-medium text-slate-600 dark:bg-[#162338] dark:border-[#243449] dark:text-slate-400">
           <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
           Closed
+        </span>
+      );
+    case "COMPLETED":
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+          Findings Submitted
         </span>
       );
     case "IN_PROGRESS":

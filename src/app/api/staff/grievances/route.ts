@@ -46,6 +46,16 @@ export async function GET(req: NextRequest) {
                 },
               },
             },
+            grievance_departments: {
+              include: {
+                departments: true,
+              },
+            },
+          },
+        },
+        grievance_departments: {
+          include: {
+            departments: true,
           },
         },
       },
@@ -118,6 +128,29 @@ export async function GET(req: NextRequest) {
 
       const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
 
+      const myDeptStatus = a.grievance_departments?.status || "ASSIGNED";
+      const isMyDeptCompleted =
+        myDeptStatus === "COMPLETED" || a.assignment_status === "COMPLETED";
+
+      const activeDept = g.grievance_departments?.find(
+        (gd) =>
+          gd.status === "IN_PROGRESS" ||
+          gd.status === "ASSIGNED" ||
+          gd.status === "PENDING_ASSIGNMENT",
+      );
+      const activeDepartmentName =
+        activeDept?.departments?.department_name || undefined;
+
+      const effectiveStatus = (
+        isMyDeptCompleted
+          ? "COMPLETED"
+          : myDeptStatus === "ASSIGNED"
+            ? "ASSIGNED"
+            : myDeptStatus === "IN_PROGRESS"
+              ? "IN_PROGRESS"
+              : g.status
+      ) as StaffGrievanceItem["status"];
+
       return {
         id: String(g.grievance_id),
         grievanceNumber: g.grievance_number,
@@ -126,7 +159,7 @@ export async function GET(req: NextRequest) {
         category: g.categories?.category_name || "General",
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: g.priority as StaffPriority,
-        status: g.status as StaffGrievanceItem["status"],
+        status: effectiveStatus,
         reopenCount: g.reopen_count,
         manualReviewCount: g.manual_review_count,
         slaStatus: slaCalc.state as StaffSlaState,
@@ -159,6 +192,10 @@ export async function GET(req: NextRequest) {
               submittedAt: g.resolutions[0].submitted_at.toISOString(),
             }
           : null,
+        overallStatus: g.status,
+        activeDepartmentName,
+        myDepartmentStatus: myDeptStatus,
+        isMyDepartmentCompleted: isMyDeptCompleted,
       };
     });
 

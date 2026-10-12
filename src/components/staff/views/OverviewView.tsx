@@ -279,7 +279,28 @@ export function OverviewView({
 
                       {/* Status */}
                       <td className="py-2 px-3">
-                        {item.status === "WAITING_ON_USER" ? (
+                        {item.isMyDepartmentCompleted ||
+                        item.status === "COMPLETED" ? (
+                          <div className="flex flex-col gap-0.5 items-start">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                              {item.myInvolvementType === "SUPPORTING"
+                                ? "Findings Submitted"
+                                : "Work Completed"}
+                            </span>
+                            {item.overallStatus &&
+                              item.overallStatus !== "COMPLETED" &&
+                              item.overallStatus !== "CLOSED" &&
+                              item.overallStatus !== "RESOLVED" && (
+                                <span className="text-[10px] font-medium text-slate-500 whitespace-nowrap">
+                                  Case: {item.overallStatus.replace(/_/g, " ")}
+                                  {item.activeDepartmentName
+                                    ? ` (${item.activeDepartmentName})`
+                                    : ""}
+                                </span>
+                              )}
+                          </div>
+                        ) : item.status === "WAITING_ON_USER" ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Waiting on User

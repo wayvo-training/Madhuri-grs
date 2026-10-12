@@ -30,7 +30,12 @@ export function InvestigationView({
   onExamine,
   onResolve,
 }: InvestigationViewProps) {
-  const activeCases = grievances.filter((g) => g.status !== "CLOSED");
+  const activeCases = grievances.filter(
+    (g) =>
+      g.status !== "CLOSED" &&
+      g.status !== "COMPLETED" &&
+      !g.isMyDepartmentCompleted,
+  );
 
   const {
     sortState,
