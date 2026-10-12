@@ -279,8 +279,18 @@ export function OverviewView({
 
                       {/* Status */}
                       <td className="py-2 px-3">
-                        {item.isMyDepartmentCompleted ||
-                        item.status === "COMPLETED" ? (
+                        {item.status === "CLOSED" ||
+                        item.overallStatus === "CLOSED" ? (
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            Closed
+                          </span>
+                        ) : item.status === "RESOLVED" ||
+                          item.overallStatus === "RESOLVED" ? (
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                            Resolved
+                          </span>
+                        ) : item.isMyDepartmentCompleted ||
+                          item.status === "COMPLETED" ? (
                           <div className="flex flex-col gap-0.5 items-start">
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />

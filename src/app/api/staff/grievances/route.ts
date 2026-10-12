@@ -142,13 +142,17 @@ export async function GET(req: NextRequest) {
         activeDept?.departments?.department_name || undefined;
 
       const effectiveStatus = (
-        isMyDeptCompleted
-          ? "COMPLETED"
-          : myDeptStatus === "ASSIGNED"
-            ? "ASSIGNED"
-            : myDeptStatus === "IN_PROGRESS"
-              ? "IN_PROGRESS"
-              : g.status
+        g.status === "CLOSED"
+          ? "CLOSED"
+          : g.status === "RESOLVED"
+            ? "RESOLVED"
+            : isMyDeptCompleted
+              ? "COMPLETED"
+              : myDeptStatus === "ASSIGNED"
+                ? "ASSIGNED"
+                : myDeptStatus === "IN_PROGRESS"
+                  ? "IN_PROGRESS"
+                  : g.status
       ) as StaffGrievanceItem["status"];
 
       return {

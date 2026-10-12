@@ -65,6 +65,18 @@ export async function POST(
       },
     });
 
+    // Mark all involved departments as COMPLETED so their departmental status is closed
+    await prisma.grievance_departments.updateMany({
+      where: {
+        grievance_id: grievanceId,
+        status: { notIn: ["REMOVED"] },
+      },
+      data: {
+        status: "COMPLETED",
+        completed_at: new Date(),
+      },
+    });
+
     // Log the event
     await prisma.audit_logs.create({
       data: {

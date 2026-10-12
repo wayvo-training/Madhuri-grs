@@ -208,28 +208,15 @@ export function formatAuditActionTitle(action: string): string {
  * Checks whether the current staff member is authorized to propose a knowledge article.
  * Rules:
  * - Grievance must be CLOSED (accepted by end user).
- * - If Department Head directly reviewed and submitted the resolution (e.g. after max reopen count was reached),
- *   ONLY the Department Head may propose the knowledge article (returns false for staff).
- * - If Staff submitted the resolution that was accepted by the end user, returns true.
+ * - All involved staff (assigned to the case) can propose knowledge once closed.
  */
 export function canStaffProposeKnowledge(
   grievance: StaffGrievanceItem,
 ): boolean {
   if (grievance.hasProposedKb) return false;
-  if (grievance.status !== "CLOSED") return false;
-
-  const role = grievance.submittedResolution?.submittedByRole;
-  if (role) {
-    return role === "STAFF";
-  }
-
-  // Fallback: If maximum reopen count or manual review threshold was reached, head resolved directly
-  if (
-    (grievance.reopenCount ?? 0) >= 2 ||
-    (grievance.manualReviewCount ?? 0) >= 1
-  ) {
-    return false;
-  }
+  const isGrievanceClosed =
+    grievance.status === "CLOSED" || grievance.overallStatus === "CLOSED";
+  if (!isGrievanceClosed) return false;
 
   return true;
 }

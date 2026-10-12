@@ -484,13 +484,17 @@ export async function GET(
     const activeDepartmentName = activeDept?.departmentName;
 
     const effectiveStatus = (
-      isMyDeptCompleted
-        ? "COMPLETED"
-        : myDept?.status === "ASSIGNED"
-          ? "ASSIGNED"
-          : myDept?.status === "IN_PROGRESS"
-            ? "IN_PROGRESS"
-            : grievance.status
+      grievance.status === "CLOSED"
+        ? "CLOSED"
+        : grievance.status === "RESOLVED"
+          ? "RESOLVED"
+          : isMyDeptCompleted
+            ? "COMPLETED"
+            : myDept?.status === "ASSIGNED"
+              ? "ASSIGNED"
+              : myDept?.status === "IN_PROGRESS"
+                ? "IN_PROGRESS"
+                : grievance.status
     ) as StaffGrievanceItem["status"];
 
     const result: StaffGrievanceItem = {

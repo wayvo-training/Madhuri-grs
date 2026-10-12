@@ -511,14 +511,18 @@ export async function GET(request: Request) {
         category: g.categories?.category_name || "General",
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-        status: (a.grievance_departments?.status === "COMPLETED" ||
-        a.assignment_status === "COMPLETED"
-          ? "COMPLETED"
-          : a.grievance_departments?.status === "ASSIGNED"
-            ? "ASSIGNED"
-            : a.grievance_departments?.status === "IN_PROGRESS"
-              ? "IN_PROGRESS"
-              : g.status) as StaffGrievanceItem["status"],
+        status: (g.status === "CLOSED"
+          ? "CLOSED"
+          : g.status === "RESOLVED"
+            ? "RESOLVED"
+            : a.grievance_departments?.status === "COMPLETED" ||
+                a.assignment_status === "COMPLETED"
+              ? "COMPLETED"
+              : a.grievance_departments?.status === "ASSIGNED"
+                ? "ASSIGNED"
+                : a.grievance_departments?.status === "IN_PROGRESS"
+                  ? "IN_PROGRESS"
+                  : g.status) as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,

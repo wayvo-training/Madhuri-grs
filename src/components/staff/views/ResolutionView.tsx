@@ -26,16 +26,26 @@ export function ResolutionView({
   onExamine,
   onResolve,
 }: ResolutionViewProps) {
+  const isFinished = (g: StaffGrievanceItem) =>
+    g.status === "CLOSED" ||
+    g.overallStatus === "CLOSED" ||
+    g.status === "COMPLETED" ||
+    g.isMyDepartmentCompleted;
+
   const pendingDrafting = grievances.filter(
-    (g) => g.status !== "CLOSED" && !g.hasResolution,
+    (g) => !isFinished(g) && !g.hasResolution,
   );
   const pendingReview = grievances.filter(
     (g) =>
-      g.status === "UNDER_REVIEW" || (g.hasResolution && g.status !== "CLOSED"),
+      !isFinished(g) &&
+      (g.status === "UNDER_REVIEW" ||
+        (g.hasResolution && g.status !== "CLOSED")),
   );
-  const completedCases = grievances.filter((g) => g.status === "CLOSED");
+  const completedCases = grievances.filter(
+    (g) => g.status === "CLOSED" || g.overallStatus === "CLOSED",
+  );
   const reopenedCases = grievances.filter(
-    (g) => g.reopenCount > 0 && g.status !== "CLOSED",
+    (g) => g.reopenCount > 0 && !isFinished(g),
   );
 
   const {

@@ -40,7 +40,10 @@ export function GrievanceCard({
   const isCompleted =
     grievance.status === "CLOSED" ||
     grievance.status === "UNDER_REVIEW" ||
-    grievance.status === "RESOLVED";
+    grievance.status === "RESOLVED" ||
+    grievance.status === "COMPLETED" ||
+    grievance.overallStatus === "CLOSED" ||
+    grievance.overallStatus === "RESOLVED";
 
   const inquiryUrl = buildGmailComposeUrl(
     buildStaffComplainantInquiryEmail({

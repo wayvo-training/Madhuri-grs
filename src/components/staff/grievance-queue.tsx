@@ -538,7 +538,8 @@ export function GrievanceQueue({
                 const isAtRisk = item.slaStatus === "AT_RISK";
                 const isReopened =
                   item.reopenCount > 0 || item.status === "REOPENED";
-                const isClosed = item.status === "CLOSED";
+                const isClosed =
+                  item.status === "CLOSED" || item.overallStatus === "CLOSED";
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition">
@@ -590,8 +591,18 @@ export function GrievanceQueue({
 
                     {/* Status */}
                     <td className="py-3 px-3">
-                      {item.isMyDepartmentCompleted ||
-                      item.status === "COMPLETED" ? (
+                      {item.status === "CLOSED" ||
+                      item.overallStatus === "CLOSED" ? (
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          Closed
+                        </span>
+                      ) : item.status === "RESOLVED" ||
+                        item.overallStatus === "RESOLVED" ? (
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                          Resolved
+                        </span>
+                      ) : item.isMyDepartmentCompleted ||
+                        item.status === "COMPLETED" ? (
                         <div className="flex flex-col gap-1 items-start">
                           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
@@ -615,14 +626,6 @@ export function GrievanceQueue({
                         <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Waiting on User
-                        </span>
-                      ) : item.status === "CLOSED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                          Closed
-                        </span>
-                      ) : item.status === "RESOLVED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
-                          Resolved
                         </span>
                       ) : (
                         <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
@@ -669,6 +672,9 @@ export function GrievanceQueue({
                           ...(!isClosed &&
                           item.status !== "UNDER_REVIEW" &&
                           item.status !== "RESOLVED" &&
+                          item.status !== "COMPLETED" &&
+                          item.overallStatus !== "RESOLVED" &&
+                          !item.isMyDepartmentCompleted &&
                           item.status !== "ASSIGNED"
                             ? [
                                 {
