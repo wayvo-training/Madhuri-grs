@@ -13,7 +13,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { uploadFileToSupabase } from "@/lib/storage-client";
 
-export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
+export function AdditionalInfoModal({
+  grievanceId,
+  requestedDocs = [],
+}: {
+  grievanceId: string;
+  requestedDocs?: string[];
+}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,6 +50,13 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!message.trim() && filesToUpload.length === 0) || isSubmitting) return;
+
+    if (requestedDocs.length > 0 && filesToUpload.length === 0) {
+      setError(
+        "Document submission is mandatory. Please attach at least one requested document.",
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -125,11 +138,29 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
             </div>
 
             <div className="p-5">
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
                 Provide additional clarification or documents related to this
                 grievance. This will be shared with the grievance processing
                 team.
               </p>
+
+              {requestedDocs.length > 0 && (
+                <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="block text-xs font-bold text-blue-900">
+                      Requested Documents:
+                    </span>
+                    <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                      Attachment Mandatory
+                    </span>
+                  </div>
+                  <ul className="list-disc pl-5 text-xs text-blue-800 space-y-0.5">
+                    {requestedDocs.map((doc) => (
+                      <li key={doc}>{doc}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
@@ -231,8 +262,10 @@ export function AdditionalInfoModal({ grievanceId }: { grievanceId: string }) {
                   <button
                     type="submit"
                     disabled={
-                      (!message.trim() && filesToUpload.length === 0) ||
-                      isSubmitting
+                      isSubmitting ||
+                      (requestedDocs.length > 0 &&
+                        filesToUpload.length === 0) ||
+                      (!message.trim() && filesToUpload.length === 0)
                     }
                     className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition cursor-pointer"
                   >

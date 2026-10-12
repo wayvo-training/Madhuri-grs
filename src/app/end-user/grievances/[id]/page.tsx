@@ -142,6 +142,16 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     })),
   };
 
+  const latestInquiryLog = grievance.audit_logs?.find(
+    (l) => l.action === "ADDITIONAL_INFO_REQUESTED",
+  );
+  const inquiryVal = latestInquiryLog?.new_value as {
+    requestedDocs?: string[];
+  } | null;
+  const requestedDocs = Array.isArray(inquiryVal?.requestedDocs)
+    ? inquiryVal.requestedDocs
+    : [];
+
   return (
     <DashboardShell
       userRole="END_USER"
@@ -158,6 +168,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         resolution={resolutionData}
         canProvideAdditionalInfo={canProvideAdditionalInfo}
         submissionCheck={submissionCheck}
+        requestedDocs={requestedDocs}
       />
     </DashboardShell>
   );

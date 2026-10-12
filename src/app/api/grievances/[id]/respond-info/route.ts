@@ -118,6 +118,37 @@ export async function POST(
       ? body.attachments
       : [];
 
+    // Verify if documents were explicitly requested by staff
+    const latestInquiryLog = await prisma.audit_logs.findFirst({
+      where: {
+        grievance_id: targetGrievanceId,
+        action: "ADDITIONAL_INFO_REQUESTED",
+      },
+      orderBy: { created_at: "desc" },
+    });
+
+    const inquiryVal = latestInquiryLog?.new_value as {
+      requestedDocs?: string[];
+    } | null;
+    const requestedDocs = Array.isArray(inquiryVal?.requestedDocs)
+      ? inquiryVal.requestedDocs
+      : [];
+
+    if (
+      (grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE") &&
+      requestedDocs.length > 0 &&
+      incomingFiles.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Document submission is mandatory. Staff requested the following documents: ${requestedDocs.join(", ")}. Please attach at least one document before submitting.`,
+        },
+        { status: 400 },
+      );
+    }
+
     await prisma.$transaction(async (tx) => {
       // 1. Change status back to IN_PROGRESS
       await tx.grievances.update({

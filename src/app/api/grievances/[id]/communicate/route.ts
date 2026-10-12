@@ -144,6 +144,11 @@ export async function POST(
       );
     }
 
+    const senderFullName = `${user.first_name} ${user.last_name || ""}`.trim();
+    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
+      ? body.attachments
+      : [];
+
     if (userRole === "END_USER") {
       const check = await canEndUserSubmitCommunication(grievanceId);
       if (!check.allowed) {
@@ -157,12 +162,38 @@ export async function POST(
           { status: 403 },
         );
       }
-    }
 
-    const senderFullName = `${user.first_name} ${user.last_name || ""}`.trim();
-    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
-      ? body.attachments
-      : [];
+      // If waiting on user because staff requested documents, enforce at least 1 document attachment
+      if (
+        grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE"
+      ) {
+        const latestInquiryLog = await prisma.audit_logs.findFirst({
+          where: {
+            grievance_id: grievanceId,
+            action: "ADDITIONAL_INFO_REQUESTED",
+          },
+          orderBy: { created_at: "desc" },
+        });
+
+        const inquiryVal = latestInquiryLog?.new_value as {
+          requestedDocs?: string[];
+        } | null;
+        const requestedDocs = Array.isArray(inquiryVal?.requestedDocs)
+          ? inquiryVal.requestedDocs
+          : [];
+
+        if (requestedDocs.length > 0 && incomingFiles.length === 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Document submission is mandatory. Staff requested: ${requestedDocs.join(", ")}. Please attach at least one requested document before sending.`,
+            },
+            { status: 400 },
+          );
+        }
+      }
+    }
 
     const fileNames = incomingFiles.map((f) => f.fileName);
 

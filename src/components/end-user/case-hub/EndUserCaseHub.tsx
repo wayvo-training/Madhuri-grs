@@ -68,6 +68,7 @@ interface EndUserCaseHubProps {
     allowed: boolean;
     reason?: string;
   };
+  requestedDocs?: string[];
 }
 
 type TabType = "overview" | "resolution" | "tracking" | "documents";
@@ -77,6 +78,7 @@ export function EndUserCaseHub({
   resolution,
   canProvideAdditionalInfo,
   submissionCheck,
+  requestedDocs = [],
 }: EndUserCaseHubProps) {
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab") as TabType | null;
@@ -803,6 +805,7 @@ export function EndUserCaseHub({
                     <div className="shrink-0">
                       <AdditionalInfoModal
                         grievanceId={grievance.id.toString()}
+                        requestedDocs={requestedDocs}
                       />
                     </div>
                   </div>

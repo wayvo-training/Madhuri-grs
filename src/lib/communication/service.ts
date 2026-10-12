@@ -891,30 +891,24 @@ export async function getGrievanceCommunicationThread(
     closureNote =
       "You have governance read-only visibility for this grievance communication.";
   } else if (userRole === "END_USER") {
-    // Turn-based policy: End user can only submit info/docs if status is WAITING_ON_USER or the latest message/action is from Staff/Head
-    const communicationEvents = timeline.filter(
-      (t) => t.id !== `submission-${grievance.grievance_id}`,
-    );
-    const lastEvent =
-      communicationEvents.length > 0
-        ? communicationEvents[communicationEvents.length - 1]
-        : null;
+    // End user can send messages when case is active (WAITING_ON_USER, IN_PROGRESS, REOPENED) or staff has reached out
+    const hasStaffOrHeadInteraction =
+      grievance.resolutions.length > 0 ||
+      timeline.some((t) => t.isStaffOrHead && t.type !== "SUBMISSION");
 
     if (
       grievance.status === "WAITING_ON_USER" ||
-      grievance.status === "WAITING_ON_EMPLOYEE"
+      grievance.status === "WAITING_ON_EMPLOYEE" ||
+      grievance.status === "IN_PROGRESS" ||
+      grievance.status === "REOPENED"
     ) {
       canSend = true;
-    } else if (lastEvent?.isStaffOrHead) {
+    } else if (hasStaffOrHeadInteraction) {
       canSend = true;
-    } else if (!lastEvent) {
-      canSend = false;
-      closureNote =
-        "You will be able to submit additional documents or messages once an assigned staff member or department head contacts you.";
     } else {
       canSend = false;
       closureNote =
-        "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.";
+        "You will be able to submit additional documents or messages once an assigned staff member contacts you.";
     }
   } else if (userRole === "STAFF" && grievance.status === "ASSIGNED") {
     canSend = false;
@@ -1016,46 +1010,31 @@ export async function canEndUserSubmitCommunication(
 
   if (
     grievance.status === "WAITING_ON_USER" ||
-    grievance.status === "WAITING_ON_EMPLOYEE"
+    grievance.status === "WAITING_ON_EMPLOYEE" ||
+    grievance.status === "IN_PROGRESS" ||
+    grievance.status === "REOPENED"
   ) {
     return { allowed: true };
   }
 
-  const latestAudit = grievance.audit_logs[0];
-  const latestResolution = grievance.resolutions[0];
+  const hasStaffOrHeadInteraction =
+    grievance.resolutions.length > 0 ||
+    grievance.audit_logs.some((l) => {
+      const role = l.users?.roles?.role_name;
+      return (
+        l.action === "ADDITIONAL_INFO_REQUESTED" ||
+        role === "STAFF" ||
+        role === "DEPARTMENT_HEAD"
+      );
+    });
 
-  if (!latestAudit && !latestResolution) {
-    return {
-      allowed: false,
-      reason:
-        "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
-    };
-  }
-
-  let isLatestFromStaffOrHead = false;
-  if (
-    latestResolution &&
-    (!latestAudit || latestResolution.submitted_at > latestAudit.created_at)
-  ) {
-    isLatestFromStaffOrHead = true;
-  } else if (latestAudit) {
-    const role = latestAudit.users?.roles?.role_name;
-    if (
-      latestAudit.action === "ADDITIONAL_INFO_REQUESTED" ||
-      role === "STAFF" ||
-      role === "DEPARTMENT_HEAD"
-    ) {
-      isLatestFromStaffOrHead = true;
-    }
-  }
-
-  if (isLatestFromStaffOrHead) {
+  if (hasStaffOrHeadInteraction) {
     return { allowed: true };
   }
 
   return {
     allowed: false,
     reason:
-      "Your response has been submitted. Awaiting next response from staff or department head before further messages or documents can be sent.",
+      "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
   };
 }

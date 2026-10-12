@@ -23,6 +23,7 @@ import { useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { uploadFileToSupabase } from "@/lib/storage-client";
 
 export interface UserGrievanceItem {
   id: string;
@@ -115,17 +116,33 @@ export function EndUserPortal({
     e.preventDefault();
     if (!isRespondingTo || !responseText.trim() || isSubmitting) return;
 
+    const hasRequiredDocs = Boolean(
+      isRespondingTo.latestInquiry?.requestedDocs &&
+        isRespondingTo.latestInquiry.requestedDocs.length > 0,
+    );
+    if (hasRequiredDocs && filesToUpload.length === 0) {
+      setSubmitError(
+        "Document submission is mandatory. Please attach at least one requested document.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setSubmitSuccess(null);
 
     try {
-      const attachmentPayloads = filesToUpload.map((f) => ({
-        fileName: f.name,
-        fileType: f.type || "application/octet-stream",
-        fileSize: f.size,
-        filePath: `/uploads/${f.name}`,
-      }));
+      const attachmentPayloads = await Promise.all(
+        filesToUpload.map(async (f) => {
+          const uploadRes = await uploadFileToSupabase(f, "grievances");
+          return {
+            fileName: f.name,
+            fileType: f.type || "application/octet-stream",
+            fileSize: f.size,
+            filePath: uploadRes.filePath || uploadRes.fileUrl,
+          };
+        }),
+      );
 
       const res = await fetch(
         `/api/grievances/${isRespondingTo.id}/respond-info`,
@@ -571,9 +588,14 @@ export function EndUserPortal({
                 {isRespondingTo.latestInquiry?.requestedDocs &&
                   isRespondingTo.latestInquiry.requestedDocs.length > 0 && (
                     <div className="mt-3 p-3 bg-white/60 rounded-lg border border-blue-100">
-                      <span className="block text-xs font-bold text-blue-900 mb-1">
-                        Requested Proof / Documents:
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="block text-xs font-bold text-blue-900">
+                          Requested Proof / Documents:
+                        </span>
+                        <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                          Attachment Required
+                        </span>
+                      </div>
                       <ul className="list-disc pl-5 text-xs text-blue-800 space-y-1">
                         {isRespondingTo.latestInquiry.requestedDocs.map(
                           (doc) => (
@@ -599,9 +621,19 @@ export function EndUserPortal({
               </div>
 
               <div className="space-y-1.5">
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Attach Documents
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Attach Documents
+                  </span>
+                  {Boolean(
+                    isRespondingTo.latestInquiry?.requestedDocs &&
+                      isRespondingTo.latestInquiry.requestedDocs.length > 0,
+                  ) && (
+                    <span className="text-[11px] font-semibold text-rose-600">
+                      * At least 1 document required
+                    </span>
+                  )}
+                </div>
                 <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-600 bg-slate-50 dark:bg-slate-800/50 p-6 transition">
                   <input
                     type="file"
@@ -661,7 +693,15 @@ export function EndUserPortal({
                 </button>
                 <button
                   type="submit"
-                  disabled={!responseText.trim() || isSubmitting}
+                  disabled={
+                    !responseText.trim() ||
+                    (Boolean(
+                      isRespondingTo.latestInquiry?.requestedDocs &&
+                        isRespondingTo.latestInquiry.requestedDocs.length > 0,
+                    ) &&
+                      filesToUpload.length === 0) ||
+                    isSubmitting
+                  }
                   className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-700 disabled:opacity-50 transition cursor-pointer"
                 >
                   <Send className="h-4 w-4" />

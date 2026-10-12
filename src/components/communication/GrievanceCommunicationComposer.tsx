@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { uploadFileToSupabase } from "@/lib/storage-client";
 
 interface GrievanceCommunicationComposerProps {
   grievanceId: string;
@@ -54,12 +55,17 @@ export function GrievanceCommunicationComposer({
     setIsSubmitting(true);
 
     try {
-      const attachmentsPayload = selectedFiles.map(({ file }) => ({
-        fileName: file.name,
-        fileType: file.type || "application/octet-stream",
-        fileSize: file.size,
-        filePath: `/uploads/${file.name}`,
-      }));
+      const attachmentsPayload = await Promise.all(
+        selectedFiles.map(async ({ file }) => {
+          const uploadRes = await uploadFileToSupabase(file, "grievances");
+          return {
+            fileName: file.name,
+            fileType: file.type || "application/octet-stream",
+            fileSize: file.size,
+            filePath: uploadRes.filePath || uploadRes.fileUrl,
+          };
+        }),
+      );
 
       const res = await fetch(`/api/grievances/${grievanceId}/communicate`, {
         method: "POST",
