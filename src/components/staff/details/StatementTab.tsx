@@ -161,7 +161,6 @@ export function StatementTab({
         message: inquiryMessage.trim(),
         requestedDocs: docsToSend,
       });
-      toast.success(`Request dispatched via ${selectedChannels.join(" & ")}.`);
       setIsRequestInfoOpen(false);
       setInquiryMessage("");
       setSelectedDocs([]);

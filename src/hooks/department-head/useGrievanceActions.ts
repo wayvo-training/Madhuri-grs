@@ -71,12 +71,9 @@ export function useGrievanceActions({
         ),
       );
 
-      showSuccess(
-        `Assigned grievance ${grievance.ticketCode} to ${staffName}.`,
-      );
       loadData(undefined, true);
     },
-    [loadData, setGrievances, setStaffList, showSuccess],
+    [loadData, setGrievances, setStaffList],
   );
 
   const handleEscalationSubmit = useCallback(

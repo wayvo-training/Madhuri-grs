@@ -526,6 +526,7 @@ export function SmartStaffAssignmentModal({
         isReassignment
           ? `Grievance reassigned to ${selectedCandidate.name}`
           : `Grievance assigned to ${selectedCandidate.name}`,
+        { id: `assign-${selectedCandidate.staffId}` },
       );
       setShowConfirmModal(false);
       onAssignmentSuccess(

@@ -12,6 +12,7 @@ import {
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { StaffGrievanceItem } from "@/types/staff";
@@ -210,13 +211,13 @@ export function InvestigationView({
                       </td>
 
                       {/* Summary */}
-                      <td className="py-3 px-3.5 max-w-[200px]">
-                        <span
-                          className="font-medium text-slate-900 line-clamp-2"
-                          title={item.title}
-                        >
-                          {item.title}
-                        </span>
+                      <td className="py-3 px-3.5 max-w-[220px]">
+                        <TruncatedText
+                          text={item.title}
+                          maxChars={35}
+                          showCopy
+                          className="font-medium text-slate-900"
+                        />
                       </td>
 
                       {/* Reopened Status */}
