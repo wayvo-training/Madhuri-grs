@@ -92,18 +92,23 @@ export function EndUserCaseHub({
       return urlTab;
     }
     if (
+      resolution ||
       grievance.status === "RESOLVED" ||
-      grievance.status === "UNDER_REVIEW"
+      grievance.status === "UNDER_REVIEW" ||
+      grievance.status === "CLOSED"
     ) {
       return "resolution";
     }
     return "overview";
-  }, [urlTab, grievance.status]);
+  }, [urlTab, grievance.status, resolution]);
 
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
 
   const isResolvedOrClosed =
-    grievance.status === "RESOLVED" || grievance.status === "CLOSED";
+    Boolean(resolution) ||
+    grievance.status === "RESOLVED" ||
+    grievance.status === "UNDER_REVIEW" ||
+    grievance.status === "CLOSED";
   const needsCitizenReview =
     grievance.status === "RESOLVED" || grievance.status === "UNDER_REVIEW";
 
@@ -414,6 +419,34 @@ export function EndUserCaseHub({
             id="overview-tab-content"
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm space-y-6 animate-in fade-in duration-150"
           >
+            {resolution && (
+              <div className="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/60 rounded-lg text-emerald-700 dark:text-emerald-300 shrink-0">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                      Official Department Resolution Available
+                    </h4>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                      The responsible department has filed findings and
+                      resolution for your grievance. You can review the outcome,
+                      accept it, or reopen if unsatisfied.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("resolution")}
+                  className="shrink-0 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition shadow-xs cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-center"
+                >
+                  <span>Review Resolution</span>
+                  <span>&rarr;</span>
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Grievance Statement & Particulars

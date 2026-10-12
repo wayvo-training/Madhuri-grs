@@ -46,7 +46,7 @@ export function ResolutionCard({
   allowActions = true,
   showDownloadButton = true,
 }: ResolutionCardProps) {
-  const isResolved = status === "RESOLVED";
+  const isResolved = status === "RESOLVED" || status === "UNDER_REVIEW";
   const isClosed = status === "CLOSED";
 
   const formattedDate = resolution.submittedAt
@@ -207,12 +207,19 @@ export function ResolutionCard({
 
       {/* Closed Confirmation Banner */}
       {isClosed && (
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-          <Check className="h-3.5 w-3.5" />
-          <span>
-            This resolution has been accepted and the grievance is formally
-            closed.
-          </span>
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+            <Check className="h-4 w-4 shrink-0" />
+            <span>
+              This resolution has been accepted and the grievance is formally
+              closed.
+            </span>
+          </div>
+          {allowActions && (
+            <div className="shrink-0">
+              <ReopenButton grievanceId={grievanceId} />
+            </div>
+          )}
         </div>
       )}
     </div>

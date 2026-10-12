@@ -37,9 +37,13 @@ export async function POST(
       );
     }
 
-    if (grievance.status !== "RESOLVED") {
+    if (!["RESOLVED", "UNDER_REVIEW", "CLOSED"].includes(grievance.status)) {
       return NextResponse.json(
-        { success: false, message: "Only resolved grievances can be reopened" },
+        {
+          success: false,
+          message:
+            "Only resolved, under-review, or closed grievances can be reopened",
+        },
         { status: 400 },
       );
     }

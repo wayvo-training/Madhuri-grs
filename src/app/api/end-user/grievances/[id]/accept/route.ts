@@ -37,9 +37,15 @@ export async function POST(
       );
     }
 
-    if (grievance.status !== "RESOLVED") {
+    if (
+      grievance.status !== "RESOLVED" &&
+      grievance.status !== "UNDER_REVIEW"
+    ) {
       return NextResponse.json(
-        { success: false, message: "Only resolved grievances can be accepted" },
+        {
+          success: false,
+          message: "Only resolved or review-pending grievances can be accepted",
+        },
         { status: 400 },
       );
     }
