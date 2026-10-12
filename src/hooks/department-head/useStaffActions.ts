@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useCallback } from "react";
+import { updateStaffStatusAction } from "@/actions";
 import type {
   EscalationAuditRecord,
   GrievanceItem,
@@ -43,13 +44,11 @@ export function useStaffActions({
           `${staff.name} is now marked as Active & Available for assignments.`,
         );
 
-        fetch(`/api/department-head/staff/${staff.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "ACTIVE" }),
-        })
+        updateStaffStatusAction(staff.id, "ACTIVE")
           .then(() => loadData(undefined, true))
-          .catch((err) => console.error("Failed to toggle availability:", err));
+          .catch((err: unknown) =>
+            console.error("Failed to toggle availability:", err),
+          );
         return;
       }
 
@@ -67,13 +66,11 @@ export function useStaffActions({
         );
         showSuccess(`${staff.name} is now marked as On Leave.`);
 
-        fetch(`/api/department-head/staff/${staff.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "ON_LEAVE" }),
-        })
+        updateStaffStatusAction(staff.id, "ON_LEAVE")
           .then(() => loadData(undefined, true))
-          .catch((err) => console.error("Failed to set on leave:", err));
+          .catch((err: unknown) =>
+            console.error("Failed to set on leave:", err),
+          );
       }
     },
     [

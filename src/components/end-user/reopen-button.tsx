@@ -4,6 +4,7 @@ import { RefreshCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { reopenGrievanceAction } from "@/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,26 +35,19 @@ export function ReopenButton({ grievanceId }: ReopenButtonProps) {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        `/api/end-user/grievances/${grievanceId}/reopen`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: reason.trim() }),
-        },
-      );
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to reopen grievance");
-      }
+      await reopenGrievanceAction({
+        grievanceId,
+        reason: reason.trim(),
+      });
 
       toast.success("Grievance reopened successfully");
       setIsOpen(false);
       setReason("");
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

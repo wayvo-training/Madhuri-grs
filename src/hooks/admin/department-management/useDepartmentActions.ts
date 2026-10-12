@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { createDepartmentAction, updateDepartmentAction } from "@/actions";
 import type {
   DepartmentHeadOption,
   SerializedDepartment,
@@ -67,36 +68,27 @@ export function useDepartmentActions(
     try {
       setIsEditSubmitting(true);
 
-      const res = await fetch("/api/admin/departments", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          department_id: editingDeptId,
-          department_name: editDeptName.trim(),
-          description: editDescription.trim() || null,
-          status: editStatus,
-        }),
+      const data = await updateDepartmentAction({
+        department_id: editingDeptId,
+        department_name: editDeptName.trim(),
+        description: editDescription.trim() || null,
+        status: editStatus,
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to update department.");
-        setIsEditSubmitting(false);
-        return;
+      if (data.department) {
+        setDepartments((prev) =>
+          prev.map((d) =>
+            d.department_id === editingDeptId
+              ? {
+                  ...d,
+                  department_name: data.department!.department_name,
+                  description: data.department!.description,
+                  status: data.department!.status,
+                }
+              : d,
+          ),
+        );
       }
-
-      setDepartments((prev) =>
-        prev.map((d) =>
-          d.department_id === editingDeptId
-            ? {
-                ...d,
-                department_name: data.department.department_name,
-                description: data.department.description,
-                status: data.department.status,
-              }
-            : d,
-        ),
-      );
 
       toast.success("Department updated successfully.");
 
@@ -105,9 +97,13 @@ export function useDepartmentActions(
         setEditingDeptId(null);
         router.refresh();
       }, 900);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update department:", err);
-      toast.error("An unexpected error occurred while updating department.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred while updating department.";
+      toast.error(msg);
     } finally {
       setIsEditSubmitting(false);
     }
@@ -143,38 +139,28 @@ export function useDepartmentActions(
     try {
       setIsSubmitting(true);
 
-      const res = await fetch("/api/admin/departments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          department_name: deptName.trim(),
-          department_code: deptCode.trim().toUpperCase(),
-          head_user_id: selectedHeadId,
-          description: description.trim(),
-          contact_email: contactEmail.trim(),
-          status: "ACTIVE",
-        }),
+      const data = await createDepartmentAction({
+        department_name: deptName.trim(),
+        department_code: deptCode.trim().toUpperCase(),
+        head_user_id: selectedHeadId,
+        description: description.trim(),
+        contact_email: contactEmail.trim(),
+        status: "ACTIVE",
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to create department.");
-        setIsSubmitting(false);
-        return;
+      if (data.department) {
+        setDepartments((prev) => [
+          ...prev,
+          {
+            department_id: data.department!.department_id,
+            department_name: data.department!.department_name,
+            description: data.department!.description,
+            status: data.department!.status,
+            user_count: 1,
+            grievance_count: 0,
+          },
+        ]);
       }
-
-      setDepartments((prev) => [
-        ...prev,
-        {
-          department_id: data.department.department_id,
-          department_name: data.department.department_name,
-          description: data.department.description,
-          status: data.department.status,
-          user_count: 1,
-          grievance_count: 0,
-        },
-      ]);
 
       toast.success(data.message || "Department created successfully.");
 
@@ -187,9 +173,13 @@ export function useDepartmentActions(
         setContactEmail("");
         router.refresh();
       }, 900);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to create department:", err);
-      toast.error("An unexpected error occurred while creating department.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred while creating department.";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

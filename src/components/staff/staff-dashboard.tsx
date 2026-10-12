@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  requestAdditionalInfoAction,
+  startInvestigationAction,
+} from "@/actions";
+import {
   type DocumentPreviewData,
   DocumentViewerModal,
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
-
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
@@ -202,17 +205,7 @@ export function StaffDashboard({
   // Handle start investigation in details modal
   const handleStartInvestigation = async (grievanceId: string) => {
     try {
-      const res = await fetch(`/api/staff/grievances/${grievanceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "START_INVESTIGATION" }),
-      });
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(
-          errJson.message || errJson.error || "Failed to start investigation",
-        );
-      }
+      await startInvestigationAction(grievanceId);
       setSelectedGrievance((prev) =>
         prev && prev.id === grievanceId
           ? { ...prev, status: "IN_PROGRESS" }
@@ -222,8 +215,11 @@ export function StaffDashboard({
         "Investigation started. Case status updated to In Progress.",
       );
       await fetchDashboardData(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
+      const msg =
+        err instanceof Error ? err.message : "Failed to start investigation";
+      toast.error(msg);
       throw err;
     }
   };
@@ -239,22 +235,10 @@ export function StaffDashboard({
     },
   ) => {
     try {
-      const res = await fetch(`/api/staff/grievances/${grievanceId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "REQUEST_ADDITIONAL_INFO",
-          ...payload,
-        }),
+      await requestAdditionalInfoAction({
+        grievanceId,
+        ...payload,
       });
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(
-          errJson.message ||
-            errJson.error ||
-            "Failed to request additional information",
-        );
-      }
       setSelectedGrievance((prev) =>
         prev && prev.id === grievanceId
           ? { ...prev, status: "WAITING_ON_USER" }
@@ -264,8 +248,13 @@ export function StaffDashboard({
         "Additional information request dispatched to complainant.",
       );
       await fetchDashboardData(true);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to request additional information";
+      toast.error(msg);
       throw err;
     }
   };

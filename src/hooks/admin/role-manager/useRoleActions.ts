@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createRoleAction, updateRoleAction } from "@/actions";
 import type {
   SerializedPermission,
   SerializedRole,
@@ -73,24 +74,12 @@ export function useRoleActions(
     try {
       setIsSubmitting(true);
 
-      const res = await fetch("/api/admin/roles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role_name: newRoleName,
-          description: newRoleDescription,
-          status: newRoleStatus,
-          permission_ids: selectedPermissionIds,
-        }),
+      const data = await createRoleAction({
+        role_name: newRoleName,
+        description: newRoleDescription,
+        status: newRoleStatus,
+        permission_ids: selectedPermissionIds,
       });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to create role.");
-        setIsSubmitting(false);
-        return;
-      }
 
       const assignedPerms = permissionsList
         .filter((p) => selectedPermissionIds.includes(p.permission_id))
@@ -100,16 +89,18 @@ export function useRoleActions(
           permission_name: p.permission_name,
         }));
 
-      const newlyAddedRole: SerializedRole = {
-        role_id: data.role.role_id,
-        role_name: data.role.role_name,
-        description: data.role.description,
-        status: data.role.status || newRoleStatus,
-        user_count: 0,
-        permissions: assignedPerms,
-      };
+      if (data.role) {
+        const newlyAddedRole: SerializedRole = {
+          role_id: data.role.role_id,
+          role_name: data.role.role_name,
+          description: data.role.description,
+          status: (data.role.status as "ACTIVE" | "INACTIVE") || newRoleStatus,
+          user_count: 0,
+          permissions: assignedPerms,
+        };
+        setRoles((prev) => [...prev, newlyAddedRole]);
+      }
 
-      setRoles((prev) => [...prev, newlyAddedRole]);
       toast.success(data.message || "Role created successfully.");
 
       setTimeout(() => {
@@ -120,9 +111,13 @@ export function useRoleActions(
         setSelectedPermissionIds([]);
         router.refresh();
       }, 1200);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to create role:", err);
-      toast.error("An unexpected error occurred while creating role.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred while creating role.";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -135,23 +130,12 @@ export function useRoleActions(
     try {
       setIsEditSubmitting(true);
 
-      const res = await fetch("/api/admin/roles", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role_id: editingRoleId,
-          description: editDescription,
-          status: editStatus,
-          permission_ids: editPermissionIds,
-        }),
+      await updateRoleAction({
+        role_id: editingRoleId,
+        description: editDescription,
+        status: editStatus,
+        permission_ids: editPermissionIds,
       });
-
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        toast.error(data.message || "Failed to update role.");
-        setIsEditSubmitting(false);
-        return;
-      }
 
       const updatedPermissions = permissionsList
         .filter((p) => editPermissionIds.includes(p.permission_id))
@@ -179,9 +163,13 @@ export function useRoleActions(
       setIsEditModalOpen(false);
       setEditingRoleId(null);
       router.refresh();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to update role:", err);
-      toast.error("An unexpected error occurred while updating role.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred while updating role.";
+      toast.error(msg);
     } finally {
       setIsEditSubmitting(false);
     }

@@ -3,6 +3,11 @@
 import type React from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import {
+  addGrievanceNoteAction,
+  interveneGrievanceAction,
+  reviewResolutionAction,
+} from "@/actions";
 import type {
   DocumentPreviewData,
   EscalationAuditRecord,
@@ -224,30 +229,24 @@ export function useGrievanceActions({
       showSuccess(successMsg, 5000);
 
       try {
-        const res = await fetch(
-          `/api/department-head/grievances/${grievance.id}/intervene`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              bottleneck,
-              bottleneckExplanation,
-              interventionType,
-              targetStaffId,
-              targetDeptName: targetDept,
-              note,
-              extensionHours,
-            }),
-          },
-        );
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          toast.error(data.message || "Failed to execute intervention");
-        }
+        await interveneGrievanceAction({
+          grievanceId: grievance.id,
+          bottleneck,
+          bottleneckExplanation,
+          interventionType,
+          targetStaffId,
+          targetDeptName: targetDept,
+          note,
+          extensionHours,
+        });
         await loadData(undefined, true);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to persist intervention:", err);
-        toast.error("Network error while recording intervention.");
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Network error while recording intervention.";
+        toast.error(msg);
       }
     },
     [
@@ -356,29 +355,23 @@ export function useGrievanceActions({
       }
 
       try {
-        const res = await fetch(
-          `/api/department-head/grievances/${grievance.id}/resolution`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              decision,
-              feedback,
-              findings,
-              actionTaken,
-              outcome,
-              evidence,
-            }),
-          },
-        );
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          toast.error(data.message || "Failed to submit resolution");
-        }
+        await reviewResolutionAction({
+          grievanceId: grievance.id,
+          decision,
+          feedback,
+          findings,
+          actionTaken,
+          outcome,
+          evidence,
+        });
         await loadData(undefined, true);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to persist resolution decision:", err);
-        toast.error("Network error while submitting resolution.");
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Network error while submitting resolution.";
+        toast.error(msg);
       }
     },
     [
@@ -441,27 +434,18 @@ export function useGrievanceActions({
       );
 
       try {
-        const res = await fetch(
-          `/api/department-head/grievances/${grievance.id}/notes`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              note: trimmedNote,
-              parentId,
-              replyToAuthor,
-              scope: "INTERNAL",
-            }),
-          },
-        );
-        if (res.ok) {
-          const resJson = await res.json();
-          if (resJson?.note?.id) {
-            newNoteObj.id = resJson.note.id;
-          }
+        const resJson = await addGrievanceNoteAction({
+          grievanceId: grievance.id,
+          note: trimmedNote,
+          parentId,
+          replyToAuthor,
+          scope: "INTERNAL",
+        });
+        if (resJson?.note?.id) {
+          newNoteObj.id = resJson.note.id;
         }
         loadData(undefined, true);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to persist internal note to database:", err);
       }
 
@@ -519,27 +503,18 @@ export function useGrievanceActions({
       showSuccess(`Added collaboration note to ${grievance.ticketCode}`, 4000);
 
       try {
-        const res = await fetch(
-          `/api/department-head/grievances/${grievance.id}/notes`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              note: trimmedNote,
-              parentId,
-              replyToAuthor,
-              scope: "COLLABORATION",
-            }),
-          },
-        );
-        if (res.ok) {
-          const resJson = await res.json();
-          if (resJson?.note?.id) {
-            newNoteObj.id = resJson.note.id;
-          }
+        const resJson = await addGrievanceNoteAction({
+          grievanceId: grievance.id,
+          note: trimmedNote,
+          parentId,
+          replyToAuthor,
+          scope: "COLLABORATION",
+        });
+        if (resJson?.note?.id) {
+          newNoteObj.id = resJson.note.id;
         }
         loadData(undefined, true);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to persist collaboration note to database:", err);
       }
 

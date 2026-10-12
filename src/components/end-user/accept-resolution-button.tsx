@@ -4,6 +4,7 @@ import { CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { acceptResolutionAction } from "@/actions";
 import { Button } from "@/components/ui/button";
 
 interface AcceptResolutionButtonProps {
@@ -19,22 +20,13 @@ export function AcceptResolutionButton({
   const executeAccept = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        `/api/end-user/grievances/${grievanceId}/accept`,
-        {
-          method: "POST",
-        },
-      );
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to accept resolution");
-      }
-
+      await acceptResolutionAction(grievanceId);
       toast.success("Resolution accepted successfully. Grievance closed.");
       router.refresh();
-    } catch (err: any) {
-      toast.error(err.message || "An unexpected error occurred");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "An unexpected error occurred";
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

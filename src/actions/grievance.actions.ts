@@ -33,6 +33,7 @@ export interface AddGrievanceNoteParams {
   parentId?: string;
   replyToAuthor?: string;
   isCollaboration?: boolean;
+  scope?: "INTERNAL" | "COLLABORATION";
 }
 
 export interface ReopenGrievanceParams {
@@ -140,6 +141,7 @@ export async function addGrievanceNoteAction(params: AddGrievanceNoteParams) {
         parentId: params.parentId,
         replyToAuthor: params.replyToAuthor,
         isCollaboration: params.isCollaboration,
+        scope: params.scope,
       }),
     },
   );
