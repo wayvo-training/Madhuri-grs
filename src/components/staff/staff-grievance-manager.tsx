@@ -160,15 +160,9 @@ export function StaffGrievanceManager({
   const handleResolveGrievance = (g: StaffGrievanceItem) => {
     if (g.status === "ASSIGNED") {
       toast.error(
-        "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+        "Investigation has not been started yet. Please click 'Start Investigation' first.",
       );
       handleExamine(g);
-      return;
-    }
-    if (g.isPrimaryOwner === false) {
-      toast.error(
-        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
-      );
       return;
     }
     setResolvingGrievance(g);
@@ -256,6 +250,10 @@ export function StaffGrievanceManager({
             if (!target) return;
             handleResolveGrievance(target);
           }}
+          onOpenResolutionForm={(g) => {
+            setSelectedGrievance(null);
+            handleResolveGrievance(g);
+          }}
         />
       )}
 
@@ -265,6 +263,11 @@ export function StaffGrievanceManager({
           isOpen={true}
           onClose={() => setResolvingGrievance(null)}
           onSubmit={handleSubmitResolution}
+          onResolutionSuccess={async () => {
+            setResolvingGrievance(null);
+            setSelectedGrievance(null);
+            await fetchData(true);
+          }}
         />
       )}
 

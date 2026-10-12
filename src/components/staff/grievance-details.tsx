@@ -372,7 +372,11 @@ export function GrievanceDetails({
                   className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed"
                 >
                   <Lock className="h-3.5 w-3.5 text-slate-400" />
-                  <span>Submit Final Resolution</span>
+                  <span>
+                    {grievance.isPrimaryOwner === false
+                      ? "Submit Department Findings"
+                      : "Submit Final Resolution"}
+                  </span>
                 </button>
               </>
             )}

@@ -163,7 +163,9 @@ export function StaffDashboard({
           setSelectedGrievance(gJson.data);
         }
       }
-      toast.success(parentId ? "Reply posted to thread." : "Internal note saved.");
+      toast.success(
+        parentId ? "Reply posted to thread." : "Internal note saved.",
+      );
       await fetchDashboardData(true);
     } catch (err) {
       console.error(err);
@@ -216,7 +218,9 @@ export function StaffDashboard({
           ? { ...prev, status: "IN_PROGRESS" }
           : prev,
       );
-      toast.success("Investigation started. Case status updated to In Progress.");
+      toast.success(
+        "Investigation started. Case status updated to In Progress.",
+      );
       await fetchDashboardData(true);
     } catch (err) {
       console.error(err);
@@ -256,7 +260,9 @@ export function StaffDashboard({
           ? { ...prev, status: "WAITING_ON_USER" }
           : prev,
       );
-      toast.success("Additional information request dispatched to complainant.");
+      toast.success(
+        "Additional information request dispatched to complainant.",
+      );
       await fetchDashboardData(true);
     } catch (err) {
       console.error(err);
@@ -312,22 +318,18 @@ export function StaffDashboard({
 
     setResolvingGrievance(null);
     setSelectedGrievance(null);
-    toast.success("Resolution submitted successfully for Department Head review!");
+    toast.success(
+      "Resolution submitted successfully for Department Head review!",
+    );
     await fetchDashboardData(true);
   };
 
   const handleResolveGrievance = (g: StaffGrievanceItem) => {
     if (g.status === "ASSIGNED") {
       toast.error(
-        "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+        "Investigation has not been started yet. Please click 'Start Investigation' first.",
       );
       handleExamineGrievance(g, "investigation");
-      return;
-    }
-    if (g.isPrimaryOwner === false) {
-      toast.error(
-        "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
-      );
       return;
     }
     setResolvingGrievance(g);

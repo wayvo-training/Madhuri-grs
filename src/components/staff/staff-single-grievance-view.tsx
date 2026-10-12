@@ -87,7 +87,9 @@ export function StaffSingleGrievanceView({
       const errJson = await res.json().catch(() => ({}));
       throw new Error(errJson.message || errJson.error || "Failed to add note");
     }
-    toast.success(parentId ? "Reply posted to thread." : "Internal note saved.");
+    toast.success(
+      parentId ? "Reply posted to thread." : "Internal note saved.",
+    );
     await fetchGrievance();
   };
 
@@ -151,7 +153,9 @@ export function StaffSingleGrievanceView({
     }
 
     setIsResolving(false);
-    toast.success("Resolution submitted successfully for Department Head review!");
+    toast.success(
+      "Resolution submitted successfully for Department Head review!",
+    );
     await fetchGrievance();
   };
 
@@ -214,13 +218,16 @@ export function StaffSingleGrievanceView({
         onOpenResolveModal={() => {
           if (grievance.status === "ASSIGNED") {
             toast.error(
-              "Investigation has not been started yet. Please click 'Start Investigation' before submitting final resolution.",
+              "Investigation has not been started yet. Please click 'Start Investigation' first.",
             );
             return;
           }
-          if (grievance.isPrimaryOwner === false) {
+          setIsResolving(true);
+        }}
+        onOpenResolutionForm={() => {
+          if (grievance.status === "ASSIGNED") {
             toast.error(
-              "Supporting Department contributor: Only the Primary Lead department staff can submit the final customer resolution.",
+              "Investigation has not been started yet. Please click 'Start Investigation' first.",
             );
             return;
           }
