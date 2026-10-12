@@ -91,7 +91,7 @@ export async function POST(
     });
 
     // Notifications
-    // 1. Notify all Department Heads involved in this grievance (Primary & Collaborating)
+    // 1. Collect all department IDs involved in this grievance (Primary & Collaborating)
     const involvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: grievanceId },
       select: { department_id: true },
@@ -105,7 +105,7 @@ export async function POST(
       deptIds.add(d.department_id);
     }
 
-    // 1. Fetch latest resolution to identify who resolved this grievance
+    // 2. Fetch latest resolution to identify who resolved this grievance
     const latestResolution = await prisma.resolutions.findFirst({
       where: { grievance_id: grievanceId },
       orderBy: { submitted_at: "desc" },
@@ -120,7 +120,9 @@ export async function POST(
     const resolverUserId = latestResolution?.submitted_by;
     const isHeadResolver = resolverRole === "DEPARTMENT_HEAD";
 
-    // 2. Notify all Department Heads involved in this grievance
+    const notifiedUserIds = new Set<string>();
+
+    // 3. Notify all Department Heads involved in this grievance
     for (const dId of Array.from(deptIds)) {
       const hods = await prisma.users.findMany({
         where: {
@@ -131,6 +133,9 @@ export async function POST(
         select: { user_id: true },
       });
       for (const hod of hods) {
+        if (notifiedUserIds.has(hod.user_id.toString())) continue;
+        notifiedUserIds.add(hod.user_id.toString());
+
         const isThisHodTheResolver = resolverUserId === hod.user_id;
         await NotificationService.send({
           userId: hod.user_id,
@@ -144,31 +149,39 @@ export async function POST(
       }
     }
 
-    // 3. Notify the Staff member who handled/resolved the grievance (if resolved by staff)
-    let staffIdToNotify: bigint | null = null;
-    if (!isHeadResolver && latestResolution) {
-      staffIdToNotify = latestResolution.submitted_by;
-    } else if (!isHeadResolver) {
-      const lastAssignment = await prisma.assignments.findFirst({
-        where: { grievance_id: grievanceId },
-        orderBy: { assigned_at: "desc" },
-      });
-      if (lastAssignment) {
-        staffIdToNotify = lastAssignment.staff_id;
+    // 4. Notify ALL involved Staff members across primary and collaborating departments
+    const allAssignments = await prisma.assignments.findMany({
+      where: { grievance_id: grievanceId },
+      select: { staff_id: true },
+    });
+
+    const staffIdsToNotify = new Set<bigint>();
+    for (const a of allAssignments) {
+      if (a.staff_id) {
+        staffIdsToNotify.add(a.staff_id);
       }
     }
+    if (resolverUserId && !isHeadResolver) {
+      staffIdsToNotify.add(resolverUserId);
+    }
 
-    if (staffIdToNotify) {
+    for (const staffId of Array.from(staffIdsToNotify)) {
+      if (notifiedUserIds.has(staffId.toString())) continue;
+      notifiedUserIds.add(staffId.toString());
+
+      const isDirectResolver = resolverUserId === staffId;
       await NotificationService.send({
-        userId: staffIdToNotify,
+        userId: staffId,
         grievanceId: grievanceId,
         type: "RESOLUTION_ACCEPTED",
         title: `Resolution Accepted: ${grievance.grievance_number}`,
-        message: `Your resolution for grievance ${grievance.grievance_number} was accepted by the employee. The case is now officially closed. You can now propose it as a Knowledge Article.`,
+        message: isDirectResolver
+          ? `Your resolution for grievance ${grievance.grievance_number} was accepted by the employee. The case is now officially closed. You can now propose it as a Knowledge Article.`
+          : `The employee has accepted the resolution for grievance ${grievance.grievance_number}. Your department's contribution is complete and the case is now officially closed.`,
       });
     }
 
-    // 4. Notify the End User confirming their acceptance
+    // 5. Notify the End User confirming their acceptance
     await NotificationService.send({
       userId: user.user_id,
       grievanceId: grievanceId,

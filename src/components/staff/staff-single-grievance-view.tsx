@@ -153,9 +153,6 @@ export function StaffSingleGrievanceView({
     }
 
     setIsResolving(false);
-    toast.success(
-      "Resolution submitted successfully for Department Head review!",
-    );
     await fetchGrievance();
   };
 

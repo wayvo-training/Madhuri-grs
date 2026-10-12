@@ -318,9 +318,6 @@ export function StaffDashboard({
 
     setResolvingGrievance(null);
     setSelectedGrievance(null);
-    toast.success(
-      "Resolution submitted successfully for Department Head review!",
-    );
     await fetchDashboardData(true);
   };
 

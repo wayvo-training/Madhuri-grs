@@ -91,7 +91,7 @@ export function InvestigationView({
               3
             </span>
             <span>
-              Prepare formal resolution report for Department Head review.
+              Prepare formal resolution report for complainant submission.
             </span>
           </div>
         </div>

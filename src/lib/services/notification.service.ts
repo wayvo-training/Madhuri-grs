@@ -52,7 +52,8 @@ export class NotificationService {
    */
   static async send(params: SendNotificationParams) {
     // Deduplicate repetitive SLA alerts while unread/pending
-    const isSlaType = params.type.startsWith("SLA_");
+    const isSlaType =
+      params.type.startsWith("SLA_") || params.type.startsWith("DEPT_SLA_");
     if (params.grievanceId && isSlaType) {
       const existing = await prisma.notifications.findFirst({
         where: {

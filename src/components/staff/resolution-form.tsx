@@ -152,7 +152,7 @@ export function ResolutionForm({
         toast.success(
           isDraft
             ? "Resolution draft saved successfully!"
-            : "Resolution submitted successfully for Department Head review!",
+            : "Resolution submitted and sent to complainant successfully!",
         );
       } else {
         const res = await fetch("/api/staff/resolutions", {
@@ -182,7 +182,8 @@ export function ResolutionForm({
         toast.success(
           isDraft
             ? "Resolution draft saved successfully!"
-            : "Resolution submitted successfully for Department Head review!",
+            : data.message ||
+                "Resolution submitted and sent to complainant successfully!",
         );
       }
 

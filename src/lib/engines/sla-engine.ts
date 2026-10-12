@@ -106,6 +106,11 @@ export async function evaluateGrievanceSla(
           },
         },
       },
+      assignments: {
+        include: {
+          users_assignments_staff_idTousers: true,
+        },
+      },
     },
   });
 
@@ -290,6 +295,211 @@ export async function evaluateGrievanceSla(
     }
     return Array.from(userMap.values());
   };
+
+  // =========================================================================
+  // DEPARTMENT-LEVEL SLA EVALUATION & NOTIFICATIONS
+  // Evaluates each active department against its allocated SLA percentage
+  // (e.g. 30% allocated to HR -> when 15% of total time has elapsed, HR is at 50% consumed)
+  // =========================================================================
+  for (const deptRec of involvedDeptRecords) {
+    if (
+      deptRec.status === "BLOCKED" ||
+      deptRec.status === "COMPLETED" ||
+      deptRec.status === "RESOLVED" ||
+      deptRec.status === "REMOVED"
+    ) {
+      continue;
+    }
+
+    const deptName = deptRec.departments?.department_name || "Department";
+    const percentAlloc = deptRec.sla_percent_allocation
+      ? Number(deptRec.sla_percent_allocation)
+      : 100;
+
+    const totalGrievanceMinutes =
+      calculateSlaConsumption(
+        grievance.created_at,
+        grievance.due_at,
+        grievance.priority || "MEDIUM",
+        evaluationDate,
+      ).totalDurationMinutes || 1440;
+
+    const deptAllocatedMinutes =
+      deptRec.allocated_duration_minutes &&
+      deptRec.allocated_duration_minutes > 0
+        ? deptRec.allocated_duration_minutes
+        : Math.max(1, Math.round((totalGrievanceMinutes * percentAlloc) / 100));
+
+    const activatedAt =
+      deptRec.activated_at || deptRec.assigned_at || grievance.created_at;
+
+    const deptDueAt =
+      deptRec.due_at ||
+      new Date(activatedAt.getTime() + deptAllocatedMinutes * 60 * 1000);
+
+    const deptSlaResult = calculateDepartmentSlaConsumption(
+      activatedAt,
+      deptDueAt,
+      deptAllocatedMinutes,
+      deptRec.completed_at,
+      evaluationDate,
+    );
+
+    const deptConsumptionPercent = deptSlaResult.consumptionPercent;
+    const deptAssignedStaff =
+      deptRec.assignments?.users_assignments_staff_idTousers ||
+      grievance.assignments?.find(
+        (a) =>
+          a.grievance_department_id === deptRec.grievance_department_id ||
+          a.grievance_departments?.department_id === deptRec.department_id,
+      )?.users_assignments_staff_idTousers;
+    const deptHeads = deptRec.departments?.users || [];
+
+    // 1. Department 50% Threshold (Nudge assigned staff)
+    if (deptConsumptionPercent >= 50 && deptConsumptionPercent < 75) {
+      if (deptAssignedStaff) {
+        const notifType = `DEPT_SLA_50_${deptRec.department_id}`;
+        if (!hasSentToUser(deptAssignedStaff.user_id, notifType)) {
+          await prisma.$transaction(async (tx) => {
+            await tx.notifications.create({
+              data: {
+                user_id: deptAssignedStaff.user_id,
+                grievance_id: grievanceId,
+                notification_type: notifType,
+                channel: "IN_APP",
+                title: `Priority Nudge: 50% Department SLA Consumed (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has reached 50% of its allocated SLA time in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Please prioritize investigation and findings.`,
+                status: "PENDING",
+                created_at: evaluationDate,
+              },
+            });
+            await tx.audit_logs.create({
+              data: {
+                grievance_id: grievanceId,
+                user_id: null,
+                action: "DEPARTMENT_SLA_50_PERCENT_WARNING",
+                entity_type: "grievance_department",
+                entity_id: deptRec.grievance_department_id,
+                new_value: {
+                  department: deptName,
+                  consumptionPercent: deptConsumptionPercent,
+                  allocatedPercent: percentAlloc,
+                  threshold: "50%",
+                  notifiedStaff:
+                    `${deptAssignedStaff.first_name} ${deptAssignedStaff.last_name || ""}`.trim(),
+                },
+              },
+            });
+          });
+          existingNotifications.push({
+            user_id: deptAssignedStaff.user_id,
+            notification_type: notifType,
+          });
+          notificationsSent.push(notifType);
+        }
+      }
+    }
+
+    // 2. Department 75% Threshold (Alert staff + Department Head, mark department AT_RISK)
+    if (deptConsumptionPercent >= 75 && deptConsumptionPercent < 100) {
+      if (deptRec.sla_status !== "AT_RISK") {
+        await prisma.grievance_departments.update({
+          where: { grievance_department_id: deptRec.grievance_department_id },
+          data: { sla_status: "AT_RISK" },
+        });
+      }
+
+      const notifType = `DEPT_SLA_75_${deptRec.department_id}`;
+      const recipientsToNotify = [
+        ...(deptAssignedStaff ? [deptAssignedStaff] : []),
+        ...deptHeads,
+      ].filter((u) => !hasSentToUser(u.user_id, notifType));
+
+      if (recipientsToNotify.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const u of recipientsToNotify) {
+            await tx.notifications.create({
+              data: {
+                user_id: u.user_id,
+                grievance_id: grievanceId,
+                notification_type: notifType,
+                channel: "IN_APP",
+                title: `SLA At Risk: 75% Department SLA Consumed (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has reached 75% of its allocated SLA in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Expedite inquiry to avoid department SLA breach.`,
+                status: "PENDING",
+                created_at: evaluationDate,
+              },
+            });
+          }
+          await tx.audit_logs.create({
+            data: {
+              grievance_id: grievanceId,
+              user_id: null,
+              action: "DEPARTMENT_SLA_75_PERCENT_WARNING",
+              entity_type: "grievance_department",
+              entity_id: deptRec.grievance_department_id,
+              new_value: {
+                department: deptName,
+                consumptionPercent: deptConsumptionPercent,
+                allocatedPercent: percentAlloc,
+                threshold: "75%",
+                slaStatus: "AT_RISK",
+              },
+            },
+          });
+        });
+        for (const u of recipientsToNotify) {
+          existingNotifications.push({
+            user_id: u.user_id,
+            notification_type: notifType,
+          });
+        }
+        notificationsSent.push(notifType);
+      }
+    }
+
+    // 3. Department 100% Threshold (Mark department BREACHED, alert staff & HOD)
+    if (deptConsumptionPercent >= 100) {
+      if (deptRec.sla_status !== "BREACHED") {
+        await prisma.grievance_departments.update({
+          where: { grievance_department_id: deptRec.grievance_department_id },
+          data: { sla_status: "BREACHED" },
+        });
+      }
+
+      const notifType = `DEPT_SLA_BREACH_${deptRec.department_id}`;
+      const recipientsToNotify = [
+        ...(deptAssignedStaff ? [deptAssignedStaff] : []),
+        ...deptHeads,
+      ].filter((u) => !hasSentToUser(u.user_id, notifType));
+
+      if (recipientsToNotify.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const u of recipientsToNotify) {
+            await tx.notifications.create({
+              data: {
+                user_id: u.user_id,
+                grievance_id: grievanceId,
+                notification_type: notifType,
+                channel: "IN_APP",
+                title: `CRITICAL: Department SLA Breached (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has consumed 100% of its allocated SLA in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Immediate intervention required.`,
+                status: "PENDING",
+                created_at: evaluationDate,
+              },
+            });
+          }
+        });
+        for (const u of recipientsToNotify) {
+          existingNotifications.push({
+            user_id: u.user_id,
+            notification_type: notifType,
+          });
+        }
+        notificationsSent.push(notifType);
+      }
+    }
+  }
 
   // =========================================================================
   // RULE 1: Below Staff Nudge threshold → Normal processing
