@@ -123,24 +123,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Ensure required supporting departments (sequential dependencies or explicit prerequisites) have completed
-    const primaryRecord = allInvolvedDepts.find(
-      (d) => d.involvement_type === "PRIMARY",
-    );
-    const rawPrereqs = (primaryRecord?.prerequisite_department_ids || []) as (
-      | string
-      | number
-      | bigint
-    )[];
-    const primaryPrereqIds = Array.isArray(rawPrereqs)
-      ? rawPrereqs.map((id) => String(id))
-      : [];
-
+    // Ensure required supporting departments have completed
     const incompleteRequiredSupporting = allInvolvedDepts.filter(
       (d) =>
         d.involvement_type === "SUPPORTING" &&
-        (d.dependency_type === "SEQUENTIAL" ||
-          primaryPrereqIds.includes(d.department_id.toString())) &&
         d.status !== "COMPLETED" &&
         d.status !== "RESOLVED" &&
         d.status !== "REMOVED",
@@ -215,6 +201,46 @@ export async function POST(request: Request) {
         status: requiresHeadReview ? "UNDER_REVIEW" : "RESOLVED",
       },
     });
+
+    // 2.5 Mark staff assignment as COMPLETED
+    await prisma.assignments.updateMany({
+      where: {
+        grievance_id: gId,
+        staff_id: staffId,
+        assignment_status: "ASSIGNED",
+      },
+      data: {
+        assignment_status: "COMPLETED",
+        completed_at: new Date(),
+      },
+    });
+
+    // Mark submitting department as COMPLETED
+    if (myAssignment?.grievance_department_id) {
+      await prisma.grievance_departments.update({
+        where: {
+          grievance_department_id: myAssignment.grievance_department_id,
+        },
+        data: {
+          status: "COMPLETED",
+          completed_at: new Date(),
+        },
+      });
+    }
+
+    if (!requiresHeadReview) {
+      // Resolution finalized and sent to user; mark all remaining active involved departments as COMPLETED
+      await prisma.grievance_departments.updateMany({
+        where: {
+          grievance_id: gId,
+          status: { notIn: ["COMPLETED", "REMOVED"] },
+        },
+        data: {
+          status: "COMPLETED",
+          completed_at: new Date(),
+        },
+      });
+    }
 
     // 3. Log audit event
     await prisma.audit_logs.create({

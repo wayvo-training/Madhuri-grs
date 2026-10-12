@@ -4,11 +4,10 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  Clock,
   FileCheck2,
   Lock,
   Play,
-  RotateCcw,
-  ShieldAlert,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -437,20 +436,50 @@ export function GrievanceDetails({
             {!isCompleted && grievance.status !== "ASSIGNED" && (
               <>
                 {grievance.isPrimaryOwner !== false ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenResolutionForm) {
-                        onOpenResolutionForm(grievance);
-                      } else {
-                        onOpenResolveModal?.();
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                  >
-                    <FileCheck2 className="h-3.5 w-3.5" />
-                    <span>Submit Final Resolution</span>
-                  </button>
+                  (() => {
+                    const pendingSupporting = (
+                      grievance.departmentsInvolved || []
+                    ).filter(
+                      (d) =>
+                        d.involvementType === "SUPPORTING" &&
+                        d.status !== "COMPLETED" &&
+                        d.status !== "RESOLVED" &&
+                        d.status !== "REMOVED",
+                    );
+                    if (pendingSupporting.length > 0) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 border border-amber-200 shadow-2xs"
+                          title={`Awaiting findings from: ${pendingSupporting.map((d) => d.departmentName).join(", ")}`}
+                        >
+                          <Clock className="h-3.5 w-3.5 text-amber-600" />
+                          <span>
+                            Awaiting Supporting Findings (
+                            {pendingSupporting
+                              .map((d) => d.departmentName)
+                              .join(", ")}
+                            )
+                          </span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onOpenResolutionForm) {
+                            onOpenResolutionForm(grievance);
+                          } else {
+                            onOpenResolveModal?.();
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                      >
+                        <FileCheck2 className="h-3.5 w-3.5" />
+                        <span>Submit Final Resolution</span>
+                      </button>
+                    );
+                  })()
                 ) : grievance.isMyDepartmentCompleted ||
                   grievance.myDepartmentStatus === "COMPLETED" ? (
                   <div className="flex items-center gap-2">

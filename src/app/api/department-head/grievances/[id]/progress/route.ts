@@ -186,10 +186,24 @@ export async function GET(
       const deptAssignment = allDeptAssignments.find(
         (a) => a.grievance_department_id === d.grievance_department_id,
       );
+      let deptStatus = d.status;
+      if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
+        if (deptStatus === "PENDING_ASSIGNMENT") {
+          deptStatus = "ASSIGNED";
+        }
+      } else if (!deptAssignment && deptStatus === "ASSIGNED") {
+        deptStatus = "PENDING_ASSIGNMENT";
+      }
+
       const staffUser = deptAssignment?.users_assignments_staff_idTousers;
-      const assignedStaff = staffUser
-        ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
-        : null;
+      const assignedStaff =
+        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+          ? null
+          : staffUser &&
+              (deptAssignment?.assignment_status === "ASSIGNED" ||
+                deptAssignment?.assignment_status === "COMPLETED")
+            ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+            : null;
 
       return {
         id: d.grievance_department_id.toString(),
@@ -198,7 +212,7 @@ export async function GET(
           | "PRIMARY"
           | "SUPPORTING"
           | "EQUAL",
-        status: d.status,
+        status: deptStatus,
         assignedStaff,
       };
     });

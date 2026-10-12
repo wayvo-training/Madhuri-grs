@@ -20,7 +20,7 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
   if (item.status === "CLOSED" || item.status === "RESOLVED") {
     return false;
   }
-  // 1. Department Head assumed resolution authority via SLA Escalation Intervention
+  // 1. Department Head explicitly assumed resolution authority
   if (hasHeadResolutionAuthority(item)) {
     return true;
   }

@@ -137,8 +137,8 @@ export async function evaluateGrievanceSla(
   const primaryDeptHead =
     primaryRecord?.departments?.users?.[0] || allDeptHeads[0];
 
-  // Ignore terminal closed or resolved grievances
-  const terminalStatuses = ["CLOSED", "RESOLVED", "REJECTED"];
+  // Ignore terminal closed, resolved, or under-review grievances
+  const terminalStatuses = ["CLOSED", "RESOLVED", "REJECTED", "UNDER_REVIEW"];
   if (terminalStatuses.includes(grievance.status)) {
     return {
       grievanceId: grievance.grievance_id.toString(),
@@ -765,15 +765,18 @@ export async function evaluateGrievanceSla(
 
     await prisma.$transaction(async (tx) => {
       // 1. Update grievance status to ESCALATED and sla_status to BREACHED
-      if (
-        grievance.status !== "ESCALATED" ||
-        grievance.sla_status !== "BREACHED"
-      ) {
+      const isEligibleForEscalation =
+        grievance.status !== "ESCALATED" &&
+        grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        grievance.status !== "UNDER_REVIEW";
+
+      if (isEligibleForEscalation || grievance.sla_status !== "BREACHED") {
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
           data: {
             sla_status: "BREACHED",
-            status: "ESCALATED",
+            ...(isEligibleForEscalation ? { status: "ESCALATED" } : {}),
             updated_at: evaluationDate,
           },
         });

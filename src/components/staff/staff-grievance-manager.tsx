@@ -149,7 +149,9 @@ export function StaffGrievanceManager({
 
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.error || "Failed to submit resolution");
+      throw new Error(
+        errJson.message || errJson.error || "Failed to submit resolution",
+      );
     }
 
     setResolvingGrievance(null);
@@ -165,6 +167,22 @@ export function StaffGrievanceManager({
       handleExamine(g);
       return;
     }
+
+    const pendingSupporting = (g.departmentsInvolved || []).filter(
+      (d) =>
+        d.involvementType === "SUPPORTING" &&
+        d.status !== "COMPLETED" &&
+        d.status !== "RESOLVED" &&
+        d.status !== "REMOVED",
+    );
+    if (g.isPrimaryOwner !== false && pendingSupporting.length > 0) {
+      toast.error(
+        `Cannot submit final resolution: Awaiting findings from supporting department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
+      );
+      handleExamine(g);
+      return;
+    }
+
     setResolvingGrievance(g);
   };
 

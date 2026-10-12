@@ -159,7 +159,7 @@ export async function POST(
         );
       }
 
-      // Reopen count >= 2 is also an authorized escalation path
+      // Explicit intervention authority assumed, reopen count >= 2, or admin
       const isAuthorizedHead =
         hasInterventionAuthority || grievance.reopen_count >= 2 || isAdmin;
 
