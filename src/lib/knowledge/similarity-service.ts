@@ -14,12 +14,14 @@ export interface SimilarityCandidateResult {
   subcategoryId: string | null;
   categoryName?: string;
   subcategoryName?: string;
+  titleSimilarity: number;
+  descriptionSimilarity: number;
   problemSimilarity: number;
   resolutionSimilarity: number;
-  titleSimilarity: number;
   metadataScore: number;
   finalScore: number;
   classification: SimilarityClassification;
+  descriptionText?: string;
   problemText?: string;
   resolutionText?: string;
   createdAt?: string;
@@ -27,8 +29,9 @@ export interface SimilarityCandidateResult {
 
 export interface CheckDuplicatesParams {
   title: string;
-  problem: string;
-  resolution: string;
+  description?: string;
+  problem?: string;
+  resolution?: string;
   categoryId?: string | bigint | null;
   subcategoryId?: string | bigint | null;
   categoryName?: string | null;
@@ -77,6 +80,7 @@ export async function checkKnowledgeDuplicates(
 ): Promise<SimilarityCheckResult> {
   const {
     title,
+    description,
     problem,
     resolution,
     categoryId,
@@ -87,11 +91,17 @@ export async function checkKnowledgeDuplicates(
   } = params;
 
   const trimmedTitle = (title || "").trim();
-  const trimmedProblem = (problem || "").trim();
+  const trimmedDescription = (description || problem || "").trim();
+  const trimmedProblem = (problem || description || "").trim();
   const trimmedResolution = (resolution || "").trim();
 
   // If required fields are empty, return safe empty result
-  if (!trimmedTitle && !trimmedProblem && !trimmedResolution) {
+  if (
+    !trimmedTitle &&
+    !trimmedDescription &&
+    !trimmedProblem &&
+    !trimmedResolution
+  ) {
     return {
       totalCandidatesCompared: 0,
       highestMatch: null,
@@ -207,6 +217,12 @@ export async function checkKnowledgeDuplicates(
           problem_summary: true,
           action_taken: true,
           findings: true,
+          grievances: {
+            select: {
+              title: true,
+              description: true,
+            },
+          },
         },
       },
     },
@@ -227,44 +243,62 @@ export async function checkKnowledgeDuplicates(
 
   for (const cand of candidatesFromDb) {
     let candProblem = "";
+    let candDescription = "";
     let candResolution = "";
 
     try {
       const parsed = JSON.parse(cand.content);
-      candProblem = parsed.problem || "";
+      candDescription = parsed.description || parsed.problem || "";
+      candProblem = parsed.problem || parsed.description || "";
       candResolution = parsed.resolution || parsed.solutionSteps || "";
     } catch {
+      candDescription = cand.content;
+      candProblem = cand.content;
       candResolution = cand.content;
     }
 
-    // Fallback from resolution if problem is absent
-    if (!candProblem && cand.resolutions?.problem_summary) {
-      candProblem = cand.resolutions.problem_summary;
+    // Fallback from resolution / grievance if problem/description is absent
+    if (!candDescription) {
+      candDescription =
+        cand.resolutions?.grievances?.description ||
+        cand.resolutions?.problem_summary ||
+        "";
+    }
+    if (!candProblem) {
+      candProblem = candDescription || cand.resolutions?.problem_summary || "";
     }
     if (!candResolution && cand.resolutions?.action_taken) {
       candResolution = cand.resolutions.action_taken;
     }
 
     // A. Calculate component scores (0..100)
-    const problemSimilarity = calculateFieldSimilarity(
-      trimmedProblem,
-      candProblem,
-    );
-    const resolutionSimilarity = calculateFieldSimilarity(
-      trimmedResolution,
-      candResolution,
-    );
     const titleSimilarity = calculateFieldSimilarity(trimmedTitle, cand.title);
+    const descriptionSimilarity = calculateFieldSimilarity(
+      trimmedDescription || trimmedProblem,
+      candDescription || candProblem,
+    );
+    const problemSimilarity = descriptionSimilarity;
+    const resolutionSimilarity = trimmedResolution
+      ? calculateFieldSimilarity(trimmedResolution, candResolution)
+      : 0;
 
     // B. Metadata matching score: deterministic 100 since taxonomy filtered
     const metadataScore = 100;
 
-    // C. Weighted final score (Domain Model: Problem Statement 50%, Resolution 40%, Taxonomy Metadata 10%):
-    // Final Score = (Problem * 0.50) + (Resolution * 0.40) + (Metadata * 0.10)
+    // C. Weighted final score:
+    // With resolution: Title (20%), Description/Problem (40%), Resolution (30%), Taxonomy (10%)
+    // Without resolution: Title (30%), Description/Problem (60%), Taxonomy (10%)
+    const hasResolution = trimmedResolution.length > 0;
+    const titleWeight = hasResolution ? 0.2 : 0.3;
+    const descriptionWeight = hasResolution ? 0.4 : 0.6;
+    const resolutionWeight = hasResolution ? 0.3 : 0.0;
+    const metadataWeight = 0.1;
+
     const rawFinalScore =
-      problemSimilarity * 0.5 +
-      resolutionSimilarity * 0.4 +
-      metadataScore * 0.1;
+      titleSimilarity * titleWeight +
+      descriptionSimilarity * descriptionWeight +
+      resolutionSimilarity * resolutionWeight +
+      metadataScore * metadataWeight;
 
     const finalScore = Math.min(
       100,
@@ -280,12 +314,14 @@ export async function checkKnowledgeDuplicates(
       subcategoryId: cand.subcategory_id?.toString() || null,
       categoryName: cand.categories?.category_name || undefined,
       subcategoryName: cand.subcategories?.subcategory_name || undefined,
+      titleSimilarity,
+      descriptionSimilarity,
       problemSimilarity,
       resolutionSimilarity,
-      titleSimilarity,
       metadataScore,
       finalScore,
       classification,
+      descriptionText: candDescription || undefined,
       problemText: candProblem || undefined,
       resolutionText: candResolution || undefined,
       createdAt: cand.created_at.toISOString(),

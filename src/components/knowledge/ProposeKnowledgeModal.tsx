@@ -54,12 +54,14 @@ interface DuplicateCandidate {
   articleId: string;
   articleTitle: string;
   status: string;
+  titleSimilarity: number;
+  descriptionSimilarity?: number;
   problemSimilarity: number;
   resolutionSimilarity: number;
-  titleSimilarity: number;
   metadataScore: number;
   finalScore: number;
   classification: "LIKELY_DUPLICATE" | "SIMILAR" | "NO_SIGNIFICANT_MATCH";
+  descriptionText?: string;
   problemText?: string;
   resolutionText?: string;
   categoryName?: string;
@@ -218,6 +220,7 @@ export function ProposeKnowledgeModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
+          description: problemScenario.trim(),
           problem: problemScenario.trim(),
           resolution: resolutionApproach.trim(),
           category: category.trim(),
@@ -273,6 +276,7 @@ export function ProposeKnowledgeModal({
           title: title.trim(),
           category: category.trim(),
           subcategory: subcategory.trim(),
+          description: problemScenario.trim(),
           problemSummary: problemScenario.trim(),
           solutionSteps: resolutionApproach.trim(),
           considerations: keyPointsGuidance.trim() || undefined,
@@ -289,10 +293,13 @@ export function ProposeKnowledgeModal({
                 matchedArticleId: dupState.highestMatch.articleId,
                 matchedArticleTitle: dupState.highestMatch.articleTitle,
                 matchedArticleStatus: dupState.highestMatch.status,
+                titleSimilarity: dupState.highestMatch.titleSimilarity,
+                descriptionSimilarity:
+                  dupState.highestMatch.descriptionSimilarity ??
+                  dupState.highestMatch.problemSimilarity,
                 problemSimilarity: dupState.highestMatch.problemSimilarity,
                 resolutionSimilarity:
                   dupState.highestMatch.resolutionSimilarity,
-                titleSimilarity: dupState.highestMatch.titleSimilarity,
                 metadataScore: dupState.highestMatch.metadataScore,
               }
             : null,
@@ -636,15 +643,33 @@ export function ProposeKnowledgeModal({
                       </span>
                     </div>
 
+                    {/* Matched Article Description snippet */}
+                    {(dupState.highestMatch.descriptionText ||
+                      dupState.highestMatch.problemText) && (
+                      <div className="rounded-md bg-amber-50/70 border border-amber-200/60 p-2 text-[11px] text-amber-950">
+                        <span className="font-semibold text-amber-900 block mb-0.5">
+                          Matched Article Description:
+                        </span>
+                        <p className="text-slate-700 line-clamp-3 italic">
+                          {dupState.highestMatch.descriptionText ||
+                            dupState.highestMatch.problemText}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Score and Calculation Formula Breakdown */}
                     <SimilarityScoreBreakdown
+                      titleSimilarity={dupState.highestMatch.titleSimilarity}
+                      descriptionSimilarity={
+                        dupState.highestMatch.descriptionSimilarity ??
+                        dupState.highestMatch.problemSimilarity
+                      }
                       problemSimilarity={
                         dupState.highestMatch.problemSimilarity
                       }
                       resolutionSimilarity={
                         dupState.highestMatch.resolutionSimilarity
                       }
-                      titleSimilarity={dupState.highestMatch.titleSimilarity}
                       metadataScore={dupState.highestMatch.metadataScore}
                       finalScore={dupState.highestMatch.finalScore}
                       classification={dupState.classification || "SIMILAR"}
@@ -709,15 +734,33 @@ export function ProposeKnowledgeModal({
                       </span>
                     </div>
 
+                    {/* Matched Article Description snippet */}
+                    {(dupState.highestMatch.descriptionText ||
+                      dupState.highestMatch.problemText) && (
+                      <div className="rounded-md bg-rose-50/70 border border-rose-200/60 p-2 text-[11px] text-rose-950">
+                        <span className="font-semibold text-rose-900 block mb-0.5">
+                          Matched Article Description:
+                        </span>
+                        <p className="text-slate-700 line-clamp-3 italic">
+                          {dupState.highestMatch.descriptionText ||
+                            dupState.highestMatch.problemText}
+                        </p>
+                      </div>
+                    )}
+
                     {/* Score and Calculation Formula Breakdown */}
                     <SimilarityScoreBreakdown
+                      titleSimilarity={dupState.highestMatch.titleSimilarity}
+                      descriptionSimilarity={
+                        dupState.highestMatch.descriptionSimilarity ??
+                        dupState.highestMatch.problemSimilarity
+                      }
                       problemSimilarity={
                         dupState.highestMatch.problemSimilarity
                       }
                       resolutionSimilarity={
                         dupState.highestMatch.resolutionSimilarity
                       }
-                      titleSimilarity={dupState.highestMatch.titleSimilarity}
                       metadataScore={dupState.highestMatch.metadataScore}
                       finalScore={dupState.highestMatch.finalScore}
                       classification={

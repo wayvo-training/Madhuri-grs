@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       title?: string;
+      description?: string;
       problem?: string;
       problemSummary?: string;
       resolution?: string;
@@ -23,11 +24,23 @@ export async function POST(request: Request) {
     };
 
     const title = (body.title || "").trim();
-    const problem = (body.problemSummary || body.problem || "").trim();
+    const description = (
+      body.description ||
+      body.problemSummary ||
+      body.problem ||
+      ""
+    ).trim();
+    const problem = (
+      body.problemSummary ||
+      body.problem ||
+      body.description ||
+      ""
+    ).trim();
     const resolution = (body.solutionSteps || body.resolution || "").trim();
 
     const result = await KnowledgeSimilarityService.checkDuplicates({
       title,
+      description,
       problem,
       resolution,
       categoryId: body.categoryId,

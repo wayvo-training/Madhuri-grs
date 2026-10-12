@@ -104,6 +104,7 @@ export async function GET(request: Request) {
               problemSimilarity?: number;
               resolutionSimilarity?: number;
               titleSimilarity?: number;
+              descriptionSimilarity?: number;
               metadataScore?: number;
               candidates?: unknown[];
             };
@@ -196,6 +197,7 @@ export async function GET(request: Request) {
             try {
               const dupRes = await KnowledgeSimilarityService.checkDuplicates({
                 title: art.title,
+                description: problemText,
                 problem: problemText,
                 resolution: resolutionText,
                 categoryId: art.category_id,
@@ -210,10 +212,12 @@ export async function GET(request: Request) {
                   matchedArticleId: dupRes.highestMatch.articleId,
                   matchedArticleTitle: dupRes.highestMatch.articleTitle,
                   matchedArticleStatus: dupRes.highestMatch.status,
+                  titleSimilarity: dupRes.highestMatch.titleSimilarity,
+                  descriptionSimilarity:
+                    dupRes.highestMatch.descriptionSimilarity,
                   problemSimilarity: dupRes.highestMatch.problemSimilarity,
                   resolutionSimilarity:
                     dupRes.highestMatch.resolutionSimilarity,
-                  titleSimilarity: dupRes.highestMatch.titleSimilarity,
                   metadataScore: dupRes.highestMatch.metadataScore,
                   candidates: dupRes.candidates,
                 };

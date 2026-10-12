@@ -35,17 +35,19 @@ export interface KnowledgeArticleData {
     matchedArticleId?: string;
     matchedArticleTitle?: string;
     matchedArticleStatus?: string;
+    titleSimilarity?: number;
+    descriptionSimilarity?: number;
     problemSimilarity?: number;
     resolutionSimilarity?: number;
-    titleSimilarity?: number;
     metadataScore?: number;
     candidates?: Array<{
       articleId: string;
       articleTitle: string;
       status: string;
+      titleSimilarity: number;
+      descriptionSimilarity?: number;
       problemSimilarity: number;
       resolutionSimilarity: number;
-      titleSimilarity: number;
       metadataScore: number;
       finalScore: number;
       classification: string;
@@ -223,14 +225,19 @@ export function KnowledgeArticleViewerModal({
 
                     {/* Calculation Formula & Score Breakdown */}
                     <SimilarityScoreBreakdown
+                      titleSimilarity={
+                        article.duplicateCheck.titleSimilarity ?? 0
+                      }
+                      descriptionSimilarity={
+                        article.duplicateCheck.descriptionSimilarity ??
+                        article.duplicateCheck.problemSimilarity ??
+                        0
+                      }
                       problemSimilarity={
                         article.duplicateCheck.problemSimilarity ?? 0
                       }
                       resolutionSimilarity={
                         article.duplicateCheck.resolutionSimilarity ?? 0
-                      }
-                      titleSimilarity={
-                        article.duplicateCheck.titleSimilarity ?? 0
                       }
                       metadataScore={
                         article.duplicateCheck.metadataScore ?? 100

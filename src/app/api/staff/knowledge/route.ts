@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       title: string;
       category?: string;
       subcategory?: string;
+      description?: string;
       problemSummary?: string;
       problem?: string;
       solutionSteps?: string;
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
       title,
       category,
       subcategory,
+      description,
       problemSummary,
       problem,
       solutionSteps,
@@ -52,7 +54,12 @@ export async function POST(request: Request) {
       duplicateCheckResult,
     } = body;
 
-    const finalProblem = (problemSummary || problem || "").trim();
+    const finalProblem = (
+      description ||
+      problemSummary ||
+      problem ||
+      ""
+    ).trim();
     const finalResolution = (solutionSteps || resolution || "").trim();
     const finalKeyPoints = (keyPoints || considerations || "").trim();
 
@@ -188,6 +195,7 @@ export async function POST(request: Request) {
 
     // Format content as structured JSON
     const structuredContent = JSON.stringify({
+      description: finalProblem,
       problem: finalProblem,
       resolution: finalResolution,
       solutionSteps: finalResolution, // backwards compatibility
