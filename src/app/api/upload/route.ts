@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file");
-    const folder = (formData.get("folder") as string) || "general";
+    const rawFolder = (formData.get("folder") as string) || "general";
+    const sanitizedFolder = rawFolder
+      .replace(/[^a-zA-Z0-9_-]/g, "")
+      .slice(0, 50);
+    const folder = sanitizedFolder || "general";
 
     if (!file || !(file instanceof File)) {
       return NextResponse.json(

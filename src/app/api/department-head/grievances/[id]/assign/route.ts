@@ -67,28 +67,35 @@ export async function POST(
       );
     }
 
+    // Validate that department heads can only assign staff from their own department
+    if (
+      !isAdmin &&
+      staff.department_id &&
+      departmentId &&
+      BigInt(staff.department_id) !== departmentId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: You can only assign staff members belonging to your department.",
+        },
+        { status: 403 },
+      );
+    }
+
     // 3. Resolve the target grievance_department
-    // First priority: Match the selected staff member's department
-    // Fallback: Match the active head's department
-    let grievanceDept = await prisma.grievance_departments.findFirst({
+    const grievanceDept = await prisma.grievance_departments.findFirst({
       where: {
         grievance_id: grievanceId,
-        department_id: staff.department_id
-          ? BigInt(staff.department_id)
-          : departmentId,
+        ...(isAdmin
+          ? staff.department_id
+            ? { department_id: BigInt(staff.department_id) }
+            : {}
+          : { department_id: departmentId }),
       },
       include: { grievances: true },
     });
-
-    if (!grievanceDept) {
-      grievanceDept = await prisma.grievance_departments.findFirst({
-        where: {
-          grievance_id: grievanceId,
-          ...(isAdmin ? {} : { department_id: departmentId }),
-        },
-        include: { grievances: true },
-      });
-    }
 
     if (!grievanceDept) {
       return NextResponse.json(

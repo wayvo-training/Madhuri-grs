@@ -56,12 +56,34 @@ export default function LoginPage() {
       }
 
       const params = new URLSearchParams(window.location.search);
-      const redirectUrl = params.get("redirect");
+      const redirectUrl = params.get("callbackUrl") || params.get("redirect");
       const defaultPath = getRoleDashboardPath(data.user?.role);
-      const targetPath =
-        redirectUrl?.startsWith("/") && data.user?.role === "END_USER"
-          ? redirectUrl
-          : defaultPath;
+
+      let targetPath = defaultPath;
+      if (redirectUrl?.startsWith("/") && !redirectUrl.startsWith("//")) {
+        const userRole = data.user?.role?.toUpperCase();
+        if (
+          userRole === "ADMIN" &&
+          (redirectUrl.startsWith("/admin") ||
+            redirectUrl.startsWith("/department-head") ||
+            redirectUrl.startsWith("/staff") ||
+            redirectUrl.startsWith("/end-user"))
+        ) {
+          targetPath = redirectUrl;
+        } else if (
+          userRole === "DEPARTMENT_HEAD" &&
+          redirectUrl.startsWith("/department-head")
+        ) {
+          targetPath = redirectUrl;
+        } else if (userRole === "STAFF" && redirectUrl.startsWith("/staff")) {
+          targetPath = redirectUrl;
+        } else if (
+          userRole === "END_USER" &&
+          redirectUrl.startsWith("/end-user")
+        ) {
+          targetPath = redirectUrl;
+        }
+      }
 
       window.location.href = targetPath;
     } catch (err) {
