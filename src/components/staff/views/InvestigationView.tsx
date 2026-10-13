@@ -232,8 +232,12 @@ export function InvestigationView({
                       </td>
 
                       {/* Category */}
-                      <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
-                        {item.category}
+                      <td className="py-3 px-3 max-w-[140px]">
+                        <TruncatedText
+                          text={item.category}
+                          maxChars={18}
+                          className="text-slate-900 border-none block"
+                        />
                       </td>
 
                       {/* Priority */}

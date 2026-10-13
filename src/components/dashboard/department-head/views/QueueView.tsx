@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import {
   canHeadProposeKnowledge,
   canHeadSubmitResolution,
@@ -414,14 +415,12 @@ export function QueueView({
                     {/* 2. Title & Badges */}
                     <TableCell className="py-3 px-3 align-top max-w-xs">
                       <div className="space-y-1">
-                        <button
-                          type="button"
+                        <TruncatedText
+                          text={item.title}
+                          maxChars={35}
                           onClick={() => onInspect(item, "statement")}
-                          className="font-semibold text-sm text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block cursor-pointer truncate max-w-[280px]"
-                          title={item.title}
-                        >
-                          {item.title}
-                        </button>
+                          className="font-semibold text-sm text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block cursor-pointer max-w-[280px] border-none"
+                        />
 
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                           {item.isReopened && (
@@ -430,10 +429,7 @@ export function QueueView({
                             </span>
                           )}
                           {item.isCrossDepartment && (
-                            <span
-                              className="inline-flex items-center gap-1 text-sm font-medium text-slate-700"
-                              title={item.collaboratingDepartments?.join(", ")}
-                            >
+                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700">
                               <GitBranch className="h-2.5 w-2.5 text-slate-500" />
                               Cross-Dept
                             </span>
@@ -444,15 +440,19 @@ export function QueueView({
                     </TableCell>
 
                     {/* 2b. Category */}
-                    <TableCell className="py-3 px-3 align-top">
-                      <p className="text-[13px] text-slate-600 font-medium">
-                        {item.category}
-                      </p>
+                    <TableCell className="py-3 px-3 align-top max-w-[160px]">
+                      <TruncatedText
+                        text={item.category}
+                        maxChars={20}
+                        className="text-[13px] text-slate-600 font-medium border-none block"
+                      />
                     </TableCell>
-                    <TableCell className="py-3 px-3 align-top">
-                      <p className="text-sm text-slate-500">
-                        {item.subcategory}
-                      </p>
+                    <TableCell className="py-3 px-3 align-top max-w-[160px]">
+                      <TruncatedText
+                        text={item.subcategory}
+                        maxChars={20}
+                        className="text-sm text-slate-500 border-none block"
+                      />
                     </TableCell>
 
                     {/* 3. Priority */}

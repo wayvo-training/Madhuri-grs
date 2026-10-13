@@ -25,8 +25,8 @@ export async function POST(request: Request) {
       descriptionFromForm || (formData.get("problemStatement") as string) || "";
     const title =
       titleFromForm ||
-      (problemStatement.length > 50
-        ? `${problemStatement.substring(0, 50)}...`
+      (problemStatement.length > 195
+        ? problemStatement.substring(0, 195).trim()
         : problemStatement);
     const files = formData.getAll("files") as File[];
 

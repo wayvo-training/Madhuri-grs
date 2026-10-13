@@ -32,6 +32,7 @@ import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { usePagination } from "@/hooks/usePagination";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import { canStaffProposeKnowledge } from "@/lib/staff/utils";
@@ -552,12 +553,11 @@ export function GrievanceQueue({
 
                     {/* Summary */}
                     <td className="py-3 px-3.5 max-w-[200px]">
-                      <span
-                        className="font-medium text-slate-900 line-clamp-2"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </span>
+                      <TruncatedText
+                        text={item.title}
+                        maxChars={35}
+                        className="font-medium text-slate-900 border-none"
+                      />
                     </td>
 
                     {/* Reopened Status */}
@@ -572,8 +572,12 @@ export function GrievanceQueue({
                     </td>
 
                     {/* Category */}
-                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
-                      {item.category}
+                    <td className="py-3 px-3 max-w-[140px]">
+                      <TruncatedText
+                        text={item.category}
+                        maxChars={18}
+                        className="text-slate-900 border-none block"
+                      />
                     </td>
 
                     {/* Priority */}

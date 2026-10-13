@@ -24,6 +24,7 @@ import {
   SortableTh,
   type SortState,
 } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import {
   canHeadProposeKnowledge,
   canHeadSubmitResolution,
@@ -369,22 +370,29 @@ export function SlaGovernanceView({
                           {item.ticketCode}
                         </span>
                       </td>
-                      <td className="py-2 px-3 align-top">
-                        <button
-                          type="button"
+                      <td className="py-2 px-3 align-top max-w-[260px]">
+                        <TruncatedText
+                          text={item.title}
+                          maxChars={32}
                           onClick={() => onInspect(item, "statement")}
-                          className="block text-left text-sm font-semibold text-slate-900 hover:text-emerald-900 transition"
-                        >
-                          {item.title}
-                        </button>
+                          className="block text-left text-sm font-semibold text-slate-900 hover:text-emerald-900 transition max-w-[240px] border-none cursor-pointer"
+                        />
                       </td>
 
-                      <td className="py-2 px-3 align-top text-sm font-medium text-slate-700">
-                        {item.category}
+                      <td className="py-2 px-3 align-top max-w-[140px]">
+                        <TruncatedText
+                          text={item.category}
+                          maxChars={18}
+                          className="text-sm font-medium text-slate-700 border-none block"
+                        />
                       </td>
 
-                      <td className="py-2 px-3 align-top text-sm text-slate-500">
-                        {item.subcategory}
+                      <td className="py-2 px-3 align-top max-w-[140px]">
+                        <TruncatedText
+                          text={item.subcategory}
+                          maxChars={18}
+                          className="text-sm text-slate-500 border-none block"
+                        />
                       </td>
 
                       <td className="py-2 px-3 align-top">

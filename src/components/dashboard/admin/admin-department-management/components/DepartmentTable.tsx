@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SerializedDepartment } from "@/types/admin/departments";
 
@@ -283,9 +284,11 @@ export function DepartmentTable({
 
                     {/* Description */}
                     <td className="max-w-[220px] px-4 py-3.5">
-                      <p className="truncate text-sm font-normal text-slate-500">
-                        {dept.description || "—"}
-                      </p>
+                      <TruncatedText
+                        text={dept.description}
+                        maxChars={30}
+                        className="text-sm font-normal text-slate-500 border-none block"
+                      />
                     </td>
 
                     {/* Status */}

@@ -250,8 +250,8 @@ export function StaffEmailHub({
               <li className="flex items-start gap-2">
                 <span className="font-bold text-emerald-700">&bull;</span>
                 <span>
-                  Always keep the <strong>Grievance Ticket ID</strong> in your
-                  email subject line so responses can be mapped back to the case
+                  Always keep the <strong>Grievance ID</strong> in your email
+                  subject line so responses can be mapped back to the case
                   record.
                 </span>
               </li>

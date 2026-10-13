@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import type {
   SerializedGrievance,
   SupportingDepartment,
@@ -257,31 +258,39 @@ export function GrievanceTableList({
 
                   {/* Subject */}
                   <TableCell className="max-w-xs px-2 py-2.5">
-                    <p className="truncate font-semibold text-slate-900">
-                      {g.title}
-                    </p>
+                    <TruncatedText
+                      text={g.title}
+                      maxChars={40}
+                      className="font-semibold text-slate-900 border-none"
+                    />
                   </TableCell>
 
                   {/* Category */}
-                  <TableCell className="max-w-xs px-2 py-2.5">
-                    <p className="text-xs font-medium text-slate-700">
-                      {g.category_name}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {g.subcategory_name}
-                    </p>
+                  <TableCell className="max-w-[180px] px-2 py-2.5">
+                    <TruncatedText
+                      text={g.category_name}
+                      maxChars={24}
+                      className="text-xs font-medium text-slate-700 border-none block"
+                    />
+                    <TruncatedText
+                      text={g.subcategory_name}
+                      maxChars={24}
+                      className="text-xs text-slate-400 border-none block"
+                    />
                   </TableCell>
 
                   {/* Department */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5">
+                  <TableCell className="max-w-[200px] px-2 py-2.5">
                     {g.department_name ? (
                       <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-slate-800">
-                            {g.department_name}
-                          </span>
+                        <div className="flex items-center gap-1.5 max-w-full">
+                          <TruncatedText
+                            text={g.department_name}
+                            maxChars={25}
+                            className="text-xs font-medium text-slate-800 border-none"
+                          />
                           {g.involvement_type === "EQUAL" && (
-                            <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                            <span className="inline-flex shrink-0 items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
                               EQUAL
                             </span>
                           )}

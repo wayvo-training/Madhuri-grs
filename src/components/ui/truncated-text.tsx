@@ -13,22 +13,28 @@ import {
 
 export interface TruncatedTextProps {
   text?: string | null;
+  fullText?: string | null;
   maxChars?: number;
   className?: string;
   tooltipClassName?: string;
   side?: "top" | "bottom" | "left" | "right";
   align?: "center" | "start" | "end";
   showCopy?: boolean;
+  showArrow?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 export function TruncatedText({
   text,
+  fullText,
   maxChars = 45,
   className,
   tooltipClassName,
   side = "top",
   align = "center",
   showCopy = false,
+  showArrow = false,
+  onClick,
 }: TruncatedTextProps) {
   const [copied, setCopied] = useState(false);
   const elementId = useId();
@@ -37,48 +43,72 @@ export function TruncatedText({
     return <span className="text-slate-400 italic">--</span>;
   }
 
-  const isLong = text.length > maxChars;
+  const completeText = fullText || text;
+  const isLong =
+    text.length > maxChars ||
+    Boolean(fullText && fullText.length > text.length);
 
   if (!isLong) {
+    if (onClick) {
+      return (
+        <button type="button" onClick={onClick} className={className}>
+          {text}
+        </button>
+      );
+    }
     return <span className={className}>{text}</span>;
   }
 
-  const displayText = `${text.slice(0, maxChars).trim()}...`;
+  const displayText =
+    text.length > maxChars ? `${text.slice(0, maxChars).trim()}...` : text;
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!navigator?.clipboard) return;
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(completeText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const triggerContent = onClick ? (
+    <button
+      type="button"
+      id={`truncate-${elementId}`}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 cursor-pointer transition-colors text-left",
+        className,
+      )}
+    >
+      {displayText}
+    </button>
+  ) : (
+    <span
+      id={`truncate-${elementId}`}
+      className={cn(
+        "inline-flex items-center gap-1 cursor-default transition-colors",
+        className,
+      )}
+    >
+      {displayText}
+    </span>
+  );
+
   return (
     <TooltipProvider delay={150}>
       <Tooltip>
-        <TooltipTrigger
-          render={
-            <span
-              id={`truncate-${elementId}`}
-              className={cn(
-                "inline-flex items-center gap-1 cursor-help border-b border-dotted border-slate-400/60 hover:border-slate-600 dark:hover:border-slate-300 transition-colors",
-                className,
-              )}
-            >
-              {displayText}
-            </span>
-          }
-        />
+        <TooltipTrigger render={triggerContent} />
         <TooltipContent
           side={side}
           align={align}
+          showArrow={showArrow}
           className={cn(
             "max-w-xs sm:max-w-sm md:max-w-md p-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900 text-slate-100 shadow-xl rounded-lg border border-slate-800 z-50",
             tooltipClassName,
           )}
         >
           <div className="space-y-1.5">
-            <p className="text-slate-200 select-text">{text}</p>
+            <p className="text-slate-200 select-text">{completeText}</p>
             {showCopy && (
               <div className="pt-1 border-t border-slate-700/60 flex items-center justify-end">
                 <button

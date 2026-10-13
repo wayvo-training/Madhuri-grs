@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SerializedPermission } from "@/types/admin/role-manager";
 
@@ -163,14 +164,26 @@ export function PermissionsTab({
                     key={perm.permission_id}
                     className="hover:bg-slate-50/70 transition"
                   >
-                    <td className="px-4 py-3 font-mono font-bold text-slate-900">
-                      {perm.permission_code}
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <TruncatedText
+                        text={perm.permission_code}
+                        maxChars={20}
+                        className="font-mono font-bold text-slate-900 border-none block"
+                      />
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-800">
-                      {perm.permission_name}
+                    <td className="px-4 py-3 max-w-[200px]">
+                      <TruncatedText
+                        text={perm.permission_name}
+                        maxChars={24}
+                        className="font-medium text-slate-800 border-none block"
+                      />
                     </td>
-                    <td className="px-4 py-3 text-slate-500">
-                      {perm.description || "—"}
+                    <td className="px-4 py-3 max-w-[280px]">
+                      <TruncatedText
+                        text={perm.description}
+                        maxChars={35}
+                        className="text-slate-500 border-none block"
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <span

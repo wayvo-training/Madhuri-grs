@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownUp } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AdvancedTableSearch,
   type SearchCondition,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -25,10 +26,6 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
     SearchCondition[]
   >([]);
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [advancedConditions, advancedMode]);
 
   const filterFields: SearchFieldDef[] = [
     { id: "grievanceId", label: "Grievance ID", type: "text" },
@@ -50,6 +47,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
   const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
     setAdvancedConditions(conditions);
     setAdvancedMode(mode);
+    setCurrentPage(1);
   };
 
   const filteredFeed = useMemo(() => {
@@ -117,7 +115,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   onSort={handleSort}
                   className="py-3 pl-4 pr-3 whitespace-nowrap"
                 >
-                  Grievance
+                  Grievance ID
                 </SortableTh>
                 <SortableTh
                   field="action"
@@ -179,14 +177,18 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                           {feedGrievanceRef}
                         </span>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-3 px-3 max-w-md">
                         <div className="space-y-1">
-                          <div className="font-semibold text-slate-800 text-[13px]">
-                            {feed.action}
-                          </div>
-                          <div className="text-[13px] leading-relaxed text-slate-500">
-                            {formatAuditFeedDetails(feed.details)}
-                          </div>
+                          <TruncatedText
+                            text={feed.action}
+                            maxChars={40}
+                            className="font-semibold text-slate-800 text-[13px] border-none block"
+                          />
+                          <TruncatedText
+                            text={formatAuditFeedDetails(feed.details)}
+                            maxChars={50}
+                            className="text-[13px] leading-relaxed text-slate-500 border-none block"
+                          />
                         </div>
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap text-[13px] font-medium text-slate-700">

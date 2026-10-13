@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  Filter,
   RefreshCw,
   RotateCcw,
   Search,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -262,10 +262,12 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                           <span className="text-slate-400 text-xs">-</span>
                         )}
                       </td>
-                      <td className="p-4 align-top">
-                        <p className="text-xs text-slate-700 leading-relaxed max-w-md">
-                          {item.details}
-                        </p>
+                      <td className="p-4 align-top max-w-md">
+                        <TruncatedText
+                          text={item.details}
+                          maxChars={55}
+                          className="text-xs text-slate-700 leading-relaxed border-none block"
+                        />
                       </td>
                       <td className="p-4 align-top whitespace-nowrap">
                         <span className="text-xs text-slate-700 font-medium">

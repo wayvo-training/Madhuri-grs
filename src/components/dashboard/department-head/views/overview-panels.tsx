@@ -17,6 +17,7 @@ import { useState } from "react";
 import { AdminMetricCard } from "@/components/dashboard/admin/admin-shared";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Pagination } from "@/components/ui/pagination";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { formatAuditFeedDetails } from "@/lib/department-head/utils";
 import type {
   EscalationAuditRecord,
@@ -264,14 +265,12 @@ export function AttentionRequiredPanel({
                       </span>
                     </div>
                     <div className="w-80 shrink-0 pr-4">
-                      <button
-                        type="button"
+                      <TruncatedText
+                        text={item.title}
+                        maxChars={38}
                         onClick={() => onInspect(item, "statement")}
-                        className="text-sm font-medium text-slate-800 hover:text-emerald-900 transition truncate text-left block w-full"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </button>
+                        className="text-sm font-medium text-slate-800 hover:text-emerald-900 transition text-left block w-full border-none cursor-pointer"
+                      />
                     </div>
 
                     <div className="w-20 shrink-0">

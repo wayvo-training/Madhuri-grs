@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SerializedRole } from "@/types/admin/role-manager";
 
@@ -154,11 +155,19 @@ export function RolesTab({
                   key={role.role_id}
                   className="hover:bg-slate-50/70 transition"
                 >
-                  <td className="px-4 py-3 font-semibold text-slate-900">
-                    {role.role_name}
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <TruncatedText
+                      text={role.role_name}
+                      maxChars={24}
+                      className="font-semibold text-slate-900 border-none block"
+                    />
                   </td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {role.description || "—"}
+                  <td className="px-4 py-3 max-w-[280px]">
+                    <TruncatedText
+                      text={role.description}
+                      maxChars={35}
+                      className="text-slate-500 border-none block"
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -178,8 +187,15 @@ export function RolesTab({
                       {role.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {role.permissions.length} permissions
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <TruncatedText
+                      text={`${role.permissions.length} permissions`}
+                      fullText={role.permissions
+                        .map((p) => p.permission_name)
+                        .join(", ")}
+                      maxChars={20}
+                      className="text-slate-600 border-none block"
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end">

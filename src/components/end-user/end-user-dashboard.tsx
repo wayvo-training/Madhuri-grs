@@ -23,6 +23,7 @@ import { useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { uploadFileToSupabase } from "@/lib/storage-client";
 
 export interface UserGrievanceItem {
@@ -481,12 +482,18 @@ export function EndUserPortal({
                       {g.grievanceNumber}
                     </td>
                     <td className="py-2.5 px-2 max-w-50">
-                      <span className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
-                        {g.title}
-                      </span>
+                      <TruncatedText
+                        text={g.title}
+                        maxChars={30}
+                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none block"
+                      />
                     </td>
-                    <td className="py-2.5 px-2 text-slate-600 dark:text-slate-400 text-sm truncate max-w-35">
-                      {g.category}
+                    <td className="py-2.5 px-2 max-w-35">
+                      <TruncatedText
+                        text={g.category}
+                        maxChars={20}
+                        className="text-slate-600 dark:text-slate-400 text-sm border-none block"
+                      />
                     </td>
                     <td className="py-2.5 px-2">
                       <PriorityBadge priority={g.priority} />

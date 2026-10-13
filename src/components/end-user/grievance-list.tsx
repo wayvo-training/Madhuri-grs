@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { usePagination } from "@/hooks/usePagination";
 import { useTableSort } from "@/hooks/useTableSort";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
@@ -204,12 +205,18 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                       </span>
                     </td>
                     <td className="py-4 px-4 max-w-50">
-                      <span className="font-semibold text-slate-900 dark:text-slate-100 line-clamp-1 text-sm">
-                        {item.title}
-                      </span>
+                      <TruncatedText
+                        text={item.title}
+                        maxChars={30}
+                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none block"
+                      />
                     </td>
-                    <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-sm truncate max-w-35">
-                      {item.category}
+                    <td className="py-4 px-4 max-w-35">
+                      <TruncatedText
+                        text={item.category}
+                        maxChars={20}
+                        className="text-slate-600 dark:text-slate-400 text-sm border-none block"
+                      />
                     </td>
                     <td className="py-4 px-4">
                       <PriorityBadge priority={item.priority} />

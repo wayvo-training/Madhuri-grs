@@ -67,7 +67,7 @@ export function RecentGrievancesTable({
                 onSort={handleSort}
                 className="py-2.5 pl-3 pr-2"
               >
-                Ticket ID
+                Grievance ID
               </SortableTableHead>
               <SortableTableHead
                 field="category_name"
