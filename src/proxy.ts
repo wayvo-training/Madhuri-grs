@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
- * Next.js Edge Middleware for early routing boundary enforcement.
+ * Next.js Edge Proxy for early routing boundary enforcement (Next.js 16 convention).
  * Checks for session token cookie before allowing access to protected dashboard routes.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const sessionToken = request.cookies.get("session_token")?.value;
   const pathname = request.nextUrl.pathname;
 
@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
 }
 
 /**
- * Configure paths intercepted by the middleware.
+ * Configure paths intercepted by the proxy.
  */
 export const config = {
   matcher: [
