@@ -38,11 +38,11 @@ export function RoutingExceptionsBanner({
   }
 
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/60 px-5 py-3.5 text-slate-700 shadow-2xs">
+    <div className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/60 px-5 py-3.5 text-slate-700 shadow-2xs dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
       <div className="flex items-center gap-2.5">
-        <ShieldCheck className="h-4.5 w-4.5 text-emerald-600 shrink-0" />
-        <p className="text-xs font-medium text-slate-700">
-          <span className="font-semibold text-slate-900">
+        <ShieldCheck className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+          <span className="font-semibold text-slate-900 dark:text-slate-100">
             Automated Routing Active:
           </span>{" "}
           All incoming grievances have been matched to departments. Zero
@@ -51,7 +51,7 @@ export function RoutingExceptionsBanner({
       </div>
       <Link
         href="/admin/rules"
-        className="text-xs font-semibold text-emerald-800 hover:underline inline-flex items-center gap-1"
+        className="text-xs font-semibold text-emerald-800 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 shrink-0"
       >
         <span>View Rules</span>
         <ArrowRight className="h-3 w-3" />

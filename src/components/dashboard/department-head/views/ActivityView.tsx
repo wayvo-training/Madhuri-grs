@@ -85,13 +85,13 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 border-b border-slate-100 pb-3">
+      <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-5 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-3">
           <div className="shrink-0">
-            <h3 className="text-base font-semibold text-slate-900">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Department Head Activity / Audit
             </h3>
-            <p className="text-sm font-normal text-slate-500 max-w-sm">
+            <p className="text-sm font-normal text-slate-500 dark:text-slate-400 max-w-sm">
               Historical governance events, staff actions, interventions, and
               SLA-related changes across this department.
             </p>
@@ -107,13 +107,13 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
 
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-[13px] border-collapse">
-            <thead className="border-b border-slate-200/80 bg-slate-50/80 text-[13px] font-semibold text-slate-600">
+            <thead className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-[13px] font-semibold text-slate-600 dark:text-slate-400">
               <tr>
                 <SortableTh
                   field="action"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 pl-4 pr-3 whitespace-nowrap"
+                  className="py-2.5 pl-4 pr-3 whitespace-nowrap"
                 >
                   Grievance ID
                 </SortableTh>
@@ -121,7 +121,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   field="action"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Activity
                 </SortableTh>
@@ -129,7 +129,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   field="actor"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Performed By
                 </SortableTh>
@@ -137,7 +137,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   field="actor"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Role
                 </SortableTh>
@@ -145,13 +145,13 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   field="timestamp"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   When
                 </SortableTh>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
               {paginatedFeed.length === 0 ? (
                 <tr>
                   <td
@@ -170,31 +170,29 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                   return (
                     <tr
                       key={feed.id}
-                      className="align-top hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
                     >
-                      <td className="py-3 pl-4 pr-3 whitespace-nowrap">
+                      <td className="py-2.5 pl-4 pr-3 align-middle whitespace-nowrap">
                         <span className="font-mono text-sm font-semibold text-slate-900 dark:text-slate-200 block">
                           {feedGrievanceRef}
                         </span>
                       </td>
-                      <td className="py-3 px-3 max-w-md">
-                        <div className="space-y-1">
-                          <TruncatedText
-                            text={feed.action}
-                            maxChars={40}
-                            className="font-semibold text-slate-800 text-[13px] border-none block"
-                          />
-                          <TruncatedText
-                            text={formatAuditFeedDetails(feed.details)}
-                            maxChars={50}
-                            className="text-[13px] leading-relaxed text-slate-500 border-none block"
-                          />
-                        </div>
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap max-w-md">
+                        <TruncatedText
+                          text={feed.action}
+                          fullText={
+                            formatAuditFeedDetails(feed.details)
+                              ? `${feed.action} • ${formatAuditFeedDetails(feed.details)}`
+                              : feed.action
+                          }
+                          maxChars={50}
+                          className="font-semibold text-slate-800 dark:text-slate-200 text-[13px] border-none truncate whitespace-nowrap block"
+                        />
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[13px] font-medium text-slate-700">
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-[13px] font-medium text-slate-700 dark:text-slate-300">
                         {feed.actor}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[13px] text-slate-500">
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-[13px] text-slate-500 dark:text-slate-400">
                         {feed.actor.includes("DEPARTMENT_HEAD")
                           ? "Department Head"
                           : feed.actor.includes("END_USER")
@@ -204,7 +202,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
                               ? "System"
                               : "Staff"}
                       </td>
-                      <td className="py-3 px-3 whitespace-nowrap text-[13px] text-slate-500">
+                      <td className="py-2.5 px-3 align-middle whitespace-nowrap text-[13px] text-slate-500 dark:text-slate-400">
                         {feed.timestamp}
                       </td>
                     </tr>
@@ -215,7 +213,7 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
           </table>
         </div>
 
-        <div className="border-t border-slate-200/80">
+        <div className="border-t border-slate-200/80 dark:border-slate-800">
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(sortedFeed.length / pageSize)}

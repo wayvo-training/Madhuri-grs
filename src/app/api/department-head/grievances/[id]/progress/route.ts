@@ -469,7 +469,7 @@ export async function GET(
     } else if (st === "CLOSED" || st === "RESOLVED") {
       currentStageKey = "CLOSED";
       currentStageLabel = "Grievance Closed";
-      currentStageNumber = 4;
+      currentStageNumber = 5;
     } else if (st === "UNDER_REVIEW") {
       currentStageKey = "RESOLUTION_SUBMITTED";
       currentStageLabel = isHeadResolution
@@ -652,11 +652,15 @@ export async function GET(
                 label:
                   st === "AWAITING_USER_RESPONSE"
                     ? "Awaiting Response"
-                    : st === "CLOSED" || st === "RESOLVED"
-                      ? "Grievance Closed"
-                      : "Resolution Review",
+                    : "Resolution",
                 isComplete: currentStageNumber >= 4,
                 isCurrent: currentStageNumber === 4,
+              },
+              {
+                key: "CLOSED",
+                label: "Closed",
+                isComplete: currentStageNumber >= 5,
+                isCurrent: currentStageNumber === 5,
               },
             ];
 

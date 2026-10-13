@@ -407,7 +407,7 @@ export function QueueView({
                   >
                     {/* 1. Ticket Code */}
                     <TableCell className="py-3 pl-4 pr-3 align-top">
-                      <span className="font-mono text-sm font-semibold text-emerald-950 inline-block">
+                      <span className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 inline-block">
                         {item.ticketCode}
                       </span>
                     </TableCell>
@@ -419,18 +419,18 @@ export function QueueView({
                           text={item.title}
                           maxChars={35}
                           onClick={() => onInspect(item, "statement")}
-                          className="font-semibold text-sm text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block cursor-pointer max-w-[280px] border-none"
+                          className="font-semibold text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition text-left group-hover:text-emerald-900 dark:group-hover:text-teal-200 block cursor-pointer max-w-[280px] border-none"
                         />
 
                         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                           {item.isReopened && (
-                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700">
+                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                               Reopened ({item.reopenCount}x)
                             </span>
                           )}
                           {item.isCrossDepartment && (
-                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700">
-                              <GitBranch className="h-2.5 w-2.5 text-slate-500" />
+                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                              <GitBranch className="h-2.5 w-2.5 text-slate-500 dark:text-slate-400" />
                               Cross-Dept
                             </span>
                           )}
@@ -444,14 +444,14 @@ export function QueueView({
                       <TruncatedText
                         text={item.category}
                         maxChars={20}
-                        className="text-[13px] text-slate-600 font-medium border-none block"
+                        className="text-[13px] text-slate-600 dark:text-slate-300 font-medium border-none block"
                       />
                     </TableCell>
                     <TableCell className="py-3 px-3 align-top max-w-[160px]">
                       <TruncatedText
                         text={item.subcategory}
                         maxChars={20}
-                        className="text-sm text-slate-500 border-none block"
+                        className="text-[13px] text-slate-500 dark:text-slate-400 border-none block"
                       />
                     </TableCell>
 

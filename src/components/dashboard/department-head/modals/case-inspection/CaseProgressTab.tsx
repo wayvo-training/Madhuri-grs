@@ -69,7 +69,7 @@ export function CaseProgressTab({
   const fallbackStageNumber = isBlocked
     ? 2
     : st === "CLOSED" || st === "RESOLVED"
-      ? 4
+      ? 5
       : st === "UNDER_REVIEW"
         ? 4
         : st === "IN_PROGRESS" || st === "ESCALATED" || st === "REOPENED"
@@ -136,6 +136,12 @@ export function CaseProgressTab({
             isComplete: false,
             isCurrent: false,
           },
+          {
+            key: "CLOSED",
+            label: "Closed",
+            isComplete: false,
+            isCurrent: false,
+          },
         ]
       : [
           {
@@ -158,9 +164,15 @@ export function CaseProgressTab({
           },
           {
             key: "RESOLUTION",
-            label: st === "CLOSED" ? "Grievance Closed" : "Resolution",
+            label: "Resolution",
             isComplete: stageNumber >= 4,
             isCurrent: stageNumber === 4,
+          },
+          {
+            key: "CLOSED",
+            label: "Closed",
+            isComplete: stageNumber >= 5,
+            isCurrent: stageNumber === 5,
           },
         ]);
 
@@ -278,14 +290,16 @@ export function CaseProgressTab({
       )}
 
       {/* Current Progress Stepper */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0">
+      <div className="rounded-xl border border-slate-200/90 bg-white dark:bg-slate-900 dark:border-slate-800 p-3 space-y-2 shadow-2xs overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
             Current Progress
           </span>
           <span
             className={`text-xs font-semibold text-right truncate max-w-full sm:max-w-[70%] ${
-              isBlocked ? "text-amber-800" : "text-emerald-800"
+              isBlocked
+                ? "text-amber-800 dark:text-amber-400"
+                : "text-emerald-800 dark:text-emerald-400"
             }`}
           >
             Stage {stageNumber} of {steps.length}: {currentStageLabel}
@@ -293,10 +307,12 @@ export function CaseProgressTab({
         </div>
 
         <div className="relative flex items-start justify-between pt-2 pb-10 px-3 sm:px-6">
-          <div className="absolute left-6.5 sm:left-9.5 right-6.5 sm:right-9.5 top-5.5 h-0.5 bg-slate-200 rounded-full overflow-hidden">
+          <div className="absolute left-6.5 sm:left-9.5 right-6.5 sm:right-9.5 top-5.5 h-0.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-300 rounded-full ${
-                isBlocked ? "bg-amber-500" : "bg-emerald-600"
+                isBlocked
+                  ? "bg-amber-500"
+                  : "bg-emerald-600 dark:bg-emerald-500"
               }`}
               style={{
                 width: `${Math.min(100, Math.max(0, ((stageNumber - 1) / (steps.length - 1)) * 100))}%`,
@@ -318,11 +334,11 @@ export function CaseProgressTab({
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-bold transition ${
                     isStepBlocked
-                      ? "border-amber-500 bg-amber-500 text-white shadow-2xs ring-3 ring-amber-100"
+                      ? "border-amber-500 bg-amber-500 text-white shadow-2xs ring-3 ring-amber-100 dark:ring-amber-900/40"
                       : isPastOrCurrent
-                        ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs"
-                        : "border-slate-300 bg-white text-slate-400"
-                  } ${!isStepBlocked && isCurrent ? "ring-3 ring-emerald-100" : ""}`}
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-2xs dark:border-emerald-500 dark:bg-emerald-500"
+                        : "border-slate-300 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                  } ${!isStepBlocked && isCurrent ? "ring-3 ring-emerald-100 dark:ring-emerald-900/40" : ""}`}
                 >
                   {isStepBlocked ? (
                     <ShieldAlert className="h-3.5 w-3.5 stroke-2" />
@@ -332,14 +348,14 @@ export function CaseProgressTab({
                     <span>{idx + 1}</span>
                   )}
                 </div>
-                <div className="absolute top-full mt-1.5 w-27.5 sm:w-27.5 left-1/2 -translate-x-1/2 flex justify-center">
+                <div className="absolute top-full mt-1.5 w-24 sm:w-26 left-1/2 -translate-x-1/2 flex justify-center">
                   <span
                     className={`text-[11px] sm:text-xs text-center line-clamp-2 leading-tight ${
                       isStepBlocked
-                        ? "font-bold text-amber-900"
+                        ? "font-bold text-amber-900 dark:text-amber-300"
                         : isPastOrCurrent
-                          ? "font-semibold text-slate-900"
-                          : "font-medium text-slate-400"
+                          ? "font-semibold text-slate-900 dark:text-slate-100"
+                          : "font-medium text-slate-400 dark:text-slate-500"
                     }`}
                   >
                     {step.label}
@@ -350,15 +366,19 @@ export function CaseProgressTab({
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 text-xs text-slate-500 border-t border-slate-100 min-w-0">
-          <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 min-w-0">
+          <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
           <span className="truncate max-w-full">
             Last Activity:{" "}
-            <strong className="text-slate-800 font-semibold">
+            <strong className="text-slate-800 dark:text-slate-200 font-semibold">
               {caseProgressData?.latestActivity ||
-                (currentGrievance.assignedStaffName
-                  ? `Assigned to ${currentGrievance.assignedStaffName}`
-                  : "Grievance registered in portal")}
+                (st === "CLOSED" || st === "RESOLVED"
+                  ? "Resolution Accepted · Grievance Closed"
+                  : st === "UNDER_REVIEW"
+                    ? "Resolution Submitted · Awaiting Review"
+                    : currentGrievance.assignedStaffName
+                      ? `Assigned to ${currentGrievance.assignedStaffName}`
+                      : "Grievance registered in portal")}
             </strong>
           </span>
         </div>
@@ -367,32 +387,34 @@ export function CaseProgressTab({
       {/* Two-Column SLA & Assignment Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Left: SLA Status */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-emerald-800" />
+        <div className="rounded-xl border border-slate-200/90 bg-white dark:bg-slate-900 dark:border-slate-800 p-3 space-y-2 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 text-emerald-800 dark:text-teal-400" />
               SLA Status
             </span>
-            <span className="text-xs font-bold text-slate-900 uppercase">
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase">
               {slaStateLabel}
             </span>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-600 font-medium">SLA Consumed</span>
-              <span className="text-slate-900 font-semibold">
+              <span className="text-slate-600 dark:text-slate-300 font-medium">
+                SLA Consumed
+              </span>
+              <span className="text-slate-900 dark:text-slate-100 font-semibold">
                 {slaPercent}%
               </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   slaPercent >= 90 || slaState === "BREACHED"
                     ? "bg-rose-500"
                     : slaPercent >= 70
                       ? "bg-amber-500"
-                      : "bg-emerald-600"
+                      : "bg-emerald-600 dark:bg-emerald-500"
                 }`}
                 style={{
                   width: `${Math.min(slaPercent, 100)}%`,
@@ -403,14 +425,20 @@ export function CaseProgressTab({
 
           <div className="space-y-1.5 pt-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Time Remaining:</span>
-              <span className="font-semibold text-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">
+                Time Remaining:
+              </span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">
                 {slaTimeRemaining}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-500">Target Due Date:</span>
-              <span className="font-medium text-slate-700">{slaTargetDue}</span>
+              <span className="text-slate-500 dark:text-slate-400">
+                Target Due Date:
+              </span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                {slaTargetDue}
+              </span>
             </div>
           </div>
         </div>
@@ -420,10 +448,10 @@ export function CaseProgressTab({
           caseProgressData.departmentsInvolved.length > 1) ||
         (currentGrievance?.departmentsInvolved &&
           currentGrievance.departmentsInvolved.length > 1) ? (
-          <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-emerald-800" />
+          <div className="rounded-xl border border-slate-200/90 bg-white dark:bg-slate-900 dark:border-slate-800 p-3 space-y-2 shadow-2xs col-span-1 max-h-56 overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-emerald-800 dark:text-teal-400" />
                 Departments Involved
               </span>
             </div>
@@ -440,13 +468,13 @@ export function CaseProgressTab({
                 return (
                   <div
                     key={dept.id}
-                    className="text-xs space-y-1.5 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5"
+                    className="text-xs space-y-1.5 rounded-lg border border-slate-100 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/60 p-2.5"
                   >
-                    <div className="flex items-center justify-between font-semibold text-slate-900 gap-1 pb-1.5 border-b border-slate-100">
+                    <div className="flex items-center justify-between font-semibold text-slate-900 dark:text-slate-100 gap-1 pb-1.5 border-b border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                         <span className="truncate">{dept.departmentName}</span>
                         {isHeadAuthorityForThisDept && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200 shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800 shrink-0">
                             Head Authority
                           </span>
                         )}
@@ -454,10 +482,10 @@ export function CaseProgressTab({
                       <span
                         className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
                           dept.involvementType === "PRIMARY"
-                            ? "bg-teal-100 text-teal-800"
+                            ? "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
                             : dept.involvementType === "EQUAL"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-slate-200 text-slate-700"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                              : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
                         }`}
                       >
                         {dept.involvementType}
@@ -467,19 +495,19 @@ export function CaseProgressTab({
                     {isHeadAuthorityForThisDept ? (
                       <div className="space-y-1 pt-0.5">
                         <div className="flex items-baseline justify-between gap-1 text-[11px]">
-                          <span className="text-slate-500 font-medium shrink-0">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
                             Resolution Lead:
                           </span>
-                          <span className="font-semibold text-slate-900 text-right truncate">
+                          <span className="font-semibold text-slate-900 dark:text-slate-100 text-right truncate">
                             {headResolutionAuthorityName} (Dept Head)
                           </span>
                         </div>
                         {dept.assignedStaff && (
                           <div className="flex items-baseline justify-between gap-1 text-[11px]">
-                            <span className="text-slate-500 font-medium shrink-0">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
                               Investigating Staff:
                             </span>
-                            <span className="font-medium text-slate-700 text-right truncate">
+                            <span className="font-medium text-slate-700 dark:text-slate-200 text-right truncate">
                               {dept.assignedStaff}
                             </span>
                           </div>
@@ -487,17 +515,17 @@ export function CaseProgressTab({
                       </div>
                     ) : (
                       <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
-                        <span className="text-slate-500 font-medium shrink-0">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
                           Assigned Staff:
                         </span>
-                        <span className="font-medium text-slate-700 text-right truncate">
+                        <span className="font-medium text-slate-700 dark:text-slate-200 text-right truncate">
                           {dept.assignedStaff || "Unassigned"}
                         </span>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
-                      <span className="text-slate-500 text-[11px] font-medium shrink-0">
+                    <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium shrink-0">
                         Status:
                       </span>
                       <span
@@ -506,13 +534,13 @@ export function CaseProgressTab({
                           isPrimary &&
                           isHeadAuthorityForThisDept
                             ? isResolutionSubmittedByHead
-                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                              : "bg-teal-50 text-[#0F766E] border border-teal-200"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800"
+                              : "bg-teal-50 text-[#0F766E] border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800"
                             : dept.status === "COMPLETED"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800"
                               : dept.status === "BLOCKED"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
+                                : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
                         }`}
                       >
                         {dept.status === "COMPLETED" &&
@@ -532,13 +560,13 @@ export function CaseProgressTab({
             </div>
           </div>
         ) : isResolutionAuthorityAssumed ? (
-          <div className="rounded-xl border border-teal-200 bg-teal-50/30 p-3 space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-teal-100 pb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
-                <ShieldAlert className="h-3.5 w-3.5 text-teal-700" />
+          <div className="rounded-xl border border-teal-200 bg-teal-50/30 dark:bg-teal-950/30 dark:border-teal-800 p-3 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-teal-100 dark:border-teal-800 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                <ShieldAlert className="h-3.5 w-3.5 text-teal-700 dark:text-teal-400" />
                 Current Resolution Authority
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800">
                 Head Intervention Active
               </span>
             </div>
@@ -549,27 +577,27 @@ export function CaseProgressTab({
                   {(headResolutionAuthorityName || "H").charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 text-xs truncate">
+                  <div className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate">
                     {headResolutionAuthorityName} &mdash; Department Head
                   </div>
-                  <div className="text-[11px] text-teal-700 truncate font-medium">
+                  <div className="text-[11px] text-teal-700 dark:text-teal-300 truncate font-medium">
                     Resolution Authority Assumed
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-1 pt-1.5 border-t border-teal-100 text-slate-600">
+              <div className="space-y-1 pt-1.5 border-t border-teal-100 dark:border-teal-800 text-slate-600 dark:text-slate-300">
                 {officerName && (
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">
+                    <span className="text-slate-500 dark:text-slate-400">
                       Assigned Staff (Findings Preserved):
                     </span>
-                    <span className="font-semibold text-slate-800">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
                       {officerName}
                     </span>
                   </div>
                 )}
-                <div className="text-[11px] text-teal-800 font-normal pt-0.5">
+                <div className="text-[11px] text-teal-800 dark:text-teal-300 font-normal pt-0.5">
                   {isResolutionSubmittedByHead
                     ? "Department Head has submitted the official resolution. The grievance is currently under review by the employee."
                     : "Department Head is now responsible for reviewing the investigation and submitting the final resolution."}
@@ -578,15 +606,15 @@ export function CaseProgressTab({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5 text-emerald-800" />
+          <div className="rounded-xl border border-slate-200/90 bg-white dark:bg-slate-900 dark:border-slate-800 p-3 space-y-2 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5 text-emerald-800 dark:text-teal-400" />
                 Current Assignment
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
                 Status:{" "}
-                <strong className="font-semibold text-slate-800">
+                <strong className="font-semibold text-slate-800 dark:text-slate-200">
                   {assignmentStatus}
                 </strong>
               </span>
@@ -595,24 +623,26 @@ export function CaseProgressTab({
             {officerName ? (
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs">
                     {officerName.charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-slate-900 text-xs truncate">
+                    <div className="font-semibold text-slate-900 dark:text-slate-100 text-xs truncate">
                       {officerName} &mdash; Staff
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate">
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       {officerDesignation}
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-1 pt-1 border-t border-slate-100">
+                <div className="space-y-1 pt-1 border-t border-slate-100 dark:border-slate-800">
                   {assignedTimestamp && (
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Assigned:</span>
-                      <span className="font-medium text-slate-700">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Assigned:
+                      </span>
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
                         {assignedTimestamp}
                       </span>
                     </div>

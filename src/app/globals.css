@@ -582,6 +582,7 @@
   /* Global Dark Mode Adaptation for Embedded Surfaces & Modals */
   .dark .bg-slate-50:not([class*="dark:bg-"]),
   .dark .bg-slate-50\/50:not([class*="dark:bg-"]),
+  .dark .bg-slate-50\/60:not([class*="dark:bg-"]),
   .dark .bg-slate-50\/70:not([class*="dark:bg-"]),
   .dark .bg-slate-50\/80:not([class*="dark:bg-"]) {
     background-color: rgba(30, 41, 59, 0.5);

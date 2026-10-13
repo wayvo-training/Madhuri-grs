@@ -28,34 +28,35 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer focus:outline-none"
+        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400 dark:hover:border-slate-700"
         title="More actions"
       >
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className={`rounded-xl p-1 bg-white border border-slate-200 shadow-sm ${widthClass}`}
+        className={`rounded-xl p-1 bg-white border border-slate-200 shadow-sm dark:bg-slate-900 dark:border-slate-800 ${widthClass}`}
       >
         {items.map((item) => {
           let variantClass =
-            "text-slate-700 focus:bg-slate-50 focus:text-slate-900";
+            "text-slate-700 focus:bg-slate-100 focus:text-slate-900 dark:text-slate-200 dark:focus:bg-slate-800 dark:focus:text-white";
           if (item.variant === "primary")
             variantClass =
-              "text-[#0F766E] font-semibold focus:bg-slate-50 focus:text-[#0F766E]";
+              "text-[#0F766E] font-semibold focus:bg-teal-50 focus:text-[#0F766E] dark:text-teal-400 dark:focus:bg-teal-950/60 dark:focus:text-teal-300";
           if (item.variant === "warning")
             variantClass =
-              "text-amber-700 focus:bg-slate-50 focus:text-amber-900";
+              "text-amber-700 focus:bg-amber-50 focus:text-amber-900 dark:text-amber-400 dark:focus:bg-amber-950/60 dark:focus:text-amber-300";
           if (item.variant === "danger")
             variantClass =
-              "text-rose-700 focus:bg-slate-50 focus:text-rose-900";
+              "text-rose-700 focus:bg-rose-50 focus:text-rose-900 dark:text-rose-400 dark:focus:bg-rose-950/60 dark:focus:text-rose-300";
 
           const alignmentClass = item.icon
             ? "text-left"
             : "justify-center text-center";
 
           if (item.disabled) {
-            variantClass = "text-slate-400 opacity-50 cursor-not-allowed";
+            variantClass =
+              "text-slate-400 opacity-50 cursor-not-allowed dark:text-slate-600";
           }
 
           return (

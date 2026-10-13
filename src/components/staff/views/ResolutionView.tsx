@@ -218,26 +218,31 @@ export function ResolutionView({
                 {reopenedPagination.paginatedItems.map((item) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-purple-50/30 transition"
+                    className="hover:bg-purple-50/30 dark:hover:bg-slate-800/40 transition"
                   >
-                    <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="font-mono text-sm font-bold text-slate-900">
+                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle">
+                      <span className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
                         {item.grievanceNumber}
                       </span>
                     </td>
-                    <td className="py-3 px-3.5 max-w-[200px]">
+                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle max-w-[240px]">
                       <span
-                        className="font-medium text-slate-900 line-clamp-2"
+                        className="font-medium text-slate-900 dark:text-slate-100 truncate whitespace-nowrap block max-w-[220px]"
                         title={item.title}
                       >
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-slate-900 truncate max-w-[140px]">
-                      {item.category}
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[150px]">
+                      <span
+                        className="text-slate-900 dark:text-slate-200 truncate whitespace-nowrap block max-w-[140px]"
+                        title={item.category}
+                      >
+                        {item.category}
+                      </span>
                     </td>
-                    <td className="py-3 px-3">
-                      <span className="text-[13px] font-medium text-slate-900">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                      <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
                         {item.priority === "CRITICAL"
                           ? "Critical"
                           : item.priority === "HIGH"
@@ -247,18 +252,18 @@ export function ResolutionView({
                               : "Low"}
                       </span>
                     </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                      <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800 whitespace-nowrap">
                         Reopened ({item.reopenCount})
                       </span>
                     </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
-                        <Clock className="w-3.5 h-3.5 text-slate-900" />
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                        <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
                         {item.slaTimeLeft}
                       </span>
                     </td>
-                    <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                    <td className="py-2.5 px-3.5 text-right whitespace-nowrap align-middle">
                       <ActionMenu
                         widthClass="w-52"
                         items={[

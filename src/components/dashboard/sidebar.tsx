@@ -338,7 +338,7 @@ export function DashboardSidebar({
                 }
               >
                 <div className="flex items-center gap-3 overflow-hidden min-w-0">
-                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
+                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800 font-bold shrink-0">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col gap-0.5 leading-tight overflow-hidden min-w-0 text-left group-data-[collapsible=icon]:hidden">
@@ -366,7 +366,7 @@ export function DashboardSidebar({
                 sideOffset={4}
               >
                 <div className="flex items-center justify-start gap-2.5 p-2.5">
-                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 text-teal-700 border border-teal-200/80 font-bold shrink-0">
+                  <div className="flex aspect-square size-9 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800 font-bold shrink-0">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col space-y-0.5 leading-tight overflow-hidden min-w-0">
@@ -384,12 +384,13 @@ export function DashboardSidebar({
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-rose-600 focus:bg-rose-50 focus:text-rose-600 cursor-pointer"
+                  variant="destructive"
+                  className="cursor-pointer font-medium"
                   onClick={handleLogout}
                   disabled={loggingOut}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <span>{loggingOut ? "Logging out..." : "Log out"}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

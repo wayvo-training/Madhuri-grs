@@ -87,7 +87,7 @@ export function CaseCollaborationTab({
         </div>
 
         {departments.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-slate-400">
+          <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-4 text-center text-slate-400">
             No collaborating departments configured.
           </div>
         ) : (
@@ -102,43 +102,47 @@ export function CaseCollaborationTab({
                   key={dept.id}
                   className={`rounded-xl border p-3.5 space-y-2 shadow-2xs ${
                     dept.involvementType === "PRIMARY"
-                      ? "border-teal-200 bg-teal-50/60"
+                      ? "border-teal-200 bg-teal-50/60 dark:border-teal-800/80 dark:bg-slate-900/90"
                       : dept.involvementType === "EQUAL"
-                        ? "border-blue-200 bg-blue-50/60"
-                        : "border-slate-200 bg-white"
+                        ? "border-blue-200 bg-blue-50/60 dark:border-blue-800/80 dark:bg-slate-900/90"
+                        : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/90"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className="font-bold text-slate-900 text-xs">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                       {dept.departmentName}
                     </span>
                     <span
                       className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
                         dept.involvementType === "PRIMARY"
-                          ? "bg-teal-100 text-teal-800"
+                          ? "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
                           : dept.involvementType === "EQUAL"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-slate-100 text-slate-700"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                       }`}
                     >
                       {dept.involvementType}
                     </span>
                   </div>
 
-                  <div className="space-y-1 text-slate-600 text-[11px]">
+                  <div className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Staff Assigned:</span>
-                      <span className="font-medium text-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Staff Assigned:
+                      </span>
+                      <span className="font-medium text-slate-800 dark:text-slate-100">
                         {dept.assignedStaff || "Unassigned"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Progress Status:</span>
-                      <span className="inline-flex items-center gap-1 font-medium text-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Progress Status:
+                      </span>
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-800 dark:text-slate-100">
                         {isCompleted ? (
-                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                         ) : (
-                          <Clock className="h-3 w-3 text-amber-500" />
+                          <Clock className="h-3 w-3 text-amber-500 dark:text-amber-400" />
                         )}
                         {dept.status.replace(/_/g, " ")}
                       </span>
@@ -166,11 +170,11 @@ export function CaseCollaborationTab({
         {/* Note Composer */}
         <form
           onSubmit={handleNoteSubmit}
-          className="rounded-xl border border-teal-200 bg-[#F0FDFA] p-3.5 space-y-2.5 shadow-2xs"
+          className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:border-teal-800/80 dark:bg-slate-900/90 p-3.5 space-y-2.5 shadow-2xs"
         >
           <label
             htmlFor="collab-note-input"
-            className="text-[11px] font-semibold text-[#115E59] block"
+            className="text-[11px] font-semibold text-[#115E59] dark:text-teal-300 block"
           >
             Send Directive / Joint Case Note
           </label>
@@ -180,10 +184,10 @@ export function CaseCollaborationTab({
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Share instructions, joint findings, or handoff updates with collaborating departments..."
-            className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E]"
+            className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
           />
           <div className="flex items-center justify-between pt-0.5">
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
               Notifies assigned staff and partner HODs immediately.
             </span>
             <button
@@ -200,7 +204,7 @@ export function CaseCollaborationTab({
         {/* Notes Timeline */}
         <div className="space-y-2.5 pt-1">
           {notes.length === 0 ? (
-            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-center text-slate-400">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-900/50 p-4 text-center text-slate-400">
               No collaborative notes posted yet. Post the first message above.
             </div>
           ) : (
@@ -208,14 +212,14 @@ export function CaseCollaborationTab({
               return (
                 <div
                   key={n.id}
-                  className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-1.5 shadow-2xs"
+                  className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/90 p-3.5 space-y-1.5 shadow-2xs"
                 >
                   <div className="flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-900">
+                      <span className="font-semibold text-slate-900 dark:text-slate-100">
                         {n.author}
                       </span>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">
+                      <span className="rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 text-[9px] font-bold">
                         {n.role}
                       </span>
                     </div>

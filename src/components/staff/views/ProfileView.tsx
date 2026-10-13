@@ -161,10 +161,10 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
           </div>
 
           {/* Policy Callout */}
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50/60 border border-blue-100 text-xs text-blue-900">
-            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50/60 dark:bg-slate-900/80 border border-blue-100 dark:border-teal-800/60 text-xs text-blue-900 dark:text-teal-200">
+            <Info className="w-4 h-4 text-blue-600 dark:text-teal-400 shrink-0 mt-0.5" />
             <div>
-              <strong className="font-semibold">
+              <strong className="font-semibold text-blue-950 dark:text-teal-300">
                 Business Rule Enforcement:
               </strong>{" "}
               A Staff member can have a maximum of 10 ACTIVE assigned grievances

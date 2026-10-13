@@ -201,48 +201,50 @@ export function InvestigationView({
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/70 transition"
+                      className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
                     >
                       {/* Grievance Number */}
-                      <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-mono text-sm font-bold text-slate-900">
+                      <td className="py-2.5 px-3.5 whitespace-nowrap align-middle">
+                        <span className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
                           {item.grievanceNumber}
                         </span>
                       </td>
 
                       {/* Summary */}
-                      <td className="py-3 px-3.5 max-w-[220px]">
+                      <td className="py-2.5 px-3.5 whitespace-nowrap align-middle max-w-[240px]">
                         <TruncatedText
                           text={item.title}
-                          maxChars={35}
+                          maxChars={30}
                           showCopy
-                          className="font-medium text-slate-900"
+                          className="font-medium text-slate-900 dark:text-slate-100 truncate whitespace-nowrap block max-w-[220px]"
                         />
                       </td>
 
                       {/* Reopened Status */}
-                      <td className="py-3 px-3 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                         {isReopened ? (
-                          <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900">
+                          <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                             Reopened ({item.reopenCount})
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-xs">-</span>
+                          <span className="text-slate-400 dark:text-slate-500 text-xs">
+                            -
+                          </span>
                         )}
                       </td>
 
                       {/* Category */}
-                      <td className="py-3 px-3 max-w-[140px]">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[150px]">
                         <TruncatedText
                           text={item.category}
                           maxChars={18}
-                          className="text-slate-900 border-none block"
+                          className="text-slate-900 dark:text-slate-200 border-none truncate whitespace-nowrap block max-w-[140px]"
                         />
                       </td>
 
                       {/* Priority */}
-                      <td className="py-3 px-3">
-                        <span className="text-[13px] font-medium text-slate-900">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                        <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
                           {item.priority === "CRITICAL"
                             ? "Critical"
                             : item.priority === "HIGH"
@@ -254,35 +256,35 @@ export function InvestigationView({
                       </td>
 
                       {/* Investigation Status */}
-                      <td className="py-3 px-3">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                         {isWaitingOnUser ? (
-                          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Waiting on User
                           </span>
                         ) : isInProgress ? (
-                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
                             In Progress
                           </span>
                         ) : isAssigned ? (
-                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700 whitespace-nowrap">
                             Assigned
                           </span>
                         ) : isUnderReview ? (
-                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200/60">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800 whitespace-nowrap">
                             Under Review
                           </span>
                         ) : (
-                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                             {item.status}
                           </span>
                         )}
                       </td>
 
                       {/* SLA */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
-                          <Clock className="w-3.5 h-3.5 text-slate-900" />
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                          <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
                           {isBreached
                             ? "SLA Breached"
                             : isAtRisk
@@ -292,12 +294,12 @@ export function InvestigationView({
                       </td>
 
                       {/* Last Activity */}
-                      <td className="py-3 px-3 text-slate-900 whitespace-nowrap text-[13px]">
+                      <td className="py-2.5 px-3 text-slate-900 dark:text-slate-300 whitespace-nowrap align-middle text-[13px]">
                         {lastActivityTime}
                       </td>
 
                       {/* Action */}
-                      <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap align-middle">
                         <ActionMenu
                           widthClass="w-52"
                           items={[

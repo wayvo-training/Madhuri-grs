@@ -199,39 +199,39 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                     key={item.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                   >
-                    <td className="py-4 px-5">
+                    <td className="py-2.5 px-5 whitespace-nowrap align-middle">
                       <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                         {item.grievanceNumber}
                       </span>
                     </td>
-                    <td className="py-4 px-4 max-w-50">
+                    <td className="py-2.5 px-4 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={item.title}
                         maxChars={30}
-                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none block"
+                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px]"
                       />
                     </td>
-                    <td className="py-4 px-4 max-w-35">
+                    <td className="py-2.5 px-4 whitespace-nowrap align-middle max-w-[180px]">
                       <TruncatedText
                         text={item.category}
-                        maxChars={20}
-                        className="text-slate-600 dark:text-slate-400 text-sm border-none block"
+                        maxChars={22}
+                        className="text-slate-600 dark:text-slate-400 text-sm border-none truncate whitespace-nowrap block max-w-[160px]"
                       />
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-2.5 px-4 whitespace-nowrap align-middle">
                       <PriorityBadge priority={item.priority} />
                     </td>
-                    <td className="py-4 px-4">
+                    <td className="py-2.5 px-4 whitespace-nowrap align-middle">
                       <StatusBadge status={item.status} />
                     </td>
-                    <td className="py-4 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap text-xs">
+                    <td className="py-2.5 px-4 text-slate-500 dark:text-slate-400 whitespace-nowrap align-middle text-xs">
                       {new Date(item.createdAt).toLocaleDateString("en-IN", {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
                       })}
                     </td>
-                    <td className="py-4 px-5 text-right whitespace-nowrap">
+                    <td className="py-2.5 px-5 text-right whitespace-nowrap align-middle">
                       <ActionMenu
                         items={[
                           {

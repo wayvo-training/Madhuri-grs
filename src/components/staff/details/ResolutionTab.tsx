@@ -47,10 +47,10 @@ export function ResolutionTab({
 
   return (
     <div className="space-y-4 text-xs">
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2">
+      <div className="rounded-xl border border-emerald-200 dark:border-teal-800/80 bg-emerald-50/50 dark:bg-slate-900/90 p-4 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="font-bold text-emerald-900 flex items-center gap-1.5">
-            <FileCheck2 className="h-4 w-4 text-emerald-700" />
+          <span className="font-bold text-emerald-900 dark:text-teal-300 flex items-center gap-1.5">
+            <FileCheck2 className="h-4 w-4 text-emerald-700 dark:text-teal-400" />
             Submitted Resolution Record
           </span>
           <div className="flex items-center gap-2">
@@ -58,10 +58,10 @@ export function ResolutionTab({
               <span
                 className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] ${
                   grievance.submittedResolution.reviewStatus === "ACCEPTED"
-                    ? "bg-emerald-100 text-emerald-900"
+                    ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border dark:border-emerald-800"
                     : grievance.submittedResolution.reviewStatus === "REJECTED"
-                      ? "bg-rose-100 text-rose-900"
-                      : "bg-amber-100 text-amber-900"
+                      ? "bg-rose-100 text-rose-900 dark:bg-rose-950/60 dark:text-rose-300 dark:border dark:border-rose-800"
+                      : "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800"
                 }`}
               >
                 {grievance.submittedResolution.reviewStatus}

@@ -468,12 +468,12 @@ export function GrievanceQueue({
         <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/80 text-[13px] font-bold uppercase tracking-wider text-slate-900">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-[13px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
                 <SortableTh
                   field="grievanceNumber"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3.5"
+                  className="py-2.5 px-3.5 whitespace-nowrap"
                 >
                   Grievance ID
                 </SortableTh>
@@ -481,18 +481,18 @@ export function GrievanceQueue({
                   field="title"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3.5"
+                  className="py-2.5 px-3.5 whitespace-nowrap"
                 >
                   Summary
                 </SortableTh>
-                <th className="py-3 px-3 text-slate-900 font-bold uppercase tracking-wider text-[13px] text-left">
+                <th className="py-2.5 px-3 text-slate-900 dark:text-slate-200 font-bold uppercase tracking-wider text-[13px] text-left whitespace-nowrap">
                   Reopened Status
                 </th>
                 <SortableTh
                   field="category"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Category
                 </SortableTh>
@@ -500,7 +500,7 @@ export function GrievanceQueue({
                   field="priority"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Priority
                 </SortableTh>
@@ -508,7 +508,7 @@ export function GrievanceQueue({
                   field="status"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Status
                 </SortableTh>
@@ -516,7 +516,7 @@ export function GrievanceQueue({
                   field="slaConsumptionPercent"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   SLA
                 </SortableTh>
@@ -524,16 +524,16 @@ export function GrievanceQueue({
                   field="submittedAt"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-2.5 px-3 whitespace-nowrap"
                 >
                   Last Updated
                 </SortableTh>
-                <th className="py-3 px-3.5 text-right text-slate-900 font-bold">
+                <th className="py-2.5 px-3.5 text-right text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
               {pagination.paginatedItems.map((item) => {
                 const isBreached = item.slaStatus === "BREACHED";
                 const isAtRisk = item.slaStatus === "AT_RISK";
@@ -543,46 +543,51 @@ export function GrievanceQueue({
                   item.status === "CLOSED" || item.overallStatus === "CLOSED";
 
                 return (
-                  <tr key={item.id} className="hover:bg-slate-50/70 transition">
+                  <tr
+                    key={item.id}
+                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
+                  >
                     {/* Grievance Number */}
-                    <td className="py-3 px-3.5 whitespace-nowrap">
-                      <span className="font-mono text-sm font-bold text-slate-900">
+                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle">
+                      <span className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
                         {item.grievanceNumber}
                       </span>
                     </td>
 
                     {/* Summary */}
-                    <td className="py-3 px-3.5 max-w-[200px]">
+                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={item.title}
-                        maxChars={35}
-                        className="font-medium text-slate-900 border-none"
+                        maxChars={30}
+                        className="font-medium text-slate-900 dark:text-slate-100 border-none truncate whitespace-nowrap block max-w-[220px]"
                       />
                     </td>
 
                     {/* Reopened Status */}
-                    <td className="py-3 px-3 whitespace-nowrap">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                       {isReopened ? (
-                        <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900">
+                        <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                           Reopened ({item.reopenCount})
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-xs">-</span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs">
+                          -
+                        </span>
                       )}
                     </td>
 
                     {/* Category */}
-                    <td className="py-3 px-3 max-w-[140px]">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[150px]">
                       <TruncatedText
                         text={item.category}
                         maxChars={18}
-                        className="text-slate-900 border-none block"
+                        className="text-slate-900 dark:text-slate-200 border-none truncate whitespace-nowrap block max-w-[140px]"
                       />
                     </td>
 
                     {/* Priority */}
-                    <td className="py-3 px-3">
-                      <span className="text-[13px] font-medium text-slate-900">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                      <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
                         {item.priority === "CRITICAL"
                           ? "Critical"
                           : item.priority === "HIGH"
@@ -594,45 +599,42 @@ export function GrievanceQueue({
                     </td>
 
                     {/* Status */}
-                    <td className="py-3 px-3">
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                       {item.status === "CLOSED" ||
                       item.overallStatus === "CLOSED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 whitespace-nowrap">
                           Closed
                         </span>
                       ) : item.status === "RESOLVED" ||
                         item.overallStatus === "RESOLVED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 whitespace-nowrap">
                           Resolved
                         </span>
                       ) : item.isMyDepartmentCompleted ||
                         item.status === "COMPLETED" ? (
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                            {item.myInvolvementType === "SUPPORTING"
-                              ? "Findings Submitted"
-                              : "Work Completed"}
-                          </span>
-                          {item.overallStatus &&
+                        <span
+                          title={
+                            item.overallStatus &&
                             item.overallStatus !== "COMPLETED" &&
                             item.overallStatus !== "CLOSED" &&
-                            item.overallStatus !== "RESOLVED" && (
-                              <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
-                                Case: {item.overallStatus.replace(/_/g, " ")}
-                                {item.activeDepartmentName
-                                  ? ` (${item.activeDepartmentName})`
-                                  : ""}
-                              </span>
-                            )}
-                        </div>
+                            item.overallStatus !== "RESOLVED"
+                              ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
+                              : undefined
+                          }
+                          className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                          {item.myInvolvementType === "SUPPORTING"
+                            ? "Findings Submitted"
+                            : "Work Completed"}
+                        </span>
                       ) : item.status === "WAITING_ON_USER" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                           Waiting on User
                         </span>
                       ) : (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
                           {item.status === "IN_PROGRESS"
                             ? "In Progress"
                             : item.status === "ASSIGNED"
@@ -645,9 +647,9 @@ export function GrievanceQueue({
                     </td>
 
                     {/* SLA */}
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900">
-                        <Clock className="w-3.5 h-3.5 text-slate-900" />
+                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                        <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
                         {isBreached
                           ? "SLA Breached"
                           : isAtRisk
@@ -657,12 +659,12 @@ export function GrievanceQueue({
                     </td>
 
                     {/* Last Updated */}
-                    <td className="py-3 px-3 text-slate-900 whitespace-nowrap text-[13px]">
+                    <td className="py-2.5 px-3 text-slate-900 dark:text-slate-300 whitespace-nowrap align-middle text-[13px]">
                       {item.assignedAt || item.submittedAt}
                     </td>
 
                     {/* Action */}
-                    <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                    <td className="py-2.5 px-3.5 text-right whitespace-nowrap align-middle">
                       <ActionMenu
                         widthClass="w-36"
                         items={[

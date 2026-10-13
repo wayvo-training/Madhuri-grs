@@ -226,19 +226,19 @@ export function OverviewView({
                   return (
                     <tr
                       key={item.id}
-                      className="hover:bg-slate-50/80 transition"
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                     >
                       {/* Grievance Number */}
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        <span className="font-mono text-xs font-bold text-slate-900">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                        <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
                           {item.grievanceNumber}
                         </span>
                       </td>
 
                       {/* Summary */}
-                      <td className="py-2 px-3 max-w-[180px]">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[200px]">
                         <span
-                          className="font-medium text-slate-900 line-clamp-1"
+                          className="font-medium text-slate-900 dark:text-slate-100 truncate whitespace-nowrap block max-w-[180px]"
                           title={item.title}
                         >
                           {item.title}
@@ -246,27 +246,34 @@ export function OverviewView({
                       </td>
 
                       {/* Reopened Status */}
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                         {isReopened ? (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-bold text-slate-900">
+                          <span className="inline-flex items-center gap-0.5 text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                             Reopened{" "}
                             {item.reopenCount > 0
                               ? `(${item.reopenCount})`
                               : ""}
                           </span>
                         ) : (
-                          <span className="text-slate-400 text-xs">-</span>
+                          <span className="text-slate-400 dark:text-slate-500 text-xs">
+                            -
+                          </span>
                         )}
                       </td>
 
                       {/* Category */}
-                      <td className="py-2 px-3 text-slate-900 truncate max-w-[130px]">
-                        {item.category}
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[140px]">
+                        <span
+                          className="text-slate-900 dark:text-slate-200 truncate whitespace-nowrap block max-w-[130px]"
+                          title={item.category}
+                        >
+                          {item.category}
+                        </span>
                       </td>
 
                       {/* Priority */}
-                      <td className="py-2 px-3">
-                        <span className="text-xs font-medium text-slate-900">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                        <span className="text-xs font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
                           {item.priority === "CRITICAL"
                             ? "Critical"
                             : item.priority === "HIGH"
@@ -278,45 +285,42 @@ export function OverviewView({
                       </td>
 
                       {/* Status */}
-                      <td className="py-2 px-3">
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                         {item.status === "CLOSED" ||
                         item.overallStatus === "CLOSED" ? (
-                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 whitespace-nowrap">
                             Closed
                           </span>
                         ) : item.status === "RESOLVED" ||
                           item.overallStatus === "RESOLVED" ? (
-                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200/60">
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 whitespace-nowrap">
                             Resolved
                           </span>
                         ) : item.isMyDepartmentCompleted ||
                           item.status === "COMPLETED" ? (
-                          <div className="flex flex-col gap-0.5 items-start">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                              {item.myInvolvementType === "SUPPORTING"
-                                ? "Findings Submitted"
-                                : "Work Completed"}
-                            </span>
-                            {item.overallStatus &&
+                          <span
+                            title={
+                              item.overallStatus &&
                               item.overallStatus !== "COMPLETED" &&
                               item.overallStatus !== "CLOSED" &&
-                              item.overallStatus !== "RESOLVED" && (
-                                <span className="text-[10px] font-medium text-slate-500 whitespace-nowrap">
-                                  Case: {item.overallStatus.replace(/_/g, " ")}
-                                  {item.activeDepartmentName
-                                    ? ` (${item.activeDepartmentName})`
-                                    : ""}
-                                </span>
-                              )}
-                          </div>
+                              item.overallStatus !== "RESOLVED"
+                                ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
+                                : undefined
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                            {item.myInvolvementType === "SUPPORTING"
+                              ? "Findings Submitted"
+                              : "Work Completed"}
+                          </span>
                         ) : item.status === "WAITING_ON_USER" ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
                             Waiting on User
                           </span>
                         ) : (
-                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                          <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
                             {item.status === "IN_PROGRESS"
                               ? "In Progress"
                               : item.status === "ASSIGNED"
@@ -329,9 +333,9 @@ export function OverviewView({
                       </td>
 
                       {/* SLA */}
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-900">
-                          <Clock className="w-3 h-3 text-slate-900" />
+                      <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                          <Clock className="w-3 h-3 text-slate-900 dark:text-slate-400" />
                           {isBreached
                             ? "SLA Breached"
                             : isAtRisk
@@ -341,12 +345,12 @@ export function OverviewView({
                       </td>
 
                       {/* Last Updated */}
-                      <td className="py-2 px-3 text-slate-900 whitespace-nowrap text-xs">
+                      <td className="py-2.5 px-3 text-slate-900 dark:text-slate-300 whitespace-nowrap align-middle text-xs">
                         {item.assignedAt || item.submittedAt}
                       </td>
 
                       {/* Action */}
-                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap align-middle">
                         <ActionMenu
                           widthClass="w-36"
                           items={[
@@ -367,12 +371,14 @@ export function OverviewView({
             </table>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-slate-50/40 border border-slate-200/70 shadow-2xs p-8 text-center">
-            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-              <FileCheck2 className="h-5 w-5 text-emerald-600" />
+          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-slate-50/40 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800 shadow-2xs p-8 text-center">
+            <div className="h-10 w-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center mb-3">
+              <FileCheck2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h4 className="text-sm font-bold text-slate-800">All Clear!</h4>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              All Clear!
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
               You currently have no active grievances requiring immediate
               attention (such as SLA breaches, high-risk delays, or reopenings).
             </p>
