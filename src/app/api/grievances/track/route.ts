@@ -70,8 +70,7 @@ export async function GET(req: NextRequest) {
 
     const primaryGDept = getPrimaryDepartment(grievance);
     const primaryDept =
-      primaryGDept?.departments?.department_name ||
-      "General Queue";
+      primaryGDept?.departments?.department_name || "General Queue";
 
     const assignedHistory = grievance.grievance_status_history.find(
       (h) => h.new_status === "ASSIGNED",
