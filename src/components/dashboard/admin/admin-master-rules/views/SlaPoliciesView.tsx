@@ -96,18 +96,38 @@ export function SlaPoliciesView({
               >
                 Resolution Target
               </SortableTableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              <SortableTableHead
+                field="warning_threshold_percent"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Warning (50%)
-              </TableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              </SortableTableHead>
+              <SortableTableHead
+                field="at_risk_threshold_percent"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 At Risk (75%)
-              </TableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              </SortableTableHead>
+              <SortableTableHead
+                field="critical_threshold_percent"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Critical (90%)
-              </TableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500">
+              </SortableTableHead>
+              <SortableTableHead
+                field="escalation_threshold_percent"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Breach (100%)
-              </TableHead>
+              </SortableTableHead>
               <SortableTableHead
                 field="status"
                 currentSort={sortState}

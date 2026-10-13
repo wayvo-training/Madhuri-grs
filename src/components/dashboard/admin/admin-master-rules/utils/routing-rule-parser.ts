@@ -274,7 +274,13 @@ export function parseRoutingRuleMDI(
     slaAllocationSummary = participatingDepartments
       .map((d) => {
         const mins = d.allocated_duration_minutes;
-        const pct = d.sla_percent_allocation;
+        const pct =
+          d.sla_percent_allocation ??
+          (executionMode === "PARALLEL"
+            ? d.involvement_type === "PRIMARY" || d.involvement_type === "EQUAL"
+              ? 100
+              : 50
+            : undefined);
         if (mins != null && mins > 0 && pct != null && pct > 0) {
           const durationStr =
             mins >= 60
@@ -292,9 +298,35 @@ export function parseRoutingRuleMDI(
         if (pct != null && pct > 0) {
           return `${d.department_name}: ${pct}%`;
         }
-        return `${d.department_name}: —`;
+        return `${d.department_name}: 100%`;
       })
       .join(" · ");
+  } else {
+    // Default smart concurrent/sequential allocations for active routing rules
+    hasSlaAllocation = true;
+    if (executionMode === "PARALLEL") {
+      if (participatingDepartments.length <= 1) {
+        slaAllocationSummary = `${primaryDepartment}: 100% (Full SLA)`;
+      } else {
+        slaAllocationSummary = participatingDepartments
+          .map((d) => {
+            const isOwner =
+              d.involvement_type === "PRIMARY" ||
+              d.involvement_type === "EQUAL";
+            return `${d.department_name}: ${isOwner ? "100%" : "50%"}`;
+          })
+          .join(" · ");
+      }
+    } else {
+      if (participatingDepartments.length <= 1) {
+        slaAllocationSummary = `${primaryDepartment}: 100% (Full SLA)`;
+      } else {
+        const equalShare = Math.round(100 / participatingDepartments.length);
+        slaAllocationSummary = participatingDepartments
+          .map((d) => `${d.department_name}: ${equalShare}%`)
+          .join(" · ");
+      }
+    }
   }
 
   return {

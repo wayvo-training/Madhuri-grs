@@ -489,17 +489,31 @@ export function useRuleActions({
             return;
           }
 
-          const totalPct = sequentialDependencies.reduce(
-            (sum, d) => sum + (Number(d.sla_percent_allocation) || 0),
-            0,
-          );
-          if (Math.round(totalPct) !== 100) {
-            showNotice(
-              "error",
-              `Total SLA percentage allocation across all participating departments must equal exactly 100% (currently ${totalPct}%). Please adjust them to equal 100%.`,
+          if (dependencyType === "SEQUENTIAL") {
+            const totalPct = sequentialDependencies.reduce(
+              (sum, d) => sum + (Number(d.sla_percent_allocation) || 0),
+              0,
             );
-            setIsSubmitting(false);
-            return;
+            if (Math.round(totalPct) !== 100) {
+              showNotice(
+                "error",
+                `Total SLA percentage allocation across sequential departments must equal exactly 100% (currently ${totalPct}%). Please adjust them to equal 100%.`,
+              );
+              setIsSubmitting(false);
+              return;
+            }
+          } else {
+            const over100 = sequentialDependencies.find(
+              (d) => Number(d.sla_percent_allocation) > 100,
+            );
+            if (over100) {
+              showNotice(
+                "error",
+                `Individual department SLA percentage cannot exceed 100% (department "${over100.department_name}" is ${over100.sla_percent_allocation}%).`,
+              );
+              setIsSubmitting(false);
+              return;
+            }
           }
         }
 

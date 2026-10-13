@@ -206,7 +206,24 @@ export function RoutingRulesView({
     });
   }, [rules, externalStatus, externalCat, externalDept, externalSearch]);
 
-  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
+  const rulesWithMDI = useMemo(() => {
+    return filtered.map((r) => {
+      const mdi = parseRoutingRuleMDI(r);
+      const participating_depts = mdi.participatingDepartments
+        .map((d) => d.department_name)
+        .join(", ");
+      return {
+        ...r,
+        mdi,
+        participating_depts,
+        execution_mode: mdi.executionMode,
+        dependencies: mdi.dependencySummary,
+        sla_allocation: mdi.slaAllocationSummary,
+      };
+    });
+  }, [filtered]);
+
+  const { sortState, handleSort, sortedItems } = useTableSort(rulesWithMDI, {
     field: "rule_order",
     direction: "asc",
   });
@@ -261,18 +278,38 @@ export function RoutingRulesView({
                 >
                   Primary Dept
                 </SortableTableHead>
-                <TableHead className="px-3 py-2.5 min-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs">
+                <SortableTableHead
+                  field="participating_depts"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-2.5 min-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                >
                   Participating Depts
-                </TableHead>
-                <TableHead className="px-3 py-2.5 min-w-[120px] font-semibold uppercase tracking-wider text-slate-500 text-xs">
+                </SortableTableHead>
+                <SortableTableHead
+                  field="execution_mode"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-2.5 min-w-[120px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                >
                   Mode
-                </TableHead>
-                <TableHead className="px-3 py-2.5 min-w-[160px] max-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs">
+                </SortableTableHead>
+                <SortableTableHead
+                  field="dependencies"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-2.5 min-w-[160px] max-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                >
                   Dependencies
-                </TableHead>
-                <TableHead className="px-3 py-2.5 min-w-[160px] max-w-[200px] font-semibold uppercase tracking-wider text-slate-500 text-xs">
+                </SortableTableHead>
+                <SortableTableHead
+                  field="sla_allocation"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-2.5 min-w-[160px] max-w-[200px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                >
                   SLA Allocation
-                </TableHead>
+                </SortableTableHead>
                 <SortableTableHead
                   field="status"
                   currentSort={sortState}
@@ -300,7 +337,7 @@ export function RoutingRulesView({
                 </TableRow>
               ) : (
                 paginated.map((r) => {
-                  const mdi = parseRoutingRuleMDI(r);
+                  const mdi = r.mdi;
                   const isSequential = mdi.executionMode === "SEQUENTIAL";
                   const visibleDepts = mdi.participatingDepartments.slice(0, 2);
                   const remainingCount =

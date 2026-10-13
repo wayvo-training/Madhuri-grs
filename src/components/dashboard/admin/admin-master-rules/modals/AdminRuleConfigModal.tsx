@@ -570,6 +570,29 @@ export function AdminRuleConfigModal({
     syncRowsToParent(updated);
   };
 
+  const handleStaggeredParallel = () => {
+    if (participatingRows.length === 0) return;
+    const updated = participatingRows.map((r) => ({
+      ...r,
+      sla_percent_allocation:
+        r.involvement_type === "PRIMARY" || r.involvement_type === "EQUAL"
+          ? 100
+          : 50,
+      allocated_duration_minutes: r.allocated_duration_minutes ?? null,
+    }));
+    syncRowsToParent(updated);
+  };
+
+  const handleFullConcurrent = () => {
+    if (participatingRows.length === 0) return;
+    const updated = participatingRows.map((r) => ({
+      ...r,
+      sla_percent_allocation: 100,
+      allocated_duration_minutes: r.allocated_duration_minutes ?? null,
+    }));
+    syncRowsToParent(updated);
+  };
+
   const totalConfiguredPercent = useMemo(() => {
     return participatingRows.reduce((sum, r) => {
       return sum + (Number(r.sla_percent_allocation) || 0);
@@ -1154,9 +1177,25 @@ export function AdminRuleConfigModal({
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            SLA Allocation Tracker (Total must be 100%)
+                            {dependencyType === "PARALLEL"
+                              ? "Parallel SLA Tracker (Concurrent Milestones per Department)"
+                              : "SLA Allocation Tracker (Total must be 100%)"}
                           </span>
-                          {Math.round(totalConfiguredPercent) === 100 ? (
+                          {dependencyType === "PARALLEL" ? (
+                            participatingRows.every(
+                              (r) =>
+                                Number(r.sla_percent_allocation) > 0 &&
+                                Number(r.sla_percent_allocation) <= 100,
+                            ) ? (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                                ✓ Concurrent Milestones Configured
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                                ⚠ Set 1–100% per department
+                              </span>
+                            )
+                          ) : Math.round(totalConfiguredPercent) === 100 ? (
                             <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
                               ✓ Total: 100% (Balanced)
                             </span>
@@ -1174,48 +1213,76 @@ export function AdminRuleConfigModal({
                         </div>
 
                         {participatingRows.length > 1 && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={handleSplitEqually}
-                              className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
-                            >
-                              Split Equally
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleAutoBalance}
-                              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
-                            >
-                              Balance to 100%
-                            </button>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {dependencyType === "PARALLEL" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={handleStaggeredParallel}
+                                  className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
+                                  title="Primary Lead gets 100% resolution window; Supporting depts get 50% investigation milestone"
+                                >
+                                  ⚡ Staggered (100% Lead · 50% Support)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleFullConcurrent}
+                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
+                                  title="All departments get 100% concurrent window"
+                                >
+                                  100% Each
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleSplitEqually}
+                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
+                                >
+                                  Split Equally
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={handleSplitEqually}
+                                  className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
+                                >
+                                  Split Equally
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={handleAutoBalance}
+                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
+                                >
+                                  Balance to 100%
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
 
-                      {/* Visual Progress Bar */}
-                      <div className="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            Math.round(totalConfiguredPercent) === 100
-                              ? "bg-emerald-500"
-                              : totalConfiguredPercent > 100
-                                ? "bg-rose-500"
-                                : "bg-amber-500"
-                          }`}
-                          style={{
-                            width: `${Math.min(100, Math.max(0, totalConfiguredPercent))}%`,
-                          }}
-                        />
-                      </div>
+                      {dependencyType === "SEQUENTIAL" && (
+                        <div className="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${
+                              Math.round(totalConfiguredPercent) === 100
+                                ? "bg-emerald-500"
+                                : totalConfiguredPercent > 100
+                                  ? "bg-rose-500"
+                                  : "bg-amber-500"
+                            }`}
+                            style={{
+                              width: `${Math.min(100, Math.max(0, totalConfiguredPercent))}%`,
+                            }}
+                          />
+                        </div>
+                      )}
 
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Each participating department receives a percentage
-                        share of the grievance's overall SLA window. Total
-                        allocation across all departments must equal strictly
-                        100%. Resolution durations are calculated dynamically at
-                        runtime according to the grievance's Priority SLA
-                        Policy.
+                        {dependencyType === "PARALLEL"
+                          ? "In Parallel mode, all departments activate concurrently. Lead/Equal departments can have up to 100% resolution window while supporting departments have concurrent milestones (e.g. 50% for findings handover)."
+                          : "Each participating department receives a percentage share of the grievance's overall SLA window. Total allocation across all departments must equal strictly 100%. Resolution durations are calculated dynamically at runtime according to the grievance's Priority SLA Policy."}
                       </p>
                     </div>
 
@@ -2300,9 +2367,23 @@ export function AdminRuleConfigModal({
               {modalRuleType === "routing" &&
                 participatingRows.length > 0 &&
                 hasLeadOrEqualOwner &&
+                dependencyType === "SEQUENTIAL" &&
                 Math.round(totalConfiguredPercent) !== 100 && (
                   <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    SLA total must be 100% (currently {totalConfiguredPercent}%)
+                    Sequential SLA total must equal 100% (currently{" "}
+                    {totalConfiguredPercent}%)
+                  </span>
+                )}
+              {modalRuleType === "routing" &&
+                participatingRows.length > 0 &&
+                dependencyType === "PARALLEL" &&
+                participatingRows.some(
+                  (r) =>
+                    (Number(r.sla_percent_allocation) || 0) <= 0 ||
+                    (Number(r.sla_percent_allocation) || 0) > 100,
+                ) && (
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                    Each parallel department SLA must be between 1% and 100%
                   </span>
                 )}
               <button
@@ -2326,7 +2407,14 @@ export function AdminRuleConfigModal({
                       !selectedRoutingSubcatId ||
                       participatingRows.length === 0 ||
                       !hasLeadOrEqualOwner ||
-                      Math.round(totalConfiguredPercent) !== 100))
+                      (dependencyType === "SEQUENTIAL" &&
+                        Math.round(totalConfiguredPercent) !== 100) ||
+                      (dependencyType === "PARALLEL" &&
+                        participatingRows.some(
+                          (r) =>
+                            (Number(r.sla_percent_allocation) || 0) <= 0 ||
+                            (Number(r.sla_percent_allocation) || 0) > 100,
+                        ))))
                 }
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
               >

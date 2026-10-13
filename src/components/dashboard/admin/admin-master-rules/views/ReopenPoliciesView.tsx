@@ -1,5 +1,5 @@
 import { AlertTriangle, FileText } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
@@ -46,10 +46,33 @@ export function ReopenPoliciesView({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
-    field: "policy_name",
-    direction: "asc",
-  });
+  const policiesWithTaxonomy = useMemo(() => {
+    return filtered.map((p) => {
+      let category = "All";
+      let subcategory = "All";
+      try {
+        const cond = p.applicable_condition as {
+          category?: string;
+          subcategory?: string;
+        };
+        if (cond?.category) category = cond.category;
+        if (cond?.subcategory) subcategory = cond.subcategory;
+      } catch (_e) {}
+      return {
+        ...p,
+        category,
+        subcategory,
+      };
+    });
+  }, [filtered]);
+
+  const { sortState, handleSort, sortedItems } = useTableSort(
+    policiesWithTaxonomy,
+    {
+      field: "policy_name",
+      direction: "asc",
+    },
+  );
 
   const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -73,12 +96,22 @@ export function ReopenPoliciesView({
               >
                 Policy Name
               </SortableTableHead>
-              <TableHead className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500">
+              <SortableTableHead
+                field="category"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Category
-              </TableHead>
-              <TableHead className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500">
+              </SortableTableHead>
+              <SortableTableHead
+                field="subcategory"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-2.5 px-2 font-semibold uppercase tracking-wider text-slate-500"
+              >
                 Subcategory
-              </TableHead>
+              </SortableTableHead>
               <SortableTableHead
                 field="reopen_window_hours"
                 currentSort={sortState}

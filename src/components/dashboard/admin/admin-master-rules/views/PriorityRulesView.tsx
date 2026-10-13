@@ -1,5 +1,5 @@
 import { AlertTriangle, FileText, Pencil } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
@@ -29,6 +29,69 @@ interface PriorityRulesViewProps {
   onDelete: (rule: SerializedPriorityRule) => void;
 }
 
+function extractPriorityRuleTaxonomy(
+  rule: SerializedPriorityRule,
+  categories: RuleCategoryOption[],
+) {
+  let ruleCat = "All";
+  let ruleSubcat = "—";
+  try {
+    if (rule.conditions && typeof rule.conditions === "object") {
+      const cond = rule.conditions as {
+        category_name?: string;
+        subcategory_name?: string;
+        category?: string;
+        subcategory?: string;
+        category_id?: string;
+        subcategory_id?: string;
+      };
+
+      let resolvedCatName = cond.category_name || cond.category;
+      let resolvedSubcatName = cond.subcategory_name || cond.subcategory;
+
+      if (cond.category_id && categories?.length > 0) {
+        const catMatch = categories.find(
+          (c) => c.category_id === cond.category_id,
+        );
+        if (catMatch) {
+          resolvedCatName = catMatch.category_name;
+          if (cond.subcategory_id) {
+            const subMatch = catMatch.subcategories?.find(
+              (s: { subcategory_id: string; subcategory_name: string }) =>
+                s.subcategory_id === cond.subcategory_id,
+            );
+            if (subMatch) {
+              resolvedSubcatName = subMatch.subcategory_name;
+            }
+          }
+        }
+      } else if (
+        resolvedSubcatName &&
+        !resolvedCatName &&
+        categories?.length > 0
+      ) {
+        // Reverse lookup: if we have subcategory name but no category name, find the parent
+        for (const c of categories) {
+          const subMatch = c.subcategories?.find(
+            (s: { subcategory_id: string; subcategory_name: string }) =>
+              s.subcategory_name.trim().toLowerCase() ===
+              resolvedSubcatName?.trim().toLowerCase(),
+          );
+          if (subMatch) {
+            resolvedCatName = c.category_name;
+            break;
+          }
+        }
+      }
+
+      ruleCat = resolvedCatName || "All";
+      ruleSubcat = resolvedSubcatName || "—";
+    }
+  } catch (_e) {}
+
+  return { ruleCat, ruleSubcat };
+}
+
 export function PriorityRulesView({
   rules,
   categories,
@@ -44,62 +107,7 @@ export function PriorityRulesView({
     if (statusFilter.length > 0 && !statusFilter.includes(r.status))
       return false;
 
-    // Parse conditions to get category (safely)
-    let ruleCat = "All";
-    let ruleSubcat = "—";
-    try {
-      if (r.conditions && typeof r.conditions === "object") {
-        const cond = r.conditions as {
-          category_name?: string;
-          subcategory_name?: string;
-          category?: string;
-          subcategory?: string;
-          category_id?: string;
-          subcategory_id?: string;
-        };
-
-        let resolvedCatName = cond.category_name || cond.category;
-        let resolvedSubcatName = cond.subcategory_name || cond.subcategory;
-
-        if (cond.category_id && categories?.length > 0) {
-          const catMatch = categories.find(
-            (c) => c.category_id === cond.category_id,
-          );
-          if (catMatch) {
-            resolvedCatName = catMatch.category_name;
-            if (cond.subcategory_id) {
-              const subMatch = catMatch.subcategories?.find(
-                (s: { subcategory_id: string; subcategory_name: string }) =>
-                  s.subcategory_id === cond.subcategory_id,
-              );
-              if (subMatch) {
-                resolvedSubcatName = subMatch.subcategory_name;
-              }
-            }
-          }
-        } else if (
-          resolvedSubcatName &&
-          !resolvedCatName &&
-          categories?.length > 0
-        ) {
-          // Reverse lookup: if we have subcategory name but no category name, find the parent
-          for (const c of categories) {
-            const subMatch = c.subcategories?.find(
-              (s: { subcategory_id: string; subcategory_name: string }) =>
-                s.subcategory_name.trim().toLowerCase() ===
-                resolvedSubcatName?.trim().toLowerCase(),
-            );
-            if (subMatch) {
-              resolvedCatName = c.category_name;
-              break;
-            }
-          }
-        }
-
-        ruleCat = resolvedCatName || "All";
-        ruleSubcat = resolvedSubcatName || "—";
-      }
-    } catch (_e) {}
+    const { ruleCat, ruleSubcat } = extractPriorityRuleTaxonomy(r, categories);
 
     if (catFilter !== "ALL" && ruleCat !== catFilter) return false;
 
@@ -113,13 +121,30 @@ export function PriorityRulesView({
     return true;
   });
 
+  const rulesWithTaxonomy = useMemo(() => {
+    return filtered.map((r) => {
+      const { ruleCat, ruleSubcat } = extractPriorityRuleTaxonomy(
+        r,
+        categories,
+      );
+      return {
+        ...r,
+        category_name: ruleCat,
+        subcategory_name: ruleSubcat,
+      };
+    });
+  }, [filtered, categories]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
-    field: "rule_order",
-    direction: "asc",
-  });
+  const { sortState, handleSort, sortedItems } = useTableSort(
+    rulesWithTaxonomy,
+    {
+      field: "rule_order",
+      direction: "asc",
+    },
+  );
 
   const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -143,12 +168,22 @@ export function PriorityRulesView({
               >
                 Rule Name
               </SortableTableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <SortableTableHead
+                field="category_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+              >
                 Category
-              </TableHead>
-              <TableHead className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              </SortableTableHead>
+              <SortableTableHead
+                field="subcategory_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+              >
                 Subcategory
-              </TableHead>
+              </SortableTableHead>
               <SortableTableHead
                 field="priority_level"
                 currentSort={sortState}

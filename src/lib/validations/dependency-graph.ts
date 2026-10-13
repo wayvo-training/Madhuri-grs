@@ -491,9 +491,9 @@ export function validateRoutingPolicy(
     }
   }
 
-  if (totalConfiguredPercent > 100.0) {
+  if (isSequential && totalConfiguredPercent > 100.0) {
     errors.push(
-      `Total SLA percentage allocation across participating departments cannot exceed 100% (received: ${totalConfiguredPercent}%).`,
+      `Total SLA percentage allocation across sequential departments cannot exceed 100% (received: ${totalConfiguredPercent}%).`,
     );
   }
 
