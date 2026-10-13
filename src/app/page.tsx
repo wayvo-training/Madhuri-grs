@@ -1,3 +1,4 @@
+import FaqAccordion from "@/components/ui/home/faqaccordion";
 import Footer from "@/components/ui/home/footer";
 import GrievanceTracker from "@/components/ui/home/grievance-tracker";
 import HeroSection from "@/components/ui/home/herosection";
@@ -22,6 +23,8 @@ export default function Home() {
         <GrievanceTracker />
 
         <HowItsWork />
+
+        <FaqAccordion />
 
         <Footer />
       </main>

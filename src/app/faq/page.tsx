@@ -64,7 +64,9 @@ const faqs: FaqItem[] = [
 ];
 
 export default function FaqPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openQuestion, setOpenQuestion] = useState<string | null>(
+    faqs[0]?.question ?? null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
@@ -161,8 +163,8 @@ export default function FaqPage() {
               </div>
             ) : (
               <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/90 bg-white shadow-xs">
-                {filteredFaqs.map((faq, index) => {
-                  const isOpen = openIndex === index;
+                {filteredFaqs.map((faq) => {
+                  const isOpen = openQuestion === faq.question;
 
                   return (
                     <div
@@ -171,7 +173,9 @@ export default function FaqPage() {
                     >
                       <button
                         type="button"
-                        onClick={() => setOpenIndex(isOpen ? null : index)}
+                        onClick={() =>
+                          setOpenQuestion(isOpen ? null : faq.question)
+                        }
                         className="group flex w-full items-center justify-between gap-4 text-left cursor-pointer"
                       >
                         <div className="pr-2 space-y-1">

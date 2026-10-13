@@ -44,7 +44,13 @@ export default function GrievanceTracker() {
         {/* Search Bar */}
         <div className="mx-auto mt-6 max-w-2xl">
           <search aria-label="Grievance tracking search">
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-[#0E7490] focus-within:ring-2 focus-within:ring-cyan-500/20">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleTrack();
+              }}
+              className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm transition-all focus-within:border-[#0E7490] focus-within:ring-2 focus-within:ring-cyan-500/20"
+            >
               <div className="flex flex-1 items-center gap-3 pl-3">
                 <Search
                   className="h-5 w-5 text-slate-400 shrink-0"
@@ -61,8 +67,7 @@ export default function GrievanceTracker() {
               </div>
 
               <button
-                type="button"
-                onClick={() => handleTrack()}
+                type="submit"
                 disabled={loading || !query.trim()}
                 className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#0F766E] px-5 py-2.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-[#115E59] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
@@ -78,7 +83,7 @@ export default function GrievanceTracker() {
                   </>
                 )}
               </button>
-            </div>
+            </form>
           </search>
 
           {/* Confidentiality / Login Note */}

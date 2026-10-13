@@ -20,6 +20,17 @@ export default function Navbar() {
     }
   };
 
+  const handleScrollTo =
+    (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (pathname === "/") {
+        e.preventDefault();
+        const targetEl = document.getElementById(id);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: "smooth" });
+        }
+      }
+    };
+
   return (
     <nav className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6 lg:px-8">
@@ -53,14 +64,16 @@ export default function Navbar() {
 
           <Link
             href="/#track"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block"
+            onClick={handleScrollTo("track")}
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block cursor-pointer"
           >
             Track Status
           </Link>
 
           <Link
             href="/#how-it-works"
-            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] md:block"
+            onClick={handleScrollTo("how-it-works")}
+            className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] md:block cursor-pointer"
           >
             How It Works
           </Link>

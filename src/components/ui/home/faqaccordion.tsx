@@ -37,7 +37,9 @@ const faqs = [
 ];
 
 export default function FaqAccordion() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [openQuestion, setOpenQuestion] = useState<string | null>(
+    faqs[0]?.question ?? null,
+  );
 
   return (
     <section
@@ -63,8 +65,8 @@ export default function FaqAccordion() {
 
           {/* Right */}
           <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200/90 bg-white shadow-xs">
-            {faqs.map((faq, index) => {
-              const isOpen = openIndex === index;
+            {faqs.map((faq) => {
+              const isOpen = openQuestion === faq.question;
 
               return (
                 <div
@@ -73,7 +75,9 @@ export default function FaqAccordion() {
                 >
                   <button
                     type="button"
-                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    onClick={() =>
+                      setOpenQuestion(isOpen ? null : faq.question)
+                    }
                     className="group flex w-full items-center justify-between gap-4 px-5 py-3.5 sm:px-6 sm:py-4 text-left cursor-pointer"
                     aria-expanded={isOpen}
                   >

@@ -50,13 +50,19 @@ export default function HeroSection({
             <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
           </Link>
 
-          <a
-            href="#track"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-[#F0FDFA] hover:text-[#0F766E]"
+          <button
+            type="button"
+            onClick={() => {
+              const trackEl = document.getElementById("track");
+              if (trackEl) {
+                trackEl.scrollIntoView({ behavior: "smooth" });
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-semibold text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-300 hover:bg-[#F0FDFA] hover:text-[#0F766E] cursor-pointer"
           >
             <Search className="h-4 w-4 text-[#0F766E]" />
             Track Existing Grievance
-          </a>
+          </button>
         </div>
       </div>
     </section>
