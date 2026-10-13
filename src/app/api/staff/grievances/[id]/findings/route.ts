@@ -28,6 +28,59 @@ export async function POST(
       );
     }
 
+    const cleanFindings = findings.trim();
+    const cleanAction = actionTaken.trim();
+
+    if (cleanFindings) {
+      if (cleanFindings.length < 20) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Findings must be at least 20 characters (currently ${cleanFindings.length}).`,
+          },
+          { status: 400 },
+        );
+      }
+      if (
+        !/[a-zA-Z]/.test(cleanFindings) ||
+        /^\d+$/.test(cleanFindings.replace(/\s+/g, ""))
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Findings must contain letters/words and cannot consist only of digits or numbers.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (cleanAction) {
+      if (cleanAction.length < 20) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Action Taken must be at least 20 characters (currently ${cleanAction.length}).`,
+          },
+          { status: 400 },
+        );
+      }
+      if (
+        !/[a-zA-Z]/.test(cleanAction) ||
+        /^\d+$/.test(cleanAction.replace(/\s+/g, ""))
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Action Taken must contain letters/words and cannot consist only of digits or numbers.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const grievance = await prisma.grievances.findUnique({
       where: { grievance_id: grievanceId },
       include: {
@@ -102,7 +155,7 @@ export async function POST(
       ? `${authorUser.first_name} ${authorUser.last_name || ""}`.trim()
       : "Staff Member";
 
-    const formattedNote = `[Department Findings - ${deptName}]\n\nFindings: ${findings.trim()}\n\nAction Taken: ${actionTaken.trim() || "Inquiry completed."}\n\nNotes: ${notes.trim() || "Ready for Lead Department compilation."}`;
+    const _formattedNote = `[Department Findings - ${deptName}]\n\nFindings: ${findings.trim()}\n\nAction Taken: ${actionTaken.trim() || "Inquiry completed."}\n\nNotes: ${notes.trim() || "Ready for Lead Department compilation."}`;
 
     await prisma.$transaction(async (tx) => {
       // 1. Mark this department's status and staff assignment as COMPLETED

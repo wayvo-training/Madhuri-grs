@@ -1,7 +1,8 @@
 "use client";
 
 import { CheckCircle2, X } from "lucide-react";
-import type { FormEvent } from "react";
+import { type FormEvent, useState } from "react";
+import { toast } from "sonner";
 import type { GrievanceItem } from "@/types/department-head";
 
 export interface DepartmentHeadResolutionModalProps {
@@ -28,6 +29,83 @@ export function DepartmentHeadResolutionModal({
     (grievance.reopenCount ?? 0) >= 2 ||
     grievance.status === "ESCALATED" ||
     grievance.status !== "UNDER_REVIEW";
+
+  const [directFindings, setDirectFindings] = useState("");
+  const [directActionTaken, setDirectActionTaken] = useState("");
+
+  const isFeedbackOnlyDigits = /^\d+$/.test(
+    feedback.trim().replace(/\s+/g, ""),
+  );
+  const hasFeedbackLetters = /[a-zA-Z]/.test(feedback.trim());
+  const isFeedbackLengthValid = feedback.trim().length >= 15;
+  const isFeedbackValid =
+    isFeedbackLengthValid && hasFeedbackLetters && !isFeedbackOnlyDigits;
+
+  const isFindingsOnlyDigits = /^\d+$/.test(
+    directFindings.trim().replace(/\s+/g, ""),
+  );
+  const hasFindingsLetters = /[a-zA-Z]/.test(directFindings.trim());
+  const isFindingsLengthValid = directFindings.trim().length >= 20;
+  const isFindingsValid =
+    isFindingsLengthValid && hasFindingsLetters && !isFindingsOnlyDigits;
+
+  const isActionTakenOnlyDigits = /^\d+$/.test(
+    directActionTaken.trim().replace(/\s+/g, ""),
+  );
+  const hasActionTakenLetters = /[a-zA-Z]/.test(directActionTaken.trim());
+  const isActionTakenLengthValid = directActionTaken.trim().length >= 20;
+  const isActionTakenValid =
+    isActionTakenLengthValid &&
+    hasActionTakenLetters &&
+    !isActionTakenOnlyDigits;
+
+  const handleFormSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!isDirectResolution || feedback.trim().length > 0) {
+      if (feedback.trim().length < 15) {
+        toast.error(
+          `Remarks must be at least 15 characters (currently ${feedback.trim().length}).`,
+        );
+        return;
+      }
+      if (!hasFeedbackLetters || isFeedbackOnlyDigits) {
+        toast.error(
+          "Remarks must contain letters/words and cannot consist only of digits or numbers.",
+        );
+        return;
+      }
+    }
+
+    if (isDirectResolution) {
+      if (directFindings.trim().length < 20) {
+        toast.error(
+          `Findings must be at least 20 characters (currently ${directFindings.trim().length}).`,
+        );
+        return;
+      }
+      if (!hasFindingsLetters || isFindingsOnlyDigits) {
+        toast.error(
+          "Findings must contain letters/words and cannot consist only of digits or numbers.",
+        );
+        return;
+      }
+      if (directActionTaken.trim().length < 20) {
+        toast.error(
+          `Action Taken must be at least 20 characters (currently ${directActionTaken.trim().length}).`,
+        );
+        return;
+      }
+      if (!hasActionTakenLetters || isActionTakenOnlyDigits) {
+        toast.error(
+          "Action Taken must contain letters/words and cannot consist only of digits or numbers.",
+        );
+        return;
+      }
+    }
+
+    onSubmit(e);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
@@ -57,7 +135,7 @@ export function DepartmentHeadResolutionModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleFormSubmit} className="mt-4 space-y-4">
           {!isDirectResolution && grievance.submittedResolution && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
               <div className="flex items-center justify-between font-semibold text-emerald-950">
@@ -65,7 +143,7 @@ export function DepartmentHeadResolutionModal({
                   Assigned Staff Findings:{" "}
                   {grievance.submittedResolution.staffName}
                 </span>
-                <span className="text-2.75 font-normal text-slate-500">
+                <span className="text-[11px] font-normal text-slate-500">
                   {grievance.submittedResolution.submittedAt}
                 </span>
               </div>
@@ -91,7 +169,7 @@ export function DepartmentHeadResolutionModal({
                   }`}
                 >
                   ✅ Approve & Clear Escalation
-                  <div className="text-2.5 font-normal text-slate-500 mt-0.5">
+                  <div className="text-[10px] font-normal text-slate-500 mt-0.5">
                     Clear escalation flag & mark grievance as CLOSED
                   </div>
                 </button>
@@ -106,7 +184,7 @@ export function DepartmentHeadResolutionModal({
                   }`}
                 >
                   🔄 Request Clarification
-                  <div className="text-2.5 font-normal text-slate-500 mt-0.5">
+                  <div className="text-[10px] font-normal text-slate-500 mt-0.5">
                     Return to assigned staff member for revision
                   </div>
                 </button>
@@ -137,9 +215,41 @@ export function DepartmentHeadResolutionModal({
                     ? "e.g. Resolution verified and sanctioned. All compliance requirements fulfilled."
                     : "e.g. Please verify additional bank annexures before final submission."
               }
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+              className={`w-full rounded-xl border p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:outline-hidden transition ${
+                feedback.length > 0 && !isFeedbackValid
+                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              }`}
               required={!isDirectResolution}
             />
+            {(!isDirectResolution || feedback.length > 0) && (
+              <div className="flex items-center justify-between text-[11px] mt-1">
+                <span
+                  className={
+                    feedback.length > 0 && !isFeedbackValid
+                      ? "text-amber-700 font-medium"
+                      : "text-slate-500"
+                  }
+                >
+                  {feedback.length === 0
+                    ? "Minimum 15 characters required. Cannot be only numbers."
+                    : feedback.trim().length < 15
+                      ? `Minimum 15 characters required (${15 - feedback.trim().length} more needed)`
+                      : !hasFeedbackLetters || isFeedbackOnlyDigits
+                        ? "Must contain letters/words (cannot be only numbers)"
+                        : "✓ Valid format"}
+                </span>
+                <span
+                  className={
+                    isFeedbackValid
+                      ? "text-emerald-700 font-semibold"
+                      : "text-slate-400"
+                  }
+                >
+                  {feedback.length} chars
+                </span>
+              </div>
+            )}
           </div>
 
           {isDirectResolution && (
@@ -149,32 +259,97 @@ export function DepartmentHeadResolutionModal({
                   htmlFor="direct-findings"
                   className="block text-xs font-semibold text-slate-800 mb-1.5"
                 >
-                  Findings / Investigation Details
+                  Findings / Investigation Details{" "}
+                  <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   id="direct-findings"
                   name="findings"
                   rows={3}
+                  value={directFindings}
+                  onChange={(e) => setDirectFindings(e.target.value)}
                   placeholder="e.g. Re-evaluated the investigation findings and documents provided by the employee..."
-                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  className={`w-full rounded-xl border p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:outline-hidden transition ${
+                    directFindings.length > 0 && !isFindingsValid
+                      ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                      : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  }`}
                   required
                 />
+                <div className="flex items-center justify-between text-[11px] mt-1">
+                  <span
+                    className={
+                      directFindings.length > 0 && !isFindingsValid
+                        ? "text-amber-700 font-medium"
+                        : "text-slate-500"
+                    }
+                  >
+                    {directFindings.length === 0
+                      ? "Minimum 20 characters required. Cannot be only numbers."
+                      : directFindings.trim().length < 20
+                        ? `Minimum 20 characters required (${20 - directFindings.trim().length} more needed)`
+                        : !hasFindingsLetters || isFindingsOnlyDigits
+                          ? "Must contain letters/words (cannot be only numbers)"
+                          : "✓ Valid format"}
+                  </span>
+                  <span
+                    className={
+                      isFindingsValid
+                        ? "text-emerald-700 font-semibold"
+                        : "text-slate-400"
+                    }
+                  >
+                    {directFindings.length} chars
+                  </span>
+                </div>
               </div>
               <div>
                 <label
                   htmlFor="direct-action"
                   className="block text-xs font-semibold text-slate-800 mb-1.5"
                 >
-                  Action Taken
+                  Action Taken <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   id="direct-action"
                   name="actionTaken"
                   rows={3}
+                  value={directActionTaken}
+                  onChange={(e) => setDirectActionTaken(e.target.value)}
                   placeholder="e.g. Approved the requested change and updated records."
-                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:outline-hidden"
+                  className={`w-full rounded-xl border p-3 text-xs font-normal text-slate-900 placeholder:text-slate-400 focus:outline-hidden transition ${
+                    directActionTaken.length > 0 && !isActionTakenValid
+                      ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                      : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                  }`}
                   required
                 />
+                <div className="flex items-center justify-between text-[11px] mt-1">
+                  <span
+                    className={
+                      directActionTaken.length > 0 && !isActionTakenValid
+                        ? "text-amber-700 font-medium"
+                        : "text-slate-500"
+                    }
+                  >
+                    {directActionTaken.length === 0
+                      ? "Minimum 20 characters required. Cannot be only numbers."
+                      : directActionTaken.trim().length < 20
+                        ? `Minimum 20 characters required (${20 - directActionTaken.trim().length} more needed)`
+                        : !hasActionTakenLetters || isActionTakenOnlyDigits
+                          ? "Must contain letters/words (cannot be only numbers)"
+                          : "✓ Valid format"}
+                  </span>
+                  <span
+                    className={
+                      isActionTakenValid
+                        ? "text-emerald-700 font-semibold"
+                        : "text-slate-400"
+                    }
+                  >
+                    {directActionTaken.length} chars
+                  </span>
+                </div>
               </div>
             </>
           )}

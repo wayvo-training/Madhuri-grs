@@ -47,6 +47,75 @@ export function ResolutionForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // Validation checks for resolution fields
+  const isProblemSummaryOnlyDigits = /^\d+$/.test(
+    problemSummary.trim().replace(/\s+/g, ""),
+  );
+  const hasProblemSummaryLetters = /[a-zA-Z]/.test(problemSummary.trim());
+  const isProblemSummaryLengthValid = problemSummary.trim().length >= 20;
+  const isProblemSummaryValid =
+    isProblemSummaryLengthValid &&
+    hasProblemSummaryLetters &&
+    !isProblemSummaryOnlyDigits;
+
+  const isFindingsOnlyDigits = /^\d+$/.test(
+    findings.trim().replace(/\s+/g, ""),
+  );
+  const hasFindingsLetters = /[a-zA-Z]/.test(findings.trim());
+  const isFindingsLengthValid = findings.trim().length >= 20;
+  const isFindingsValid =
+    isFindingsLengthValid && hasFindingsLetters && !isFindingsOnlyDigits;
+
+  const isActionTakenOnlyDigits = /^\d+$/.test(
+    actionTaken.trim().replace(/\s+/g, ""),
+  );
+  const hasActionTakenLetters = /[a-zA-Z]/.test(actionTaken.trim());
+  const isActionTakenLengthValid = actionTaken.trim().length >= 20;
+  const isActionTakenValid =
+    isActionTakenLengthValid &&
+    hasActionTakenLetters &&
+    !isActionTakenOnlyDigits;
+
+  const isOutcomeOnlyDigits = /^\d+$/.test(outcome.trim().replace(/\s+/g, ""));
+  const hasOutcomeLetters = /[a-zA-Z]/.test(outcome.trim());
+  const isOutcomeLengthValid = outcome.trim().length >= 15;
+  const isOutcomeValid =
+    isOutcomeLengthValid && hasOutcomeLetters && !isOutcomeOnlyDigits;
+
+  const isFormValid =
+    isProblemSummaryValid &&
+    isFindingsValid &&
+    isActionTakenValid &&
+    isOutcomeValid;
+
+  const getValidationError = (): string | null => {
+    if (!problemSummary.trim()) return "Problem summary is required.";
+    if (!isProblemSummaryLengthValid)
+      return `Problem summary must be at least 20 characters (currently ${problemSummary.trim().length}).`;
+    if (!hasProblemSummaryLetters || isProblemSummaryOnlyDigits)
+      return "Problem summary must contain letters/words and cannot consist only of digits/numbers.";
+
+    if (!findings.trim()) return "Investigation findings are required.";
+    if (!isFindingsLengthValid)
+      return `Investigation findings must be at least 20 characters (currently ${findings.trim().length}).`;
+    if (!hasFindingsLetters || isFindingsOnlyDigits)
+      return "Investigation findings must contain letters/words and cannot consist only of digits/numbers.";
+
+    if (!actionTaken.trim()) return "Corrective action taken is required.";
+    if (!isActionTakenLengthValid)
+      return `Corrective action taken must be at least 20 characters (currently ${actionTaken.trim().length}).`;
+    if (!hasActionTakenLetters || isActionTakenOnlyDigits)
+      return "Corrective action taken must contain letters/words and cannot consist only of digits/numbers.";
+
+    if (!outcome.trim()) return "Proposed settlement / outcome is required.";
+    if (!isOutcomeLengthValid)
+      return `Proposed settlement / outcome must be at least 15 characters (currently ${outcome.trim().length}).`;
+    if (!hasOutcomeLetters || isOutcomeOnlyDigits)
+      return "Proposed settlement / outcome must contain letters/words and cannot consist only of digits/numbers.";
+
+    return null;
+  };
+
   useEffect(() => {
     if (isOpen && grievance.id) {
       const saved = localStorage.getItem(`draft_resolution_${grievance.id}`);
@@ -86,13 +155,10 @@ export function ResolutionForm({
       return;
     }
 
-    if (
-      !problemSummary.trim() ||
-      !findings.trim() ||
-      !actionTaken.trim() ||
-      !outcome.trim()
-    ) {
-      setErrorMsg("Please complete all required fields before submitting.");
+    const validationError = getValidationError();
+    if (validationError) {
+      setErrorMsg(validationError);
+      toast.error(validationError);
       return;
     }
 
@@ -279,9 +345,39 @@ export function ResolutionForm({
               required
               value={problemSummary}
               onChange={(e) => setProblemSummary(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
+                problemSummary.length > 0 && !isProblemSummaryValid
+                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              }`}
               placeholder="Concise overview of the issue investigated"
             />
+            <div className="flex items-center justify-between text-[11px]">
+              <span
+                className={
+                  problemSummary.length > 0 && !isProblemSummaryValid
+                    ? "text-amber-700 font-medium"
+                    : "text-slate-500"
+                }
+              >
+                {problemSummary.length === 0
+                  ? "Minimum 20 characters required. Cannot be only numbers."
+                  : problemSummary.trim().length < 20
+                    ? `Minimum 20 characters required (${20 - problemSummary.trim().length} more needed)`
+                    : !hasProblemSummaryLetters || isProblemSummaryOnlyDigits
+                      ? "Must contain letters/words (cannot be only numbers)"
+                      : "✓ Valid format"}
+              </span>
+              <span
+                className={
+                  isProblemSummaryValid
+                    ? "text-emerald-700 font-semibold"
+                    : "text-slate-400"
+                }
+              >
+                {problemSummary.length} chars
+              </span>
+            </div>
           </div>
 
           {/* Investigation Findings */}
@@ -298,9 +394,39 @@ export function ResolutionForm({
               required
               value={findings}
               onChange={(e) => setFindings(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 leading-relaxed font-sans"
+              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 leading-relaxed font-sans transition focus:outline-hidden ${
+                findings.length > 0 && !isFindingsValid
+                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              }`}
               placeholder="Detail your findings, interviews conducted, policies referenced, or records verified..."
             />
+            <div className="flex items-center justify-between text-[11px]">
+              <span
+                className={
+                  findings.length > 0 && !isFindingsValid
+                    ? "text-amber-700 font-medium"
+                    : "text-slate-500"
+                }
+              >
+                {findings.length === 0
+                  ? "Minimum 20 characters required. Cannot be only numbers."
+                  : findings.trim().length < 20
+                    ? `Minimum 20 characters required (${20 - findings.trim().length} more needed)`
+                    : !hasFindingsLetters || isFindingsOnlyDigits
+                      ? "Must contain letters/words (cannot be only numbers)"
+                      : "✓ Valid format"}
+              </span>
+              <span
+                className={
+                  isFindingsValid
+                    ? "text-emerald-700 font-semibold"
+                    : "text-slate-400"
+                }
+              >
+                {findings.length} chars
+              </span>
+            </div>
           </div>
 
           {/* Action Taken */}
@@ -317,9 +443,39 @@ export function ResolutionForm({
               required
               value={actionTaken}
               onChange={(e) => setActionTaken(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 leading-relaxed font-sans"
+              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 leading-relaxed font-sans transition focus:outline-hidden ${
+                actionTaken.length > 0 && !isActionTakenValid
+                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              }`}
               placeholder="Specific remedies executed (e.g. system adjustments, policy explanation, corrective guidance)..."
             />
+            <div className="flex items-center justify-between text-[11px]">
+              <span
+                className={
+                  actionTaken.length > 0 && !isActionTakenValid
+                    ? "text-amber-700 font-medium"
+                    : "text-slate-500"
+                }
+              >
+                {actionTaken.length === 0
+                  ? "Minimum 20 characters required. Cannot be only numbers."
+                  : actionTaken.trim().length < 20
+                    ? `Minimum 20 characters required (${20 - actionTaken.trim().length} more needed)`
+                    : !hasActionTakenLetters || isActionTakenOnlyDigits
+                      ? "Must contain letters/words (cannot be only numbers)"
+                      : "✓ Valid format"}
+              </span>
+              <span
+                className={
+                  isActionTakenValid
+                    ? "text-emerald-700 font-semibold"
+                    : "text-slate-400"
+                }
+              >
+                {actionTaken.length} chars
+              </span>
+            </div>
           </div>
 
           {/* Final Outcome */}
@@ -337,9 +493,39 @@ export function ResolutionForm({
               required
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
+                outcome.length > 0 && !isOutcomeValid
+                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+              }`}
               placeholder="e.g. Grievance validated; leave ledger reconciled and updated"
             />
+            <div className="flex items-center justify-between text-[11px]">
+              <span
+                className={
+                  outcome.length > 0 && !isOutcomeValid
+                    ? "text-amber-700 font-medium"
+                    : "text-slate-500"
+                }
+              >
+                {outcome.length === 0
+                  ? "Minimum 15 characters required. Cannot be only numbers."
+                  : outcome.trim().length < 15
+                    ? `Minimum 15 characters required (${15 - outcome.trim().length} more needed)`
+                    : !hasOutcomeLetters || isOutcomeOnlyDigits
+                      ? "Must contain letters/words (cannot be only numbers)"
+                      : "✓ Valid format"}
+              </span>
+              <span
+                className={
+                  isOutcomeValid
+                    ? "text-emerald-700 font-semibold"
+                    : "text-slate-400"
+                }
+              >
+                {outcome.length} chars
+              </span>
+            </div>
           </div>
 
           {/* Supporting Evidence / Notes */}
@@ -473,28 +659,16 @@ export function ResolutionForm({
           <button
             type="button"
             onClick={() => {
-              if (
-                !problemSummary.trim() ||
-                !findings.trim() ||
-                !actionTaken.trim() ||
-                !outcome.trim()
-              ) {
-                setErrorMsg(
-                  "Please complete all required fields before submitting.",
-                );
-                toast.error("Please fill in all mandatory resolution fields.");
+              const validationError = getValidationError();
+              if (validationError) {
+                setErrorMsg(validationError);
+                toast.error(validationError);
                 return;
               }
               setErrorMsg(null);
               setShowConfirmModal(true);
             }}
-            disabled={
-              isSubmitting ||
-              !problemSummary.trim() ||
-              !findings.trim() ||
-              !actionTaken.trim() ||
-              !outcome.trim()
-            }
+            disabled={isSubmitting || !isFormValid}
             className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
               grievance.isPrimaryOwner === false
                 ? "bg-amber-600 hover:bg-amber-700"

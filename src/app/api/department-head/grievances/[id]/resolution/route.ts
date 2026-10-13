@@ -175,6 +175,91 @@ export async function POST(
       }
     }
 
+    const cleanFeedback = typeof feedback === "string" ? feedback.trim() : "";
+    const cleanFindings = typeof findings === "string" ? findings.trim() : "";
+    const cleanAction =
+      typeof actionTaken === "string" ? actionTaken.trim() : "";
+
+    if (
+      decision === "CLARIFY" ||
+      (!isDirectResolution && cleanFeedback.length > 0)
+    ) {
+      if (cleanFeedback.length < 15) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Feedback remarks must be at least 15 characters (currently ${cleanFeedback.length}).`,
+          },
+          { status: 400 },
+        );
+      }
+      if (
+        !/[a-zA-Z]/.test(cleanFeedback) ||
+        /^\d+$/.test(cleanFeedback.replace(/\s+/g, ""))
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Feedback remarks must contain letters/words and cannot consist only of digits or numbers.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (isDirectResolution) {
+      if (cleanFindings) {
+        if (cleanFindings.length < 20) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Findings must be at least 20 characters (currently ${cleanFindings.length}).`,
+            },
+            { status: 400 },
+          );
+        }
+        if (
+          !/[a-zA-Z]/.test(cleanFindings) ||
+          /^\d+$/.test(cleanFindings.replace(/\s+/g, ""))
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Findings must contain letters/words and cannot consist only of digits or numbers.",
+            },
+            { status: 400 },
+          );
+        }
+      }
+
+      if (cleanAction) {
+        if (cleanAction.length < 20) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Action Taken must be at least 20 characters (currently ${cleanAction.length}).`,
+            },
+            { status: 400 },
+          );
+        }
+        if (
+          !/[a-zA-Z]/.test(cleanAction) ||
+          /^\d+$/.test(cleanAction.replace(/\s+/g, ""))
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Action Taken must contain letters/words and cannot consist only of digits or numbers.",
+            },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const isApproved = decision === "APPROVE";
     const currentAssignedStaff =
       grievance.assignments[0]?.users_assignments_staff_idTousers;

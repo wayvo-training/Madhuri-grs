@@ -83,12 +83,25 @@ export function SubmitGrievanceForm({
   >(null);
   const [copied, setCopied] = useState(false);
 
-  // Check if all Step 1 required fields are filled
+  // Validation checks for Title and Description
+  const isTitleOnlyDigits = /^\d+$/.test(title.trim().replace(/\s+/g, ""));
+  const hasTitleLetters = /[a-zA-Z]/.test(title.trim());
+  const isTitleLengthValid = title.trim().length >= 20;
+  const isTitleValid =
+    isTitleLengthValid && hasTitleLetters && !isTitleOnlyDigits;
+
+  const isDescOnlyDigits = /^\d+$/.test(description.trim().replace(/\s+/g, ""));
+  const hasDescLetters = /[a-zA-Z]/.test(description.trim());
+  const isDescLengthValid = description.trim().length >= 100;
+  const isDescriptionValid =
+    isDescLengthValid && hasDescLetters && !isDescOnlyDigits;
+
+  // Check if all Step 1 required fields are filled and valid
   const isStep1Complete =
     Boolean(categoryId) &&
     Boolean(subcategoryId) &&
-    title.trim().length > 0 &&
-    description.trim().length > 0;
+    isTitleValid &&
+    isDescriptionValid;
 
   // Subcategories filtered by selected category
   const filteredSubcategories = subcategories.filter(
@@ -123,12 +136,36 @@ export function SubmitGrievanceForm({
   };
 
   const handleNextFromStep1 = () => {
-    if (!isStep1Complete) {
-      if (!categoryId) toast.error("Please select a category.");
-      else if (!subcategoryId) toast.error("Please select a subcategory.");
-      else if (!title.trim()) toast.error("Please enter a title.");
-      else if (!description.trim())
-        toast.error("Please provide a description.");
+    if (!categoryId) {
+      toast.error("Please select a category.");
+      return;
+    }
+    if (!subcategoryId) {
+      toast.error("Please select a subcategory.");
+      return;
+    }
+    if (title.trim().length < 20) {
+      toast.error(
+        `Title must be at least 20 characters (currently ${title.trim().length}).`,
+      );
+      return;
+    }
+    if (!hasTitleLetters || isTitleOnlyDigits) {
+      toast.error(
+        "Title must contain letters/words and cannot consist only of digits/numbers.",
+      );
+      return;
+    }
+    if (description.trim().length < 100) {
+      toast.error(
+        `Description must be at least 100 characters (currently ${description.trim().length}).`,
+      );
+      return;
+    }
+    if (!hasDescLetters || isDescOnlyDigits) {
+      toast.error(
+        "Description must contain letters/words and cannot consist only of digits/numbers.",
+      );
       return;
     }
     setCurrentStep(2);
@@ -137,7 +174,20 @@ export function SubmitGrievanceForm({
   // Triggers Confirmation Popup
   const handleOpenConfirmModal = () => {
     if (!isStep1Complete) {
-      toast.error("Please complete all required fields in Grievance Details.");
+      if (!categoryId) toast.error("Please select a category.");
+      else if (!subcategoryId) toast.error("Please select a subcategory.");
+      else if (title.trim().length < 20)
+        toast.error("Title must be at least 20 characters.");
+      else if (!hasTitleLetters || isTitleOnlyDigits)
+        toast.error("Title cannot be purely digits.");
+      else if (description.trim().length < 100)
+        toast.error("Description must be at least 100 characters.");
+      else if (!hasDescLetters || isDescOnlyDigits)
+        toast.error("Description cannot be purely digits.");
+      else
+        toast.error(
+          "Please complete all required fields in Grievance Details.",
+        );
       setCurrentStep(1);
       return;
     }
@@ -417,13 +467,40 @@ export function SubmitGrievanceForm({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       maxLength={100}
-                      placeholder="Enter a brief title for your grievance"
+                      placeholder="Enter a brief title (minimum 20 characters, letters required)"
                       required
-                      className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition"
+                      className={`h-11 w-full rounded-xl border bg-white pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition ${
+                        title.length > 0 && !isTitleValid
+                          ? "border-amber-400 focus:border-amber-500 focus:ring-amber-100"
+                          : "border-slate-200 focus:border-[#0F766E] focus:ring-teal-100"
+                      }`}
                     />
                   </div>
-                  <div className="flex justify-end text-2.75 text-slate-400">
-                    {title.length}/100
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span
+                      className={
+                        title.length > 0 && !isTitleValid
+                          ? "text-amber-700 font-medium"
+                          : "text-slate-500"
+                      }
+                    >
+                      {title.length === 0
+                        ? "Minimum 20 characters required. Cannot be only numbers."
+                        : title.trim().length < 20
+                          ? `Minimum 20 characters required (${20 - title.trim().length} more needed)`
+                          : !hasTitleLetters || isTitleOnlyDigits
+                            ? "Must contain letters/words (cannot be only numbers)"
+                            : "✓ Title length and format valid"}
+                    </span>
+                    <span
+                      className={
+                        isTitleValid
+                          ? "text-emerald-700 font-semibold"
+                          : "text-slate-400"
+                      }
+                    >
+                      {title.length}/100
+                    </span>
                   </div>
                 </div>
 
@@ -443,18 +520,42 @@ export function SubmitGrievanceForm({
                       id="description"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      rows={4}
+                      rows={5}
                       maxLength={1000}
-                      placeholder="Provide a detailed description of your concern..."
+                      placeholder="Provide a detailed description of your concern (minimum 100 characters, letters required)..."
                       required
-                      className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 pt-3 pb-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition resize-none"
+                      className={`w-full rounded-xl border bg-white pl-10 pr-4 pt-3 pb-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition resize-none ${
+                        description.length > 0 && !isDescriptionValid
+                          ? "border-amber-400 focus:border-amber-500 focus:ring-amber-100"
+                          : "border-slate-200 focus:border-[#0F766E] focus:ring-teal-100"
+                      }`}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-2.75 text-slate-400">
-                    <span>
-                      Be specific about dates, people involved, and details.
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span
+                      className={
+                        description.length > 0 && !isDescriptionValid
+                          ? "text-amber-700 font-medium"
+                          : "text-slate-500"
+                      }
+                    >
+                      {description.length === 0
+                        ? "Minimum 100 characters required. Cannot be only numbers."
+                        : description.trim().length < 100
+                          ? `Minimum 100 characters required (${100 - description.trim().length} more needed)`
+                          : !hasDescLetters || isDescOnlyDigits
+                            ? "Must contain letters/words (cannot be only numbers)"
+                            : "✓ Description length and format valid"}
                     </span>
-                    <span>{description.length}/1000</span>
+                    <span
+                      className={
+                        isDescriptionValid
+                          ? "text-emerald-700 font-semibold"
+                          : "text-slate-400"
+                      }
+                    >
+                      {description.length}/1000
+                    </span>
                   </div>
                 </div>
               </div>

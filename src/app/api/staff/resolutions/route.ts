@@ -55,6 +55,103 @@ export async function POST(request: Request) {
       );
     }
 
+    const cleanSummary = problemSummary.trim();
+    const cleanFindings = findings.trim();
+    const cleanAction = actionTaken.trim();
+    const cleanOutcome = outcome.trim();
+
+    if (cleanSummary.length < 20) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Problem Summary must be at least 20 characters (currently ${cleanSummary.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      !/[a-zA-Z]/.test(cleanSummary) ||
+      /^\d+$/.test(cleanSummary.replace(/\s+/g, ""))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Problem Summary must contain letters/words and cannot consist only of digits or numbers.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (cleanFindings.length < 20) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Investigation Findings must be at least 20 characters (currently ${cleanFindings.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      !/[a-zA-Z]/.test(cleanFindings) ||
+      /^\d+$/.test(cleanFindings.replace(/\s+/g, ""))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Investigation Findings must contain letters/words and cannot consist only of digits or numbers.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (cleanAction.length < 20) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Action Taken must be at least 20 characters (currently ${cleanAction.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      !/[a-zA-Z]/.test(cleanAction) ||
+      /^\d+$/.test(cleanAction.replace(/\s+/g, ""))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Action Taken must contain letters/words and cannot consist only of digits or numbers.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (cleanOutcome.length < 15) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Proposed Outcome must be at least 15 characters (currently ${cleanOutcome.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      !/[a-zA-Z]/.test(cleanOutcome) ||
+      /^\d+$/.test(cleanOutcome.replace(/\s+/g, ""))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Proposed Outcome must contain letters/words and cannot consist only of digits or numbers.",
+        },
+        { status: 400 },
+      );
+    }
+
     const gId = BigInt(grievanceId);
 
     // Verify assignment to this staff member

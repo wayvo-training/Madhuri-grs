@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const subcategoryId = formData.get("subcategoryId") as string;
     const titleFromForm = (formData.get("title") as string)?.trim();
     const descriptionFromForm = (formData.get("description") as string)?.trim();
-    const userPriority = (formData.get("priority") as string)?.trim();
+    const _userPriority = (formData.get("priority") as string)?.trim();
     const problemStatement =
       descriptionFromForm || (formData.get("problemStatement") as string) || "";
     const title =
@@ -30,16 +30,55 @@ export async function POST(request: Request) {
         : problemStatement);
     const files = formData.getAll("files") as File[];
 
-    if (
-      !categoryId ||
-      !subcategoryId ||
-      !title ||
-      !problemStatement ||
-      problemStatement.trim().length < 5
-    ) {
+    const cleanTitle = title.trim();
+    const cleanDesc = problemStatement.trim();
+
+    const isTitleOnlyDigits = /^\d+$/.test(cleanTitle.replace(/\s+/g, ""));
+    const hasTitleLetters = /[a-zA-Z]/.test(cleanTitle);
+
+    const isDescOnlyDigits = /^\d+$/.test(cleanDesc.replace(/\s+/g, ""));
+    const hasDescLetters = /[a-zA-Z]/.test(cleanDesc);
+
+    if (!categoryId || !subcategoryId) {
+      return NextResponse.json(
+        { error: "Category and Subcategory are mandatory." },
+        { status: 400 },
+      );
+    }
+
+    if (cleanTitle.length < 20) {
       return NextResponse.json(
         {
-          error: "Category, Subcategory, Title, and Description are mandatory.",
+          error: `Title must be at least 20 characters long (currently ${cleanTitle.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!hasTitleLetters || isTitleOnlyDigits) {
+      return NextResponse.json(
+        {
+          error:
+            "Title must contain letters/words and cannot consist only of digits or numbers.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (cleanDesc.length < 100) {
+      return NextResponse.json(
+        {
+          error: `Description must be at least 100 characters long (currently ${cleanDesc.length}).`,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!hasDescLetters || isDescOnlyDigits) {
+      return NextResponse.json(
+        {
+          error:
+            "Description must contain letters/words and cannot consist only of digits or numbers.",
         },
         { status: 400 },
       );
@@ -327,18 +366,18 @@ export async function POST(request: Request) {
         include: { departments: true },
       });
 
-      const participatingDeptProfiles = participatingDepts.map((gd) => ({
+      const _participatingDeptProfiles = participatingDepts.map((gd) => ({
         department_id: gd.department_id,
         department_name: gd.departments.department_name,
         involvement_type: gd.involvement_type,
       }));
 
-      const categoryRec = categoryId
+      const _categoryRec = categoryId
         ? await prisma.categories.findUnique({
             where: { category_id: BigInt(categoryId) },
           })
         : null;
-      const subcategoryRec = subcategoryId
+      const _subcategoryRec = subcategoryId
         ? await prisma.subcategories.findUnique({
             where: { subcategory_id: BigInt(subcategoryId) },
           })
