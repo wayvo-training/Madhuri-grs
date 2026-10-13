@@ -33,6 +33,23 @@ export function CaseProgressTab({
   const [timelineSort] = useState<"desc" | "asc">("desc");
 
   const st = currentGrievance.status;
+  const isClosedOrResolved = st === "CLOSED" || st === "RESOLVED";
+
+  const isResolutionAuthorityAssumed =
+    !isClosedOrResolved &&
+    Boolean(
+      currentGrievance.hodIntervention?.isResolutionAuthority ||
+        caseProgressData?.assignment?.isResolutionAuthority,
+    );
+
+  const isResolutionSubmittedByHead = Boolean(
+    (st === "UNDER_REVIEW" || isClosedOrResolved) &&
+      (currentGrievance.submittedResolution?.submittedByRole ===
+        "DEPARTMENT_HEAD" ||
+        (isResolutionAuthorityAssumed &&
+          (currentGrievance.submittedResolution || st === "UNDER_REVIEW"))),
+  );
+
   const isAssigned =
     !!currentGrievance.assignedStaffName ||
     !!caseProgressData?.assignment?.isAssigned;
@@ -71,7 +88,11 @@ export function CaseProgressTab({
       : st === "CLOSED"
         ? "Grievance Closed"
         : st === "UNDER_REVIEW"
-          ? "Resolution Submitted — Pending HOD Approval"
+          ? isResolutionAuthorityAssumed ||
+            currentGrievance.submittedResolution?.submittedByRole ===
+              "DEPARTMENT_HEAD"
+            ? "Resolution Submitted — Under Employee Review"
+            : "Resolution Submitted — Pending HOD Approval"
           : st === "ESCALATED"
             ? isCaseReopened
               ? "Reopened — Escalated for Intervention"
@@ -202,14 +223,6 @@ export function CaseProgressTab({
     null;
   if (officerName === "Unassigned") officerName = null;
 
-  const isClosedOrResolved = st === "CLOSED" || st === "RESOLVED";
-
-  const isResolutionAuthorityAssumed =
-    !isClosedOrResolved &&
-    Boolean(
-      currentGrievance.hodIntervention?.isResolutionAuthority ||
-        caseProgressData?.assignment?.isResolutionAuthority,
-    );
   const headResolutionAuthorityName =
     currentGrievance.hodIntervention?.resolutionAuthorityName ||
     caseProgressData?.assignment?.resolutionAuthorityName ||
@@ -419,36 +432,103 @@ export function CaseProgressTab({
                 caseProgressData?.departmentsInvolved ||
                 currentGrievance?.departmentsInvolved ||
                 []
-              ).map((dept) => (
-                <div key={dept.id} className="text-xs space-y-1">
-                  <div className="flex items-center justify-between font-semibold text-slate-900">
-                    <span>{dept.departmentName}</span>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase ${
-                        dept.involvementType === "PRIMARY"
-                          ? "bg-teal-100 text-teal-800"
-                          : dept.involvementType === "EQUAL"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      {dept.involvementType}
-                    </span>
+              ).map((dept) => {
+                const isPrimary = dept.involvementType === "PRIMARY";
+                const isHeadAuthorityForThisDept =
+                  isPrimary && isResolutionAuthorityAssumed;
+
+                return (
+                  <div
+                    key={dept.id}
+                    className="text-xs space-y-1.5 rounded-lg border border-slate-100 bg-slate-50/60 p-2.5"
+                  >
+                    <div className="flex items-center justify-between font-semibold text-slate-900 gap-1 pb-1.5 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        <span className="truncate">{dept.departmentName}</span>
+                        {isHeadAuthorityForThisDept && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200 shrink-0">
+                            Head Authority
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
+                          dept.involvementType === "PRIMARY"
+                            ? "bg-teal-100 text-teal-800"
+                            : dept.involvementType === "EQUAL"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {dept.involvementType}
+                      </span>
+                    </div>
+
+                    {isHeadAuthorityForThisDept ? (
+                      <div className="space-y-1 pt-0.5">
+                        <div className="flex items-baseline justify-between gap-1 text-[11px]">
+                          <span className="text-slate-500 font-medium shrink-0">
+                            Resolution Lead:
+                          </span>
+                          <span className="font-semibold text-slate-900 text-right truncate">
+                            {headResolutionAuthorityName} (Dept Head)
+                          </span>
+                        </div>
+                        {dept.assignedStaff && (
+                          <div className="flex items-baseline justify-between gap-1 text-[11px]">
+                            <span className="text-slate-500 font-medium shrink-0">
+                              Investigating Staff:
+                            </span>
+                            <span className="font-medium text-slate-700 text-right truncate">
+                              {dept.assignedStaff}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
+                        <span className="text-slate-500 font-medium shrink-0">
+                          Assigned Staff:
+                        </span>
+                        <span className="font-medium text-slate-700 text-right truncate">
+                          {dept.assignedStaff || "Unassigned"}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100">
+                      <span className="text-slate-500 text-[11px] font-medium shrink-0">
+                        Status:
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold text-right leading-tight ${
+                          dept.status === "COMPLETED" &&
+                          isPrimary &&
+                          isHeadAuthorityForThisDept
+                            ? isResolutionSubmittedByHead
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-teal-50 text-[#0F766E] border border-teal-200"
+                            : dept.status === "COMPLETED"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : dept.status === "BLOCKED"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}
+                      >
+                        {dept.status === "COMPLETED" &&
+                        isPrimary &&
+                        isHeadAuthorityForThisDept
+                          ? isResolutionSubmittedByHead
+                            ? "Resolution Submitted · Under Citizen Review"
+                            : "Findings Done · Pending Head Resolution"
+                          : dept.status === "COMPLETED"
+                            ? "Findings Submitted"
+                            : dept.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-slate-500">
-                    <span>Staff:</span>
-                    <span className="font-medium text-slate-700">
-                      {dept.assignedStaff || "Unassigned"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-500">
-                    <span>Status:</span>
-                    <span className="font-medium text-slate-700">
-                      {dept.status.replace(/_/g, " ")}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : isResolutionAuthorityAssumed ? (
@@ -490,8 +570,9 @@ export function CaseProgressTab({
                   </div>
                 )}
                 <div className="text-[11px] text-teal-800 font-normal pt-0.5">
-                  Department Head is now responsible for reviewing the
-                  investigation and submitting the final resolution.
+                  {isResolutionSubmittedByHead
+                    ? "Department Head has submitted the official resolution. The grievance is currently under review by the employee."
+                    : "Department Head is now responsible for reviewing the investigation and submitting the final resolution."}
                 </div>
               </div>
             </div>
@@ -577,16 +658,20 @@ export function CaseProgressTab({
                       ? "Staff assignment is on hold while prerequisite findings are being prepared."
                       : "No staff member currently assigned to this grievance."}
                 </p>
-                {!isClosedOrResolved && !isBlocked && (
-                  <button
-                    type="button"
-                    onClick={() => onAssignClick(currentGrievance)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    <span>Assign Staff Now</span>
-                  </button>
-                )}
+                {!isClosedOrResolved &&
+                  !isBlocked &&
+                  currentGrievance.status !== "COMPLETED" &&
+                  currentGrievance.status !== "UNDER_REVIEW" &&
+                  currentGrievance.myDepartmentStatus !== "COMPLETED" && (
+                    <button
+                      type="button"
+                      onClick={() => onAssignClick(currentGrievance)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      <span>Assign Staff Now</span>
+                    </button>
+                  )}
                 {isBlocked && (
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
                     <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />

@@ -13,6 +13,7 @@ import {
   canHeadProposeKnowledge,
   canHeadSubmitResolution,
   hasHeadResolutionAuthority,
+  isResolutionSubmittedByHead,
 } from "@/lib/department-head/filters";
 import type {
   CaseProgressData,
@@ -50,7 +51,7 @@ export function CaseInspectionFooter({
   hodEmail,
   onClose,
   onAssignClick,
-  onEscalateClick,
+  onEscalateClick: _onEscalateClick,
   onReviewResolutionClick,
   onProposeKbClick,
   onAddInternalNote,
@@ -120,6 +121,9 @@ export function CaseInspectionFooter({
           ) : null}
 
           {!isClosedOrResolved &&
+            currentGrievance.status !== "COMPLETED" &&
+            currentGrievance.status !== "UNDER_REVIEW" &&
+            currentGrievance.myDepartmentStatus !== "COMPLETED" &&
             !hasHeadResolutionAuthority(currentGrievance) && (
               <button
                 type="button"
@@ -135,8 +139,8 @@ export function CaseInspectionFooter({
               </button>
             )}
 
-          {canHeadSubmitResolution(currentGrievance) &&
-            (currentGrievance.isPrimaryDepartment !== false ? (
+          {canHeadSubmitResolution(currentGrievance) ? (
+            currentGrievance.isPrimaryDepartment !== false ? (
               <button
                 type="button"
                 onClick={() => onReviewResolutionClick(currentGrievance)}
@@ -159,7 +163,18 @@ export function CaseInspectionFooter({
                 <FileCheck2 className="h-3.5 w-3.5" />
                 <span>Submit Department Findings</span>
               </button>
-            ))}
+            )
+          ) : isResolutionSubmittedByHead(currentGrievance) ||
+            (currentGrievance.status === "UNDER_REVIEW" &&
+              (currentGrievance.submittedResolution?.submittedByRole ===
+                "DEPARTMENT_HEAD" ||
+                currentGrievance.submittedResolution?.submittedByRole ===
+                  "ADMIN")) ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 px-3.5 py-2 rounded-xl border border-teal-200">
+              <CheckCircle2 className="h-3.5 w-3.5 text-teal-600" />
+              Resolution Submitted · Awaiting Citizen Review
+            </span>
+          ) : null}
 
           {canHeadProposeKnowledge(currentGrievance) && onProposeKbClick && (
             <button

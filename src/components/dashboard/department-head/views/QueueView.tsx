@@ -3,13 +3,9 @@
 import {
   AlertCircle,
   BookOpen,
-  Check,
   CheckCircle2,
-  ChevronDown,
-  Clock,
   Eye,
   GitBranch,
-  RotateCcw,
   User,
   UserCheck,
   UserPlus,
@@ -87,29 +83,29 @@ export function QueueView({
   grievances,
   filteredGrievances,
   staffList,
-  selectedTab,
-  setSelectedTab,
-  searchQuery,
-  setSearchQuery,
-  priorityFilter,
-  setPriorityFilter,
-  staffFilter,
-  setStaffFilter,
-  statusFilter = "ALL",
-  setStatusFilter,
-  departmentFilter = "ALL",
-  setDepartmentFilter,
-  slaFilter = "ALL",
-  setSlaFilter,
-  categoryFilter = "ALL",
-  setCategoryFilter,
-  subCategoryFilter = "ALL",
-  setSubCategoryFilter,
-  availableDepartments = [],
-  selectedDeptId,
-  onDepartmentChange,
+  selectedTab: _selectedTab,
+  setSelectedTab: _setSelectedTab,
+  searchQuery: _searchQuery,
+  setSearchQuery: _setSearchQuery,
+  priorityFilter: _priorityFilter,
+  setPriorityFilter: _setPriorityFilter,
+  staffFilter: _staffFilter,
+  setStaffFilter: _setStaffFilter,
+  statusFilter: _statusFilter = "ALL",
+  setStatusFilter: _setStatusFilter,
+  departmentFilter: _departmentFilter = "ALL",
+  setDepartmentFilter: _setDepartmentFilter,
+  slaFilter: _slaFilter = "ALL",
+  setSlaFilter: _setSlaFilter,
+  categoryFilter: _categoryFilter = "ALL",
+  setCategoryFilter: _setCategoryFilter,
+  subCategoryFilter: _subCategoryFilter = "ALL",
+  setSubCategoryFilter: _setSubCategoryFilter,
+  availableDepartments: _availableDepartments = [],
+  selectedDeptId: _selectedDeptId,
+  onDepartmentChange: _onDepartmentChange,
   resetFilters,
-  metrics,
+  metrics: _metrics,
   onInspect,
   onAssign,
   onIntervene,
@@ -152,11 +148,12 @@ export function QueueView({
       return localFilteredGrievances;
 
     return [...localFilteredGrievances].sort((a, b) => {
-      let valA: any = a[sortState.field as keyof GrievanceItem] || "";
-      let valB: any = b[sortState.field as keyof GrievanceItem] || "";
+      const field = sortState.field as keyof GrievanceItem;
+      const rawA = a[field] ?? "";
+      const rawB = b[field] ?? "";
 
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
+      const valA = typeof rawA === "string" ? rawA.toLowerCase() : rawA;
+      const valB = typeof rawB === "string" ? rawB.toLowerCase() : rawB;
 
       if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
       if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
@@ -168,27 +165,6 @@ export function QueueView({
     const start = (currentPage - 1) * pageSize;
     return sortedGrievances.slice(start, start + pageSize);
   }, [sortedGrievances, currentPage, pageSize]);
-
-  const departmentOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of availableDepartments) {
-      if (d.name) {
-        map.set(d.name, d.name);
-      }
-    }
-    for (const g of grievances) {
-      if (g.collaboratingDepartments) {
-        for (const cd of g.collaboratingDepartments) {
-          if (cd) map.set(cd, cd);
-        }
-      }
-    }
-    const names = Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-    return [
-      { value: "ALL", label: "All Departments" },
-      ...names.map((name) => ({ value: name, label: name })),
-    ];
-  }, [availableDepartments, grievances]);
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -289,74 +265,6 @@ export function QueueView({
     setAdvancedConditions(conditions);
     setAdvancedMode(mode);
     setCurrentPage(1);
-  };
-
-  const handleClear = () => {
-    if (setDepartmentFilter) setDepartmentFilter("ALL");
-    setPriorityFilter("ALL");
-    if (setStatusFilter) setStatusFilter("ALL");
-    if (setSlaFilter) setSlaFilter("ALL");
-    if (setCategoryFilter) setCategoryFilter("ALL");
-    if (setSubCategoryFilter) setSubCategoryFilter("ALL");
-    setStaffFilter("ALL");
-    setSelectedTab("ALL");
-    setSearchQuery("");
-    setAdvancedConditions([]);
-    setAdvancedMode("AND");
-    resetFilters();
-    setCurrentPage(1);
-  };
-
-  // Metric counts for views
-  const counts = {
-    all: grievances.length,
-    exceptions:
-      metrics.exceptionsCount ??
-      grievances.filter(
-        (g) =>
-          (!g.assignedStaffId ||
-            g.status === "SUBMITTED" ||
-            g.isReopened ||
-            g.status === "REOPENED" ||
-            g.isCrossDepartment ||
-            g.slaStatus === "BREACHED") &&
-          g.status !== "CLOSED" &&
-          g.status !== "RESOLVED",
-      ).length,
-    inProgress:
-      metrics.inProgressCount ??
-      grievances.filter(
-        (g) => g.status === "IN_PROGRESS" || g.status === "ASSIGNED",
-      ).length,
-    slaRisk:
-      metrics.slaAtRiskCount ??
-      grievances.filter(
-        (g) =>
-          g.slaStatus === "AT_RISK" &&
-          g.status !== "ESCALATED" &&
-          !["CLOSED", "RESOLVED"].includes(g.status),
-      ).length,
-    slaCritical:
-      metrics.slaCriticalCount ??
-      grievances.filter(
-        (g) =>
-          (g.slaStatus === "BREACHED" || g.status === "ESCALATED") &&
-          !["CLOSED", "RESOLVED"].includes(g.status),
-      ).length,
-    reopened:
-      metrics.reopenedCount ??
-      grievances.filter(
-        (g) =>
-          (g.isReopened || g.status === "REOPENED") &&
-          !["CLOSED", "RESOLVED"].includes(g.status),
-      ).length,
-    escalated:
-      metrics.escalatedCount ??
-      grievances.filter((g) => g.status === "ESCALATED").length,
-    closed:
-      metrics.closedCount ??
-      grievances.filter((g) => ["CLOSED", "RESOLVED"].includes(g.status))
-        .length,
   };
 
   return (
@@ -504,12 +412,13 @@ export function QueueView({
                     </TableCell>
 
                     {/* 2. Title & Badges */}
-                    <TableCell className="py-3 px-3 align-top">
+                    <TableCell className="py-3 px-3 align-top max-w-xs">
                       <div className="space-y-1">
                         <button
                           type="button"
                           onClick={() => onInspect(item, "statement")}
-                          className="font-semibold text-sm text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block cursor-pointer"
+                          className="font-semibold text-sm text-slate-900 hover:text-emerald-900 transition text-left group-hover:text-emerald-950 block cursor-pointer truncate max-w-[280px]"
+                          title={item.title}
                         >
                           {item.title}
                         </button>
@@ -678,6 +587,9 @@ export function QueueView({
                           ...(!hasHeadResolutionAuthority(item) &&
                           item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
+                          item.status !== "COMPLETED" &&
+                          item.status !== "UNDER_REVIEW" &&
+                          item.myDepartmentStatus !== "COMPLETED" &&
                           item.status !== "ESCALATED" &&
                           item.slaStatus !== "BREACHED" &&
                           !item.assignedStaffName &&
@@ -694,6 +606,9 @@ export function QueueView({
                           ...(!hasHeadResolutionAuthority(item) &&
                           item.status !== "CLOSED" &&
                           item.status !== "RESOLVED" &&
+                          item.status !== "COMPLETED" &&
+                          item.status !== "UNDER_REVIEW" &&
+                          item.myDepartmentStatus !== "COMPLETED" &&
                           item.status !== "ESCALATED" &&
                           item.slaStatus !== "BREACHED" &&
                           (item.assignedStaffName || item.assignedStaffId)

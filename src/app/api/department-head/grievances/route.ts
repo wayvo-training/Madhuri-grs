@@ -748,14 +748,16 @@ export async function GET(request: Request) {
       if (myDeptRecord) {
         if (g.status === "CLOSED" || g.status === "RESOLVED") {
           resolvedStatus = g.status as GrievanceItem["status"];
+        } else if (g.status === "UNDER_REVIEW") {
+          resolvedStatus = "UNDER_REVIEW";
+        } else if (g.status === "REOPENED" || g.status === "REOPEN_REVIEW") {
+          resolvedStatus = g.status as GrievanceItem["status"];
         } else if (myDeptRecord.status === "COMPLETED") {
           resolvedStatus = "COMPLETED";
         } else if (myDeptRecord.status === "BLOCKED") {
           resolvedStatus = "BLOCKED";
         } else if (g.status === "ESCALATED") {
           resolvedStatus = "ESCALATED";
-        } else if (g.status === "UNDER_REVIEW") {
-          resolvedStatus = "UNDER_REVIEW";
         } else if (
           myDeptRecord.status === "PENDING_ASSIGNMENT" ||
           !myDeptAssignment

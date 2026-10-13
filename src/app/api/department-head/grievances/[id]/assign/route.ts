@@ -120,11 +120,17 @@ export async function POST(
       );
     }
 
-    if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
+    if (
+      grievance.status === "CLOSED" ||
+      grievance.status === "RESOLVED" ||
+      grievance.status === "COMPLETED" ||
+      grievance.status === "UNDER_REVIEW" ||
+      grievanceDept.status === "COMPLETED"
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: `Cannot assign or change assignment for a ${grievance.status.toLowerCase()} grievance.`,
+          message: `Cannot assign or change assignment for a ${grievance.status.toLowerCase().replace(/_/g, " ")} grievance.`,
         },
         { status: 400 },
       );

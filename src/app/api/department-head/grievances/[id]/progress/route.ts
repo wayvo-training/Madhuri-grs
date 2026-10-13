@@ -457,22 +457,29 @@ export async function GET(
       st === "REOPENED" ||
       st === "REOPEN_REVIEW";
 
+    const latestResolution = grievance.resolutions[0];
+    const isHeadResolution =
+      latestResolution?.users?.roles?.role_name === "DEPARTMENT_HEAD" ||
+      latestResolution?.users?.roles?.role_name === "ADMIN";
+
     if (isDeptBlocked) {
       currentStageKey = "BLOCKED";
       currentStageLabel = `Blocked — Waiting on ${prereqSummary} findings`;
       currentStageNumber = 2;
-    } else if (myDeptRecord?.status === "COMPLETED") {
-      currentStageKey = "COMPLETED";
-      currentStageLabel = "Department Findings Submitted (Completed)";
-      currentStageNumber = 3;
     } else if (st === "CLOSED" || st === "RESOLVED") {
       currentStageKey = "CLOSED";
       currentStageLabel = "Grievance Closed";
       currentStageNumber = 4;
     } else if (st === "UNDER_REVIEW") {
       currentStageKey = "RESOLUTION_SUBMITTED";
-      currentStageLabel = "Resolution Submitted — Pending HOD Approval";
+      currentStageLabel = isHeadResolution
+        ? "Resolution Submitted — Under Citizen Review"
+        : "Resolution Submitted — Pending HOD Approval";
       currentStageNumber = 4;
+    } else if (myDeptRecord?.status === "COMPLETED") {
+      currentStageKey = "COMPLETED";
+      currentStageLabel = "Department Findings Submitted (Completed)";
+      currentStageNumber = 3;
     } else if (st === "AWAITING_USER_RESPONSE") {
       currentStageKey = "AWAITING_USER_RESPONSE";
       currentStageLabel = "Awaiting Complainant Response";

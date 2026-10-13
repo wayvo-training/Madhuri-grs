@@ -84,7 +84,8 @@ export function StatusBadge({ status }: { status: GrievanceStatus | string }) {
       );
     case "UNDER_REVIEW":
       return (
-        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100/80 px-2.5 py-0.5 text-sm font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300">
+        <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-100/90 px-2.5 py-0.5 text-sm font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-400" />
           Under Review
         </span>
       );

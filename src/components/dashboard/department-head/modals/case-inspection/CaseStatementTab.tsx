@@ -204,6 +204,9 @@ export function CaseStatementTab({
             {currentGrievance.status !== "ESCALATED" &&
               currentGrievance.status !== "CLOSED" &&
               currentGrievance.status !== "RESOLVED" &&
+              currentGrievance.status !== "COMPLETED" &&
+              currentGrievance.status !== "UNDER_REVIEW" &&
+              currentGrievance.myDepartmentStatus !== "COMPLETED" &&
               currentGrievance.slaStatus === "BREACHED" && (
                 <button
                   type="button"
@@ -220,10 +223,16 @@ export function CaseStatementTab({
               {currentGrievance.status === "CLOSED" ||
               currentGrievance.status === "RESOLVED"
                 ? "Case Closed"
-                : "Currently Unassigned"}
+                : currentGrievance.status === "COMPLETED" ||
+                    currentGrievance.status === "UNDER_REVIEW"
+                  ? "Under Citizen Review"
+                  : "Currently Unassigned"}
             </span>
             {currentGrievance.status !== "CLOSED" &&
-              currentGrievance.status !== "RESOLVED" && (
+              currentGrievance.status !== "RESOLVED" &&
+              currentGrievance.status !== "COMPLETED" &&
+              currentGrievance.status !== "UNDER_REVIEW" &&
+              currentGrievance.myDepartmentStatus !== "COMPLETED" && (
                 <button
                   type="button"
                   onClick={() => onAssignClick(currentGrievance)}

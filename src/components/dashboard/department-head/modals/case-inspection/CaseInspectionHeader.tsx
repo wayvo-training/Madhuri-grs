@@ -63,6 +63,8 @@ export function CaseInspectionHeader({
         hodIntervention?.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
         hodIntervention?.actionType === "DIRECT_OVERSIGHT",
     );
+  const isResolutionSubmittedByHead =
+    isResolutionAuthorityAssumed && status === "UNDER_REVIEW";
 
   return (
     <div className="flex flex-col border-b border-slate-200/90 bg-slate-50/70 px-6 py-4 shrink-0 gap-3">
@@ -133,19 +135,30 @@ export function CaseInspectionHeader({
               {isResolutionAuthorityAssumed ? (
                 <div className="inline-flex flex-col gap-1 rounded-xl bg-teal-50 border border-teal-300/80 px-3.5 py-2.5 shadow-2xs">
                   <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-[#0F766E] text-white">
-                      Head Intervention Active
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
+                        isResolutionSubmittedByHead
+                          ? "bg-emerald-600 text-white"
+                          : "bg-[#0F766E] text-white"
+                      }`}
+                    >
+                      {isResolutionSubmittedByHead
+                        ? "Resolution Submitted"
+                        : "Head Intervention Active"}
                     </span>
                     <span>
-                      Resolution Authority Assumed
+                      {isResolutionSubmittedByHead
+                        ? "Resolution Provided by Department Head"
+                        : "Resolution Authority Assumed"}
                       {hodIntervention.targetDepartment
                         ? ` (${hodIntervention.targetDepartment})`
                         : ""}
                     </span>
                   </div>
                   <p className="text-[11px] font-medium text-teal-900 leading-snug">
-                    Department Head is now responsible for reviewing the
-                    investigation and submitting the final resolution.
+                    {isResolutionSubmittedByHead
+                      ? "Department Head has submitted the official resolution. The grievance is currently under review by the employee."
+                      : "Department Head is now responsible for reviewing the investigation and submitting the final resolution."}
                   </p>
                   {hodIntervention.note && (
                     <p className="text-[11px] text-teal-800 italic border-t border-teal-200/60 pt-1 mt-0.5">

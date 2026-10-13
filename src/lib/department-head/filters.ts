@@ -5,8 +5,29 @@ import type {
   StaffMember,
 } from "@/types/department-head";
 
+export function isResolutionSubmittedByHead(item: GrievanceItem): boolean {
+  if (!item.submittedResolution) return false;
+  const role = item.submittedResolution.submittedByRole;
+  if (role === "DEPARTMENT_HEAD" || role === "ADMIN") {
+    return true;
+  }
+  if (
+    item.hodIntervention?.resolutionAuthorityUserId &&
+    item.submittedResolution.submittedByUserId ===
+      item.hodIntervention.resolutionAuthorityUserId
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function hasHeadResolutionAuthority(item: GrievanceItem): boolean {
-  if (item.status === "CLOSED" || item.status === "RESOLVED") {
+  if (
+    item.status === "CLOSED" ||
+    item.status === "RESOLVED" ||
+    item.status === "COMPLETED" ||
+    isResolutionSubmittedByHead(item)
+  ) {
     return false;
   }
   return Boolean(
@@ -17,19 +38,36 @@ export function hasHeadResolutionAuthority(item: GrievanceItem): boolean {
 }
 
 export function canHeadSubmitResolution(item: GrievanceItem): boolean {
-  if (item.status === "CLOSED" || item.status === "RESOLVED") {
+  if (
+    item.status === "CLOSED" ||
+    item.status === "RESOLVED" ||
+    item.status === "COMPLETED" ||
+    isResolutionSubmittedByHead(item)
+  ) {
     return false;
   }
-  // 1. Department Head explicitly assumed resolution authority
+  // If resolution is already submitted by Department Head and awaiting employee acceptance, head cannot submit again
+  if (item.status === "UNDER_REVIEW" && isResolutionSubmittedByHead(item)) {
+    return false;
+  }
+  // 1. Department Head explicitly assumed resolution authority (and hasn't submitted yet)
   if (hasHeadResolutionAuthority(item)) {
     return true;
   }
   // 2. Staff submitted a resolution pending Head review
-  if (item.status === "UNDER_REVIEW" && item.submittedResolution) {
+  if (
+    item.status === "UNDER_REVIEW" &&
+    item.submittedResolution &&
+    !isResolutionSubmittedByHead(item)
+  ) {
     return true;
   }
   // 3. Maximum reopens reached with submitted resolution
-  if ((item.reopenCount ?? 0) >= 2 && item.submittedResolution) {
+  if (
+    (item.reopenCount ?? 0) >= 2 &&
+    item.submittedResolution &&
+    !isResolutionSubmittedByHead(item)
+  ) {
     return true;
   }
   return false;

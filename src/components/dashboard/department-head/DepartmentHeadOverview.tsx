@@ -195,9 +195,15 @@ export function DepartmentHeadOverviewInner({
 
   const handleOpenAssignModal = useCallback(
     (item: GrievanceItem, _currentStaffId?: string) => {
-      if (item.status === "CLOSED" || item.status === "RESOLVED") {
+      if (
+        item.status === "CLOSED" ||
+        item.status === "RESOLVED" ||
+        item.status === "COMPLETED" ||
+        item.status === "UNDER_REVIEW" ||
+        item.myDepartmentStatus === "COMPLETED"
+      ) {
         toast.error(
-          `Cannot assign or change assignment for a ${item.status.toLowerCase()} grievance.`,
+          `Cannot assign or change assignment for a ${item.status.toLowerCase().replace(/_/g, " ")} grievance.`,
         );
         return;
       }
