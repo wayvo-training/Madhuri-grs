@@ -207,7 +207,7 @@ export function ResolutionCard({
 
       {/* Closed Confirmation Banner */}
       {isClosed && (
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
             <Check className="h-4 w-4 shrink-0" />
             <span>
@@ -215,11 +215,6 @@ export function ResolutionCard({
               closed.
             </span>
           </div>
-          {allowActions && (
-            <div className="shrink-0">
-              <ReopenButton grievanceId={grievanceId} />
-            </div>
-          )}
         </div>
       )}
     </div>

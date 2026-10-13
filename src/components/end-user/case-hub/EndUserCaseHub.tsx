@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
   ArrowLeft,
   Building2,
   Check,
@@ -159,7 +158,10 @@ export function EndUserCaseHub({
       {
         id: "UNDER_REVIEW",
         title: "Citizen Review",
-        defaultDesc: "Pending your decision or feedback",
+        defaultDesc:
+          grievance.status === "CLOSED" || grievance.status === "RESOLVED"
+            ? "Resolution reviewed and accepted"
+            : "Pending your decision or feedback",
         icon: Eye,
       },
       {
@@ -181,12 +183,19 @@ export function EndUserCaseHub({
       if (s === "ASSIGNED") historyDates.ASSIGNED = h.changedAt;
       if (s === "IN_PROGRESS" || s === "ESCALATED")
         historyDates.IN_PROGRESS = h.changedAt;
-      if (s === "RESOLVED") {
-        historyDates.RESOLUTION = h.changedAt;
+      if (s === "UNDER_REVIEW" || s === "RESOLVED") {
+        historyDates.RESOLUTION = historyDates.RESOLUTION || h.changedAt;
         historyDates.UNDER_REVIEW = h.changedAt;
       }
       if (s === "CLOSED") historyDates.CLOSED = h.changedAt;
     });
+
+    if (resolution?.submittedAt) {
+      historyDates.RESOLUTION = resolution.submittedAt;
+      if (!historyDates.UNDER_REVIEW) {
+        historyDates.UNDER_REVIEW = resolution.submittedAt;
+      }
+    }
 
     // Intelligent fallbacks for completed stages if intermediate status events weren't logged
     if (
@@ -216,6 +225,27 @@ export function EndUserCaseHub({
       historyDates.IN_PROGRESS =
         historyDates.RESOLUTION || historyDates.ASSIGNED || grievance.createdAt;
     }
+    if (
+      !historyDates.RESOLUTION &&
+      ["UNDER_REVIEW", "RESOLVED", "CLOSED"].includes(grievance.status)
+    ) {
+      historyDates.RESOLUTION =
+        resolution?.submittedAt ||
+        historyDates.UNDER_REVIEW ||
+        historyDates.CLOSED ||
+        historyDates.IN_PROGRESS ||
+        grievance.createdAt;
+    }
+    if (
+      !historyDates.UNDER_REVIEW &&
+      ["UNDER_REVIEW", "RESOLVED", "CLOSED"].includes(grievance.status)
+    ) {
+      historyDates.UNDER_REVIEW =
+        historyDates.RESOLUTION ||
+        historyDates.CLOSED ||
+        historyDates.IN_PROGRESS ||
+        grievance.createdAt;
+    }
     if (!historyDates.CLOSED && grievance.status === "CLOSED") {
       historyDates.CLOSED =
         grievance.statusHistory[grievance.statusHistory.length - 1]
@@ -229,7 +259,7 @@ export function EndUserCaseHub({
       ASSIGNED: 2,
       IN_PROGRESS: 3,
       ESCALATED: 3,
-      UNDER_REVIEW: 4,
+      UNDER_REVIEW: 5,
       RESOLVED: 5,
       CLOSED: 6,
     };
@@ -254,7 +284,7 @@ export function EndUserCaseHub({
         icon: stage.icon,
       };
     });
-  }, [grievance]);
+  }, [grievance, resolution?.submittedAt]);
 
   // Combine citizen attachments and resolution attachments for the Documents tab
   const allDocuments = useMemo(() => {
@@ -712,6 +742,10 @@ export function EndUserCaseHub({
                             })}
                           </span>
                         </div>
+                      ) : node.isCompleted ? (
+                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          Completed
+                        </span>
                       ) : (
                         <span className="text-[11px] text-slate-400 italic">
                           Pending
