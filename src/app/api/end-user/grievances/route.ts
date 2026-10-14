@@ -84,31 +84,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate unique grievance number safely
+    // Generate unique grievance number based on the latest grievance id
     const year = new Date().getFullYear();
     const prefix = `GRS-${year}-`;
 
+    // Fetch the most recently created grievance by grievance_id (auto-increment primary key)
     const latestGrievance = await prisma.grievances.findFirst({
-      where: {
-        grievance_number: {
-          startsWith: prefix,
-        },
-      },
       orderBy: {
-        grievance_number: "desc",
+        grievance_id: "desc",
       },
       select: {
+        grievance_id: true,
         grievance_number: true,
       },
     });
 
     let nextSeq = 1;
-    if (latestGrievance?.grievance_number) {
-      const parts = latestGrievance.grievance_number.split("-");
+    if (latestGrievance) {
+      const parts = latestGrievance.grievance_number?.split("-") || [];
       const lastNum = parseInt(parts[parts.length - 1], 10);
-      if (!Number.isNaN(lastNum)) {
-        nextSeq = lastNum + 1;
-      }
+      const idNum = Number(latestGrievance.grievance_id);
+
+      const highestExisting = Math.max(
+        !Number.isNaN(lastNum) ? lastNum : 0,
+        !Number.isNaN(idNum) ? idNum : 0,
+      );
+      nextSeq = highestExisting + 1;
     }
 
     let grievanceNumber = "";
