@@ -51,9 +51,25 @@ export function CaseProgressTab({
           (currentGrievance.submittedResolution || st === "UNDER_REVIEW"))),
   );
 
+  const hasRealAssignedStaff = Boolean(
+    (currentGrievance.assignedStaffId ||
+      (currentGrievance.assignedStaffName &&
+        currentGrievance.assignedStaffName !== "Unassigned" &&
+        currentGrievance.assignedStaffName !== "Blocked")) &&
+      currentGrievance.status !== "PENDING_ASSIGNMENT" &&
+      currentGrievance.status !== "ROUTED" &&
+      currentGrievance.status !== "SUBMITTED",
+  );
+
   const isAssigned =
-    !!currentGrievance.assignedStaffName ||
-    !!caseProgressData?.assignment?.isAssigned;
+    hasRealAssignedStaff ||
+    Boolean(
+      caseProgressData?.assignment?.isAssigned &&
+        caseProgressData?.assignment?.staffName &&
+        caseProgressData.assignment.staffName !== "Unassigned" &&
+        caseProgressData.assignment.staffName !==
+          "Blocked (Waiting for Prerequisite)",
+    );
 
   const isCaseReopened =
     currentGrievance.isReopened ||
@@ -75,7 +91,7 @@ export function CaseProgressTab({
         ? 4
         : st === "IN_PROGRESS" || st === "ESCALATED" || st === "REOPENED"
           ? 3
-          : isAssigned || st === "ASSIGNED"
+          : isAssigned || (st === "ASSIGNED" && hasRealAssignedStaff)
             ? 2
             : 1;
 
@@ -102,7 +118,7 @@ export function CaseProgressTab({
               ? isCaseReopened
                 ? "Reopened — Under Active Investigation"
                 : "Under Active Investigation"
-              : isAssigned || st === "ASSIGNED"
+              : isAssigned || (st === "ASSIGNED" && hasRealAssignedStaff)
                 ? isCaseReopened
                   ? `Reopened — Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
                   : `Assigned to ${currentGrievance.assignedStaffName || "Staff"}`
@@ -234,7 +250,13 @@ export function CaseProgressTab({
     currentGrievance.assignedStaffName ||
     assignedStaff?.name ||
     null;
-  if (officerName === "Unassigned") officerName = null;
+  if (
+    officerName === "Unassigned" ||
+    officerName === "Blocked" ||
+    officerName === "Blocked (Waiting for Prerequisite)"
+  ) {
+    officerName = null;
+  }
 
   const headResolutionAuthorityName =
     currentGrievance.hodIntervention?.resolutionAuthorityName ||
@@ -249,10 +271,15 @@ export function CaseProgressTab({
   const assignedTimestamp =
     caseProgressData?.assignment?.assignedAtRelative ||
     caseProgressData?.assignment?.assignedAt ||
-    (currentGrievance.assignedStaffName ? "Assigned" : null);
+    (isAssigned ? "Assigned" : null);
   const assignmentStatus =
-    caseProgressData?.assignment?.status ||
-    (currentGrievance.assignedStaffName ? "In Progress" : "Pending");
+    caseProgressData?.assignment?.status &&
+    caseProgressData.assignment.status !== "PENDING" &&
+    caseProgressData.assignment.status !== "PENDING_ASSIGNMENT"
+      ? caseProgressData.assignment.status
+      : isAssigned
+        ? "In Progress"
+        : "Pending";
 
   const timelineEvents = [
     ...(caseProgressData?.timeline && caseProgressData.timeline.length > 0
@@ -377,8 +404,8 @@ export function CaseProgressTab({
                   ? "Resolution Accepted · Grievance Closed"
                   : st === "UNDER_REVIEW"
                     ? "Resolution Submitted · Awaiting Review"
-                    : currentGrievance.assignedStaffName
-                      ? `Assigned to ${currentGrievance.assignedStaffName}`
+                    : isAssigned && officerName
+                      ? `Assigned to ${officerName}`
                       : "Grievance registered in portal")}
             </strong>
           </span>

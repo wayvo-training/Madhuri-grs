@@ -399,6 +399,12 @@ export function QueueView({
                 const isEscalated = item.status === "ESCALATED";
                 const isBreached = item.slaStatus === "BREACHED";
                 const highlightSla = !isEscalated && isBreached;
+                const hasAssignedStaff = Boolean(
+                  item.assignedStaffId ||
+                    (item.assignedStaffName &&
+                      item.assignedStaffName !== "Unassigned" &&
+                      item.assignedStaffName !== "Blocked"),
+                );
 
                 return (
                   <TableRow
@@ -511,7 +517,7 @@ export function QueueView({
                               (Authority)
                             </span>
                           </span>
-                          {item.assignedStaffName && (
+                          {hasAssignedStaff && (
                             <span className="text-[11px] text-slate-500">
                               Staff: {item.assignedStaffName}
                             </span>
@@ -521,7 +527,7 @@ export function QueueView({
                         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
                           Blocked
                         </span>
-                      ) : item.assignedStaffName ? (
+                      ) : hasAssignedStaff ? (
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
                           <User className="h-3 w-3 text-slate-400" />
                           <span>{item.assignedStaffName}</span>
@@ -592,8 +598,7 @@ export function QueueView({
                           item.myDepartmentStatus !== "COMPLETED" &&
                           item.status !== "ESCALATED" &&
                           item.slaStatus !== "BREACHED" &&
-                          !item.assignedStaffName &&
-                          !item.assignedStaffId
+                          !hasAssignedStaff
                             ? [
                                 {
                                   label: "Assign",
@@ -611,7 +616,7 @@ export function QueueView({
                           item.myDepartmentStatus !== "COMPLETED" &&
                           item.status !== "ESCALATED" &&
                           item.slaStatus !== "BREACHED" &&
-                          (item.assignedStaffName || item.assignedStaffId)
+                          hasAssignedStaff
                             ? [
                                 {
                                   label: "Change Assignment",
