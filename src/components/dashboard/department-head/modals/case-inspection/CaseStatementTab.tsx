@@ -194,7 +194,10 @@ export function CaseStatementTab({
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Handling Officer
         </span>
-        {currentGrievance.assignedStaffName ? (
+        {currentGrievance.assignedStaffId ||
+        (currentGrievance.assignedStaffName &&
+          currentGrievance.assignedStaffName !== "Unassigned" &&
+          currentGrievance.assignedStaffName !== "Blocked") ? (
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-emerald-700" />

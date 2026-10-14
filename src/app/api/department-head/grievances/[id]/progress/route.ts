@@ -607,13 +607,13 @@ export async function GET(
                 key: "SUBMITTED",
                 label: "Submitted",
                 isComplete: true,
-                isCurrent: false,
+                isCurrent: true,
               },
               {
                 key: "ASSIGNED",
                 label: "Pending Assignment",
                 isComplete: false,
-                isCurrent: true,
+                isCurrent: false,
               },
               {
                 key: "INVESTIGATION",

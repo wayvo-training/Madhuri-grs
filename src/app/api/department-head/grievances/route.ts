@@ -820,8 +820,9 @@ export async function GET(request: Request) {
         isCrossDepartment,
         collaboratingDepartments: deptList,
         isPrimaryDepartment,
-        myInvolvementType,
-        myDepartmentStatus: myDeptRecord?.status || "ASSIGNED",
+        myDepartmentStatus:
+          myDeptRecord?.status ||
+          (assignedStaff ? "ASSIGNED" : "PENDING_ASSIGNMENT"),
         isBlocked: myDeptRecord?.status === "BLOCKED",
         escalationReason: latestEscalation?.reason || undefined,
         escalationLevel: latestEscalation?.escalation_level || undefined,
