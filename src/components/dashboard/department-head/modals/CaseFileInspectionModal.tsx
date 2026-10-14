@@ -168,7 +168,7 @@ export function CaseFileInspectionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-      <div className="relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <CaseInspectionHeader
           ticketCode={currentGrievance.ticketCode}
@@ -191,7 +191,7 @@ export function CaseFileInspectionModal({
         />
 
         {/* Navigation Tabs */}
-        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0">
+        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0 overflow-x-auto custom-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("progress")}
@@ -285,7 +285,7 @@ export function CaseFileInspectionModal({
         </div>
 
         {/* Drawer Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
           {activeTab === "progress" && (
             <CaseProgressTab
               currentGrievance={currentGrievance}

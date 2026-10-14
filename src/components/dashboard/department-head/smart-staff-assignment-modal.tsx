@@ -552,9 +552,9 @@ export function SmartStaffAssignmentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
+      <div className="w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3.5 bg-slate-50/70">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/70">
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md bg-[#F0FDFA] px-2 py-0.5 text-[11px] font-semibold text-[#0F766E] border border-teal-200">
@@ -567,12 +567,12 @@ export function SmartStaffAssignmentModal({
                 {grievance.ticketCode}
               </span>
             </div>
-            <h3 className="text-sm font-bold text-slate-900 mt-1">
+            <h3 className="text-base font-bold text-slate-900 mt-1">
               {isReassignment
                 ? "Change Staff for Grievance"
                 : "Assign Grievance to Staff"}
             </h3>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               Department Head decision support &bull; Review smart
               recommendations and confirm assignment
             </p>
@@ -580,15 +580,15 @@ export function SmartStaffAssignmentModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition"
+            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-700 transition cursor-pointer"
             title="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
           {isBlocked && (
             <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -607,44 +607,44 @@ export function SmartStaffAssignmentModal({
           )}
 
           {/* 1. Grievance Context Banner */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-2.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Grievance Dossier
                 </div>
-                <h4 className="text-xs font-bold text-slate-900 mt-0.5 leading-snug">
+                <h4 className="text-sm font-bold text-slate-900 mt-0.5 leading-snug">
                   {grievance.title}
                 </h4>
               </div>
               <PriorityBadge priority={grievance.priority} />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200/70 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2.5 border-t border-slate-200/70 text-xs">
               <div>
-                <span className="text-slate-400 block text-[10px]">
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">
                   Category
                 </span>
                 <span
-                  className="font-medium text-slate-800 truncate block text-xs"
+                  className="font-medium text-slate-800 block text-xs"
                   title={grievance.category}
                 >
                   {grievance.category}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">
                   Subcategory
                 </span>
                 <span
-                  className="font-medium text-slate-800 truncate block text-xs"
+                  className="font-medium text-slate-800 block text-xs"
                   title={grievance.subcategory}
                 >
                   {grievance.subcategory}
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">
                   Current SLA
                 </span>
                 <span className="font-medium text-slate-800 flex items-center gap-1 text-xs">
@@ -653,10 +653,10 @@ export function SmartStaffAssignmentModal({
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">
+                <span className="text-slate-400 block text-[10px] uppercase font-semibold">
                   Department
                 </span>
-                <span className="font-medium text-slate-800 truncate block text-xs">
+                <span className="font-medium text-slate-800 block text-xs">
                   {currentDepartmentName}
                 </span>
               </div>
@@ -746,22 +746,22 @@ export function SmartStaffAssignmentModal({
                           <span>Top Recommendation</span>
                         </div>
 
-                        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1 space-y-2.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200 shrink-0">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200 shrink-0">
                                 {topCandidate.name.charAt(0)}
                               </div>
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <h5 className="text-xs font-bold text-slate-900">
+                                  <h5 className="text-sm font-bold text-slate-900">
                                     {topCandidate.name}
                                   </h5>
-                                  <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                                  <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
                                     Recommended
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-slate-500">
+                                <p className="text-xs text-slate-500">
                                   {topCandidate.designation}
                                   {currentDepartmentName &&
                                   !topCandidate.designation
@@ -772,20 +772,20 @@ export function SmartStaffAssignmentModal({
                                     ? ` (${currentDepartmentName})`
                                     : ""}
                                 </p>
-                                <p className="text-[11px] text-slate-400">
+                                <p className="text-xs text-slate-400 font-mono">
                                   {topCandidate.email}
                                 </p>
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] text-slate-600">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
                               {topCandidate.bulletReasons.map((reason) => (
                                 <div
                                   key={reason}
-                                  className="flex items-center gap-1.5"
+                                  className="flex items-start gap-1.5"
                                 >
-                                  <Check className="h-3 w-3 text-emerald-600 shrink-0" />
-                                  <span>
+                                  <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                  <span className="leading-snug">
                                     {reason === "Strong category/skill match"
                                       ? "Strong category/skill match"
                                       : reason ===
@@ -804,12 +804,12 @@ export function SmartStaffAssignmentModal({
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-2.5 shrink-0">
+                          <div className="flex flex-col items-end gap-2.5 shrink-0 sm:pl-4">
                             <div className="text-right">
-                              <div className="text-xl font-bold text-[#0F766E]">
+                              <div className="text-2xl font-bold text-[#0F766E]">
                                 {topCandidate.score}%
                               </div>
-                              <div className="text-[9px] font-semibold uppercase text-slate-500 tracking-wider">
+                              <div className="text-[10px] font-semibold uppercase text-slate-500 tracking-wider">
                                 Recommendation Score
                               </div>
                             </div>

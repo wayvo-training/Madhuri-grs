@@ -3,11 +3,15 @@
 import { cn } from "cn";
 import type * as React from "react";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"table"> & { containerClassName?: string }) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative w-full overflow-x-auto", containerClassName)}
     >
       <table
         data-slot="table"
@@ -23,7 +27,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
     <thead
       data-slot="table-header"
       className={cn(
-        "[&_tr]:border-b !bg-slate-50 dark:!bg-slate-800/50",
+        "[&_tr]:border-b !bg-slate-50 dark:!bg-slate-800/95 sticky top-0 z-10 shadow-2xs backdrop-blur-xs",
         className,
       )}
       {...props}
@@ -72,7 +76,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle text-[13px] font-semibold whitespace-nowrap text-slate-600 dark:text-slate-400 bg-transparent [&:has([role=checkbox])]:pr-0",
+        "h-10 px-2 text-left align-middle text-[13px] font-semibold whitespace-nowrap text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/95 [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}

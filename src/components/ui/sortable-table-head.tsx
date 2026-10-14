@@ -42,7 +42,7 @@ export function SortableTableHead({
   return (
     <TableHead
       className={cn(
-        "cursor-pointer select-none bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors duration-150 group",
+        "cursor-pointer select-none bg-slate-50 dark:bg-slate-800/95 text-slate-600 dark:text-slate-400 hover:bg-slate-100/90 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors duration-150 group",
         className,
       )}
       onClick={handleToggle}

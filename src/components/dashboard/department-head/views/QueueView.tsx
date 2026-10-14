@@ -24,11 +24,9 @@ import {
   type SortState,
 } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -145,10 +143,37 @@ export function QueueView({
   }, [grievances, advancedConditions, advancedMode]);
 
   const sortedGrievances = useMemo(() => {
-    if (!sortState.field || !sortState.direction)
-      return localFilteredGrievances;
+    const list = [...localFilteredGrievances];
+    if (!sortState.field || !sortState.direction) {
+      // Default Sort: Unassigned grievances first, then sorted by newest first
+      return list.sort((a, b) => {
+        const isUnassignedA =
+          !a.assignedStaffId ||
+          !a.assignedStaffName ||
+          a.assignedStaffName === "Unassigned" ||
+          a.status === "SUBMITTED" ||
+          a.status === "ROUTED";
+        const isUnassignedB =
+          !b.assignedStaffId ||
+          !b.assignedStaffName ||
+          b.assignedStaffName === "Unassigned" ||
+          b.status === "SUBMITTED" ||
+          b.status === "ROUTED";
 
-    return [...localFilteredGrievances].sort((a, b) => {
+        if (isUnassignedA && !isUnassignedB) return -1;
+        if (!isUnassignedA && isUnassignedB) return 1;
+
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (!isNaN(dateA) && !isNaN(dateB) && dateA !== dateB) {
+          return dateB - dateA;
+        }
+
+        return Number(b.id) - Number(a.id);
+      });
+    }
+
+    return list.sort((a, b) => {
       const field = sortState.field as keyof GrievanceItem;
       const rawA = a[field] ?? "";
       const rawB = b[field] ?? "";
@@ -290,366 +315,415 @@ export function QueueView({
       </div>
 
       {/* Grievances Data Table */}
-      <div className="overflow-x-auto custom-scrollbar">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableTableHead
-                field="id"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 pl-4 pr-3"
-              >
-                Grievance ID
-              </SortableTableHead>
-              <SortableTableHead
-                field="title"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3 min-w-64"
-              >
-                Grievance
-              </SortableTableHead>
-              <SortableTableHead
-                field="category"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Category
-              </SortableTableHead>
-              <SortableTableHead
-                field="subcategory"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Sub Category
-              </SortableTableHead>
-              <SortableTableHead
-                field="priority"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Priority
-              </SortableTableHead>
-              <SortableTableHead
-                field="status"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Status
-              </SortableTableHead>
-              <SortableTableHead
-                field="slaStatus"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                SLA Status
-              </SortableTableHead>
-              <SortableTableHead
-                field="assignedStaffName"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Assigned Staff
-              </SortableTableHead>
-              <SortableTableHead
-                field="createdAt"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-3 px-3"
-              >
-                Submitted
-              </SortableTableHead>
-              <TableHead className="py-3 pl-3 pr-4 text-right">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredGrievances.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={10}
-                  className="py-12 text-center text-slate-400 font-normal"
+      <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+        <div className="min-w-[1340px]">
+          {/* Static Header Table: no scrollbar next to header */}
+          <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+            <colgroup>
+              <col className="w-[110px]" />
+              <col className="w-[240px]" />
+              <col className="w-[140px]" />
+              <col className="w-[130px]" />
+              <col className="w-[100px]" />
+              <col className="w-[110px]" />
+              <col className="w-[140px]" />
+              <col className="w-[150px]" />
+              <col className="w-[130px]" />
+              <col className="w-[90px]" />
+            </colgroup>
+            <thead>
+              <tr>
+                <SortableTableHead
+                  field="id"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 pl-4 pr-3"
                 >
-                  <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                  <p className="font-semibold text-slate-700 text-sm">
-                    No grievances match this filter
-                  </p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Try changing your search keywords or filter criteria.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="mt-3 text-sm font-semibold text-emerald-800 hover:text-emerald-950 transition"
-                  >
-                    Reset filters
-                  </button>
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedGrievances.map((item) => {
-                const isEscalated = item.status === "ESCALATED";
-                const isBreached = item.slaStatus === "BREACHED";
-                const highlightSla = !isEscalated && isBreached;
-                const hasAssignedStaff = Boolean(
-                  item.assignedStaffId ||
-                    (item.assignedStaffName &&
-                      item.assignedStaffName !== "Unassigned" &&
-                      item.assignedStaffName !== "Blocked"),
-                );
+                  Grievance ID
+                </SortableTableHead>
+                <SortableTableHead
+                  field="title"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Grievance
+                </SortableTableHead>
+                <SortableTableHead
+                  field="category"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Category
+                </SortableTableHead>
+                <SortableTableHead
+                  field="subcategory"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Sub Category
+                </SortableTableHead>
+                <SortableTableHead
+                  field="priority"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Priority
+                </SortableTableHead>
+                <SortableTableHead
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Status
+                </SortableTableHead>
+                <SortableTableHead
+                  field="slaStatus"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  SLA Status
+                </SortableTableHead>
+                <SortableTableHead
+                  field="assignedStaffName"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Assigned Staff
+                </SortableTableHead>
+                <SortableTableHead
+                  field="createdAt"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 px-3"
+                >
+                  Submitted
+                </SortableTableHead>
+                <TableHead className="py-3 pl-3 pr-4 text-right">
+                  Actions
+                </TableHead>
+              </tr>
+            </thead>
+          </table>
 
-                return (
-                  <TableRow
-                    key={item.id}
-                    className="hover:bg-slate-50/70 transition group"
-                  >
-                    {/* 1. Ticket Code */}
-                    <TableCell className="py-3 pl-4 pr-3 align-top">
-                      <span className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 inline-block">
-                        {item.ticketCode}
-                      </span>
-                    </TableCell>
-
-                    {/* 2. Title & Badges */}
-                    <TableCell className="py-3 px-3 align-top max-w-xs">
-                      <div className="space-y-1">
-                        <TruncatedText
-                          text={item.title}
-                          maxChars={35}
-                          onClick={() => onInspect(item, "statement")}
-                          className="font-semibold text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition text-left group-hover:text-emerald-900 dark:group-hover:text-teal-200 block cursor-pointer max-w-[280px] border-none"
-                        />
-
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          {item.isReopened && (
-                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                              Reopened ({item.reopenCount}x)
-                            </span>
-                          )}
-                          {item.isCrossDepartment && (
-                            <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                              <GitBranch className="h-2.5 w-2.5 text-slate-500 dark:text-slate-400" />
-                              Cross-Dept
-                            </span>
-                          )}
-                          {/* Removed Resolution Submitted badge per requirement */}
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    {/* 2b. Category */}
-                    <TableCell className="py-3 px-3 align-top max-w-[160px]">
-                      <TruncatedText
-                        text={item.category}
-                        maxChars={20}
-                        className="text-[13px] text-slate-600 dark:text-slate-300 font-medium border-none block"
-                      />
-                    </TableCell>
-                    <TableCell className="py-3 px-3 align-top max-w-[160px]">
-                      <TruncatedText
-                        text={item.subcategory}
-                        maxChars={20}
-                        className="text-[13px] text-slate-500 dark:text-slate-400 border-none block"
-                      />
-                    </TableCell>
-
-                    {/* 3. Priority */}
-                    <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      <PriorityBadge priority={item.priority} />
-                    </TableCell>
-
-                    {/* 4. Status */}
-                    <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      <StatusBadge status={item.status} />
-                      {item.status === "BLOCKED" && (
-                        <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                          Waiting for Prerequisite
-                        </span>
-                      )}
-                      {hasHeadResolutionAuthority(item) && (
-                        <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                          Head Intervention Active
-                        </span>
-                      )}
-                    </TableCell>
-
-                    {/* 5. SLA Status */}
-                    <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      <div className="flex flex-col items-start gap-1">
-                        <span
-                          className={`text-sm font-medium whitespace-nowrap ${
-                            highlightSla
-                              ? "text-slate-900 font-semibold dark:text-slate-100"
-                              : item.slaStatus === "AT_RISK"
-                                ? "text-amber-800 font-medium dark:text-amber-400"
-                                : "text-slate-600 dark:text-slate-300"
-                          }`}
-                        >
-                          {item.slaTimeLeft}
-                        </span>
-                        {item.slaStatus === "AT_RISK" && (
-                          <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                            SLA At Risk
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    {/* 6. Assigned Officer */}
-                    <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      {item.status !== "CLOSED" &&
-                      item.status !== "RESOLVED" &&
-                      item.hodIntervention?.isResolutionAuthority ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-                            <UserCheck className="h-3 w-3 text-amber-600" />
-                            <span>
-                              {item.hodIntervention.resolutionAuthorityName ||
-                                "Department Head"}{" "}
-                              (Authority)
-                            </span>
-                          </span>
-                          {hasAssignedStaff && (
-                            <span className="text-[11px] text-slate-500">
-                              Staff: {item.assignedStaffName}
-                            </span>
-                          )}
-                        </div>
-                      ) : item.isBlocked || item.status === "BLOCKED" ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
-                          Blocked
-                        </span>
-                      ) : hasAssignedStaff ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
-                          <User className="h-3 w-3 text-slate-400" />
-                          <span>{item.assignedStaffName}</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center text-sm font-normal text-slate-500">
-                          Unassigned
-                        </span>
-                      )}
-                    </TableCell>
-
-                    {/* 7. Submitter & Date */}
-                    <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                      <div className="text-sm">
-                        <p className="font-medium text-slate-800">
-                          {item.submitterName}
-                        </p>
-                        <p className="text-sm text-slate-400 font-normal mt-0.5">
-                          {item.createdAt}
-                        </p>
-                      </div>
-                    </TableCell>
-
-                    {/* 8. Actions */}
-                    <TableCell className="py-3 pl-3 pr-4 text-right whitespace-nowrap align-top">
-                      <ActionMenu
-                        widthClass="w-44"
-                        items={[
-                          {
-                            label: "Inspect",
-                            icon: <Eye className="h-3.5 w-3.5" />,
-                            onClick: () => onInspect(item, "progress"),
-                          },
-                          ...(canHeadSubmitResolution(item) &&
-                          item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.isPrimaryDepartment !== false
-                            ? [
-                                {
-                                  label: "Submit Resolution",
-                                  icon: (
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                  ),
-                                  variant: "default" as const,
-                                  onClick: () => onReviewResolution(item),
-                                },
-                              ]
-                            : []),
-                          ...(!hasHeadResolutionAuthority(item) &&
-                          item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          (item.status === "ESCALATED" ||
-                            item.slaStatus === "BREACHED")
-                            ? [
-                                {
-                                  label: "Intervene",
-                                  icon: <AlertCircle className="h-3.5 w-3.5" />,
-                                  variant: "warning" as const,
-                                  onClick: () => onIntervene(item),
-                                },
-                              ]
-                            : []),
-                          ...(!hasHeadResolutionAuthority(item) &&
-                          item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.status !== "COMPLETED" &&
-                          item.status !== "UNDER_REVIEW" &&
-                          item.myDepartmentStatus !== "COMPLETED" &&
-                          item.status !== "ESCALATED" &&
-                          item.slaStatus !== "BREACHED" &&
-                          !hasAssignedStaff
-                            ? [
-                                {
-                                  label: "Assign",
-                                  icon: <UserPlus className="h-3.5 w-3.5" />,
-                                  variant: "default" as const,
-                                  onClick: () => onAssign(item),
-                                },
-                              ]
-                            : []),
-                          ...(!hasHeadResolutionAuthority(item) &&
-                          item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.status !== "COMPLETED" &&
-                          item.status !== "UNDER_REVIEW" &&
-                          item.myDepartmentStatus !== "COMPLETED" &&
-                          item.status !== "ESCALATED" &&
-                          item.slaStatus !== "BREACHED" &&
-                          hasAssignedStaff
-                            ? [
-                                {
-                                  label: "Change Assignment",
-                                  icon: <UserCheck className="h-3.5 w-3.5" />,
-                                  variant: "default" as const,
-                                  onClick: () =>
-                                    onAssign(item, item.assignedStaffId || ""),
-                                },
-                              ]
-                            : []),
-                          ...(!item.hasProposedKb &&
-                          canHeadProposeKnowledge(item)
-                            ? [
-                                {
-                                  label: "Propose KB Article",
-                                  icon: <BookOpen className="h-3.5 w-3.5" />,
-                                  variant: "default" as const,
-                                  onClick: () => onProposeKb?.(item),
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
+          {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
+          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <table className="w-full text-left text-sm table-fixed border-collapse">
+              <colgroup>
+                <col className="w-[110px]" />
+                <col className="w-[240px]" />
+                <col className="w-[140px]" />
+                <col className="w-[130px]" />
+                <col className="w-[100px]" />
+                <col className="w-[110px]" />
+                <col className="w-[140px]" />
+                <col className="w-[150px]" />
+                <col className="w-[130px]" />
+                <col className="w-[90px]" />
+              </colgroup>
+              <TableBody>
+                {filteredGrievances.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={10}
+                      className="py-12 text-center text-slate-400 font-normal"
+                    >
+                      <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                      <p className="font-semibold text-slate-700 text-sm">
+                        No grievances match this filter
+                      </p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Try changing your search keywords or filter criteria.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="mt-3 text-sm font-semibold text-emerald-800 hover:text-emerald-950 transition"
+                      >
+                        Reset filters
+                      </button>
                     </TableCell>
                   </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                ) : (
+                  paginatedGrievances.map((item) => {
+                    const isEscalated = item.status === "ESCALATED";
+                    const isBreached = item.slaStatus === "BREACHED";
+                    const highlightSla = !isEscalated && isBreached;
+                    const hasAssignedStaff = Boolean(
+                      item.assignedStaffId ||
+                        (item.assignedStaffName &&
+                          item.assignedStaffName !== "Unassigned" &&
+                          item.assignedStaffName !== "Blocked"),
+                    );
+
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className="hover:bg-slate-50/70 transition group"
+                      >
+                        {/* 1. Ticket Code */}
+                        <TableCell className="py-3 pl-4 pr-3 align-top">
+                          <span className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 inline-block">
+                            {item.ticketCode}
+                          </span>
+                        </TableCell>
+
+                        {/* 2. Title & Badges */}
+                        <TableCell className="py-3 px-3 align-top max-w-[240px] overflow-hidden">
+                          <div className="space-y-1 min-w-0">
+                            <TruncatedText
+                              text={item.title}
+                              maxChars={24}
+                              onClick={() => onInspect(item, "statement")}
+                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition text-left group-hover:text-emerald-900 dark:group-hover:text-teal-200 block cursor-pointer max-w-[215px] truncate border-none"
+                            />
+
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {item.isReopened && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Reopened ({item.reopenCount}x)
+                                </span>
+                              )}
+                              {item.isCrossDepartment && (
+                                <span className="inline-flex items-center text-xs font-medium text-slate-600 dark:text-slate-300">
+                                  Multi Department
+                                </span>
+                              )}
+                              {/* Removed Resolution Submitted badge per requirement */}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* 2b. Category */}
+                        <TableCell className="py-3 px-3 align-top max-w-[140px] overflow-hidden">
+                          <TruncatedText
+                            text={item.category}
+                            maxChars={16}
+                            className="text-[13px] text-slate-600 dark:text-slate-300 font-medium border-none block max-w-[125px] truncate"
+                          />
+                        </TableCell>
+                        <TableCell className="py-3 px-3 align-top max-w-[130px] overflow-hidden">
+                          <TruncatedText
+                            text={item.subcategory}
+                            maxChars={16}
+                            className="text-[13px] text-slate-500 dark:text-slate-400 border-none block max-w-[115px] truncate"
+                          />
+                        </TableCell>
+
+                        {/* 3. Priority */}
+                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                          <PriorityBadge priority={item.priority} />
+                        </TableCell>
+
+                        {/* 4. Status */}
+                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                          <StatusBadge status={item.status} />
+                          {item.status === "BLOCKED" && (
+                            <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                              Waiting for Prerequisite
+                            </span>
+                          )}
+                          {hasHeadResolutionAuthority(item) && (
+                            <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                              Head Intervention Active
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* 5. SLA Status */}
+                        <TableCell className="py-3 px-3 whitespace-nowrap align-top max-w-[140px] overflow-hidden">
+                          <div className="flex flex-col items-start gap-1 min-w-0">
+                            <span
+                              className={`text-sm font-medium whitespace-nowrap ${
+                                highlightSla
+                                  ? "text-rose-600 font-bold dark:text-rose-400"
+                                  : item.slaStatus === "AT_RISK"
+                                    ? "text-amber-800 font-semibold dark:text-amber-400"
+                                    : "text-slate-600 dark:text-slate-300"
+                              }`}
+                            >
+                              {item.slaTimeLeft}
+                            </span>
+                            {item.slaStatus === "AT_RISK" && (
+                              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                SLA At Risk
+                              </span>
+                            )}
+                            {item.slaStatus === "BREACHED" && (
+                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                                Breached
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* 6. Assigned Officer */}
+                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                          {item.status !== "CLOSED" &&
+                          item.status !== "RESOLVED" &&
+                          item.hodIntervention?.isResolutionAuthority ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                                <UserCheck className="h-3 w-3 text-amber-600" />
+                                <span>
+                                  {item.hodIntervention
+                                    .resolutionAuthorityName ||
+                                    "Department Head"}{" "}
+                                  (Authority)
+                                </span>
+                              </span>
+                              {hasAssignedStaff && (
+                                <span className="text-[11px] text-slate-500">
+                                  Staff: {item.assignedStaffName}
+                                </span>
+                              )}
+                            </div>
+                          ) : item.isBlocked || item.status === "BLOCKED" ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
+                              Blocked
+                            </span>
+                          ) : hasAssignedStaff ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                              <User className="h-3 w-3 text-slate-400" />
+                              <span>{item.assignedStaffName}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-sm font-normal text-slate-500">
+                              Unassigned
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* 7. Submitter & Date */}
+                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                          <div className="text-sm">
+                            <p className="font-medium text-slate-800">
+                              {item.submitterName}
+                            </p>
+                            <p className="text-sm text-slate-400 font-normal mt-0.5">
+                              {item.createdAt}
+                            </p>
+                          </div>
+                        </TableCell>
+
+                        {/* 8. Actions */}
+                        <TableCell className="py-3 pl-3 pr-4 text-right whitespace-nowrap align-top">
+                          <ActionMenu
+                            widthClass="w-44"
+                            items={[
+                              {
+                                label: "Inspect",
+                                icon: <Eye className="h-3.5 w-3.5" />,
+                                onClick: () => onInspect(item, "progress"),
+                              },
+                              ...(canHeadSubmitResolution(item) &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.isPrimaryDepartment !== false
+                                ? [
+                                    {
+                                      label: "Submit Resolution",
+                                      icon: (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => onReviewResolution(item),
+                                    },
+                                  ]
+                                : []),
+                              ...(!hasHeadResolutionAuthority(item) &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              (item.status === "ESCALATED" ||
+                                item.slaStatus === "BREACHED")
+                                ? [
+                                    {
+                                      label: "Intervene",
+                                      icon: (
+                                        <AlertCircle className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "warning" as const,
+                                      onClick: () => onIntervene(item),
+                                    },
+                                  ]
+                                : []),
+                              ...(!hasHeadResolutionAuthority(item) &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.status !== "COMPLETED" &&
+                              item.status !== "UNDER_REVIEW" &&
+                              item.myDepartmentStatus !== "COMPLETED" &&
+                              item.status !== "ESCALATED" &&
+                              item.slaStatus !== "BREACHED" &&
+                              !hasAssignedStaff
+                                ? [
+                                    {
+                                      label: "Assign",
+                                      icon: (
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => onAssign(item),
+                                    },
+                                  ]
+                                : []),
+                              ...(!hasHeadResolutionAuthority(item) &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.status !== "COMPLETED" &&
+                              item.status !== "UNDER_REVIEW" &&
+                              item.myDepartmentStatus !== "COMPLETED" &&
+                              item.status !== "ESCALATED" &&
+                              item.slaStatus !== "BREACHED" &&
+                              hasAssignedStaff
+                                ? [
+                                    {
+                                      label: "Change Assignment",
+                                      icon: (
+                                        <UserCheck className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () =>
+                                        onAssign(
+                                          item,
+                                          item.assignedStaffId || "",
+                                        ),
+                                    },
+                                  ]
+                                : []),
+                              ...(!item.hasProposedKb &&
+                              canHeadProposeKnowledge(item)
+                                ? [
+                                    {
+                                      label: "Propose KB Article",
+                                      icon: (
+                                        <BookOpen className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => onProposeKb?.(item),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      <div className="border-t border-slate-200/80">
+      <div className="border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(filteredGrievances.length / pageSize)}

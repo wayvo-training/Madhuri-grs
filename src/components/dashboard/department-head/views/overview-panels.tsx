@@ -91,7 +91,7 @@ export function AttentionRequiredPanel({
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(5);
   const totalCount = attentionRequiredList.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -334,6 +334,8 @@ export function AttentionRequiredPanel({
             totalCount={totalCount}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20]}
             itemLabel="Grievances"
           />
         </div>

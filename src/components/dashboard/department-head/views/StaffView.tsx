@@ -2,10 +2,7 @@
 
 import { Inbox, Layers, Mail, UserCheck, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  AdminMetricCard,
-  AdminPanelHeader,
-} from "@/components/dashboard/admin/admin-shared";
+import { AdminMetricCard } from "@/components/dashboard/admin/admin-shared";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
@@ -41,9 +38,9 @@ export function StaffView({
   grievances,
   currentDepartmentName,
   metrics,
-  onToggleAvailability,
-  onInspect,
-  onReassign,
+  onToggleAvailability: _onToggleAvailability,
+  onInspect: _onInspect,
+  onReassign: _onReassign,
   onFilterStaffInQueue,
 }: StaffViewProps) {
   const loadFactor =
@@ -70,7 +67,9 @@ export function StaffView({
   const [advancedMode, setAdvancedMode] = useState<string>("AND");
 
   useEffect(() => {
-    setCurrentPage(1);
+    if (advancedConditions.length > 0 || advancedMode !== "AND") {
+      setCurrentPage(1);
+    }
   }, [advancedConditions, advancedMode]);
 
   const handleSort = (field: string, direction: "asc" | "desc" | null) => {
@@ -109,14 +108,20 @@ export function StaffView({
     if (!sortState.field || !sortState.direction) return filteredStaff;
 
     return [...filteredStaff].sort((a, b) => {
-      let valA: any = a[sortState.field as keyof StaffMember] || "";
-      let valB: any = b[sortState.field as keyof StaffMember] || "";
+      let valA: unknown = a[sortState.field as keyof StaffMember] ?? "";
+      let valB: unknown = b[sortState.field as keyof StaffMember] ?? "";
 
       if (typeof valA === "string") valA = valA.toLowerCase();
       if (typeof valB === "string") valB = valB.toLowerCase();
 
-      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
+      if (typeof valA === "string" && typeof valB === "string") {
+        return sortState.direction === "asc"
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+      }
+      if (typeof valA === "number" && typeof valB === "number") {
+        return sortState.direction === "asc" ? valA - valB : valB - valA;
+      }
       return 0;
     });
   }, [filteredStaff, sortState]);
@@ -191,220 +196,250 @@ export function StaffView({
           </div>
         </div>
 
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead className="border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-sm font-semibold text-slate-600 dark:text-slate-400">
-              <tr>
-                <SortableTh
-                  field="name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3 pl-4 pr-3 whitespace-nowrap"
-                >
-                  Staff Member
-                </SortableTh>
-                <SortableTh
-                  field="status"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
-                >
-                  Status
-                </SortableTh>
-                <SortableTh
-                  field="employeeCode"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
-                >
-                  Staff ID
-                </SortableTh>
-                <SortableTh
-                  field="activeTickets"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3 px-3 min-w-48"
-                >
-                  Active Workload
-                </SortableTh>
-                <SortableTh
-                  field="activeTickets"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3 px-3 whitespace-nowrap"
-                >
-                  Assigned Cases
-                </SortableTh>
-                <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
-              {paginatedStaff.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="py-10 text-center text-slate-500 text-sm"
-                  >
-                    No staff members found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedStaff.map((staff) => {
-                  const loadPercentage =
-                    staff.maxCapacity > 0
-                      ? Math.round(
-                          (staff.activeTickets / staff.maxCapacity) * 100,
-                        )
-                      : 0;
-                  const isOverloaded = loadPercentage >= 80;
-                  const staffTickets = grievances.filter(
-                    (g) => g.assignedStaffId === staff.id,
-                  );
-
-                  return (
-                    <tr
-                      key={staff.id}
-                      className="hover:bg-slate-50/60 transition"
+        {/* Full Staff Table with Row-only Vertical Scrolling */}
+        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <div className="min-w-[900px]">
+              {/* Header Table (Static, no scrollbar next to header) */}
+              <table className="w-full text-left text-sm table-fixed border-b border-slate-200/80 bg-slate-50 dark:bg-slate-900">
+                <colgroup>
+                  <col className="w-[28%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[24%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
+                <thead className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                  <tr>
+                    <SortableTh
+                      field="name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 pl-4 pr-3 whitespace-nowrap"
                     >
-                      {/* Staff Member Info */}
-                      <td className="py-3 pl-4 pr-3 align-top">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200/80">
-                            {staff.name.charAt(0)}
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-slate-900">
-                              {staff.name}
-                            </h4>
-                            <p className="text-[13px] text-slate-500">
-                              {staff.designation.split(" (")[0]}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+                      Staff Member
+                    </SortableTh>
+                    <SortableTh
+                      field="status"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3 whitespace-nowrap"
+                    >
+                      Status
+                    </SortableTh>
+                    <SortableTh
+                      field="employeeCode"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3 whitespace-nowrap"
+                    >
+                      Staff ID
+                    </SortableTh>
+                    <SortableTh
+                      field="activeTickets"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3 min-w-48"
+                    >
+                      Active Workload
+                    </SortableTh>
+                    <SortableTh
+                      field="activeTickets"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3 px-3 whitespace-nowrap"
+                    >
+                      Assigned Cases
+                    </SortableTh>
+                    <th className="py-3 pl-3 pr-4 text-right whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+              </table>
 
-                      {/* Status */}
-                      <td className="py-3 px-3 align-top">
-                        {staff.status === "ON_LEAVE" ? (
-                          <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[13px] font-semibold text-slate-700">
-                            On Leave
-                          </span>
-                        ) : staff.activeTickets >= (staff.maxCapacity || 10) ? (
-                          <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[13px] font-semibold text-rose-800">
-                            At Capacity
-                          </span>
-                        ) : isOverloaded ? (
-                          <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[13px] font-semibold text-amber-800">
-                            High Load
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[13px] font-semibold text-emerald-800">
-                            Available
-                          </span>
-                        )}
-                      </td>
+              {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
+              <div className="max-h-[420px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                <table className="w-full text-left text-sm table-fixed">
+                  <colgroup>
+                    <col className="w-[28%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[24%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
+                    {paginatedStaff.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="py-10 text-center text-slate-500 text-sm"
+                        >
+                          No staff members found.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedStaff.map((staff) => {
+                        const loadPercentage =
+                          staff.maxCapacity > 0
+                            ? Math.round(
+                                (staff.activeTickets / staff.maxCapacity) * 100,
+                              )
+                            : 0;
+                        const isOverloaded = loadPercentage >= 80;
+                        const staffTickets = grievances.filter(
+                          (g) => g.assignedStaffId === staff.id,
+                        );
 
-                      {/* Staff ID */}
-                      <td className="py-3 px-3 align-top font-mono text-[13px] text-slate-600">
-                        {staff.employeeCode}
-                      </td>
+                        return (
+                          <tr
+                            key={staff.id}
+                            className="hover:bg-slate-50/60 transition"
+                          >
+                            {/* Staff Member Info */}
+                            <td className="py-3 pl-4 pr-3 align-top">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F0FDFA] text-sm font-bold text-[#0F766E] border border-teal-200/80">
+                                  {staff.name.charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-sm font-semibold text-slate-900 truncate">
+                                    {staff.name}
+                                  </h4>
+                                  <p className="text-[13px] text-slate-500 truncate">
+                                    {staff.designation.split(" (")[0]}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
 
-                      {/* Workload */}
-                      <td className="py-3 px-3 align-top">
-                        <div className="space-y-1.5 w-full min-w-48 max-w-[240px]">
-                          <div className="flex items-center justify-between text-[13px]">
-                            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                              <span>
-                                {staff.activeTickets} /{" "}
-                                {staff.maxCapacity || 10}
-                              </span>
-                              <span className="text-slate-400 font-normal">
-                                •
-                              </span>
-                              <span
-                                className={`text-[13px] ${
-                                  staff.activeTickets >=
-                                  (staff.maxCapacity || 10)
-                                    ? "text-slate-900 dark:text-slate-200 font-bold"
-                                    : "text-slate-900 dark:text-slate-200 font-medium"
-                                }`}
-                              >
-                                Avail:{" "}
-                                {Math.max(
-                                  0,
-                                  (staff.maxCapacity || 10) -
-                                    staff.activeTickets,
+                            {/* Status */}
+                            <td className="py-3 px-3 align-top">
+                              {staff.status === "ON_LEAVE" ? (
+                                <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[13px] font-semibold text-slate-700">
+                                  On Leave
+                                </span>
+                              ) : staff.activeTickets >=
+                                (staff.maxCapacity || 10) ? (
+                                <span className="rounded-full bg-rose-50 border border-rose-200 px-2 py-0.5 text-[13px] font-semibold text-rose-800">
+                                  At Capacity
+                                </span>
+                              ) : isOverloaded ? (
+                                <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[13px] font-semibold text-amber-800">
+                                  High Load
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[13px] font-semibold text-emerald-800">
+                                  Available
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Staff ID */}
+                            <td className="py-3 px-3 align-top font-mono text-[13px] text-slate-600">
+                              {staff.employeeCode}
+                            </td>
+
+                            {/* Workload */}
+                            <td className="py-3 px-3 align-top">
+                              <div className="space-y-1.5 w-full min-w-48 max-w-[240px]">
+                                <div className="flex items-center justify-between text-[13px]">
+                                  <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                                    <span>
+                                      {staff.activeTickets} /{" "}
+                                      {staff.maxCapacity || 10}
+                                    </span>
+                                    <span className="text-slate-400 font-normal">
+                                      •
+                                    </span>
+                                    <span
+                                      className={`text-[13px] ${
+                                        staff.activeTickets >=
+                                        (staff.maxCapacity || 10)
+                                          ? "text-slate-900 dark:text-slate-200 font-bold"
+                                          : "text-slate-900 dark:text-slate-200 font-medium"
+                                      }`}
+                                    >
+                                      Avail:{" "}
+                                      {Math.max(
+                                        0,
+                                        (staff.maxCapacity || 10) -
+                                          staff.activeTickets,
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${
+                                      staff.status === "ON_LEAVE"
+                                        ? "bg-slate-400"
+                                        : isOverloaded
+                                          ? "bg-amber-500"
+                                          : "bg-emerald-600"
+                                    }`}
+                                    style={{
+                                      width: `${Math.min(loadPercentage, 100)}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Assigned Cases Count & Quick Actions */}
+                            <td className="py-3 px-3 align-top">
+                              <div className="flex flex-col gap-1 items-start">
+                                <span className="text-sm font-semibold text-slate-700">
+                                  {staffTickets.length} assigned
+                                </span>
+                                {staffTickets.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onFilterStaffInQueue(staff.id)
+                                    }
+                                    className="text-[13px] font-medium text-emerald-700 hover:text-emerald-900 transition underline cursor-pointer"
+                                  >
+                                    View in Queue
+                                  </button>
                                 )}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                staff.status === "ON_LEAVE"
-                                  ? "bg-slate-400"
-                                  : isOverloaded
-                                    ? "bg-amber-500"
-                                    : "bg-emerald-600"
-                              }`}
-                              style={{
-                                width: `${Math.min(loadPercentage, 100)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
+                              </div>
+                            </td>
 
-                      {/* Assigned Cases Count & Quick Actions */}
-                      <td className="py-3 px-3 align-top">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className="text-sm font-semibold text-slate-700">
-                            {staffTickets.length} assigned
-                          </span>
-                          {staffTickets.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => onFilterStaffInQueue(staff.id)}
-                              className="text-[13px] font-medium text-emerald-700 hover:text-emerald-900 transition underline cursor-pointer"
-                            >
-                              View in Queue
-                            </button>
-                          )}
-                        </div>
-                      </td>
+                            {/* Actions */}
+                            <td className="py-3 pl-3 pr-4 text-right align-top">
+                              <div className="flex justify-end">
+                                <ActionMenu
+                                  widthClass="w-36"
+                                  items={[
+                                    {
+                                      label: "Email Staff",
+                                      icon: <Mail className="h-3.5 w-3.5" />,
+                                      variant: "default",
+                                      onClick: () => {
+                                        window.open(
+                                          `https://mail.google.com/mail/?view=cm&fs=1&to=${staff.email}`,
+                                          "_blank",
+                                        );
+                                      },
+                                    },
+                                  ]}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
 
-                      {/* Actions */}
-                      <td className="py-3 pl-3 pr-4 text-right align-top">
-                        <div className="flex justify-end">
-                          <ActionMenu
-                            widthClass="w-36"
-                            items={[
-                              {
-                                label: "Email Staff",
-                                icon: <Mail className="h-3.5 w-3.5" />,
-                                variant: "default",
-                                onClick: () => {
-                                  window.open(
-                                    `https://mail.google.com/mail/?view=cm&fs=1&to=${staff.email}`,
-                                    "_blank",
-                                  );
-                                },
-                              },
-                            ]}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="border-t border-slate-200/80">
+          {/* Non-Sticky Solid Pagination Footer */}
           <Pagination
             currentPage={currentPage}
             totalPages={Math.ceil(staffList.length / pageSize)}

@@ -76,7 +76,7 @@ export function TruncatedText({
       id={`truncate-${elementId}`}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 cursor-pointer transition-colors text-left",
+        "inline-flex items-center gap-1 cursor-pointer transition-colors text-left max-w-full truncate",
         className,
       )}
     >
@@ -86,7 +86,7 @@ export function TruncatedText({
     <span
       id={`truncate-${elementId}`}
       className={cn(
-        "inline-flex items-center gap-1 cursor-default transition-colors",
+        "inline-flex items-center gap-1 cursor-default transition-colors max-w-full truncate",
         className,
       )}
     >
