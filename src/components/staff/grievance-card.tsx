@@ -9,6 +9,7 @@ import {
   RotateCcw,
   User,
 } from "lucide-react";
+import Link from "next/link";
 import {
   PriorityBadge,
   SlaBadge,
@@ -124,7 +125,7 @@ export function GrievanceCard({
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
         <div className="flex items-center gap-2">
           {grievance.submitterEmail && (
-            <a
+            <Link
               href={inquiryUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -133,7 +134,7 @@ export function GrievanceCard({
             >
               <Mail className="h-3.5 w-3.5 text-slate-500" />
               <span>Email Complainant</span>
-            </a>
+            </Link>
           )}
         </div>
 

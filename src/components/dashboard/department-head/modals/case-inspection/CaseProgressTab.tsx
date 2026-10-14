@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Clock, ShieldAlert, User, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import {
   formatAuditActionTitle,
@@ -661,7 +662,7 @@ export function CaseProgressTab({
                           {officerEmail} (You — HOD)
                         </span>
                       ) : (
-                        <a
+                        <Link
                           href={buildGmailComposeUrl({
                             to: officerEmail,
                             authuser: currentHodEmail || hodEmail || undefined,
@@ -673,7 +674,7 @@ export function CaseProgressTab({
                           title={`Email staff via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
                         >
                           {officerEmail}
-                        </a>
+                        </Link>
                       )}
                     </div>
                   )}

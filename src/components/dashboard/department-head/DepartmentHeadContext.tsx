@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   CaseDrawerTab,
   EscalationAuditRecord,
@@ -357,13 +358,8 @@ export function DepartmentHeadProvider({
     const sampleText = `REPUBLIC OF INDIA / CENTRAL GRIEVANCE REDRESSAL SYSTEM\nOFFICIAL ATTACHMENT RECORD\n\nTicket Code: ${doc.grievanceNumber}\nFile Name: ${doc.name}\nSize: ${doc.size}\nCategory: ${doc.category}\nComplainant: ${doc.submitterName} (${doc.submitterRole})\nUploaded: ${doc.uploadedAt}\n\n--- DOCUMENT CONTENT EXTRACT ---\nThis official digital document was retrieved from the grievance case dossier.\nCryptographic Verification: SHA-256 Validated\nStatus: Certified Authentic Evidence\n`;
     const blob = new Blob([sampleText], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    triggerFileDownload(url, doc.name);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success(`Downloaded file: ${doc.name}`);
   }, []);
 

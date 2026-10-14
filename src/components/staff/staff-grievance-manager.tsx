@@ -10,6 +10,7 @@ import {
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { GrievanceQueue } from "@/components/staff/grievance-queue";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   StaffDashboardData,
   StaffGrievanceItem,
@@ -51,12 +52,7 @@ export function StaffGrievanceManager({
 
   const handleDownloadDocument = (doc: DocumentPreviewData) => {
     if (doc.path) {
-      const link = document.createElement("a");
-      link.href = doc.path;
-      link.download = doc.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      triggerFileDownload(doc.path, doc.name);
     }
   };
 

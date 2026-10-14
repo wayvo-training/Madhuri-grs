@@ -8,6 +8,7 @@ import {
   Image as ImageIcon,
   UserCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { buildGmailComposeUrl } from "@/lib/email";
 import type {
   DocumentPreviewData,
@@ -68,7 +69,7 @@ export function CaseStatementTab({
           </div>
           <div className="flex flex-col justify-center text-xs">
             <span className="text-slate-500 text-xs">Contact Email</span>
-            <a
+            <Link
               href={buildGmailComposeUrl({
                 to: currentGrievance.submitterEmail,
                 authuser: currentHodEmail || hodEmail || undefined,
@@ -80,7 +81,7 @@ export function CaseStatementTab({
               title={`Email complainant via Gmail from ${currentHodEmail || hodEmail || "Department Head"}`}
             >
               {currentGrievance.submitterEmail}
-            </a>
+            </Link>
           </div>
         </div>
       </div>

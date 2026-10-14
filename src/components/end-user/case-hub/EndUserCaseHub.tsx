@@ -570,14 +570,14 @@ export function EndUserCaseHub({
                           {att.name}
                         </span>
                       </div>
-                      <a
+                      <Link
                         href={att.path}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs font-semibold text-[#0F766E] hover:underline shrink-0"
                       >
                         View
-                      </a>
+                      </Link>
                     </div>
                   ))}
                 </div>
@@ -825,7 +825,7 @@ export function EndUserCaseHub({
                         </div>
                       </div>
 
-                      <a
+                      <Link
                         href={doc.path}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -838,7 +838,7 @@ export function EndUserCaseHub({
                           <Eye className="h-3.5 w-3.5 mr-1.5" />
                           <span>View Proof</span>
                         </Button>
-                      </a>
+                      </Link>
                     </div>
                   );
                 })}

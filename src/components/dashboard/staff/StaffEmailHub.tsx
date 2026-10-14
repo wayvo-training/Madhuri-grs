@@ -10,6 +10,7 @@ import {
   User,
   UserCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import {
   buildGmailComposeUrl,
@@ -96,7 +97,7 @@ export function StaffEmailHub({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <a
+            <Link
               href={directGmailUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -104,9 +105,9 @@ export function StaffEmailHub({
             >
               <ExternalLink className="h-3.5 w-3.5" />
               <span>Open Official Gmail</span>
-            </a>
+            </Link>
             {hodComposeUrl && (
-              <a
+              <Link
                 href={hodComposeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -115,7 +116,7 @@ export function StaffEmailHub({
               >
                 <Shield className="h-3.5 w-3.5 text-emerald-700" />
                 <span>Email HOD ({hodName || "Head"})</span>
-              </a>
+              </Link>
             )}
           </div>
         </div>
@@ -204,7 +205,7 @@ export function StaffEmailHub({
                         >
                           Select
                         </button>
-                        <a
+                        <Link
                           href={inquiryUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -213,7 +214,7 @@ export function StaffEmailHub({
                         >
                           <Send className="h-3 w-3" />
                           <span>Email Citizen</span>
-                        </a>
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -287,14 +288,14 @@ export function StaffEmailHub({
                 ({hodEmail || "Email on file"}).
               </p>
               {hodComposeUrl && (
-                <a
+                <Link
                   href={hodComposeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-900 hover:text-amber-950 underline"
                 >
                   <span>Launch Guidance Request Draft &rarr;</span>
-                </a>
+                </Link>
               )}
             </div>
           )}

@@ -11,10 +11,7 @@ export default function Footer() {
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (pathname === "/") {
       e.preventDefault();
-      const mainEl = document.querySelector("main");
-      if (mainEl && mainEl.scrollTop > 0) {
-        mainEl.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 

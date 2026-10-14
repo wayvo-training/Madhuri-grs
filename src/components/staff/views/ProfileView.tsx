@@ -9,6 +9,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import {
   buildGmailComposeUrl,
   buildStaffHodEscalationEmail,
@@ -82,7 +83,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-2">
-            <a
+            <Link
               href={directGmailUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -91,10 +92,10 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
               <Mail className="h-4 w-4" />
               <span>Open Official Gmail</span>
               <ExternalLink className="h-3 w-3 opacity-70" />
-            </a>
+            </Link>
 
             {hodComposeUrl && (
-              <a
+              <Link
                 href={hodComposeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -103,7 +104,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
                 <Shield className="h-4 w-4 text-[#0E7490]" />
                 <span>Contact HOD ({profile.hodName || "Head"})</span>
                 <ExternalLink className="h-3 w-3 opacity-70" />
-              </a>
+              </Link>
             )}
           </div>
         </div>

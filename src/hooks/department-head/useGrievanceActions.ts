@@ -8,6 +8,7 @@ import {
   interveneGrievanceAction,
   reviewResolutionAction,
 } from "@/actions";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   DocumentPreviewData,
   EscalationAuditRecord,
@@ -530,13 +531,8 @@ export function useGrievanceActions({
         type: "text/plain;charset=utf-8",
       });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerFileDownload(url, doc.name);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       showSuccess(`Downloaded file: ${doc.name}`, 3000);
     },
     [showSuccess],

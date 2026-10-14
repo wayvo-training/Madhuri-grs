@@ -10,6 +10,7 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
 interface StaffSingleGrievanceViewProps {
@@ -36,12 +37,7 @@ export function StaffSingleGrievanceView({
 
   const handleDownloadDocument = (doc: DocumentPreviewData) => {
     if (doc.path) {
-      const link = document.createElement("a");
-      link.href = doc.path;
-      link.download = doc.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      triggerFileDownload(doc.path, doc.name);
     }
   };
 

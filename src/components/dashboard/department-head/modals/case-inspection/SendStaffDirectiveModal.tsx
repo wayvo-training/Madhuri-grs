@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, Mail, MessageSquare, Send, User, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { buildGmailComposeUrl } from "@/lib/email";
 import type { GrievanceItem } from "@/types/department-head";
@@ -136,7 +137,7 @@ Department Head`;
 
         {/* Actions Footer */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-2 border-t border-slate-100">
-          <a
+          <Link
             href={gmailUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -145,7 +146,7 @@ Department Head`;
           >
             <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
             <span>Open Draft in Gmail</span>
-          </a>
+          </Link>
 
           <div className="flex items-center justify-end gap-2">
             <button

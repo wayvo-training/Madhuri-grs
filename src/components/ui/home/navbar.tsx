@@ -13,23 +13,9 @@ export default function Navbar() {
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (pathname === "/") {
       e.preventDefault();
-      const mainEl = document.querySelector("main");
-      if (mainEl && mainEl.scrollTop > 0) {
-        mainEl.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
-
-  const handleScrollTo =
-    (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (pathname === "/") {
-        e.preventDefault();
-        const targetEl = document.getElementById(id);
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: "smooth" });
-        }
-      }
-    };
 
   return (
     <nav className="sticky top-0 z-50 shrink-0 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
@@ -64,7 +50,6 @@ export default function Navbar() {
 
           <Link
             href="/#track"
-            onClick={handleScrollTo("track")}
             className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] sm:block cursor-pointer"
           >
             Track Status
@@ -72,7 +57,6 @@ export default function Navbar() {
 
           <Link
             href="/#how-it-works"
-            onClick={handleScrollTo("how-it-works")}
             className="hidden rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0F766E] md:block cursor-pointer"
           >
             How It Works

@@ -17,6 +17,7 @@ import { ResolutionForm } from "@/components/staff/resolution-form";
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   StaffAuditItem,
   StaffDashboardData,
@@ -62,12 +63,7 @@ export function StaffDashboard({
 
   const handleDownloadDocument = (doc: DocumentPreviewData) => {
     if (doc.path) {
-      const link = document.createElement("a");
-      link.href = doc.path;
-      link.download = doc.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      triggerFileDownload(doc.path, doc.name);
     }
   };
 

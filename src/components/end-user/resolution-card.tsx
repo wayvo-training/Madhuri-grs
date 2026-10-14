@@ -6,6 +6,7 @@ import {
   FileText,
   ShieldCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { AcceptResolutionButton } from "@/components/end-user/accept-resolution-button";
 import { PrintSectionButton } from "@/components/end-user/print-button";
 import { ReopenButton } from "@/components/end-user/reopen-button";
@@ -163,7 +164,7 @@ export function ResolutionCard({
                     )}
                   </div>
                 </div>
-                <a
+                <Link
                   href={att.path}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -177,7 +178,7 @@ export function ResolutionCard({
                     <Eye className="h-3 w-3 mr-1" />
                     View
                   </Button>
-                </a>
+                </Link>
               </div>
             ))}
           </div>

@@ -246,7 +246,7 @@ export function StatementTab({
               </div>
             ) : (
               <div className="space-y-1 mt-0.5">
-                <a
+                <Link
                   href={inquiryUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -254,7 +254,7 @@ export function StatementTab({
                 >
                   <Mail className="h-3 w-3" />
                   <span>{grievance.submitterEmail}</span>
-                </a>
+                </Link>
                 <Link
                   href={`/staff/messages/${grievance.id}`}
                   className="font-medium text-[#0F766E] hover:underline inline-flex items-center gap-1 text-xs block"
@@ -267,7 +267,7 @@ export function StatementTab({
             {hodEscalationUrl && (
               <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400">Department Head:</span>
-                <a
+                <Link
                   href={hodEscalationUrl}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -275,7 +275,7 @@ export function StatementTab({
                 >
                   <Shield className="h-3 w-3" />
                   <span>Consult Supervisor ({hodName || "HOD"})</span>
-                </a>
+                </Link>
               </div>
             )}
           </div>
