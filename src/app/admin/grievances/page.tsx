@@ -11,114 +11,96 @@ export default async function AdminGrievancesPage() {
   const user = await requirePageRole("ADMIN");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
-  const [
-    rawGrievances,
-    departments,
-    totalGrievancesCount,
-    [
-      allCount,
-      exceptionCount,
-      activeCount,
-      slaRiskCount,
-      closedCount,
-      slaCriticalCount,
-      reopenedCount,
-      escalatedCount,
-    ],
-    categoriesData,
-  ] = await Promise.all([
-    prisma.grievances.findMany({
-      take: 10,
-      orderBy: { created_at: "desc" },
-      include: {
-        categories: true,
-        subcategories: true,
-        users: {
-          select: {
-            first_name: true,
-            last_name: true,
-            email: true,
-          },
-        },
-        grievance_departments: {
-          where: { involvement_type: "PRIMARY" },
-          include: {
-            departments: true,
-          },
-        },
-      },
-    }),
-    prisma.departments.findMany({
-      where: { status: "ACTIVE" },
-      select: {
-        department_id: true,
-        department_name: true,
-        _count: {
-          select: { grievance_departments: true },
-        },
-      },
-      orderBy: { department_name: "asc" },
-    }),
-    prisma.grievances.count(),
-    Promise.all([
-      prisma.grievances.count(),
-      prisma.grievances.count({
-        where: {
-          OR: [
-            { status: "SUBMITTED" },
-            { grievance_departments: { none: {} } },
-          ],
-        },
-      }),
-      prisma.grievances.count({
-        where: {
-          status: {
-            in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
-          },
-        },
-      }),
-      prisma.grievances.count({
-        where: { sla_status: "AT_RISK" },
-      }),
-      prisma.grievances.count({
-        where: { status: { in: ["CLOSED", "RESOLVED"] } },
-      }),
-      prisma.grievances.count({
-        where: {
-          OR: [{ sla_status: "BREACHED" }, { status: "ESCALATED" }],
-        },
-      }),
-      prisma.grievances.count({
-        where: {
-          OR: [
-            { reopen_count: { gt: 0 } },
-            { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
-          ],
-        },
-      }),
-      prisma.grievances.count({
-        where: { status: "ESCALATED" },
-      }),
-    ]),
-    prisma.categories.findMany({
-      select: { category_name: true },
-      orderBy: { category_name: "asc" },
-    }),
-  ]);
+  interface AggregatedCountsRow {
+    all_count: number;
+    exception_count: number;
+    active_count: number;
+    sla_risk_count: number;
+    closed_count: number;
+    sla_critical_count: number;
+    reopened_count: number;
+    escalated_count: number;
+  }
 
-  const grievanceIds = rawGrievances.map((g) => g.grievance_id);
-  const allDeptLinks =
-    grievanceIds.length > 0
-      ? await prisma.grievance_departments.findMany({
-          where: { grievance_id: { in: grievanceIds } },
-          include: { departments: true },
-        })
-      : [];
+  const [rawGrievances, departments, countsResult, categoriesData] =
+    await Promise.all([
+      prisma.grievances.findMany({
+        take: 10,
+        orderBy: { created_at: "desc" },
+        include: {
+          categories: true,
+          subcategories: true,
+          users: {
+            select: {
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+          },
+          grievance_departments: {
+            include: {
+              departments: true,
+            },
+          },
+        },
+      }),
+      prisma.departments.findMany({
+        where: { status: "ACTIVE" },
+        select: {
+          department_id: true,
+          department_name: true,
+          _count: {
+            select: { grievance_departments: true },
+          },
+        },
+        orderBy: { department_name: "asc" },
+      }),
+      prisma.$queryRaw<AggregatedCountsRow[]>`
+        SELECT
+          COUNT(*)::int AS all_count,
+          COUNT(*) FILTER (
+            WHERE status = 'SUBMITTED' 
+            OR NOT EXISTS (SELECT 1 FROM grievance_departments gd WHERE gd.grievance_id = grievances.grievance_id)
+          )::int AS exception_count,
+          COUNT(*) FILTER (
+            WHERE status IN ('ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW')
+          )::int AS active_count,
+          COUNT(*) FILTER (
+            WHERE sla_status = 'AT_RISK'
+          )::int AS sla_risk_count,
+          COUNT(*) FILTER (
+            WHERE status IN ('CLOSED', 'RESOLVED')
+          )::int AS closed_count,
+          COUNT(*) FILTER (
+            WHERE sla_status = 'BREACHED' OR status = 'ESCALATED'
+          )::int AS sla_critical_count,
+          COUNT(*) FILTER (
+            WHERE reopen_count > 0 OR status IN ('REOPENED', 'REOPEN_REVIEW')
+          )::int AS reopened_count,
+          COUNT(*) FILTER (
+            WHERE status = 'ESCALATED'
+          )::int AS escalated_count
+        FROM grievances;
+      `,
+      prisma.categories.findMany({
+        select: { category_name: true },
+        orderBy: { category_name: "asc" },
+      }),
+    ]);
+
+  const countsRow = countsResult[0] || {
+    all_count: 0,
+    exception_count: 0,
+    active_count: 0,
+    sla_risk_count: 0,
+    closed_count: 0,
+    sla_critical_count: 0,
+    reopened_count: 0,
+    escalated_count: 0,
+  };
 
   const serializedGrievances: SerializedGrievance[] = rawGrievances.map((g) => {
-    const ticketLinks = allDeptLinks.filter(
-      (l) => l.grievance_id === g.grievance_id,
-    );
+    const ticketLinks = g.grievance_departments;
     const primaryLink = ticketLinks.find(
       (l) => l.involvement_type === "PRIMARY",
     );
@@ -175,17 +157,17 @@ export default async function AdminGrievancesPage() {
     >
       <AdminGrievanceTable
         initialGrievances={serializedGrievances}
-        initialTotalCount={totalGrievancesCount}
+        initialTotalCount={countsRow.all_count}
         initialCounts={{
-          all: allCount,
-          exceptions: exceptionCount,
-          active: activeCount,
-          inProgress: activeCount,
-          slaRisk: slaRiskCount,
-          slaCritical: slaCriticalCount,
-          reopened: reopenedCount,
-          escalated: escalatedCount,
-          closed: closedCount,
+          all: countsRow.all_count,
+          exceptions: countsRow.exception_count,
+          active: countsRow.active_count,
+          inProgress: countsRow.active_count,
+          slaRisk: countsRow.sla_risk_count,
+          slaCritical: countsRow.sla_critical_count,
+          reopened: countsRow.reopened_count,
+          escalated: countsRow.escalated_count,
+          closed: countsRow.closed_count,
         }}
         departments={serializedDepartments}
         categories={categoriesData.map((c) => c.category_name)}

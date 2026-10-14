@@ -902,12 +902,26 @@ export async function evaluateGrievanceSla(
   };
 }
 
+const lastEvaluationByDept = new Map<string, number>();
+const SLA_EVAL_COOLDOWN_MS = 60 * 1000; // 60 seconds debounce
+
 /**
  * Batch evaluates all active, non-terminal grievances across the system.
  */
 export async function evaluateAllActiveGrievancesSla(
   departmentId?: bigint,
+  force: boolean = false,
 ): Promise<{ totalEvaluated: number; results: SlaEvaluationResult[] }> {
+  const deptKey = departmentId ? departmentId.toString() : "ALL";
+  const now = Date.now();
+  const lastEval = lastEvaluationByDept.get(deptKey) || 0;
+
+  if (!force && now - lastEval < SLA_EVAL_COOLDOWN_MS) {
+    return { totalEvaluated: 0, results: [] };
+  }
+
+  lastEvaluationByDept.set(deptKey, now);
+
   const activeGrievances = await prisma.grievances.findMany({
     where: {
       status: {

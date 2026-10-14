@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     ) {
       deptId = BigInt(user.department_id);
     }
-    const batchResult = await evaluateAllActiveGrievancesSla(deptId);
+    const batchResult = await evaluateAllActiveGrievancesSla(deptId, true);
 
     return NextResponse.json({
       success: true,

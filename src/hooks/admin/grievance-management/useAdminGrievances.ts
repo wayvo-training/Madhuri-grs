@@ -9,8 +9,6 @@ import type {
   TableTab,
 } from "@/types/admin/grievances";
 
-const PAGE_SIZE = 10;
-
 export function useAdminGrievances(
   initialGrievances: SerializedGrievance[],
   initialTotalCount = 0,
@@ -40,6 +38,7 @@ export function useAdminGrievances(
     },
   );
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,10 +64,15 @@ export function useAdminGrievances(
   // Check URL search params on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("search");
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("search");
       if (q) {
         setSearchQuery(q);
         setDebouncedSearch(q);
+      }
+      const s = params.get("status");
+      if (s) {
+        setSelectedStatus([s]);
       }
     }
   }, []);
@@ -98,12 +102,13 @@ export function useAdminGrievances(
       status: string[],
       dept: string[],
       sla: string[],
+      limitSize: number = pageSize,
     ) => {
       try {
         setIsLoading(true);
         const params = new URLSearchParams({
           page: page.toString(),
-          limit: PAGE_SIZE.toString(),
+          limit: limitSize.toString(),
           tab,
           search,
         });
@@ -136,7 +141,7 @@ export function useAdminGrievances(
         setIsLoading(false);
       }
     },
-    [],
+    [pageSize],
   );
 
   const handleRouteSuccess = (
@@ -209,7 +214,11 @@ export function useAdminGrievances(
   // Filter or tab changes: reset to page 1 and fetch from server
   useEffect(() => {
     if (isInitialMount.current) {
-      if (activeTab !== "ALL") {
+      if (
+        activeTab !== "ALL" ||
+        debouncedSearch.trim() !== "" ||
+        selectedStatus.length > 0
+      ) {
         isInitialMount.current = false;
         fetchGrievances(
           1,
@@ -219,6 +228,7 @@ export function useAdminGrievances(
           selectedStatus,
           selectedDept,
           selectedSla,
+          pageSize,
         );
       } else {
         isInitialMount.current = false;
@@ -244,9 +254,10 @@ export function useAdminGrievances(
     selectedDept,
     selectedSla,
     fetchGrievances,
+    pageSize,
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   function handlePageChange(newPage: number) {
     if (newPage < 1 || newPage > totalPages || isLoading) return;
@@ -259,6 +270,22 @@ export function useAdminGrievances(
       selectedStatus,
       selectedDept,
       selectedSla,
+      pageSize,
+    );
+  }
+
+  function handlePageSizeChange(newSize: number) {
+    setPageSize(newSize);
+    setCurrentPage(1);
+    fetchGrievances(
+      1,
+      activeTab,
+      debouncedSearch,
+      selectedPriority,
+      selectedStatus,
+      selectedDept,
+      selectedSla,
+      newSize,
     );
   }
 
@@ -268,7 +295,9 @@ export function useAdminGrievances(
     counts,
     currentPage,
     setCurrentPage,
-    pageSize: PAGE_SIZE,
+    pageSize,
+    setPageSize: handlePageSizeChange,
+    onPageSizeChange: handlePageSizeChange,
     totalPages,
     isLoading,
     searchQuery,
