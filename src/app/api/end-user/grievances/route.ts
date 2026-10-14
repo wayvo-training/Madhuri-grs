@@ -84,12 +84,47 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate unique grievance number
+    // Generate unique grievance number safely
     const year = new Date().getFullYear();
-    // find count of grievances to generate sequence number
-    const count = await prisma.grievances.count();
-    const seq = String(count + 1).padStart(4, "0");
-    const grievanceNumber = `GRS-${year}-${seq}`;
+    const prefix = `GRS-${year}-`;
+
+    const latestGrievance = await prisma.grievances.findFirst({
+      where: {
+        grievance_number: {
+          startsWith: prefix,
+        },
+      },
+      orderBy: {
+        grievance_number: "desc",
+      },
+      select: {
+        grievance_number: true,
+      },
+    });
+
+    let nextSeq = 1;
+    if (latestGrievance?.grievance_number) {
+      const parts = latestGrievance.grievance_number.split("-");
+      const lastNum = parseInt(parts[parts.length - 1], 10);
+      if (!Number.isNaN(lastNum)) {
+        nextSeq = lastNum + 1;
+      }
+    }
+
+    let grievanceNumber = "";
+    let candidateSeq = nextSeq;
+    while (!grievanceNumber) {
+      const candidateNumber = `${prefix}${String(candidateSeq).padStart(4, "0")}`;
+      const existing = await prisma.grievances.findUnique({
+        where: { grievance_number: candidateNumber },
+        select: { grievance_id: true },
+      });
+      if (!existing) {
+        grievanceNumber = candidateNumber;
+      } else {
+        candidateSeq++;
+      }
+    }
 
     // Apply Routing Rules
     let activeRule = await prisma.routing_rules.findFirst({
@@ -158,21 +193,47 @@ export async function POST(request: Request) {
     const initialStatus = isAutoRouted ? "ROUTED" : "SUBMITTED";
 
     // Create the grievance with status ROUTED (if rule matched) or SUBMITTED (if manual routing needed), priority, calculated due_at, and sla_status
-    const newGrievance = await prisma.grievances.create({
-      data: {
-        grievance_number: grievanceNumber,
-        category_id: BigInt(categoryId),
-        subcategory_id: BigInt(subcategoryId),
-        title: title,
-        description: problemStatement,
-        status: initialStatus,
-        priority: priorityLevel,
-        priority_rule_id: priorityResult.priorityRuleId,
-        due_at: dueAt,
-        sla_status: "ON_TRACK",
-        submitted_by: user.user_id,
-      },
-    });
+    let newGrievance: Awaited<
+      ReturnType<typeof prisma.grievances.create>
+    > | null = null;
+    let createAttempts = 0;
+    while (!newGrievance && createAttempts < 5) {
+      try {
+        newGrievance = await prisma.grievances.create({
+          data: {
+            grievance_number: grievanceNumber,
+            category_id: BigInt(categoryId),
+            subcategory_id: BigInt(subcategoryId),
+            title: title,
+            description: problemStatement,
+            status: initialStatus,
+            priority: priorityLevel,
+            priority_rule_id: priorityResult.priorityRuleId,
+            due_at: dueAt,
+            sla_status: "ON_TRACK",
+            submitted_by: user.user_id,
+          },
+        });
+      } catch (err: unknown) {
+        if (
+          err &&
+          typeof err === "object" &&
+          "code" in err &&
+          err.code === "P2002" &&
+          createAttempts < 4
+        ) {
+          candidateSeq++;
+          grievanceNumber = `${prefix}${String(candidateSeq).padStart(4, "0")}`;
+          createAttempts++;
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!newGrievance) {
+      throw new Error("Failed to create grievance after multiple attempts.");
+    }
 
     // Initialize SLA tracking record
     if (slaPolicy) {
