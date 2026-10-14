@@ -242,396 +242,390 @@ export function RoutingRulesView({
     <TooltipProvider delay={200}>
       <div className="flex flex-col gap-3.5">
         {/* Table Container */}
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs overflow-x-auto">
-          <Table className="w-full text-left text-sm min-w-[1250px]">
-            <TableHeader className="bg-slate-50/60 dark:bg-slate-800/60">
-              <TableRow className="hover:bg-transparent whitespace-nowrap">
-                <SortableTableHead
-                  field="rule_name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-2.5 pl-4 pr-3 min-w-[200px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Rule Name
-                </SortableTableHead>
-                <SortableTableHead
-                  field="category_name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[130px] max-w-[160px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Category
-                </SortableTableHead>
-                <SortableTableHead
-                  field="subcategory_name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[130px] max-w-[160px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Subcategory
-                </SortableTableHead>
-                <SortableTableHead
-                  field="department_name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[140px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Primary Dept
-                </SortableTableHead>
-                <SortableTableHead
-                  field="participating_depts"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Participating Depts
-                </SortableTableHead>
-                <SortableTableHead
-                  field="execution_mode"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[120px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Mode
-                </SortableTableHead>
-                <SortableTableHead
-                  field="dependencies"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[160px] max-w-[220px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Dependencies
-                </SortableTableHead>
-                <SortableTableHead
-                  field="sla_allocation"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[160px] max-w-[200px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  SLA Allocation
-                </SortableTableHead>
-                <SortableTableHead
-                  field="status"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-3 py-2.5 min-w-[90px] font-semibold uppercase tracking-wider text-slate-500 text-xs"
-                >
-                  Status
-                </SortableTableHead>
-                <TableHead className="py-2.5 pl-2 pr-4 min-w-[90px] text-right font-semibold uppercase tracking-wider text-slate-500 text-xs">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody className="font-medium text-slate-700 dark:text-slate-200">
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={10}
-                    className="py-12 text-center text-slate-400 font-normal"
-                  >
-                    <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                    No Routing Rules found matching your filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((r) => {
-                  const mdi = r.mdi;
-                  const isSequential = mdi.executionMode === "SEQUENTIAL";
-                  const visibleDepts = mdi.participatingDepartments.slice(0, 2);
-                  const remainingCount =
-                    mdi.participatingDepartments.length - visibleDepts.length;
-
-                  return (
-                    <TableRow
-                      key={r.routing_rule_id}
-                      className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 whitespace-nowrap"
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <div className="min-w-[1480px]">
+              {/* Static Header Table: no scrollbar next to header */}
+              <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/60">
+                <colgroup>
+                  <col className="w-[190px]" />
+                  <col className="w-[130px]" />
+                  <col className="w-[130px]" />
+                  <col className="w-[140px]" />
+                  <col className="w-[240px]" />
+                  <col className="w-[110px]" />
+                  <col className="w-[160px]" />
+                  <col className="w-[190px]" />
+                  <col className="w-[100px]" />
+                  <col className="w-[90px]" />
+                </colgroup>
+                <TableHeader className="bg-transparent">
+                  <TableRow className="hover:bg-transparent whitespace-nowrap">
+                    <SortableTableHead
+                      field="rule_name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-2.5 pl-4 pr-3 font-semibold uppercase tracking-wider text-slate-500 text-xs"
                     >
-                      {/* Rule Name */}
-                      <TableCell className="py-2.5 pl-4 pr-3 min-w-[200px]">
-                        <div className="flex flex-col">
-                          <TruncatedTextTooltip
-                            text={r.rule_name}
-                            tooltipHeader={`Routing Rule #${r.rule_order}`}
-                            threshold={26}
-                            maxWidthClass="max-w-[220px]"
-                            interactive={true}
-                            onClick={() => setSelectedWorkflowRule(r)}
-                          />
-                          <span className="text-2xs text-slate-400 font-mono mt-0.5">
-                            Rule #{r.rule_order}
-                          </span>
-                        </div>
-                      </TableCell>
+                      Rule Name
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="category_name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Category
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="subcategory_name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Subcategory
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="department_name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Primary Dept
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="participating_depts"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Participating Depts
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="execution_mode"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Mode
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="dependencies"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Dependencies
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="sla_allocation"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      SLA Allocation
+                    </SortableTableHead>
+                    <SortableTableHead
+                      field="status"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-xs"
+                    >
+                      Status
+                    </SortableTableHead>
+                    <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500 text-xs">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+              </table>
 
-                      {/* Category */}
-                      <TableCell className="px-3 py-2.5 min-w-[130px] max-w-[160px]">
-                        <TruncatedTextTooltip
-                          text={r.category_name || "All"}
-                          tooltipHeader="Grievance Category"
-                          threshold={18}
-                          maxWidthClass="max-w-[140px]"
-                          className="text-slate-600 dark:text-slate-300"
-                        />
-                      </TableCell>
-
-                      {/* Subcategory */}
-                      <TableCell className="px-3 py-2.5 min-w-[130px] max-w-[160px]">
-                        <TruncatedTextTooltip
-                          text={r.subcategory_name || "—"}
-                          tooltipHeader="Subcategory"
-                          threshold={18}
-                          maxWidthClass="max-w-[140px]"
-                          className="text-slate-600 dark:text-slate-300"
-                        />
-                      </TableCell>
-
-                      {/* Primary Dept */}
-                      <TableCell className="px-3 py-2.5 min-w-[140px]">
-                        <div className="flex items-center gap-1.5">
-                          <TruncatedTextTooltip
-                            text={mdi.primaryDepartment}
-                            tooltipHeader="Primary Lead Department"
-                            threshold={16}
-                            maxWidthClass="max-w-[110px]"
-                            className="font-semibold text-slate-800 dark:text-slate-200"
-                          />
-                          <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 shrink-0">
-                            Lead
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      {/* Participating Departments */}
-                      <TableCell className="px-3 py-2.5 min-w-[220px]">
-                        <div className="flex items-center gap-1 flex-wrap max-w-[240px]">
-                          {visibleDepts.map((d) => {
-                            const badgeStyle =
-                              d.involvement_type === "PRIMARY"
-                                ? "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800"
-                                : d.involvement_type === "EQUAL"
-                                  ? "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800"
-                                  : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800";
-
-                            return (
-                              <Tooltip key={d.department_name}>
-                                <TooltipTrigger
-                                  tabIndex={0}
-                                  className="focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 rounded cursor-default"
-                                >
-                                  <span
-                                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-2xs font-medium border ${badgeStyle}`}
-                                  >
-                                    <span className="truncate max-w-[95px] text-slate-800 dark:text-slate-200 font-semibold">
-                                      {d.department_name}
-                                    </span>
-                                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-85">
-                                      · {d.involvement_type}
-                                    </span>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="top"
-                                  sideOffset={6}
-                                  className="z-50 rounded-lg bg-slate-900 dark:bg-slate-800 text-white px-2.5 py-1.5 shadow-xl border border-slate-700/80 text-xs"
-                                >
-                                  <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                                    Participating Department
-                                  </div>
-                                  <div className="font-semibold text-slate-100 mt-0.5">
-                                    {d.department_name}
-                                  </div>
-                                  <div className="text-2xs text-indigo-300 font-bold uppercase mt-0.5">
-                                    Role: {d.involvement_type}
-                                  </div>
-                                  {d.prerequisites &&
-                                    d.prerequisites.length > 0 && (
-                                      <div className="text-2xs text-amber-300 mt-1 border-t border-slate-700 pt-1">
-                                        Prerequisites:{" "}
-                                        {d.prerequisites.join(" + ")}
-                                      </div>
-                                    )}
-                                </TooltipContent>
-                              </Tooltip>
-                            );
-                          })}
-
-                          {remainingCount > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger
-                                type="button"
-                                tabIndex={0}
-                                onClick={() => setSelectedWorkflowRule(r)}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
-                              >
-                                +{remainingCount} more
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                sideOffset={6}
-                                className="p-3 space-y-1.5 bg-slate-900 text-white rounded-xl shadow-xl text-xs z-50 min-w-[220px] max-w-sm border border-slate-700/80"
-                              >
-                                <div className="font-bold border-b border-slate-700 pb-1.5 text-2xs uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                                  <span>
-                                    All Participating (
-                                    {mdi.participatingDepartments.length})
-                                  </span>
-                                  <span className="text-[10px] text-indigo-300 font-normal">
-                                    Click pill for graph
-                                  </span>
-                                </div>
-                                <div className="space-y-1 max-h-48 overflow-y-auto">
-                                  {mdi.participatingDepartments.map((d) => (
-                                    <div
-                                      key={d.department_name}
-                                      className="flex items-center justify-between gap-3 text-2xs py-0.5 border-b border-slate-800/60 last:border-0"
-                                    >
-                                      <span className="font-medium text-slate-200">
-                                        {d.department_name}
-                                      </span>
-                                      <span className="font-bold uppercase text-[10px] text-indigo-300">
-                                        {d.involvement_type}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Execution Mode */}
-                      <TableCell className="px-3 py-2.5 min-w-[120px] whitespace-nowrap">
-                        {isSequential ? (
-                          <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
-                            <GitMerge className="h-3 w-3" />
-                            SEQUENTIAL
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-2xs font-bold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800">
-                            <Zap className="h-3 w-3" />
-                            PARALLEL
-                          </span>
-                        )}
-                      </TableCell>
-
-                      {/* Dependencies */}
-                      <TableCell className="px-3 py-2.5 min-w-[160px] max-w-[220px]">
-                        {mdi.isDependencyComplex ? (
-                          <button
-                            type="button"
-                            onClick={() => setSelectedWorkflowRule(r)}
-                            className="inline-flex items-center gap-1 text-2xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/50 hover:bg-indigo-100 px-2 py-1 rounded-md border border-indigo-200 dark:border-indigo-800 transition cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
-                            title="View complete multi-stage dependency workflow"
-                          >
-                            <GitBranch className="h-3 w-3" />
-                            <span>View Workflow</span>
-                          </button>
-                        ) : (
-                          <TruncatedTextTooltip
-                            text={mdi.dependencySummary}
-                            tooltipHeader="Execution Dependencies"
-                            threshold={18}
-                            maxWidthClass="max-w-[200px]"
-                            className={
-                              mdi.dependencySummary === "Independent"
-                                ? "text-slate-400 dark:text-slate-500 font-mono text-2xs"
-                                : "font-mono font-medium text-slate-700 dark:text-slate-300 text-2xs"
-                            }
-                          />
-                        )}
-                      </TableCell>
-
-                      {/* SLA Allocation */}
-                      <TableCell className="px-3 py-2.5 min-w-[160px] max-w-[200px]">
-                        {mdi.hasSlaAllocation ? (
-                          <TruncatedTextTooltip
-                            text={mdi.slaAllocationSummary}
-                            tooltipHeader="Department SLA Allocation"
-                            threshold={18}
-                            maxWidthClass="max-w-[180px]"
-                            className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300"
-                          />
-                        ) : (
-                          <span className="text-slate-400 dark:text-slate-500 italic text-2xs">
-                            Not configured
-                          </span>
-                        )}
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell className="px-3 py-2.5 min-w-[90px] whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => onToggleStatus(r)}
-                          className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 ${
-                            r.status === "ACTIVE"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                              : "bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-                          }`}
-                          title="Click to toggle active/inactive status"
+              {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+              <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                <table className="w-full text-left text-sm table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-[190px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[240px]" />
+                    <col className="w-[110px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[190px]" />
+                    <col className="w-[100px]" />
+                    <col className="w-[90px]" />
+                  </colgroup>
+                  <TableBody className="font-medium text-slate-700 dark:text-slate-200">
+                    {filtered.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={10}
+                          className="py-12 text-center text-slate-400 font-normal"
                         >
-                          {r.status === "ACTIVE" ? "Active" : "Inactive"}
-                        </button>
-                      </TableCell>
+                          <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                          No Routing Rules found matching your filters.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginated.map((r) => {
+                        const mdi = r.mdi;
+                        const isSequential = mdi.executionMode === "SEQUENTIAL";
+                        const primaryDepts =
+                          mdi.participatingDepartments.filter(
+                            (d) =>
+                              d.involvement_type === "PRIMARY" ||
+                              d.involvement_type === "EQUAL",
+                          );
+                        const supportDepts =
+                          mdi.participatingDepartments.filter(
+                            (d) => d.involvement_type === "SUPPORT",
+                          );
 
-                      {/* Actions */}
-                      <TableCell className="py-2.5 pl-2 pr-4 min-w-[70px] text-right">
-                        <div className="flex items-center justify-end">
-                          <ActionMenu
-                            widthClass="w-40"
-                            items={[
-                              {
-                                label: "View Workflow",
-                                icon: <GitBranch className="h-3.5 w-3.5" />,
-                                onClick: () => setSelectedWorkflowRule(r),
-                              },
-                              {
-                                label: "Edit Rule",
-                                icon: <Pencil className="h-3.5 w-3.5" />,
-                                onClick: () => onEdit(r),
-                              },
-                              {
-                                label:
+                        return (
+                          <TableRow
+                            key={r.routing_rule_id}
+                            className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50 whitespace-nowrap"
+                          >
+                            {/* Rule Name */}
+                            <TableCell className="py-2.5 pl-4 pr-3 min-w-[190px]">
+                              <div className="flex flex-col">
+                                <TruncatedTextTooltip
+                                  text={r.rule_name}
+                                  tooltipHeader={`Routing Rule #${r.rule_order}`}
+                                  threshold={26}
+                                  maxWidthClass="max-w-[210px]"
+                                  interactive={true}
+                                  onClick={() => setSelectedWorkflowRule(r)}
+                                />
+                                <span className="text-2xs text-slate-400 font-mono mt-0.5">
+                                  Rule #{r.rule_order}
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* Category */}
+                            <TableCell className="px-3 py-2.5 min-w-[130px] max-w-[150px]">
+                              <TruncatedTextTooltip
+                                text={r.category_name || "All"}
+                                tooltipHeader="Grievance Category"
+                                threshold={16}
+                                maxWidthClass="max-w-[130px]"
+                                className="text-slate-600 dark:text-slate-300"
+                              />
+                            </TableCell>
+
+                            {/* Subcategory */}
+                            <TableCell className="px-3 py-2.5 min-w-[130px] max-w-[150px]">
+                              <TruncatedTextTooltip
+                                text={r.subcategory_name || "—"}
+                                tooltipHeader="Subcategory"
+                                threshold={16}
+                                maxWidthClass="max-w-[130px]"
+                                className="text-slate-600 dark:text-slate-300"
+                              />
+                            </TableCell>
+
+                            {/* Primary Dept */}
+                            <TableCell className="px-3 py-2.5 min-w-[140px]">
+                              <div className="flex items-center gap-1.5">
+                                <TruncatedTextTooltip
+                                  text={mdi.primaryDepartment}
+                                  tooltipHeader="Primary Lead Department"
+                                  threshold={16}
+                                  maxWidthClass="max-w-[110px]"
+                                  className="font-semibold text-slate-800 dark:text-slate-200"
+                                />
+                                <span className="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                                  Lead
+                                </span>
+                              </div>
+                            </TableCell>
+
+                            {/* Participating Departments: Clean text, separated Primary & Support, no heavy badge colors */}
+                            <TableCell className="px-3 py-2.5 min-w-[240px] max-w-[240px] overflow-hidden">
+                              <div className="flex flex-col gap-1 text-xs py-0.5">
+                                {primaryDepts.length > 0 && (
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">
+                                      Primary:
+                                    </span>
+                                    <TruncatedTextTooltip
+                                      text={primaryDepts
+                                        .map((d) => d.department_name)
+                                        .join(", ")}
+                                      tooltipHeader="Primary Department(s)"
+                                      threshold={20}
+                                      maxWidthClass="max-w-[170px]"
+                                      className="font-semibold text-slate-800 dark:text-slate-200"
+                                    />
+                                  </div>
+                                )}
+                                {supportDepts.length > 0 && (
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0">
+                                      Support:
+                                    </span>
+                                    <TruncatedTextTooltip
+                                      text={supportDepts
+                                        .map((d) => d.department_name)
+                                        .join(", ")}
+                                      tooltipHeader="Support Department(s)"
+                                      threshold={20}
+                                      maxWidthClass="max-w-[170px]"
+                                      className="font-normal text-slate-600 dark:text-slate-400"
+                                    />
+                                  </div>
+                                )}
+                                {primaryDepts.length === 0 &&
+                                  supportDepts.length === 0 && (
+                                    <span className="text-slate-400 text-xs italic">
+                                      —
+                                    </span>
+                                  )}
+                              </div>
+                            </TableCell>
+
+                            {/* Execution Mode */}
+                            <TableCell className="px-3 py-2.5 min-w-[110px] whitespace-nowrap">
+                              {isSequential ? (
+                                <span className="inline-flex items-center gap-1 text-2xs font-semibold text-slate-700 dark:text-slate-300">
+                                  <GitMerge className="h-3 w-3 text-amber-600" />
+                                  SEQUENTIAL
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-2xs font-semibold text-slate-700 dark:text-slate-300">
+                                  <Zap className="h-3 w-3 text-sky-600" />
+                                  PARALLEL
+                                </span>
+                              )}
+                            </TableCell>
+
+                            {/* Dependencies */}
+                            <TableCell className="px-3 py-2.5 min-w-[160px] max-w-[200px] overflow-hidden">
+                              {mdi.isDependencyComplex ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedWorkflowRule(r)}
+                                  className="inline-flex items-center gap-1 text-2xs font-bold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                                  title="View complete multi-stage dependency workflow"
+                                >
+                                  <GitBranch className="h-3 w-3" />
+                                  <span>Workflow</span>
+                                </button>
+                              ) : (
+                                <TruncatedTextTooltip
+                                  text={mdi.dependencySummary}
+                                  tooltipHeader="Execution Dependencies"
+                                  threshold={18}
+                                  maxWidthClass="max-w-[155px]"
+                                  className={
+                                    mdi.dependencySummary === "Independent"
+                                      ? "text-slate-400 dark:text-slate-500 font-mono text-2xs"
+                                      : "font-mono font-medium text-slate-700 dark:text-slate-300 text-2xs"
+                                  }
+                                />
+                              )}
+                            </TableCell>
+
+                            {/* SLA Allocation */}
+                            <TableCell className="px-3 py-2.5 min-w-[190px] max-w-[190px] overflow-hidden">
+                              {mdi.hasSlaAllocation ? (
+                                <TruncatedTextTooltip
+                                  text={mdi.slaAllocationSummary}
+                                  tooltipHeader="Department SLA Allocation"
+                                  threshold={20}
+                                  maxWidthClass="max-w-[175px]"
+                                  className="text-xs font-mono font-medium text-slate-700 dark:text-slate-300"
+                                />
+                              ) : (
+                                <span className="text-slate-400 dark:text-slate-500 italic text-2xs">
+                                  Not configured
+                                </span>
+                              )}
+                            </TableCell>
+
+                            {/* Status */}
+                            <TableCell className="px-3 py-2.5 min-w-[90px] whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => onToggleStatus(r)}
+                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 ${
                                   r.status === "ACTIVE"
-                                    ? "Deactivate"
-                                    : "Activate",
-                                icon: <CheckCircle2 className="h-3.5 w-3.5" />,
-                                onClick: () => onToggleStatus(r),
-                              },
-                              {
-                                label: "Delete Rule",
-                                variant: "danger" as const,
-                                icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                                onClick: () => onDelete(r),
-                              },
-                            ]}
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                    : "bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                                }`}
+                                title="Click to toggle active/inactive status"
+                              >
+                                {r.status === "ACTIVE" ? "Active" : "Inactive"}
+                              </button>
+                            </TableCell>
 
-        {/* Pagination */}
-        {rules.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50]}
-            itemLabel="Routing Rules"
-          />
-        )}
+                            {/* Actions */}
+                            <TableCell className="py-2.5 pl-2 pr-4 min-w-[70px] text-right">
+                              <div className="flex items-center justify-end">
+                                <ActionMenu
+                                  widthClass="w-40"
+                                  items={[
+                                    {
+                                      label: "View Workflow",
+                                      icon: (
+                                        <GitBranch className="h-3.5 w-3.5" />
+                                      ),
+                                      onClick: () => setSelectedWorkflowRule(r),
+                                    },
+                                    {
+                                      label: "Edit Rule",
+                                      icon: <Pencil className="h-3.5 w-3.5" />,
+                                      onClick: () => onEdit(r),
+                                    },
+                                    {
+                                      label:
+                                        r.status === "ACTIVE"
+                                          ? "Deactivate"
+                                          : "Activate",
+                                      icon: (
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                      ),
+                                      onClick: () => onToggleStatus(r),
+                                    },
+                                    {
+                                      label: "Delete Rule",
+                                      variant: "danger" as const,
+                                      icon: (
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                      ),
+                                      onClick: () => onDelete(r),
+                                    },
+                                  ]}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          {rules.length > 0 && (
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[5, 10, 20, 50]}
+                itemLabel="Routing Rules"
+              />
+            </div>
+          )}
+        </div>
 
         {/* View Workflow Modal */}
         <RoutingWorkflowModal

@@ -7,7 +7,6 @@ import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHeader,
@@ -57,76 +56,102 @@ export function RecentGrievancesTable({
         </Link>
       </div>
 
-      <div className="mt-4 overflow-x-auto flex-1">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableTableHead
-                field="grievance_number"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-2.5 pl-3 pr-2"
-              >
-                Grievance ID
-              </SortableTableHead>
-              <SortableTableHead
-                field="category_name"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2.5 py-2.5"
-              >
-                Category
-              </SortableTableHead>
-              <SortableTableHead
-                field="priority"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2.5 py-2.5"
-              >
-                Priority
-              </SortableTableHead>
-              <SortableTableHead
-                field="status"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2.5 py-2.5"
-              >
-                Status
-              </SortableTableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recentGrievances.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="py-8 text-center text-slate-400"
-                >
-                  No grievances registered yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedGrievances.map((g) => (
-                <TableRow key={g.grievance_id}>
-                  <TableCell className="pl-3 pr-2 font-mono font-medium text-slate-900">
-                    {g.grievance_number}
-                  </TableCell>
-                  <TableCell className="px-2.5 text-slate-700">
-                    {g.category_name || "General"}
-                  </TableCell>
-                  <TableCell className="px-2.5">
-                    <PriorityBadge priority={g.priority} />
-                  </TableCell>
-                  <TableCell className="px-2.5">
-                    <StatusBadge status={g.status} />
-                  </TableCell>
+      <div className="mt-4 flex-1 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+        <div className="overflow-x-auto custom-scrollbar">
+          <div className="min-w-[500px]">
+            {/* Header Table (Static, no scrollbar) */}
+            <table className="w-full text-left text-sm table-fixed border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+              <colgroup>
+                <col className="w-[30%]" />
+                <col className="w-[36%]" />
+                <col className="w-[17%]" />
+                <col className="w-[17%]" />
+              </colgroup>
+              <TableHeader className="bg-transparent shadow-none">
+                <TableRow className="border-none hover:bg-transparent">
+                  <SortableTableHead
+                    field="grievance_number"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-2.5 pl-3 pr-2"
+                  >
+                    Grievance ID
+                  </SortableTableHead>
+                  <SortableTableHead
+                    field="category_name"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="px-2.5 py-2.5"
+                  >
+                    Category
+                  </SortableTableHead>
+                  <SortableTableHead
+                    field="priority"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="px-2.5 py-2.5"
+                  >
+                    Priority
+                  </SortableTableHead>
+                  <SortableTableHead
+                    field="status"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="px-2.5 py-2.5"
+                  >
+                    Status
+                  </SortableTableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+              </TableHeader>
+            </table>
+
+            {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
+            <div className="max-h-[300px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+              <table className="w-full text-left text-sm table-fixed">
+                <colgroup>
+                  <col className="w-[30%]" />
+                  <col className="w-[36%]" />
+                  <col className="w-[17%]" />
+                  <col className="w-[17%]" />
+                </colgroup>
+                <TableBody>
+                  {recentGrievances.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="py-8 text-center text-slate-400"
+                      >
+                        No grievances registered yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedGrievances.map((g) => (
+                      <TableRow
+                        key={g.grievance_id}
+                        className="hover:bg-slate-50/70 transition"
+                      >
+                        <TableCell className="pl-3 pr-2 font-mono font-medium text-slate-900 truncate">
+                          {g.grievance_number}
+                        </TableCell>
+                        <TableCell className="px-2.5 text-slate-700 truncate">
+                          {g.category_name || "General"}
+                        </TableCell>
+                        <TableCell className="px-2.5">
+                          <PriorityBadge priority={g.priority} />
+                        </TableCell>
+                        <TableCell className="px-2.5">
+                          <StatusBadge status={g.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Solid Pagination Footer */}
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(recentGrievances.length / pageSize) || 1}

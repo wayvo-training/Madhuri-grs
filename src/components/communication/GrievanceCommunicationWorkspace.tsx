@@ -39,15 +39,20 @@ export function GrievanceCommunicationWorkspace({
             <span>Back to Conversations</span>
           </Link>
         )}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
           {/* Grievance Identity */}
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100">
+          <div className="space-y-0.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-mono text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 shrink-0 whitespace-nowrap">
                 {data.grievanceNumber}
               </span>
-              <span className="text-slate-300 dark:text-slate-700">•</span>
-              <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+              <span className="text-slate-300 dark:text-slate-700 shrink-0">
+                •
+              </span>
+              <h2
+                className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 truncate min-w-0 cursor-default"
+                title={data.title}
+              >
                 {data.title}
               </h2>
             </div>
@@ -57,6 +62,16 @@ export function GrievanceCommunicationWorkspace({
               <span>{data.categoryName}</span>
               <span>•</span>
               <span>{data.subcategoryName}</span>
+              {data.departmentName && (
+                <>
+                  <span>•</span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">
+                    {data.isMultiDepartment
+                      ? "Multi Department"
+                      : data.departmentName}
+                  </span>
+                </>
+              )}
               <span>•</span>
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${

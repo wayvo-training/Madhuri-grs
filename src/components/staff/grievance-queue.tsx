@@ -98,6 +98,15 @@ export function GrievanceQueue({
 
   const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("search");
+      if (q) {
+        setFilters((prev) => ({ ...prev, searchQuery: q }));
+      }
+    }
+  }, []);
+
   // Comprehensive master categories: combines system taxonomy + assigned grievances
   const categories = useMemo(() => {
     const set = new Set<string>(categoriesProp || []);
@@ -338,10 +347,17 @@ export function GrievanceQueue({
   const sortedGrievances = useMemo(() => {
     const list = [...filteredGrievances];
     if (!sortState.field || !sortState.direction) {
-      return list.sort(
-        (a, b) =>
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
-      );
+      // Default Sort: Most recently assigned / received grievances on top
+      return list.sort((a, b) => {
+        const dateB = new Date(b.assignedAt || b.submittedAt).getTime();
+        const dateA = new Date(a.assignedAt || a.submittedAt).getTime();
+        if (!isNaN(dateB) && !isNaN(dateA) && dateB !== dateA) {
+          return dateB - dateA;
+        }
+        const idA = Number(a.id) || 0;
+        const idB = Number(b.id) || 0;
+        return idB - idA;
+      });
     }
 
     return list.sort((a, b) => {
@@ -465,10 +481,10 @@ export function GrievanceQueue({
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white shadow-2xs">
+        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)] rounded-xl border border-slate-200/90 bg-white shadow-2xs custom-scrollbar">
           <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/50 text-[13px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
+            <thead className="sticky top-0 z-10 shadow-2xs backdrop-blur-xs">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-[13px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
                 <SortableTh
                   field="grievanceNumber"
                   currentSort={sortState}
@@ -727,16 +743,18 @@ export function GrievanceQueue({
             </tbody>
           </table>
 
-          <Pagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            totalCount={pagination.totalCount}
-            pageSize={pagination.pageSize}
-            onPageChange={pagination.onPageChange}
-            onPageSizeChange={pagination.onPageSizeChange}
-            pageSizeOptions={pagination.pageSizeOptions}
-            itemLabel="grievances"
-          />
+          <div className="border-t border-slate-200/80 bg-white dark:bg-slate-900">
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              pageSize={pagination.pageSize}
+              onPageChange={pagination.onPageChange}
+              onPageSizeChange={pagination.onPageSizeChange}
+              pageSizeOptions={pagination.pageSizeOptions}
+              itemLabel="grievances"
+            />
+          </div>
         </div>
       )}
 

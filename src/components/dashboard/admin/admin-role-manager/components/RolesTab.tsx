@@ -109,7 +109,7 @@ export function RolesTab({
         />
       </div>
 
-      {/* Roles Table */}
+      {/* Roles Table with Row-only Vertical Scrolling */}
       {paginatedRoles.length === 0 ? (
         <AdminEmptyState
           icon={ShieldCheck}
@@ -117,118 +117,143 @@ export function RolesTab({
           description="Try adjusting your search query or status filter."
         />
       ) : (
-        <div className="overflow-x-auto bg-transparent mb-6">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <tr>
-                <SortableTh
-                  field="role_name"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-4 py-3"
-                >
-                  Role Name
-                </SortableTh>
-                <SortableTh
-                  field="description"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-4 py-3"
-                >
-                  Description
-                </SortableTh>
-                <SortableTh
-                  field="status"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="px-4 py-3"
-                >
-                  Status
-                </SortableTh>
-                <th className="px-4 py-3">Permissions</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
-              {sortedItems.map((role) => (
-                <tr
-                  key={role.role_id}
-                  className="hover:bg-slate-50/70 transition"
-                >
-                  <td className="px-4 py-3 max-w-[200px]">
-                    <TruncatedText
-                      text={role.role_name}
-                      maxChars={24}
-                      className="font-semibold text-slate-900 border-none block"
-                    />
-                  </td>
-                  <td className="px-4 py-3 max-w-[280px]">
-                    <TruncatedText
-                      text={role.description}
-                      maxChars={35}
-                      className="text-slate-500 border-none block"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold ${
-                        role.status === "ACTIVE"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
-                      }`}
+        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <div className="min-w-[850px]">
+              {/* Header Table (Static, no scrollbar) */}
+              <table className="w-full text-left text-sm table-fixed border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+                <colgroup>
+                  <col className="w-[24%]" />
+                  <col className="w-[32%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
+                <thead className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <tr>
+                    <SortableTh
+                      field="role_name"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-4 py-3"
                     >
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                          role.status === "ACTIVE"
-                            ? "bg-emerald-500"
-                            : "bg-slate-400"
-                        }`}
-                      />
-                      {role.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 max-w-[200px]">
-                    <TruncatedText
-                      text={`${role.permissions.length} permissions`}
-                      fullText={role.permissions
-                        .map((p) => p.permission_name)
-                        .join(", ")}
-                      maxChars={20}
-                      className="text-slate-600 border-none block"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end">
-                      <ActionMenu
-                        widthClass="w-36"
-                        items={[
-                          {
-                            label: "Edit",
-                            icon: <ShieldCheck className="h-3.5 w-3.5" />,
-                            onClick: () => onEditRole(role),
-                          },
-                        ]}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      Role Name
+                    </SortableTh>
+                    <SortableTh
+                      field="description"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-4 py-3"
+                    >
+                      Description
+                    </SortableTh>
+                    <SortableTh
+                      field="status"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="px-4 py-3"
+                    >
+                      Status
+                    </SortableTh>
+                    <th className="px-4 py-3">Permissions</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+              </table>
+
+              {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
+              <div className="max-h-[420px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                <table className="w-full text-left text-sm table-fixed">
+                  <colgroup>
+                    <col className="w-[24%]" />
+                    <col className="w-[32%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[10%]" />
+                  </colgroup>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
+                    {sortedItems.map((role) => (
+                      <tr
+                        key={role.role_id}
+                        className="hover:bg-slate-50/70 transition"
+                      >
+                        <td className="px-4 py-3">
+                          <TruncatedText
+                            text={role.role_name}
+                            maxChars={24}
+                            className="font-semibold text-slate-900 border-none block truncate max-w-full"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <TruncatedText
+                            text={role.description}
+                            maxChars={35}
+                            className="text-slate-500 border-none block truncate max-w-full"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-semibold ${
+                              role.status === "ACTIVE"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                role.status === "ACTIVE"
+                                  ? "bg-emerald-500"
+                                  : "bg-slate-400"
+                              }`}
+                            />
+                            {role.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <TruncatedText
+                            text={`${role.permissions.length} permissions`}
+                            fullText={role.permissions
+                              .map((p) => p.permission_name)
+                              .join(", ")}
+                            maxChars={20}
+                            className="text-slate-600 border-none block truncate max-w-full"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end">
+                            <ActionMenu
+                              widthClass="w-36"
+                              items={[
+                                {
+                                  label: "Edit",
+                                  icon: <ShieldCheck className="h-3.5 w-3.5" />,
+                                  onClick: () => onEditRole(role),
+                                },
+                              ]}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Solid Pagination Footer */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={filteredRolesCount}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemLabel="roles"
+          />
         </div>
       )}
-
-      {/* Pagination Footer */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={filteredRolesCount}
-        pageSize={pageSize}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        pageSizeOptions={[5, 10, 20, 50]}
-        itemLabel="roles"
-      />
     </div>
   );
 }

@@ -170,10 +170,10 @@ export function DepartmentTable({
       </div>
 
       {/* Departments Table */}
-      <div className="mt-5 overflow-x-auto">
+      <div className="mt-5 overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
         <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+          <thead className="sticky top-0 z-10 shadow-2xs backdrop-blur-xs">
+            <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
               <SortableTh
                 field="department_id"
                 currentSort={sortState}
@@ -274,11 +274,13 @@ export function DepartmentTable({
                     </td>
 
                     {/* Department Name */}
-                    <td className="whitespace-nowrap px-4 py-3.5">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-sm font-semibold text-slate-900">
-                          {dept.department_name}
-                        </span>
+                    <td className="px-4 py-3.5 max-w-[200px] overflow-hidden">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <TruncatedText
+                          text={dept.department_name}
+                          maxChars={24}
+                          className="text-sm font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block"
+                        />
                       </div>
                     </td>
 
@@ -365,16 +367,18 @@ export function DepartmentTable({
       </div>
 
       {/* Pagination Footer */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={filteredDepartments.length}
-        pageSize={pageSize}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        pageSizeOptions={[5, 10, 20, 50]}
-        itemLabel="departments"
-      />
+      <div className="mt-4 pt-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={filteredDepartments.length}
+          pageSize={pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={[5, 10, 20, 50]}
+          itemLabel="departments"
+        />
+      </div>
     </div>
   );
 }

@@ -700,7 +700,7 @@ export function StatementTab({
               </span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
               {kbRecommendations.map((art) => (
                 <div
                   key={art.id}

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import type {
   CategoryOption as RuleCategoryOption,
@@ -156,9 +157,19 @@ export function PriorityRulesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
-        <Table className="w-full text-left text-sm">
-          <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
+        {/* Static Header Table: no scrollbar next to header */}
+        <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+          <colgroup>
+            <col className="w-[22%]" />
+            <col className="w-[18%]" />
+            <col className="w-[18%]" />
+            <col className="w-[14%]" />
+            <col className="w-[9%]" />
+            <col className="w-[10%]" />
+            <col className="w-[9%]" />
+          </colgroup>
+          <TableHeader className="bg-transparent">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
                 field="rule_name"
@@ -213,174 +224,194 @@ export function PriorityRulesView({
               </TableHead>
             </TableRow>
           </TableHeader>
+        </table>
 
-          <TableBody className="font-medium text-slate-700">
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="py-12 text-center text-slate-400 font-normal"
-                >
-                  <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                  No Priority Rules found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginated.map((r) => {
-                let ruleCat = "All";
-                let ruleSubcat = "—";
-                try {
-                  if (r.conditions && typeof r.conditions === "object") {
-                    const cond = r.conditions as {
-                      category_name?: string;
-                      subcategory_name?: string;
-                      category?: string;
-                      subcategory?: string;
-                      category_id?: string;
-                      subcategory_id?: string;
-                    };
+        {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+        <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <table className="w-full text-left text-sm table-fixed border-collapse">
+            <colgroup>
+              <col className="w-[22%]" />
+              <col className="w-[18%]" />
+              <col className="w-[18%]" />
+              <col className="w-[14%]" />
+              <col className="w-[9%]" />
+              <col className="w-[10%]" />
+              <col className="w-[9%]" />
+            </colgroup>
+            <TableBody className="font-medium text-slate-700">
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="py-12 text-center text-slate-400 font-normal"
+                  >
+                    <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                    No Priority Rules found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((r) => {
+                  let ruleCat = "All";
+                  let ruleSubcat = "—";
+                  try {
+                    if (r.conditions && typeof r.conditions === "object") {
+                      const cond = r.conditions as {
+                        category_name?: string;
+                        subcategory_name?: string;
+                        category?: string;
+                        subcategory?: string;
+                        category_id?: string;
+                        subcategory_id?: string;
+                      };
 
-                    let resolvedCatName = cond.category_name || cond.category;
-                    let resolvedSubcatName =
-                      cond.subcategory_name || cond.subcategory;
+                      let resolvedCatName = cond.category_name || cond.category;
+                      let resolvedSubcatName =
+                        cond.subcategory_name || cond.subcategory;
 
-                    if (cond.category_id && categories?.length > 0) {
-                      const catMatch = categories.find(
-                        (c) => c.category_id === cond.category_id,
-                      );
-                      if (catMatch) {
-                        resolvedCatName = catMatch.category_name;
-                        if (cond.subcategory_id) {
-                          const subMatch = catMatch.subcategories?.find(
+                      if (cond.category_id && categories?.length > 0) {
+                        const catMatch = categories.find(
+                          (c) => c.category_id === cond.category_id,
+                        );
+                        if (catMatch) {
+                          resolvedCatName = catMatch.category_name;
+                          if (cond.subcategory_id) {
+                            const subMatch = catMatch.subcategories?.find(
+                              (s: {
+                                subcategory_id: string;
+                                subcategory_name: string;
+                              }) => s.subcategory_id === cond.subcategory_id,
+                            );
+                            if (subMatch) {
+                              resolvedSubcatName = subMatch.subcategory_name;
+                            }
+                          }
+                        }
+                      } else if (
+                        resolvedSubcatName &&
+                        !resolvedCatName &&
+                        categories?.length > 0
+                      ) {
+                        for (const c of categories) {
+                          const subMatch = c.subcategories?.find(
                             (s: {
                               subcategory_id: string;
                               subcategory_name: string;
-                            }) => s.subcategory_id === cond.subcategory_id,
+                            }) =>
+                              s.subcategory_name.trim().toLowerCase() ===
+                              resolvedSubcatName?.trim().toLowerCase(),
                           );
                           if (subMatch) {
-                            resolvedSubcatName = subMatch.subcategory_name;
+                            resolvedCatName = c.category_name;
+                            break;
                           }
                         }
                       }
-                    } else if (
-                      resolvedSubcatName &&
-                      !resolvedCatName &&
-                      categories?.length > 0
-                    ) {
-                      for (const c of categories) {
-                        const subMatch = c.subcategories?.find(
-                          (s: {
-                            subcategory_id: string;
-                            subcategory_name: string;
-                          }) =>
-                            s.subcategory_name.trim().toLowerCase() ===
-                            resolvedSubcatName?.trim().toLowerCase(),
-                        );
-                        if (subMatch) {
-                          resolvedCatName = c.category_name;
-                          break;
-                        }
-                      }
+
+                      ruleCat = resolvedCatName || "All";
+                      ruleSubcat = resolvedSubcatName || "—";
                     }
+                  } catch (_e) {}
 
-                    ruleCat = resolvedCatName || "All";
-                    ruleSubcat = resolvedSubcatName || "—";
-                  }
-                } catch (_e) {}
+                  const isDefault = r.is_default;
 
-                const isDefault = r.is_default;
-
-                return (
-                  <TableRow
-                    key={r.priority_rule_id}
-                    className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
-                  >
-                    <TableCell className="py-2.5 pl-4 pr-2">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-slate-900">
-                          {r.rule_name}
-                          {isDefault && " (Default Fallback)"}
+                  return (
+                    <TableRow
+                      key={r.priority_rule_id}
+                      className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
+                    >
+                      <TableCell className="py-2.5 pl-4 pr-2 overflow-hidden max-w-full">
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <TruncatedText
+                            text={`${r.rule_name}${isDefault ? " (Default Fallback)" : ""}`}
+                            maxChars={26}
+                            className="font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block"
+                          />
+                          {(() => {
+                            const cond = r.conditions as {
+                              keywords?: string[];
+                              contains?: string[];
+                            } | null;
+                            const kwList = cond?.keywords || cond?.contains;
+                            if (Array.isArray(kwList) && kwList.length > 0) {
+                              return (
+                                <TruncatedText
+                                  text={`Keywords: ${kwList.join(", ")}`}
+                                  maxChars={28}
+                                  className="text-[11px] text-slate-400 max-w-full truncate block"
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600 dark:text-slate-300 overflow-hidden">
+                        <TruncatedText
+                          text={ruleCat}
+                          maxChars={20}
+                          className="text-slate-600 dark:text-slate-300 max-w-full truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600 dark:text-slate-400 overflow-hidden">
+                        <TruncatedText
+                          text={ruleSubcat}
+                          maxChars={20}
+                          className="text-slate-600 dark:text-slate-400 max-w-full truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5">
+                        {r.priority_level}
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5">
+                        {isDefault ? "99" : r.rule_order}
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 whitespace-nowrap">
+                        <span
+                          className={`font-medium ${r.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                        >
+                          {r.status === "ACTIVE" ? "Active" : "Inactive"}
                         </span>
-                        {(() => {
-                          const cond = r.conditions as {
-                            keywords?: string[];
-                            contains?: string[];
-                          } | null;
-                          const kwList = cond?.keywords || cond?.contains;
-                          if (Array.isArray(kwList) && kwList.length > 0) {
-                            return (
-                              <span className="text-[11px] text-slate-400">
-                                Keywords: {kwList.join(", ")}
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]"
-                      title={ruleCat}
-                    >
-                      {ruleCat}
-                    </TableCell>
-                    <TableCell
-                      className="px-2 py-2.5 text-slate-600 truncate max-w-[200px]"
-                      title={ruleSubcat}
-                    >
-                      {ruleSubcat}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5">
-                      {r.priority_level}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5">
-                      {isDefault ? "99" : r.rule_order}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 whitespace-nowrap">
-                      <span
-                        className={`font-medium ${r.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
-                      >
-                        {r.status === "ACTIVE" ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-2.5 pl-2 pr-4 text-right">
-                      <ActionMenu
-                        widthClass="w-36"
-                        items={[
-                          {
-                            label: "Edit Rule",
-                            icon: <Pencil className="h-3.5 w-3.5" />,
-                            onClick: () => onEdit(r),
-                          },
-                          {
-                            label: "Delete Rule",
-                            variant: "danger" as const,
-                            icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                            onClick: () => onDelete(r),
-                          },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                      </TableCell>
+                      <TableCell className="py-2.5 pl-2 pr-4 text-right">
+                        <ActionMenu
+                          widthClass="w-36"
+                          items={[
+                            {
+                              label: "Edit Rule",
+                              icon: <Pencil className="h-3.5 w-3.5" />,
+                              onClick: () => onEdit(r),
+                            },
+                            {
+                              label: "Delete Rule",
+                              variant: "danger" as const,
+                              icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                              onClick: () => onDelete(r),
+                            },
+                          ]}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </table>
+        </div>
+        {rules.length > 0 && (
+          <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemLabel="Priority Rules"
+            />
+          </div>
+        )}
       </div>
-
-      {rules.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          itemLabel="Priority Rules"
-        />
-      )}
     </div>
   );
 }

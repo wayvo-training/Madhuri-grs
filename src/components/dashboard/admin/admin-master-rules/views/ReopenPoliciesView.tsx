@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import type { SerializedReopenPolicy } from "@/types/admin/master-rules";
 
@@ -44,7 +45,7 @@ export function ReopenPoliciesView({
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const policiesWithTaxonomy = useMemo(() => {
     return filtered.map((p) => {
@@ -84,9 +85,20 @@ export function ReopenPoliciesView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs">
-        <Table className="w-full text-left text-sm">
-          <TableHeader className="bg-slate-50/50 dark:bg-slate-800/50">
+      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
+        {/* Static Header Table: no scrollbar next to header */}
+        <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+          <colgroup>
+            <col className="w-[20%]" />
+            <col className="w-[15%]" />
+            <col className="w-[15%]" />
+            <col className="w-[13%]" />
+            <col className="w-[10%]" />
+            <col className="w-[13%]" />
+            <col className="w-[7%]" />
+            <col className="w-[7%]" />
+          </colgroup>
+          <TableHeader className="bg-transparent">
             <TableRow className="hover:bg-transparent whitespace-nowrap">
               <SortableTableHead
                 field="policy_name"
@@ -149,103 +161,131 @@ export function ReopenPoliciesView({
               </TableHead>
             </TableRow>
           </TableHeader>
+        </table>
 
-          <TableBody className="font-medium text-slate-700">
-            {filtered.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="py-12 text-center text-slate-400 font-normal"
-                >
-                  <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                  No Reopen Policies found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginated.map((p) => {
-                return (
-                  <TableRow
-                    key={p.reopen_policy_id}
-                    className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
+        {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+        <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <table className="w-full text-left text-sm table-fixed border-collapse">
+            <colgroup>
+              <col className="w-[20%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[13%]" />
+              <col className="w-[10%]" />
+              <col className="w-[13%]" />
+              <col className="w-[7%]" />
+              <col className="w-[7%]" />
+            </colgroup>
+            <TableBody className="font-medium text-slate-700">
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="py-12 text-center text-slate-400 font-normal"
                   >
-                    <TableCell className="py-2.5 pl-4 pr-2">
-                      <span className="font-semibold text-slate-900">
-                        {p.policy_name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 text-slate-600">
-                      {(() => {
-                        try {
-                          const cond = p.applicable_condition as {
-                            category?: string;
-                          };
-                          return cond?.category || "All";
-                        } catch {
-                          return "All";
-                        }
-                      })()}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 text-slate-600">
-                      {(() => {
-                        try {
-                          const cond = p.applicable_condition as {
-                            subcategory?: string;
-                          };
-                          return cond?.subcategory || "All";
-                        } catch {
-                          return "All";
-                        }
-                      })()}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 text-slate-600">
-                      {p.reopen_window_hours
-                        ? `${p.reopen_window_hours} Hours`
-                        : "Unlimited"}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 text-slate-600">
-                      {p.max_reopen_count}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 text-slate-600">
-                      {p.max_manual_review_count}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 whitespace-nowrap">
-                      <span
-                        className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
-                      >
-                        {p.status === "ACTIVE" ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="py-2.5 pl-2 pr-4 text-right">
-                      <ActionMenu
-                        widthClass="w-36"
-                        items={[
-                          {
-                            label: "Delete Policy",
-                            variant: "danger" as const,
-                            icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                            onClick: () => onDelete(p),
-                          },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                    <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                    No Reopen Policies found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginated.map((p) => {
+                  return (
+                    <TableRow
+                      key={p.reopen_policy_id}
+                      className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
+                    >
+                      <TableCell className="py-2.5 pl-4 pr-2 overflow-hidden max-w-full">
+                        <TruncatedText
+                          text={p.policy_name}
+                          maxChars={24}
+                          className="font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600 dark:text-slate-300 overflow-hidden">
+                        <TruncatedText
+                          text={(() => {
+                            try {
+                              const cond = p.applicable_condition as {
+                                category?: string;
+                              };
+                              return cond?.category || "All";
+                            } catch {
+                              return "All";
+                            }
+                          })()}
+                          maxChars={18}
+                          className="text-slate-600 dark:text-slate-300 max-w-full truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600 dark:text-slate-400 overflow-hidden">
+                        <TruncatedText
+                          text={(() => {
+                            try {
+                              const cond = p.applicable_condition as {
+                                subcategory?: string;
+                              };
+                              return cond?.subcategory || "All";
+                            } catch {
+                              return "All";
+                            }
+                          })()}
+                          maxChars={18}
+                          className="text-slate-600 dark:text-slate-400 max-w-full truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600">
+                        {p.reopen_window_hours
+                          ? `${p.reopen_window_hours} Hours`
+                          : "Unlimited"}
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600">
+                        {p.max_reopen_count}
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 text-slate-600">
+                        {p.max_manual_review_count}
+                      </TableCell>
+                      <TableCell className="px-2 py-2.5 whitespace-nowrap">
+                        <span
+                          className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                        >
+                          {p.status === "ACTIVE" ? "Active" : "Inactive"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-2.5 pl-2 pr-4 text-right">
+                        <ActionMenu
+                          widthClass="w-36"
+                          items={[
+                            {
+                              label: "Delete Policy",
+                              variant: "danger" as const,
+                              icon: <AlertTriangle className="h-3.5 w-3.5" />,
+                              onClick: () => onDelete(p),
+                            },
+                          ]}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </table>
+        </div>
+        {policies.length > 0 && (
+          <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemLabel="Reopen Policies"
+            />
+          </div>
+        )}
       </div>
-
-      {policies.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          itemLabel="Reopen Policies"
-        />
-      )}
     </div>
   );
 }

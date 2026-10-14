@@ -97,7 +97,14 @@ export function OverviewView({
   };
 
   const sortedAttentionItems = [...attentionItems].sort((a, b) => {
-    if (!sortKey) return 0;
+    if (!sortKey) {
+      const dateB = new Date(b.assignedAt || b.submittedAt).getTime();
+      const dateA = new Date(a.assignedAt || a.submittedAt).getTime();
+      if (!isNaN(dateB) && !isNaN(dateA) && dateB !== dateA) {
+        return dateB - dateA;
+      }
+      return Number(b.id) - Number(a.id);
+    }
     let comp = 0;
     switch (sortKey) {
       case "grievanceNumber":

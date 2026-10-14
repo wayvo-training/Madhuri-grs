@@ -127,9 +127,9 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4">
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         <div>
           <div className="flex items-center gap-2">
             <Link
@@ -145,7 +145,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
               <span>Activity History</span>
             </div>
           </div>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-2">
+          <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 mt-1.5">
             Staff Activity &amp; Audit Trail
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -155,7 +155,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <div className="shrink-0 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="flex-1 min-w-0 w-full">
           <AdvancedTableSearch
             fields={searchFields}
@@ -169,7 +169,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
       </div>
 
       {/* Activity Timeline List */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="p-8 text-center space-y-3">
             <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
@@ -191,15 +191,23 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="w-full overflow-hidden flex flex-col">
+              {/* Static Header Table: no scrollbar next to header */}
+              <table className="w-full text-left table-fixed border-collapse shrink-0">
+                <colgroup>
+                  <col className="w-[20%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[36%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[12%]" />
+                </colgroup>
                 <thead>
                   <tr className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800/60">
                     <SortableTh
                       field="action"
                       currentSort={sortState}
                       onSort={handleSort}
-                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                      className="py-3 px-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
                     >
                       Action
                     </SortableTh>
@@ -207,7 +215,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                       field="grievanceNumber"
                       currentSort={sortState}
                       onSort={handleSort}
-                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                      className="py-3 px-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
                     >
                       Grievance ID
                     </SortableTh>
@@ -215,7 +223,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                       field="details"
                       currentSort={sortState}
                       onSort={handleSort}
-                      className="p-4 text-xs font-semibold text-slate-600"
+                      className="py-3 px-4 text-xs font-semibold text-slate-600"
                     >
                       Details
                     </SortableTh>
@@ -223,7 +231,7 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                       field="actor"
                       currentSort={sortState}
                       onSort={handleSort}
-                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                      className="py-3 px-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
                     >
                       Actor
                     </SortableTh>
@@ -231,72 +239,87 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
                       field="timestamp"
                       currentSort={sortState}
                       onSort={handleSort}
-                      className="p-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
+                      className="py-3 px-4 text-xs font-semibold text-slate-600 whitespace-nowrap"
                     >
                       Time
                     </SortableTh>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                  {pagination.paginatedItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition"
-                    >
-                      <td className="p-4 align-top whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shrink-0">
-                            {getActionIcon(item.action)}
-                          </div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {item.action}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-4 align-top whitespace-nowrap">
-                        {item.grievanceNumber ? (
-                          <span className="font-mono text-[13px] font-medium text-slate-900 dark:text-slate-200">
-                            {item.grievanceNumber}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-xs">-</span>
-                        )}
-                      </td>
-                      <td className="p-4 align-top max-w-md">
-                        <TruncatedText
-                          text={item.details}
-                          maxChars={55}
-                          className="text-xs text-slate-700 leading-relaxed border-none block"
-                        />
-                      </td>
-                      <td className="p-4 align-top whitespace-nowrap">
-                        <span className="text-xs text-slate-700 font-medium">
-                          {item.actor || "-"}
-                        </span>
-                      </td>
-                      <td className="p-4 align-top whitespace-nowrap">
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                          {item.relativeTime ||
-                            new Date(item.timestamp).toLocaleString()}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
               </table>
+
+              {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+              <div className="max-h-[calc(100vh-360px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                <table className="w-full text-left table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-[20%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[36%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[12%]" />
+                  </colgroup>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {pagination.paginatedItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition"
+                      >
+                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shrink-0">
+                              {getActionIcon(item.action)}
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                              {item.action}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                          {item.grievanceNumber ? (
+                            <span className="font-mono text-[13px] font-medium text-slate-900 dark:text-slate-200">
+                              {item.grievanceNumber}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 align-top">
+                          <TruncatedText
+                            text={item.details}
+                            maxChars={55}
+                            className="text-xs text-slate-700 leading-relaxed border-none block"
+                          />
+                        </td>
+                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                          <span className="text-xs text-slate-700 font-medium truncate block">
+                            {item.actor || "-"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 align-top whitespace-nowrap">
+                          <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            {item.relativeTime ||
+                              new Date(item.timestamp).toLocaleString()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              totalCount={pagination.totalCount}
-              pageSize={pagination.pageSize}
-              onPageChange={pagination.onPageChange}
-              onPageSizeChange={pagination.onPageSizeChange}
-              pageSizeOptions={pagination.pageSizeOptions}
-              itemLabel="activity logs"
-            />
+            <div className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.onPageChange}
+                onPageSizeChange={pagination.onPageSizeChange}
+                pageSizeOptions={pagination.pageSizeOptions}
+                itemLabel="activity logs"
+              />
+            </div>
           </>
         )}
       </div>

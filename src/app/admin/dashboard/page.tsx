@@ -39,7 +39,7 @@ export default async function AdminDashboardPage() {
         orderBy: { department_name: "asc" },
       }),
       prisma.grievances.findMany({
-        take: 6,
+        take: 10,
         orderBy: { created_at: "desc" },
         include: {
           categories: true,

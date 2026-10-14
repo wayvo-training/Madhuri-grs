@@ -329,6 +329,15 @@ export function DepartmentHeadProvider({
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search).get("search");
+      if (q) {
+        setSearchQuery(q);
+      }
+    }
+  }, []);
+
   const handleOpenDocumentPreview = useCallback(
     (file: {
       name: string;

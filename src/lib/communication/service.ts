@@ -69,6 +69,8 @@ export interface GrievanceCommunicationThreadData {
   currentUserId: string;
   currentUserName?: string;
   basePath: string;
+  departmentName?: string;
+  isMultiDepartment?: boolean;
 }
 
 const TEST_MESSAGE_REGEX = /^(hi|hello|hey|test|testing|asdf|qwerty)$/i;
@@ -918,20 +920,29 @@ export async function getGrievanceCommunicationThread(
     canSend = true;
   }
 
-  // Action button routing
-  let actionUrl = `/staff/dashboard`;
-  let actionLabel = "Open in Staff Dashboard";
+  // Action button routing with search filter for grievance number
+  const encodedNum = encodeURIComponent(grievance.grievance_number);
+  let actionUrl = `/staff/dashboard?search=${encodedNum}`;
+  let actionLabel = "View Grievance Details";
 
   if (userRole === "END_USER") {
     actionUrl = `/end-user/grievances/${grievance.grievance_id}`;
     actionLabel = "View Grievance Details";
   } else if (userRole === "DEPARTMENT_HEAD") {
-    actionUrl = `/department-head/grievances`;
-    actionLabel = "Open in Head Dashboard";
+    actionUrl = `/department-head/grievances?search=${encodedNum}`;
+    actionLabel = "View Grievance Details";
   } else if (userRole === "ADMIN") {
-    actionUrl = `/admin/grievances`;
+    actionUrl = `/admin/grievances?search=${encodedNum}`;
     actionLabel = "View Grievance Details";
   }
+
+  const isMultiDepartment = involvedDepartments.length > 1;
+  const primaryDept =
+    involvedDepartments.find((d) => d.involvement_type === "PRIMARY") ||
+    involvedDepartments[0];
+  const departmentName = isMultiDepartment
+    ? "Multi Department"
+    : primaryDept?.departments.department_name || "";
 
   return {
     grievanceId: grievance.grievance_id.toString(),
@@ -939,6 +950,8 @@ export async function getGrievanceCommunicationThread(
     title: grievance.title,
     categoryName: grievance.categories?.category_name || "General",
     subcategoryName: grievance.subcategories?.subcategory_name || "General",
+    departmentName,
+    isMultiDepartment,
     status: grievance.status,
     isClosed,
     participants: participantsList,

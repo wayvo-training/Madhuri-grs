@@ -10,7 +10,6 @@ import {
   type SortState,
 } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -98,6 +97,8 @@ interface GrievanceTableListProps {
   totalCount: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+  pageSizeOptions?: number[];
 }
 
 export function GrievanceTableList({
@@ -109,6 +110,8 @@ export function GrievanceTableList({
   totalCount,
   pageSize,
   onPageChange,
+  onPageSizeChange,
+  pageSizeOptions,
 }: GrievanceTableListProps) {
   const [sortState, setSortState] = useState<SortState>({
     field: null,
@@ -143,236 +146,295 @@ export function GrievanceTableList({
     });
   }, [grievancesList, sortState]);
 
+  const colGroup = (
+    <colgroup>
+      <col className="w-[140px]" />
+      <col className="w-[260px]" />
+      <col className="w-[170px]" />
+      <col className="w-[170px]" />
+      <col className="w-[170px]" />
+      <col className="w-[150px]" />
+      <col className="w-[160px]" />
+      <col className="w-[200px]" />
+      <col className="w-[100px]" />
+      <col className="w-[110px]" />
+      <col className="w-[110px]" />
+      <col className="w-[90px]" />
+    </colgroup>
+  );
+
   return (
-    <div className="border border-slate-200 rounded-xl bg-white shadow-xs">
-      <Table className="w-full text-left text-xs">
-        <TableHeader className="bg-slate-50/50">
-          <TableRow className="hover:bg-transparent">
-            <SortableTableHead
-              field="grievance_number"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Grievance ID
-            </SortableTableHead>
-            <SortableTableHead
-              field="title"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Subject
-            </SortableTableHead>
-            <SortableTableHead
-              field="category_name"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Category
-            </SortableTableHead>
-            <SortableTableHead
-              field="department_name"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Department
-            </SortableTableHead>
-            <SortableTableHead
-              field="submitted_by_name"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Submitter Name
-            </SortableTableHead>
-            <SortableTableHead
-              field="submitted_by_email"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Submitter Email
-            </SortableTableHead>
-            <SortableTableHead
-              field="priority"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Priority
-            </SortableTableHead>
-            <SortableTableHead
-              field="status"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              Status
-            </SortableTableHead>
-            <SortableTableHead
-              field="sla_status"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-            >
-              SLA Health
-            </SortableTableHead>
-            <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody
-          className={`font-medium text-slate-700 transition-opacity duration-150 ${
-            isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
-          }`}
-        >
-          {grievancesList.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={10}
-                className="py-12 text-center text-slate-400 font-normal"
-              >
-                <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                No grievances match the selected filters.
-              </TableCell>
-            </TableRow>
-          ) : (
-            sortedList.map((g) => {
-              const isException =
-                g.status === "SUBMITTED" || !g.department_name;
-
-              return (
-                <TableRow
-                  key={g.grievance_id}
-                  className="transition-colors hover:bg-slate-50/80"
+    <div className="flex flex-col overflow-hidden">
+      <div className="overflow-x-auto w-full custom-scrollbar">
+        <div className="min-w-[1840px]">
+          {/* Static Header Table: no scrollbar next to header */}
+          <table className="w-full text-left text-xs table-fixed border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
+            {colGroup}
+            <TableHeader className="bg-transparent shadow-none">
+              <TableRow className="hover:bg-transparent border-none">
+                <SortableTableHead
+                  field="grievance_number"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3 pl-4 pr-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
                 >
-                  {/* ID */}
-                  <TableCell className="whitespace-nowrap py-2.5 pl-4 pr-2 font-mono font-bold text-slate-900">
-                    {g.grievance_number}
-                  </TableCell>
+                  Grievance ID
+                </SortableTableHead>
+                <SortableTableHead
+                  field="title"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500"
+                >
+                  Subject
+                </SortableTableHead>
+                <SortableTableHead
+                  field="category_name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Category
+                </SortableTableHead>
+                <SortableTableHead
+                  field="subcategory_name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Sub Category
+                </SortableTableHead>
+                <SortableTableHead
+                  field="department_name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Department
+                </SortableTableHead>
+                <TableHead className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                  Supporting Depts
+                </TableHead>
+                <SortableTableHead
+                  field="submitted_by_name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Submitter Name
+                </SortableTableHead>
+                <SortableTableHead
+                  field="submitted_by_email"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Submitter Email
+                </SortableTableHead>
+                <SortableTableHead
+                  field="priority"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Priority
+                </SortableTableHead>
+                <SortableTableHead
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  Status
+                </SortableTableHead>
+                <SortableTableHead
+                  field="sla_status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                >
+                  SLA Health
+                </SortableTableHead>
+                <TableHead className="py-3 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+          </table>
 
-                  {/* Subject */}
-                  <TableCell className="max-w-xs px-2 py-2.5">
-                    <TruncatedText
-                      text={g.title}
-                      maxChars={40}
-                      className="font-semibold text-slate-900 border-none"
-                    />
-                  </TableCell>
+          {/* Scrollable Table Body: vertical scrollbar starts directly below header at marked line */}
+          <div className="max-h-[calc(100vh-370px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <table className="w-full text-left text-xs table-fixed">
+              {colGroup}
+              <TableBody
+                className={`font-medium text-slate-700 transition-opacity duration-150 ${
+                  isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
+                }`}
+              >
+                {grievancesList.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={12}
+                      className="py-12 text-center text-slate-400 font-normal"
+                    >
+                      <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                      No grievances match the selected filters.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sortedList.map((g) => {
+                    const isException =
+                      g.status === "SUBMITTED" || !g.department_name;
 
-                  {/* Category */}
-                  <TableCell className="max-w-[180px] px-2 py-2.5">
-                    <TruncatedText
-                      text={g.category_name}
-                      maxChars={24}
-                      className="text-xs font-medium text-slate-700 border-none block"
-                    />
-                    <TruncatedText
-                      text={g.subcategory_name}
-                      maxChars={24}
-                      className="text-xs text-slate-400 border-none block"
-                    />
-                  </TableCell>
+                    return (
+                      <TableRow
+                        key={g.grievance_id}
+                        className="transition-colors hover:bg-slate-50/80 border-b border-slate-100"
+                      >
+                        {/* ID */}
+                        <TableCell className="whitespace-nowrap py-3 pl-4 pr-3 font-mono font-bold text-slate-900">
+                          {g.grievance_number}
+                        </TableCell>
 
-                  {/* Department */}
-                  <TableCell className="max-w-[200px] px-2 py-2.5">
-                    {g.department_name ? (
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-1.5 max-w-full">
+                        {/* Subject */}
+                        <TableCell className="px-3 py-3">
                           <TruncatedText
-                            text={g.department_name}
-                            maxChars={25}
-                            className="text-xs font-medium text-slate-800 border-none"
+                            text={g.title}
+                            maxChars={32}
+                            className="font-semibold text-slate-900 border-none block truncate max-w-full"
                           />
-                          {g.involvement_type === "EQUAL" && (
-                            <span className="inline-flex shrink-0 items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                              EQUAL
+                        </TableCell>
+
+                        {/* Category */}
+                        <TableCell className="px-3 py-3">
+                          <TruncatedText
+                            text={g.category_name}
+                            maxChars={20}
+                            className="text-xs font-semibold text-slate-800 border-none block truncate max-w-full"
+                          />
+                        </TableCell>
+
+                        {/* Sub Category */}
+                        <TableCell className="px-3 py-3">
+                          <TruncatedText
+                            text={g.subcategory_name}
+                            maxChars={20}
+                            className="text-xs font-medium text-slate-600 border-none block truncate max-w-full"
+                          />
+                        </TableCell>
+
+                        {/* Department */}
+                        <TableCell className="px-3 py-3">
+                          {g.department_name ? (
+                            <div className="flex items-center gap-1.5 max-w-full">
+                              <TruncatedText
+                                text={g.department_name}
+                                maxChars={18}
+                                className="text-xs font-medium text-slate-800 border-none truncate max-w-full"
+                              />
+                              {g.involvement_type === "EQUAL" && (
+                                <span className="inline-flex shrink-0 items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                                  EQUAL
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">
+                              Unrouted Exception
                             </span>
                           )}
-                        </div>
-                        {g.supporting_departments &&
-                          g.supporting_departments.length > 0 && (
+                        </TableCell>
+
+                        {/* Supporting Depts */}
+                        <TableCell className="whitespace-nowrap px-3 py-3">
+                          {g.supporting_departments &&
+                          g.supporting_departments.length > 0 ? (
                             <SupportingDeptsPopover
                               departments={g.supporting_departments}
                             />
+                          ) : (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
                           )}
-                      </div>
-                    ) : (
-                      <span className="text-xs font-semibold text-amber-800">
-                        Unrouted Exception
-                      </span>
-                    )}
-                  </TableCell>
+                        </TableCell>
 
-                  {/* Submitter Name */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5 text-slate-600">
-                    <p className="font-medium text-slate-900">
-                      {g.submitted_by_name}
-                    </p>
-                  </TableCell>
+                        {/* Submitter Name */}
+                        <TableCell className="px-3 py-3 text-slate-600 overflow-hidden max-w-full">
+                          <TruncatedText
+                            text={g.submitted_by_name}
+                            maxChars={18}
+                            className="font-medium text-slate-900 dark:text-slate-100 truncate block text-xs"
+                          />
+                        </TableCell>
 
-                  {/* Submitter Email */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5 text-slate-600">
-                    <p className="text-xs text-slate-500">
-                      {g.submitted_by_email}
-                    </p>
-                  </TableCell>
+                        {/* Submitter Email */}
+                        <TableCell className="px-3 py-3 text-slate-600 overflow-hidden max-w-full">
+                          <TruncatedText
+                            text={g.submitted_by_email}
+                            maxChars={20}
+                            showCopy={true}
+                            className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate block"
+                          />
+                        </TableCell>
 
-                  {/* Priority */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5">
-                    {g.priority}
-                  </TableCell>
+                        {/* Priority */}
+                        <TableCell className="whitespace-nowrap px-3 py-3">
+                          {g.priority}
+                        </TableCell>
 
-                  {/* Status */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5">
-                    <StatusBadge status={g.status} />
-                  </TableCell>
+                        {/* Status */}
+                        <TableCell className="whitespace-nowrap px-3 py-3">
+                          <StatusBadge status={g.status} />
+                        </TableCell>
 
-                  {/* SLA Health */}
-                  <TableCell className="whitespace-nowrap px-2 py-2.5">
-                    {g.sla_status || "N/A"}
-                  </TableCell>
+                        {/* SLA Health */}
+                        <TableCell className="whitespace-nowrap px-3 py-3">
+                          {g.sla_status || "N/A"}
+                        </TableCell>
 
-                  {/* Actions */}
-                  <TableCell className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right">
-                    <ActionMenu
-                      widthClass="w-24"
-                      items={[
-                        {
-                          label: "View",
-                          onClick: () => onOpenModal(g),
-                        },
-                        ...(isException
-                          ? [
+                        {/* Actions */}
+                        <TableCell className="whitespace-nowrap py-3 pl-2 pr-4 text-right">
+                          <ActionMenu
+                            widthClass="w-24"
+                            items={[
                               {
-                                label: "Route",
-                                icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                                variant: "warning" as const,
+                                label: "View",
                                 onClick: () => onOpenModal(g),
                               },
-                            ]
-                          : []),
-                      ]}
-                    />
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
-      <div className="border-t border-slate-100">
+                              ...(isException
+                                ? [
+                                    {
+                                      label: "Route",
+                                      icon: (
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                      ),
+                                      variant: "warning" as const,
+                                      onClick: () => onOpenModal(g),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           totalCount={totalCount}
           pageSize={pageSize}
           onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          pageSizeOptions={pageSizeOptions}
           itemLabel="grievances"
           isLoading={isLoading}
         />

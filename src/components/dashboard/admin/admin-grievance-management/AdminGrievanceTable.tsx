@@ -40,6 +40,7 @@ export function AdminGrievanceTable({
     closeGrievanceModal,
     handlePageChange,
     handleRouteSuccess,
+    onPageSizeChange,
   } = useAdminGrievances(initialGrievances, initialTotalCount, initialCounts);
 
   return (
@@ -50,7 +51,7 @@ export function AdminGrievanceTable({
       <span id="routing-exceptions" className="absolute -top-24" />
 
       {/* Table Toolbar / Filters */}
-      <div className="border-b border-slate-100 p-5 sm:p-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+      <div className="border-b border-slate-100 px-5 py-3.5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
         <div>
           <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <span>Live Grievance Oversight Queue</span>
@@ -91,6 +92,8 @@ export function AdminGrievanceTable({
         totalCount={totalCount}
         pageSize={pageSize}
         onPageChange={handlePageChange}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[10, 25, 50, 100]}
       />
 
       {/* Detail Modal / Drawer */}

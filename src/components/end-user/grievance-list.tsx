@@ -100,7 +100,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
   }, [advancedSearch, filterMode, sortState, pagination.resetPage]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden h-full flex flex-col min-h-0">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden flex flex-col">
       <div className="p-5 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1 min-w-0 w-full lg:w-1/2">
@@ -135,64 +135,87 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
           </p>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0 relative">
-          <div className="overflow-y-auto custom-scrollbar flex-1 relative">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
-                <tr>
-                  <SortableTh
-                    field="grievanceNumber"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-5"
-                  >
-                    Grievance ID
-                  </SortableTh>
-                  <SortableTh
-                    field="title"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Title
-                  </SortableTh>
-                  <SortableTh
-                    field="category"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Category
-                  </SortableTh>
-                  <SortableTh
-                    field="priority"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Priority
-                  </SortableTh>
-                  <SortableTh
-                    field="status"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Status
-                  </SortableTh>
-                  <SortableTh
-                    field="createdAt"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4 whitespace-nowrap"
-                  >
-                    Submitted
-                  </SortableTh>
-                  <th className="py-3.5 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
+        <div className="flex flex-col overflow-hidden">
+          {/* Static Header Table: no scrollbar next to header */}
+          <table className="w-full text-left table-fixed border-collapse shrink-0 bg-slate-50/95 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700">
+            <colgroup>
+              <col className="w-[14%]" />
+              <col className="w-[28%]" />
+              <col className="w-[18%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[7%]" />
+            </colgroup>
+            <thead>
+              <tr>
+                <SortableTh
+                  field="grievanceNumber"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-5"
+                >
+                  Grievance ID
+                </SortableTh>
+                <SortableTh
+                  field="title"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Title
+                </SortableTh>
+                <SortableTh
+                  field="category"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Category
+                </SortableTh>
+                <SortableTh
+                  field="priority"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Priority
+                </SortableTh>
+                <SortableTh
+                  field="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Status
+                </SortableTh>
+                <SortableTh
+                  field="createdAt"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4 whitespace-nowrap"
+                >
+                  Submitted
+                </SortableTh>
+                <th className="py-3.5 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+          </table>
+
+          {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+            <table className="w-full text-left table-fixed border-collapse">
+              <colgroup>
+                <col className="w-[14%]" />
+                <col className="w-[28%]" />
+                <col className="w-[18%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[7%]" />
+              </colgroup>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {pagination.paginatedItems.map((item: EndUserGrievance) => (
                   <tr
@@ -259,7 +282,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
 
           {/* Pagination Controls */}
           {pagination.totalCount > 0 && (
-            <div className="shrink-0">
+            <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
               <Pagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
