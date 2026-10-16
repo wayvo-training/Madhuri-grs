@@ -285,29 +285,11 @@ export async function GET(request: Request) {
           },
           attachments: true,
           audit_logs: {
-            where: {
-              OR: [
-                {
-                  action: {
-                    in: [
-                      "HOD_DIRECTIVE_NOTE",
-                      "INVESTIGATION_NOTE_ADDED",
-                      "INTERNAL_NOTE_ADDED",
-                      "HEAD_DIRECTIVE_ISSUED",
-                      "COLLABORATION_NOTE_ADDED",
-                      "SUPPORTING_FINDINGS_SUBMITTED",
-                    ],
-                  },
-                },
-                { action: { contains: "NOTE" } },
-                { action: { contains: "FINDING" } },
-              ],
-            },
             orderBy: { created_at: "desc" },
             include: {
               users: { include: { roles: true } },
             },
-            take: 20,
+            take: 50,
           },
         },
         orderBy: [{ priority: "desc" }, { created_at: "desc" }],

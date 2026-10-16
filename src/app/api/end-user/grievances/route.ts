@@ -20,8 +20,6 @@ export async function POST(request: Request) {
     const subcategoryId = formData.get("subcategoryId") as string;
     const titleFromForm = (formData.get("title") as string)?.trim();
     const descriptionFromForm = (formData.get("description") as string)?.trim();
-    const impactFromForm = (formData.get("impact") as string)?.trim();
-    const urgencyFromForm = (formData.get("urgency") as string)?.trim();
     const _userPriority = (formData.get("priority") as string)?.trim();
     const problemStatement =
       descriptionFromForm || (formData.get("problemStatement") as string) || "";
@@ -173,8 +171,6 @@ export async function POST(request: Request) {
       subcategoryName: subcategoryRecord?.subcategory_name,
       title: title,
       description: problemStatement,
-      impact: impactFromForm || null,
-      urgency: urgencyFromForm || null,
     });
 
     const priorityLevel = priorityResult.priority || "MEDIUM";
