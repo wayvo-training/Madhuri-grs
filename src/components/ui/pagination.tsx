@@ -6,6 +6,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+import { useEffect } from "react";
 
 export interface PaginationProps {
   currentPage: number;
@@ -34,38 +35,58 @@ export function Pagination({
   className = "",
   compact = false,
 }: PaginationProps) {
+  const safeTotalPages = Math.max(1, totalPages);
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
+
+  // Sync parent back to a valid page if currentPage was out of bounds
+  useEffect(() => {
+    if (totalCount > 0 && currentPage > safeTotalPages && safeTotalPages > 0) {
+      onPageChange(safeTotalPages);
+    } else if (totalCount > 0 && currentPage < 1) {
+      onPageChange(1);
+    }
+  }, [currentPage, safeTotalPages, totalCount, onPageChange]);
+
   if (totalCount === 0) return null;
 
-  const startRecord = (currentPage - 1) * pageSize + 1;
-  const endRecord = Math.min(currentPage * pageSize, totalCount);
+  const startRecord = Math.min(
+    (safeCurrentPage - 1) * pageSize + 1,
+    totalCount,
+  );
+  const endRecord = Math.min(safeCurrentPage * pageSize, totalCount);
 
   // Generate page numbers to display with smart windowing
   const getPageNumbers = () => {
-    if (totalPages <= 5) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (safeTotalPages <= 5) {
+      return Array.from({ length: safeTotalPages }, (_, i) => i + 1);
     }
-    if (currentPage <= 3) {
-      return [1, 2, 3, 4, "...", totalPages];
+    if (safeCurrentPage <= 3) {
+      return [1, 2, 3, 4, "...", safeTotalPages];
     }
-    if (currentPage >= totalPages - 2) {
+    if (safeCurrentPage >= safeTotalPages - 2) {
       return [
         1,
         "...",
-        totalPages - 3,
-        totalPages - 2,
-        totalPages - 1,
-        totalPages,
+        safeTotalPages - 3,
+        safeTotalPages - 2,
+        safeTotalPages - 1,
+        safeTotalPages,
       ];
     }
     return [
       1,
       "...",
-      currentPage - 1,
-      currentPage,
-      currentPage + 1,
+      safeCurrentPage - 1,
+      safeCurrentPage,
+      safeCurrentPage + 1,
       "...",
-      totalPages,
+      safeTotalPages,
     ];
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    onPageSizeChange?.(newSize);
+    onPageChange(1);
   };
 
   return (
@@ -89,7 +110,7 @@ export function Pagination({
             <select
               aria-label="Items per page"
               value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
               className="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 focus:border-[#0F766E] focus:outline-none focus:ring-1 focus:ring-[#0F766E] cursor-pointer"
             >
               {pageSizeOptions.map((opt) => (
@@ -104,10 +125,10 @@ export function Pagination({
         {/* Navigation buttons */}
         <div className="inline-flex items-center gap-1">
           {/* First page button for larger datasets */}
-          {totalPages > 5 && !compact && (
+          {safeTotalPages > 5 && !compact && (
             <button
               type="button"
-              disabled={currentPage <= 1 || isLoading}
+              disabled={safeCurrentPage <= 1 || isLoading}
               onClick={() => onPageChange(1)}
               title="First Page"
               aria-label="First Page"
@@ -120,8 +141,8 @@ export function Pagination({
           {/* Previous page button */}
           <button
             type="button"
-            disabled={currentPage <= 1 || isLoading}
-            onClick={() => onPageChange(currentPage - 1)}
+            disabled={safeCurrentPage <= 1 || isLoading}
+            onClick={() => onPageChange(safeCurrentPage - 1)}
             title="Previous Page"
             aria-label="Previous Page"
             className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
@@ -130,8 +151,8 @@ export function Pagination({
             <span className={compact ? "sr-only" : ""}>Prev</span>
           </button>
 
-          {/* Page numbers (only when totalPages > 1) */}
-          {totalPages > 1 && !compact && (
+          {/* Page numbers (only when safeTotalPages > 1) */}
+          {safeTotalPages > 1 && !compact && (
             <div className="hidden sm:flex items-center gap-1">
               {getPageNumbers().map((p, idx) => {
                 if (p === "...") {
@@ -147,14 +168,14 @@ export function Pagination({
                   );
                 }
                 const pageNum = Number(p);
-                const isActive = pageNum === currentPage;
+                const isActive = pageNum === safeCurrentPage;
                 return (
                   <button
                     key={pageNum}
                     type="button"
                     disabled={isLoading}
                     onClick={() => onPageChange(pageNum)}
-                    className={`inline-flex h-8 min-w-[32px] px-2 items-center justify-center rounded-lg text-xs font-semibold transition ${
+                    className={`inline-flex h-8 min-w-8 px-2 items-center justify-center rounded-lg text-xs font-semibold transition ${
                       isActive
                         ? "bg-[#0F766E] text-white shadow-2xs font-bold"
                         : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
@@ -168,17 +189,17 @@ export function Pagination({
           )}
 
           {/* Compact page display indicator */}
-          {(compact || totalPages <= 1) && (
+          {(compact || safeTotalPages <= 1) && (
             <span className="px-2 text-xs font-medium text-slate-600 select-none">
-              Page {currentPage} of {totalPages}
+              Page {safeCurrentPage} of {safeTotalPages}
             </span>
           )}
 
           {/* Next page button */}
           <button
             type="button"
-            disabled={currentPage >= totalPages || isLoading}
-            onClick={() => onPageChange(currentPage + 1)}
+            disabled={safeCurrentPage >= safeTotalPages || isLoading}
+            onClick={() => onPageChange(safeCurrentPage + 1)}
             title="Next Page"
             aria-label="Next Page"
             className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
@@ -188,11 +209,11 @@ export function Pagination({
           </button>
 
           {/* Last page button for larger datasets */}
-          {totalPages > 5 && !compact && (
+          {safeTotalPages > 5 && !compact && (
             <button
               type="button"
-              disabled={currentPage >= totalPages || isLoading}
-              onClick={() => onPageChange(totalPages)}
+              disabled={safeCurrentPage >= safeTotalPages || isLoading}
+              onClick={() => onPageChange(safeTotalPages)}
               title="Last Page"
               aria-label="Last Page"
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"

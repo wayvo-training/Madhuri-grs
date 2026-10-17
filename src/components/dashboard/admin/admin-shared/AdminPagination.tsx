@@ -19,8 +19,13 @@ export function AdminPagination({
 }: AdminPaginationProps) {
   if (totalCount === 0 || totalPages <= 1) return null;
 
-  const startRecord = (currentPage - 1) * pageSize + 1;
-  const endRecord = Math.min(currentPage * pageSize, totalCount);
+  const safeTotalPages = Math.max(1, totalPages);
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), safeTotalPages);
+  const startRecord = Math.min(
+    (safeCurrentPage - 1) * pageSize + 1,
+    totalCount,
+  );
+  const endRecord = Math.min(safeCurrentPage * pageSize, totalCount);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 sm:px-6">
@@ -35,8 +40,8 @@ export function AdminPagination({
       <div className="flex items-center gap-1.5 self-end sm:self-auto">
         <button
           type="button"
-          disabled={currentPage <= 1 || isLoading}
-          onClick={() => onPageChange(currentPage - 1)}
+          disabled={safeCurrentPage <= 1 || isLoading}
+          onClick={() => onPageChange(safeCurrentPage - 1)}
           className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -44,13 +49,13 @@ export function AdminPagination({
         </button>
 
         <span className="px-2 text-xs font-medium text-slate-600">
-          Page {currentPage} of {totalPages}
+          Page {safeCurrentPage} of {safeTotalPages}
         </span>
 
         <button
           type="button"
-          disabled={currentPage >= totalPages || isLoading}
-          onClick={() => onPageChange(currentPage + 1)}
+          disabled={safeCurrentPage >= safeTotalPages || isLoading}
+          onClick={() => onPageChange(safeCurrentPage + 1)}
           className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition"
         >
           <span>Next</span>

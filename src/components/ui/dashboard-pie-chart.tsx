@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import type * as React from "react";
 import { Cell, Label, Pie, PieChart } from "recharts";
 import {
@@ -63,6 +64,7 @@ interface DashboardPieChartCardProps {
   centerLabelBottom?: string;
   isLoading?: boolean;
   extraHeaderElement?: React.ReactNode;
+  className?: string;
 }
 
 export function DashboardPieChartCard({
@@ -76,6 +78,7 @@ export function DashboardPieChartCard({
   centerLabelBottom = "GRIEVANCES",
   isLoading = false,
   extraHeaderElement,
+  className,
 }: DashboardPieChartCardProps) {
   // Only render non-zero slices in the donut
   const pieData = data.filter((d) => d.value > 0);
@@ -84,7 +87,12 @@ export function DashboardPieChartCard({
   const hasData = pieData.length > 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white flex flex-col overflow-hidden shadow-2xs h-auto sm:h-[270px]">
+    <div
+      className={cn(
+        "rounded-2xl border border-slate-200 bg-white flex flex-col overflow-hidden shadow-2xs",
+        className || "h-auto sm:h-[270px]",
+      )}
+    >
       <div className="p-4 sm:p-5 pb-1 flex justify-between items-center gap-3">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
