@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import type { ReactNode } from "react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import type { UserRole } from "@/components/dashboard/navigation";
@@ -19,6 +20,7 @@ interface DashboardShellProps {
   searchValue?: string;
   onSearchChange?: (val: string) => void;
   searchPlaceholder?: string;
+  mainClassName?: string;
 }
 
 export function DashboardShell({
@@ -34,6 +36,7 @@ export function DashboardShell({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  mainClassName,
 }: DashboardShellProps) {
   return (
     <SidebarProvider>
@@ -56,7 +59,12 @@ export function DashboardShell({
             onSearchChange={onSearchChange}
             searchPlaceholder={searchPlaceholder}
           />
-          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col">
+          <main
+            className={cn(
+              "flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-2 sm:py-2.5 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col",
+              mainClassName,
+            )}
+          >
             {children}
           </main>
         </SidebarInset>
