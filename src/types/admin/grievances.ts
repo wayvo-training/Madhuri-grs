@@ -59,4 +59,10 @@ export interface AdminGrievanceTableProps {
   initialCounts?: TabCounts;
   departments: DepartmentOption[];
   categories?: string[];
+  initialTab?: TableTab;
+  initialPriority?: string[];
+  initialStatus?: string[];
+  initialSla?: string[];
+  initialSearch?: string;
+  initialDept?: string[];
 }

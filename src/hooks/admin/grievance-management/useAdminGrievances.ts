@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   SerializedGrievance,
@@ -13,8 +13,16 @@ export function useAdminGrievances(
   initialGrievances: SerializedGrievance[],
   initialTotalCount = 0,
   initialCounts?: TabCounts,
+  initialTab: TableTab = "ALL",
+  initialPriority: string[] = [],
+  initialStatus: string[] = [],
+  initialSla: string[] = [],
+  initialSearch = "",
+  initialDept: string[] = [],
 ) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const deduped = useMemo(
     () =>
       Array.from(
@@ -41,16 +49,17 @@ export function useAdminGrievances(
   const [pageSize, setPageSize] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState<string[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
-  const [selectedDept, setSelectedDept] = useState<string[]>([]);
-  const [selectedSla, setSelectedSla] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
+  const [selectedPriority, setSelectedPriority] =
+    useState<string[]>(initialPriority);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>(initialStatus);
+  const [selectedDept, setSelectedDept] = useState<string[]>(initialDept);
+  const [selectedSla, setSelectedSla] = useState<string[]>(initialSla);
+  const [activeTab, setActiveTab] = useState<TableTab>(initialTab);
   const [activeModalGrievance, setActiveModalGrievance] =
     useState<SerializedGrievance | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TableTab>("ALL");
   const isInitialMount = useRef(true);
 
   // Debounce search query to avoid frequent server hits
@@ -61,21 +70,78 @@ export function useAdminGrievances(
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Check URL search params on mount
+  // Sync with reactive Next.js searchParams
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get("search");
-      if (q) {
+    if (!searchParams) return;
+    const tabParam =
+      (searchParams.get("tab")?.toUpperCase() as TableTab) || "ALL";
+    const statusParam = searchParams.get("status");
+    let parsedStatus: string[] = [];
+    if (statusParam && statusParam !== "ALL") {
+      let stats = statusParam.split(",").map((s) => s.trim().toUpperCase());
+      if (stats.includes("UNASSIGNED")) {
+        stats = stats
+          .filter((s) => s !== "UNASSIGNED")
+          .concat(["SUBMITTED", "ROUTED"]);
+      }
+      if (stats.includes("IN_PROGRESS")) {
+        if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
+        if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
+      }
+      if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
+        stats.push("REOPEN_REVIEW");
+      }
+      parsedStatus = stats;
+    }
+    const priorityParam = searchParams.get("priority");
+    const parsedPriority =
+      priorityParam && priorityParam !== "ALL"
+        ? priorityParam.split(",").map((p) => p.trim().toUpperCase())
+        : [];
+    const slaParam = searchParams.get("sla_status") || searchParams.get("sla");
+    let parsedSla: string[] = [];
+    if (slaParam && slaParam !== "ALL") {
+      let slas = slaParam.split(",").map((s) => s.trim().toUpperCase());
+      slas = slas.map((s) =>
+        s === "SLA_CRITICAL" ? "BREACHED" : s === "SLA_RISK" ? "AT_RISK" : s,
+      );
+      parsedSla = slas;
+    }
+    const q = searchParams.get("search")?.trim() || "";
+
+    const tabChanged = tabParam !== activeTab;
+    const statusChanged =
+      JSON.stringify(parsedStatus) !== JSON.stringify(selectedStatus);
+    const priorityChanged =
+      JSON.stringify(parsedPriority) !== JSON.stringify(selectedPriority);
+    const slaChanged =
+      JSON.stringify(parsedSla) !== JSON.stringify(selectedSla);
+    const searchChanged = q !== searchQuery;
+
+    if (
+      tabChanged ||
+      statusChanged ||
+      priorityChanged ||
+      slaChanged ||
+      searchChanged
+    ) {
+      if (tabChanged) setActiveTab(tabParam);
+      if (statusChanged) setSelectedStatus(parsedStatus);
+      if (priorityChanged) setSelectedPriority(parsedPriority);
+      if (slaChanged) setSelectedSla(parsedSla);
+      if (searchChanged) {
         setSearchQuery(q);
         setDebouncedSearch(q);
       }
-      const s = params.get("status");
-      if (s) {
-        setSelectedStatus([s]);
-      }
     }
-  }, []);
+  }, [
+    searchParams,
+    activeTab,
+    selectedStatus,
+    selectedPriority,
+    selectedSla,
+    searchQuery,
+  ]);
 
   // Listen to global header search events
   useEffect(() => {
@@ -214,25 +280,7 @@ export function useAdminGrievances(
   // Filter or tab changes: reset to page 1 and fetch from server
   useEffect(() => {
     if (isInitialMount.current) {
-      if (
-        activeTab !== "ALL" ||
-        debouncedSearch.trim() !== "" ||
-        selectedStatus.length > 0
-      ) {
-        isInitialMount.current = false;
-        fetchGrievances(
-          1,
-          activeTab,
-          debouncedSearch,
-          selectedPriority,
-          selectedStatus,
-          selectedDept,
-          selectedSla,
-          pageSize,
-        );
-      } else {
-        isInitialMount.current = false;
-      }
+      isInitialMount.current = false;
       return;
     }
 
@@ -254,7 +302,6 @@ export function useAdminGrievances(
     selectedDept,
     selectedSla,
     fetchGrievances,
-    pageSize,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));

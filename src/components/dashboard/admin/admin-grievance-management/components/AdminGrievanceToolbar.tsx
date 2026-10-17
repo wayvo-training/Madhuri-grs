@@ -74,6 +74,7 @@ export function AdminGrievanceToolbar({
       label: "Status",
       type: "select",
       options: [
+        { label: "Unassigned (Submitted/Routed)", value: "UNASSIGNED" },
         { label: "Submitted", value: "SUBMITTED" },
         { label: "Routed", value: "ROUTED" },
         { label: "Assigned", value: "ASSIGNED" },
@@ -91,8 +92,8 @@ export function AdminGrievanceToolbar({
       label: "SLA Status",
       type: "select",
       options: [
-        { label: "SLA Critical", value: "SLA_CRITICAL" },
-        { label: "SLA Risk", value: "SLA_RISK" },
+        { label: "Breached (Critical)", value: "BREACHED" },
+        { label: "At Risk", value: "AT_RISK" },
         { label: "On Track", value: "ON_TRACK" },
       ],
     },

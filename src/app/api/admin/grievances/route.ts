@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
       conditions.push({
         status: {
-          in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
+          notIn: ["CLOSED", "RESOLVED"],
         },
       });
     } else if (tab === "SLA_RISK") {
@@ -107,13 +107,35 @@ export async function GET(request: Request) {
 
     // 5. Status filter
     if (status !== "ALL") {
-      const stats = status.split(",");
+      let stats = status.split(",").map((s) => s.trim().toUpperCase());
+
+      // Expand UNASSIGNED to SUBMITTED and ROUTED (awaiting staff assignment)
+      if (stats.includes("UNASSIGNED")) {
+        stats = stats
+          .filter((s) => s !== "UNASSIGNED")
+          .concat(["SUBMITTED", "ROUTED"]);
+      }
+      // Expand IN_PROGRESS to include UNDER_REVIEW and ESCALATED
+      if (stats.includes("IN_PROGRESS")) {
+        if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
+        if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
+      }
+      // Expand REOPENED to include REOPEN_REVIEW
+      if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
+        stats.push("REOPEN_REVIEW");
+      }
+
       conditions.push({ status: { in: stats } });
     }
 
     // 6. SLA Status filter
     if (slaStatus !== "ALL") {
-      const slas = slaStatus.split(",");
+      let slas = slaStatus.split(",").map((s) => s.trim().toUpperCase());
+      slas = slas.map((s) => {
+        if (s === "SLA_CRITICAL") return "BREACHED";
+        if (s === "SLA_RISK") return "AT_RISK";
+        return s;
+      });
       conditions.push({ sla_status: { in: slas } });
     }
 

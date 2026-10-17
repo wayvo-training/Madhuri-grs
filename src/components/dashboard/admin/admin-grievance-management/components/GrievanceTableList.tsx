@@ -157,8 +157,8 @@ export function GrievanceTableList({
       <col className="w-[160px]" />
       <col className="w-[200px]" />
       <col className="w-[100px]" />
-      <col className="w-[110px]" />
-      <col className="w-[110px]" />
+      <col className="w-[160px]" />
+      <col className="w-[140px]" />
       <col className="w-[90px]" />
     </colgroup>
   );
@@ -166,7 +166,7 @@ export function GrievanceTableList({
   return (
     <div className="flex flex-col overflow-hidden">
       <div className="overflow-x-auto w-full custom-scrollbar">
-        <div className="min-w-[1840px]">
+        <div className="min-w-[1920px]">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left text-xs table-fixed border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
             {colGroup}
@@ -389,8 +389,14 @@ export function GrievanceTableList({
                         </TableCell>
 
                         {/* SLA Health */}
-                        <TableCell className="whitespace-nowrap px-3 py-3">
-                          {g.sla_status || "N/A"}
+                        <TableCell className="whitespace-nowrap px-3 py-3 text-xs font-medium text-slate-800 dark:text-slate-200">
+                          {g.sla_status === "BREACHED"
+                            ? "Breached"
+                            : g.sla_status === "AT_RISK"
+                              ? "At Risk"
+                              : g.sla_status === "ON_TRACK"
+                                ? "On Track"
+                                : g.sla_status || "—"}
                         </TableCell>
 
                         {/* Actions */}

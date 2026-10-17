@@ -13,6 +13,12 @@ export function AdminGrievanceTable({
   initialCounts,
   departments,
   categories = [],
+  initialTab = "ALL",
+  initialPriority = [],
+  initialStatus = [],
+  initialSla = [],
+  initialSearch = "",
+  initialDept = [],
 }: AdminGrievanceTableProps) {
   const {
     grievancesList,
@@ -41,7 +47,17 @@ export function AdminGrievanceTable({
     handlePageChange,
     handleRouteSuccess,
     onPageSizeChange,
-  } = useAdminGrievances(initialGrievances, initialTotalCount, initialCounts);
+  } = useAdminGrievances(
+    initialGrievances,
+    initialTotalCount,
+    initialCounts,
+    initialTab,
+    initialPriority,
+    initialStatus,
+    initialSla,
+    initialSearch,
+    initialDept,
+  );
 
   return (
     <div
