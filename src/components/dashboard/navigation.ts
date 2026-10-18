@@ -81,6 +81,12 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       label: "Administration",
       items: [
         {
+          title: "User Management",
+          href: "/admin/users",
+          icon: Users,
+          requiredPermission: "MANAGE_USERS",
+        },
+        {
           title: "Roles & Permissions",
           href: "/admin/roles",
           icon: ShieldCheck,
