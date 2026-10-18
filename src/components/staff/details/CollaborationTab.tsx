@@ -16,6 +16,7 @@ interface CollaborationTabProps {
     note: string,
     parentId?: string,
     replyToAuthor?: string,
+    scope?: "INTERNAL" | "COLLABORATION",
   ) => Promise<void>;
 }
 
@@ -23,22 +24,43 @@ export function CollaborationTab({
   grievance,
   onAddNote,
 }: CollaborationTabProps) {
-  const departments = grievance.departmentsInvolved || [];
+  const departments =
+    grievance.departmentsInvolved && grievance.departmentsInvolved.length > 0
+      ? grievance.departmentsInvolved
+      : (grievance.collaboratingDepartments || []).map((name, idx) => ({
+          id: `dept-${idx}`,
+          departmentName: name,
+          involvementType: (idx === 0 ? "PRIMARY" : "SUPPORTING") as
+            | "PRIMARY"
+            | "SUPPORTING"
+            | "EQUAL",
+          status: "IN_PROGRESS",
+          assignedStaff: null,
+          isMyAssignment: idx === 0,
+        }));
   const crossDeptNotes =
-    grievance.collaborationNotes ||
-    (grievance.internalNotes || []).filter(
-      (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
-    );
+    grievance.collaborationNotes && grievance.collaborationNotes.length > 0
+      ? grievance.collaborationNotes
+      : (grievance.internalNotes || []).filter(
+          (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
+        );
 
   const [noteText, setNoteText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isClosed = grievance.status === "CLOSED";
 
   const handleSendNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noteText.trim() || !onAddNote || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onAddNote(grievance.id, noteText.trim());
+      await onAddNote(
+        grievance.id,
+        noteText.trim(),
+        undefined,
+        undefined,
+        "COLLABORATION",
+      );
       setNoteText("");
     } finally {
       setIsSubmitting(false);
@@ -152,68 +174,82 @@ export function CollaborationTab({
           </div>
 
           {/* Direct Collaboration Composer */}
-          {onAddNote && (
-            <form onSubmit={handleSendNote} className="space-y-2 pt-1">
-              {grievance.status === "ASSIGNED" && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 flex items-center gap-2 text-xs text-amber-900 shadow-2xs mb-1.5">
-                  <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          {onAddNote &&
+            (isClosed ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/60 dark:border-slate-800 p-3.5 flex items-center justify-between text-xs text-slate-500 shadow-2xs">
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-slate-400 shrink-0" />
                   <span>
-                    Collaboration notes are locked until investigation is
-                    initiated. Click{" "}
-                    <strong>&quot;Start Investigation&quot;</strong> in the
-                    bottom bar to unlock.
+                    This grievance is <strong>Closed</strong>. Cross-department
+                    collaboration is archived in read-only mode.
                   </span>
-                </div>
-              )}
-              <textarea
-                rows={2}
-                disabled={grievance.status === "ASSIGNED"}
-                value={noteText}
-                onChange={(e) => setNoteText(e.target.value)}
-                placeholder={
-                  grievance.status === "ASSIGNED"
-                    ? "Start investigation to post collaboration updates..."
-                    : "Post an update for collaborating departments (e.g. 'Invoices audited. Finance sign-off completed; forwarding for Compliance review.')..."
-                }
-                className={`w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-teal-600 focus:ring-1 focus:ring-teal-600 shadow-2xs resize-none ${
-                  grievance.status === "ASSIGNED"
-                    ? "bg-slate-50 opacity-60 cursor-not-allowed"
-                    : ""
-                }`}
-              />
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] text-slate-400">
-                  Visible to all assigned staff & department heads
                 </span>
-                <button
-                  type="submit"
-                  disabled={
-                    grievance.status === "ASSIGNED" ||
-                    !noteText.trim() ||
-                    isSubmitting
-                  }
-                  className={`inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] disabled:opacity-50 transition ${
-                    grievance.status === "ASSIGNED"
-                      ? "cursor-not-allowed"
-                      : "cursor-pointer"
-                  }`}
-                >
-                  {grievance.status === "ASSIGNED" ? (
-                    <Lock className="w-3 h-3" />
-                  ) : (
-                    <Send className="w-3 h-3" />
-                  )}
-                  <span>
-                    {isSubmitting
-                      ? "Sending..."
-                      : grievance.status === "ASSIGNED"
-                        ? "Notes Locked"
-                        : "Send Note"}
-                  </span>
-                </button>
+                <span className="rounded-full bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">
+                  Case Closed
+                </span>
               </div>
-            </form>
-          )}
+            ) : (
+              <form onSubmit={handleSendNote} className="space-y-2 pt-1">
+                {grievance.status === "ASSIGNED" && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-2.5 flex items-center gap-2 text-xs text-amber-900 shadow-2xs mb-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>
+                      Collaboration notes are locked until investigation is
+                      initiated. Click{" "}
+                      <strong>&quot;Start Investigation&quot;</strong> in the
+                      bottom bar to unlock.
+                    </span>
+                  </div>
+                )}
+                <textarea
+                  rows={2}
+                  disabled={grievance.status === "ASSIGNED"}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder={
+                    grievance.status === "ASSIGNED"
+                      ? "Start investigation to post collaboration updates..."
+                      : "Post an update for collaborating departments (e.g. 'Invoices audited. Finance sign-off completed; forwarding for Compliance review.')..."
+                  }
+                  className={`w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-teal-600 focus:ring-1 focus:ring-teal-600 shadow-2xs resize-none ${
+                    grievance.status === "ASSIGNED"
+                      ? "bg-slate-50 opacity-60 cursor-not-allowed"
+                      : ""
+                  }`}
+                />
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] text-slate-400">
+                    Visible to all assigned staff & department heads
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={
+                      grievance.status === "ASSIGNED" ||
+                      !noteText.trim() ||
+                      isSubmitting
+                    }
+                    className={`inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] disabled:opacity-50 transition ${
+                      grievance.status === "ASSIGNED"
+                        ? "cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    {grievance.status === "ASSIGNED" ? (
+                      <Lock className="w-3 h-3" />
+                    ) : (
+                      <Send className="w-3 h-3" />
+                    )}
+                    <span>
+                      {isSubmitting
+                        ? "Sending..."
+                        : grievance.status === "ASSIGNED"
+                          ? "Notes Locked"
+                          : "Send Note"}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            ))}
         </div>
       </div>
     </div>

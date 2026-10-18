@@ -132,6 +132,8 @@ export interface StaffGrievanceItem {
   supportingFindings?: SupportingDepartmentFinding[];
   auditTrail?: StaffAuditItem[];
   departmentsInvolved?: StaffInvolvedDepartment[];
+  isCrossDepartment?: boolean;
+  collaboratingDepartments?: string[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   isPrimaryOwner?: boolean;
   myDepartmentStatus?: string;

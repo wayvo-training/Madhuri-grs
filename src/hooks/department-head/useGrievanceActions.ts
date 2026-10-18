@@ -392,7 +392,7 @@ export function useGrievanceActions({
       replyToAuthor?: string,
     ) => {
       const trimmedNote = noteText.trim();
-      if (!trimmedNote) return;
+      if (!trimmedNote || grievance.status === "CLOSED") return;
 
       const headDisplayName = currentHodName.startsWith("Department Head")
         ? currentHodName
@@ -463,7 +463,7 @@ export function useGrievanceActions({
       replyToAuthor?: string,
     ) => {
       const trimmedNote = noteText.trim();
-      if (!trimmedNote) return;
+      if (!trimmedNote || grievance.status === "CLOSED") return;
 
       const headDisplayName = currentHodName.startsWith("Department Head")
         ? currentHodName

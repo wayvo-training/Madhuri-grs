@@ -300,22 +300,31 @@ export function GrievanceDetails({
               {grievance.auditTrail?.length || 0}
             </span>
           </button>
-          {grievance.departmentsInvolved &&
-            grievance.departmentsInvolved.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("collaboration")}
-                className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === "collaboration"
-                    ? "border-[#0F766E] text-[#0F766E]"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <span>Collaboration</span>
-              </button>
-            )}
           {((grievance.departmentsInvolved &&
             grievance.departmentsInvolved.length > 1) ||
+            grievance.isCrossDepartment ||
+            (grievance.collaboratingDepartments &&
+              grievance.collaboratingDepartments.length > 1)) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("collaboration")}
+              className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "collaboration"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span>Collaboration</span>
+              <span className="rounded-full bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
+                {grievance.collaborationNotes?.length || 0}
+              </span>
+            </button>
+          )}
+          {((grievance.departmentsInvolved &&
+            grievance.departmentsInvolved.length > 1) ||
+            grievance.isCrossDepartment ||
+            (grievance.collaboratingDepartments &&
+              grievance.collaboratingDepartments.length > 1) ||
             (grievance.supportingFindings &&
               grievance.supportingFindings.length > 0)) && (
             <button

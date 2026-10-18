@@ -90,6 +90,9 @@ export function CaseFileInspectionModal({
           setCaseProgressData(json.data);
           setCurrentGrievance((prev) => ({
             ...prev,
+            ...(json.data.departmentsInvolved
+              ? { departmentsInvolved: json.data.departmentsInvolved }
+              : {}),
             ...(json.data.grievance?.attachments
               ? { attachments: json.data.grievance.attachments }
               : {}),
@@ -245,7 +248,10 @@ export function CaseFileInspectionModal({
           {((currentGrievance.departmentsInvolved &&
             currentGrievance.departmentsInvolved.length > 1) ||
             (caseProgressData?.departmentsInvolved &&
-              caseProgressData.departmentsInvolved.length > 1)) && (
+              caseProgressData.departmentsInvolved.length > 1) ||
+            currentGrievance.isCrossDepartment ||
+            (currentGrievance.collaboratingDepartments &&
+              currentGrievance.collaboratingDepartments.length > 1)) && (
             <button
               type="button"
               onClick={() => setActiveTab("collaboration")}
@@ -257,7 +263,9 @@ export function CaseFileInspectionModal({
             >
               <span>Collaboration</span>
               <span className="rounded-full bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
-                {currentGrievance.collaborationNotes?.length || 0}
+                {currentGrievance.collaborationNotes?.length ??
+                  caseProgressData?.collaborationNotes?.length ??
+                  0}
               </span>
             </button>
           )}
@@ -265,6 +273,9 @@ export function CaseFileInspectionModal({
             currentGrievance.departmentsInvolved.length > 1) ||
             (caseProgressData?.departmentsInvolved &&
               (caseProgressData.departmentsInvolved as unknown[]).length > 1) ||
+            currentGrievance.isCrossDepartment ||
+            (currentGrievance.collaboratingDepartments &&
+              currentGrievance.collaboratingDepartments.length > 1) ||
             (currentGrievance.supportingFindings &&
               currentGrievance.supportingFindings.length > 0)) && (
             <button

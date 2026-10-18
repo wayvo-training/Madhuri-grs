@@ -594,6 +594,7 @@ export async function PATCH(
       note?: string;
       parentId?: string;
       replyToAuthor?: string;
+      scope?: "INTERNAL" | "COLLABORATION";
       subject?: string;
       message?: string;
       channels?: ("IN_APP" | "EMAIL")[];
@@ -848,6 +849,16 @@ export async function PATCH(
         status: "IN_PROGRESS",
       });
     } else if (body.action === "ADD_NOTE" && body.note?.trim()) {
+      if (grievance.status === "CLOSED") {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "This grievance is closed. Internal notes and collaboration messages cannot be added to closed cases.",
+          },
+          { status: 400 },
+        );
+      }
       if (grievance.status === "ASSIGNED") {
         return NextResponse.json(
           {
@@ -862,14 +873,31 @@ export async function PATCH(
       const staffUser = auth.user;
       const rawStaffName =
         `${staffUser.first_name} ${staffUser.last_name || ""}`.trim();
-      const authorDisplay = `Staff — ${rawStaffName}`;
+      const scope =
+        body.scope === "COLLABORATION" ? "COLLABORATION" : "INTERNAL";
+
+      const staffDept = staffUser.department_id
+        ? await prisma.departments.findUnique({
+            where: { department_id: staffUser.department_id },
+            select: { department_name: true },
+          })
+        : null;
+      const deptName = staffDept?.department_name || "Department";
+
+      const authorDisplay =
+        scope === "COLLABORATION"
+          ? `Staff — ${rawStaffName} (${deptName})`
+          : `Staff — ${rawStaffName}`;
       const noteContent = body.note.trim();
 
       const createdAudit = await prisma.audit_logs.create({
         data: {
           grievance_id: grievanceId,
           user_id: staffId,
-          action: "INVESTIGATION_NOTE_ADDED",
+          action:
+            scope === "COLLABORATION"
+              ? "COLLABORATION_NOTE_ADDED"
+              : "INVESTIGATION_NOTE_ADDED",
           entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
@@ -879,7 +907,8 @@ export async function PATCH(
             department_id: staffUser.department_id
               ? staffUser.department_id.toString()
               : null,
-            scope: "INTERNAL",
+            departmentName: deptName,
+            scope,
             details: noteContent,
             parentId: body.parentId?.trim() || null,
             replyToAuthor: body.replyToAuthor?.trim() || null,
@@ -887,26 +916,71 @@ export async function PATCH(
         },
       });
 
-      // Notify strictly the Department Head of this staff member's department
-      if (staffUser.department_id) {
-        const deptHeads = await prisma.users.findMany({
-          where: {
-            department_id: staffUser.department_id,
-            roles: { role_name: "DEPARTMENT_HEAD" },
-            status: "ACTIVE",
+      if (scope === "COLLABORATION") {
+        // Broadcast notification to HODs and assigned staff of ALL collaborating departments
+        const involvedDepts = await prisma.grievance_departments.findMany({
+          where: { grievance_id: grievanceId },
+          include: {
+            assignments: {
+              include: { users_assignments_staff_idTousers: true },
+            },
           },
         });
-        for (const dh of deptHeads) {
-          if (dh.user_id !== staffId) {
+
+        for (const gd of involvedDepts) {
+          // Notify HOD
+          const hods = await prisma.users.findMany({
+            where: {
+              department_id: gd.department_id,
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+          });
+          for (const hod of hods) {
+            if (hod.user_id !== staffId) {
+              await NotificationService.send({
+                userId: hod.user_id,
+                grievanceId,
+                type: "HEAD_INTERNAL_NOTE",
+                title: "Cross-Department Collaboration Note",
+                message: `${authorDisplay} added a note on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              });
+            }
+          }
+
+          // Notify assigned staff
+          if (gd.assignments && gd.assignments.staff_id !== staffId) {
             await NotificationService.send({
-              userId: dh.user_id,
+              userId: gd.assignments.staff_id,
               grievanceId,
               type: "HEAD_INTERNAL_NOTE",
-              title: body.parentId
-                ? "Internal Discussion Reply"
-                : "Internal Discussion Note",
-              message: `${authorDisplay} posted an internal ${body.parentId ? "reply" : "note"} on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              title: "Cross-Department Collaboration Note",
+              message: `${authorDisplay} posted on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
             });
+          }
+        }
+      } else {
+        // Notify strictly the Department Head of this staff member's department
+        if (staffUser.department_id) {
+          const deptHeads = await prisma.users.findMany({
+            where: {
+              department_id: staffUser.department_id,
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+          });
+          for (const dh of deptHeads) {
+            if (dh.user_id !== staffId) {
+              await NotificationService.send({
+                userId: dh.user_id,
+                grievanceId,
+                type: "HEAD_INTERNAL_NOTE",
+                title: body.parentId
+                  ? "Internal Discussion Reply"
+                  : "Internal Discussion Note",
+                message: `${authorDisplay} posted an internal ${body.parentId ? "reply" : "note"} on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              });
+            }
           }
         }
       }
@@ -916,13 +990,19 @@ export async function PATCH(
         userId: staffId,
         grievanceId,
         type: "HEAD_INTERNAL_NOTE",
-        title: "Internal Note Logged",
-        message: `You added an internal investigation note to grievance ${grievance.grievance_number}.`,
+        title:
+          scope === "COLLABORATION"
+            ? "Collaboration Note Logged"
+            : "Internal Note Logged",
+        message: `You added a ${scope === "COLLABORATION" ? "collaboration note" : "internal investigation note"} to grievance ${grievance.grievance_number}.`,
       });
 
       return NextResponse.json({
         success: true,
-        message: "Internal investigation note logged successfully",
+        message:
+          scope === "COLLABORATION"
+            ? "Collaboration note logged successfully"
+            : "Internal investigation note logged successfully",
         note: {
           id: createdAudit.audit_log_id.toString(),
           author: authorDisplay,

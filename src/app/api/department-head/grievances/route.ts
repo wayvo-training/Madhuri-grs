@@ -733,6 +733,41 @@ export async function GET(request: Request) {
       }
       const isCrossDepartment = deptList.length > 1;
 
+      const departmentsInvolved = relatedDepts.map((d) => {
+        const deptAssignment = grievanceAssignments.find(
+          (a) => a.grievance_department_id === d.grievance_department_id,
+        );
+        let deptStatus = d.status;
+        if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
+          if (deptStatus === "PENDING_ASSIGNMENT") {
+            deptStatus = "ASSIGNED";
+          }
+        } else if (!deptAssignment && deptStatus === "ASSIGNED") {
+          deptStatus = "PENDING_ASSIGNMENT";
+        }
+
+        const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+        const assignedStaff =
+          deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+            ? null
+            : staffUser &&
+                (deptAssignment?.assignment_status === "ASSIGNED" ||
+                  deptAssignment?.assignment_status === "COMPLETED")
+              ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+              : null;
+
+        return {
+          id: d.grievance_department_id.toString(),
+          departmentName:
+            d.departments?.department_name || "Unknown Department",
+          involvementType:
+            (d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+            "PRIMARY",
+          status: deptStatus,
+          assignedStaff,
+        };
+      });
+
       const myInvolvementType =
         (myDeptRecord?.involvement_type as
           | "PRIMARY"
@@ -819,6 +854,7 @@ export async function GET(request: Request) {
         hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
         isCrossDepartment,
         collaboratingDepartments: deptList,
+        departmentsInvolved,
         isPrimaryDepartment,
         myDepartmentStatus:
           myDeptRecord?.status ||

@@ -226,7 +226,7 @@ export interface DocumentPreviewData {
 }
 
 export interface CaseProgressData {
-  grievance?: Record<string, unknown>;
+  grievance?: Partial<GrievanceItem>;
   isBlocked?: boolean;
   blockedReason?: string;
   prerequisiteDepartments?: string[];
@@ -278,6 +278,9 @@ export interface CaseProgressData {
     assignedStaff?: string | null;
   }[];
   hodIntervention?: GrievanceItem["hodIntervention"];
+  internalNotes?: InternalNoteItem[];
+  collaborationNotes?: InternalNoteItem[];
+  supportingFindings?: SupportingDepartmentFinding[];
 }
 
 export interface DepartmentMetricsSummary {

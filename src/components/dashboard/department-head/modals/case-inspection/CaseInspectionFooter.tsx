@@ -108,7 +108,7 @@ export function CaseInspectionFooter({
 
         <div className="flex flex-wrap items-center gap-2">
           {/* If assigned to staff, show contact button */}
-          {staffEmail && !isSelfAssigned ? (
+          {staffEmail && !isSelfAssigned && !isClosedOrResolved ? (
             <button
               type="button"
               onClick={() => setIsDirectiveModalOpen(true)}

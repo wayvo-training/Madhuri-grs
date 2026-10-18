@@ -74,6 +74,7 @@ export function InvestigationTab({
   };
 
   const notes = grievance.internalNotes || [];
+  const isClosed = grievance.status === "CLOSED";
 
   // Group notes into top-level threads and nested replies
   const { topLevelNotes, replyMap } = useMemo(() => {
@@ -167,7 +168,7 @@ export function InvestigationTab({
           {noteItem.note}
         </p>
 
-        {grievance.status !== "ASSIGNED" && (
+        {!isClosed && grievance.status !== "ASSIGNED" && (
           <div className="flex items-center justify-end pt-1">
             <button
               type="button"
@@ -239,118 +240,137 @@ export function InvestigationTab({
         )}
       </div>
 
-      {/* 3. Composer at Bottom */}
-      {grievance.status === "ASSIGNED" && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3.5 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
-          <Lock className="h-4 w-4 text-amber-600 shrink-0" />
-          <span>
-            Investigation has not started yet. Please click{" "}
-            <strong>&quot;Start Investigation&quot;</strong> in the bottom
-            action bar to enable internal notes and case discussions.
-          </span>
-        </div>
-      )}
-
-      <form
-        onSubmit={handlePostNoteSubmit}
-        className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:bg-slate-900/60 dark:border-slate-700 p-3.5 space-y-2.5 shadow-2xs"
-      >
-        {replyingTo && (
-          <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-teal-100/70 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/60 rounded-lg text-teal-900 dark:text-teal-200">
-            <span className="flex items-center gap-1.5 font-medium truncate">
-              <CornerDownRight className="h-3.5 w-3.5 text-[#0F766E] shrink-0" />
-              Replying to{" "}
-              <strong className="font-semibold truncate max-w-[200px]">
-                {replyingTo.author}
-              </strong>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
-                ({replyingTo.noteSnippet})
-              </span>
-            </span>
-            <button
-              type="button"
-              onClick={handleCancelReply}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer ml-2 shrink-0 inline-flex items-center gap-0.5"
-            >
-              <X className="h-3.5 w-3.5" />
-              <span>Cancel</span>
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-[#115E59] dark:text-teal-400 flex items-center gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5 text-[#0F766E]" />
-            {replyingTo ? "Post Reply to Discussion" : "Internal Discussion"}
-          </span>
-          <span className="text-[11px] text-[#0F766E] dark:text-teal-400">
-            Visible only to authorized grievance participants
-          </span>
-        </div>
-
-        <textarea
-          ref={textareaRef}
-          rows={3}
-          required
-          disabled={grievance.status === "ASSIGNED"}
-          value={newNote}
-          onChange={(e) => setNewNote(e.target.value)}
-          placeholder={
-            grievance.status === "ASSIGNED"
-              ? "Investigation has not started. Click 'Start Investigation' below to add notes..."
-              : "Add an internal note or reply..."
-          }
-          className={`w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E] ${
-            grievance.status === "ASSIGNED"
-              ? "opacity-60 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed"
-              : ""
-          }`}
-        />
-
-        <div className="flex items-center justify-between">
-          {replyingTo ? (
-            <button
-              type="button"
-              onClick={handleCancelReply}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
-            >
-              Cancel Reply
-            </button>
-          ) : (
-            <div />
-          )}
-          <button
-            type="submit"
-            disabled={
-              grievance.status === "ASSIGNED" ||
-              !newNote.trim() ||
-              isPostingNote
-            }
-            className={`inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition ${
-              grievance.status === "ASSIGNED"
-                ? "cursor-not-allowed"
-                : "cursor-pointer"
-            }`}
-          >
-            {grievance.status === "ASSIGNED" ? (
-              <Lock className="h-3 w-3" />
-            ) : (
-              <Send className="h-3 w-3" />
-            )}
+      {/* 3. Composer or Read-Only Banner for Closed Grievances */}
+      {isClosed ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/60 dark:border-slate-800 p-3.5 flex items-center justify-between text-xs text-slate-500 shadow-2xs">
+          <span className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-slate-400 shrink-0" />
             <span>
-              {grievance.status === "ASSIGNED"
-                ? "Notes Locked (Start Investigation First)"
-                : isPostingNote
-                  ? replyingTo
-                    ? "Posting Reply..."
-                    : "Adding Note..."
-                  : replyingTo
-                    ? "Post Reply"
-                    : "Add Internal Note"}
+              This grievance is <strong>Closed</strong>. Internal discussion
+              &amp; notes are archived in read-only mode.
             </span>
-          </button>
+          </span>
+          <span className="rounded-full bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">
+            Case Closed
+          </span>
         </div>
-      </form>
+      ) : (
+        <>
+          {grievance.status === "ASSIGNED" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3.5 flex items-center gap-2.5 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
+              <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+              <span>
+                Investigation has not started yet. Please click{" "}
+                <strong>&quot;Start Investigation&quot;</strong> in the bottom
+                action bar to enable internal notes and case discussions.
+              </span>
+            </div>
+          )}
+
+          <form
+            onSubmit={handlePostNoteSubmit}
+            className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:bg-slate-900/60 dark:border-slate-700 p-3.5 space-y-2.5 shadow-2xs"
+          >
+            {replyingTo && (
+              <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-teal-100/70 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/60 rounded-lg text-teal-900 dark:text-teal-200">
+                <span className="flex items-center gap-1.5 font-medium truncate">
+                  <CornerDownRight className="h-3.5 w-3.5 text-[#0F766E] shrink-0" />
+                  Replying to{" "}
+                  <strong className="font-semibold truncate max-w-[200px]">
+                    {replyingTo.author}
+                  </strong>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
+                    ({replyingTo.noteSnippet})
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCancelReply}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer ml-2 shrink-0 inline-flex items-center gap-0.5"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  <span>Cancel</span>
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#115E59] dark:text-teal-400 flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5 text-[#0F766E]" />
+                {replyingTo
+                  ? "Post Reply to Discussion"
+                  : "Internal Discussion"}
+              </span>
+              <span className="text-[11px] text-[#0F766E] dark:text-teal-400">
+                Visible only to authorized grievance participants
+              </span>
+            </div>
+
+            <textarea
+              ref={textareaRef}
+              rows={3}
+              required
+              disabled={grievance.status === "ASSIGNED"}
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder={
+                grievance.status === "ASSIGNED"
+                  ? "Investigation has not started. Click 'Start Investigation' below to add notes..."
+                  : "Add an internal note or reply..."
+              }
+              className={`w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E] ${
+                grievance.status === "ASSIGNED"
+                  ? "opacity-60 bg-slate-50 dark:bg-slate-800/40 cursor-not-allowed"
+                  : ""
+              }`}
+            />
+
+            <div className="flex items-center justify-between">
+              {replyingTo ? (
+                <button
+                  type="button"
+                  onClick={handleCancelReply}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+                >
+                  Cancel Reply
+                </button>
+              ) : (
+                <div />
+              )}
+              <button
+                type="submit"
+                disabled={
+                  grievance.status === "ASSIGNED" ||
+                  !newNote.trim() ||
+                  isPostingNote
+                }
+                className={`inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition ${
+                  grievance.status === "ASSIGNED"
+                    ? "cursor-not-allowed"
+                    : "cursor-pointer"
+                }`}
+              >
+                {grievance.status === "ASSIGNED" ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  <Send className="h-3 w-3" />
+                )}
+                <span>
+                  {grievance.status === "ASSIGNED"
+                    ? "Notes Locked (Start Investigation First)"
+                    : isPostingNote
+                      ? replyingTo
+                        ? "Posting Reply..."
+                        : "Adding Note..."
+                      : replyingTo
+                        ? "Post Reply"
+                        : "Add Internal Note"}
+                </span>
+              </button>
+            </div>
+          </form>
+        </>
+      )}
     </div>
   );
 }

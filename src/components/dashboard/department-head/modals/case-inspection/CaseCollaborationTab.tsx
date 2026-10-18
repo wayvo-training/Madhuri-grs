@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckCircle2, Clock, MessageSquare, Send, Users } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Lock,
+  MessageSquare,
+  Send,
+  Users,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { GrievanceItem } from "@/types/department-head";
@@ -38,6 +45,11 @@ export function CaseCollaborationTab({
         if (isMounted && json?.success) {
           onGrievanceUpdated({
             ...grievanceRef.current,
+            departmentsInvolved:
+              grievanceRef.current.departmentsInvolved &&
+              grievanceRef.current.departmentsInvolved.length > 0
+                ? grievanceRef.current.departmentsInvolved
+                : currentGrievance.departmentsInvolved,
             collaborationNotes: json.collaborationNotes || [],
             internalNotes:
               json.internalNotes || grievanceRef.current.internalNotes || [],
@@ -51,7 +63,11 @@ export function CaseCollaborationTab({
     return () => {
       isMounted = false;
     };
-  }, [currentGrievance.id, onGrievanceUpdated]);
+  }, [
+    currentGrievance.id,
+    currentGrievance.departmentsInvolved,
+    onGrievanceUpdated,
+  ]);
 
   const handleNoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,15 +78,33 @@ export function CaseCollaborationTab({
     try {
       const updated = await onAddCollaborationNote(currentGrievance, noteText);
       if (updated) {
-        onGrievanceUpdated(updated);
+        onGrievanceUpdated({
+          ...updated,
+          departmentsInvolved:
+            updated.departmentsInvolved &&
+            updated.departmentsInvolved.length > 0
+              ? updated.departmentsInvolved
+              : currentGrievance.departmentsInvolved,
+        });
       }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const departments = currentGrievance.departmentsInvolved || [];
+  const departments =
+    currentGrievance.departmentsInvolved &&
+    currentGrievance.departmentsInvolved.length > 0
+      ? currentGrievance.departmentsInvolved
+      : (currentGrievance.collaboratingDepartments || []).map((name, idx) => ({
+          id: `dept-${idx}`,
+          departmentName: name,
+          involvementType: idx === 0 ? "PRIMARY" : "SUPPORTING",
+          status: "IN_PROGRESS",
+          assignedStaff: null,
+        }));
   const notes = currentGrievance.collaborationNotes || [];
+  const isClosed = currentGrievance.status === "CLOSED";
 
   return (
     <div className="space-y-6 text-xs animate-in fade-in duration-150">
@@ -167,39 +201,54 @@ export function CaseCollaborationTab({
           </span>
         </div>
 
-        {/* Note Composer */}
-        <form
-          onSubmit={handleNoteSubmit}
-          className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:border-teal-800/80 dark:bg-slate-900/90 p-3.5 space-y-2.5 shadow-2xs"
-        >
-          <label
-            htmlFor="collab-note-input"
-            className="text-[11px] font-semibold text-[#115E59] dark:text-teal-300 block"
-          >
-            Send Directive / Joint Case Note
-          </label>
-          <textarea
-            id="collab-note-input"
-            rows={2}
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Share instructions, joint findings, or handoff updates with collaborating departments..."
-            className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
-          />
-          <div className="flex items-center justify-between pt-0.5">
-            <span className="text-[10px] text-slate-400 dark:text-slate-500">
-              Notifies assigned staff and partner HODs immediately.
+        {/* Note Composer or Read-Only Banner for Closed Grievances */}
+        {isClosed ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/60 dark:border-slate-800 p-3.5 flex items-center justify-between text-xs text-slate-500 shadow-2xs">
+            <span className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-slate-400 shrink-0" />
+              <span>
+                This grievance is <strong>Closed</strong>. Cross-department
+                collaboration is archived in read-only mode.
+              </span>
             </span>
-            <button
-              type="submit"
-              disabled={!newNote.trim() || isSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer shadow-2xs"
-            >
-              <Send className="h-3 w-3" />
-              <span>{isSubmitting ? "Sending..." : "Post Directive"}</span>
-            </button>
+            <span className="rounded-full bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">
+              Case Closed
+            </span>
           </div>
-        </form>
+        ) : (
+          <form
+            onSubmit={handleNoteSubmit}
+            className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:border-teal-800/80 dark:bg-slate-900/90 p-3.5 space-y-2.5 shadow-2xs"
+          >
+            <label
+              htmlFor="collab-note-input"
+              className="text-[11px] font-semibold text-[#115E59] dark:text-teal-300 block"
+            >
+              Send Directive / Joint Case Note
+            </label>
+            <textarea
+              id="collab-note-input"
+              rows={2}
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Share instructions, joint findings, or handoff updates with collaborating departments..."
+              className="w-full rounded-lg border border-teal-200 bg-white p-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E] dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500"
+            />
+            <div className="flex items-center justify-between pt-0.5">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                Notifies assigned staff and partner HODs immediately.
+              </span>
+              <button
+                type="submit"
+                disabled={!newNote.trim() || isSubmitting}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer shadow-2xs"
+              >
+                <Send className="h-3 w-3" />
+                <span>{isSubmitting ? "Sending..." : "Post Directive"}</span>
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Notes Timeline */}
         <div className="space-y-2.5 pt-1">
