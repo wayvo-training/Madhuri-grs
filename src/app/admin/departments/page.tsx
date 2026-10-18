@@ -72,8 +72,9 @@ export default async function AdminDepartmentsPage() {
       }
       title="Department & Organization Management"
       subtitle="Enterprise divisions, workload distribution, and resolution mandates"
+      mainClassName="overflow-y-auto lg:overflow-hidden flex flex-col"
     >
-      <div className="space-y-6">
+      <div className="flex flex-col flex-1 min-h-0">
         <AdminDepartments
           initialDepartments={serializedDepartments}
           departmentHeads={serializedHeads}

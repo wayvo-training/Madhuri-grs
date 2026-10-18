@@ -146,31 +146,31 @@ export function DepartmentTable({
   return (
     <div
       id="departments"
-      className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs"
+      className="flex flex-col flex-1 min-h-0 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs"
     >
-      <div>
-        <AdminPanelHeader
-          title="Department Workload & Governance"
-          action={
-            <div className="flex flex-wrap items-center gap-3 ml-4 sm:ml-8 lg:ml-12 w-full justify-end sm:w-auto flex-1">
-              <div className="w-full sm:w-[600px] max-w-[50vw]">
-                <AdvancedTableSearch
-                  fields={filterFields}
-                  onSearch={handleSearchChange}
-                  className="w-full"
-                />
-              </div>
-              <AdminToolbarAction onClick={onOpenCreateModal}>
-                <Plus className="h-3.5 w-3.5" />
-                <span>New Department</span>
-              </AdminToolbarAction>
+      <div className="shrink-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap">
+            Department Workload & Governance
+          </h2>
+          <div className="flex items-center gap-3 flex-1 min-w-0 ml-0 lg:ml-6">
+            <div className="flex-1 min-w-0">
+              <AdvancedTableSearch
+                fields={filterFields}
+                onSearch={handleSearchChange}
+                className="w-full"
+              />
             </div>
-          }
-        />
+            <AdminToolbarAction onClick={onOpenCreateModal}>
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Department</span>
+            </AdminToolbarAction>
+          </div>
+        </div>
       </div>
 
       {/* Departments Table */}
-      <div className="mt-5 overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
+      <div className="flex-1 min-h-0 mt-3 overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 z-10 shadow-2xs backdrop-blur-xs">
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">

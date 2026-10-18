@@ -64,12 +64,14 @@ export function AdminDepartments({
   } = useDepartmentActions(setDepartments, departmentHeads);
 
   return (
-    <div className="space-y-6">
-      <DepartmentMetricCards
-        departments={departments}
-        totalGrievances={totalGrievances}
-        stats={stats}
-      />
+    <div className="flex flex-col flex-1 min-h-0 gap-2.5 sm:gap-3">
+      <div className="shrink-0">
+        <DepartmentMetricCards
+          departments={departments}
+          totalGrievances={totalGrievances}
+          stats={stats}
+        />
+      </div>
 
       <DepartmentTable
         departments={departments}

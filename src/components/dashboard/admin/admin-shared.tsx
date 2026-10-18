@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
 import { Search } from "lucide-react";

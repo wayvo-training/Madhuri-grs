@@ -149,7 +149,7 @@ export function GrievanceTableList({
   const colGroup = (
     <colgroup>
       <col className="w-[140px]" />
-      <col className="w-[260px]" />
+      <col className="w-[270px]" />
       <col className="w-[170px]" />
       <col className="w-[170px]" />
       <col className="w-[170px]" />
@@ -168,7 +168,7 @@ export function GrievanceTableList({
       <div className="overflow-x-auto w-full custom-scrollbar">
         <div className="min-w-[1920px]">
           {/* Static Header Table: no scrollbar next to header */}
-          <table className="w-full text-left text-xs table-fixed border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
+          <table className="w-full text-left text-[12px] table-fixed border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
             {colGroup}
             <TableHeader className="bg-transparent shadow-none">
               <TableRow className="hover:bg-transparent border-none">
@@ -176,7 +176,7 @@ export function GrievanceTableList({
                   field="grievance_number"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 pl-4 pr-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[140px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Grievance ID
                 </SortableTableHead>
@@ -184,7 +184,7 @@ export function GrievanceTableList({
                   field="title"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500"
+                  className="w-[270px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Subject
                 </SortableTableHead>
@@ -192,7 +192,7 @@ export function GrievanceTableList({
                   field="category_name"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Category
                 </SortableTableHead>
@@ -200,7 +200,7 @@ export function GrievanceTableList({
                   field="subcategory_name"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Sub Category
                 </SortableTableHead>
@@ -208,18 +208,18 @@ export function GrievanceTableList({
                   field="department_name"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Department
                 </SortableTableHead>
-                <TableHead className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                <TableHead className="w-[150px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
                   Supporting Depts
                 </TableHead>
                 <SortableTableHead
                   field="submitted_by_name"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Submitter Name
                 </SortableTableHead>
@@ -227,7 +227,7 @@ export function GrievanceTableList({
                   field="submitted_by_email"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[200px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Submitter Email
                 </SortableTableHead>
@@ -235,7 +235,7 @@ export function GrievanceTableList({
                   field="priority"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[100px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Priority
                 </SortableTableHead>
@@ -243,7 +243,7 @@ export function GrievanceTableList({
                   field="status"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Status
                 </SortableTableHead>
@@ -251,11 +251,11 @@ export function GrievanceTableList({
                   field="sla_status"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="px-3 py-3 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
+                  className="w-[140px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   SLA Health
                 </SortableTableHead>
-                <TableHead className="py-3 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                <TableHead className="w-[90px] py-3 pl-2 pr-4 text-right text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden align-middle">
                   Actions
                 </TableHead>
               </TableRow>
@@ -264,18 +264,18 @@ export function GrievanceTableList({
 
           {/* Scrollable Table Body: vertical scrollbar starts directly below header at marked line */}
           <div className="max-h-[calc(100vh-370px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <table className="w-full text-left text-xs table-fixed">
+            <table className="w-full text-left text-[13px] table-fixed">
               {colGroup}
               <TableBody
-                className={`font-medium text-slate-700 transition-opacity duration-150 ${
+                className={`font-normal text-slate-700 transition-opacity duration-150 ${
                   isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
                 }`}
               >
                 {grievancesList.length === 0 ? (
-                  <TableRow>
+                  <TableRow className="h-[52px]">
                     <TableCell
                       colSpan={12}
-                      className="py-12 text-center text-slate-400 font-normal"
+                      className="py-12 text-center text-slate-400 font-normal text-[13px]"
                     >
                       <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
                       No grievances match the selected filters.
@@ -289,107 +289,112 @@ export function GrievanceTableList({
                     return (
                       <TableRow
                         key={g.grievance_id}
-                        className="transition-colors hover:bg-slate-50/80 border-b border-slate-100"
+                        className="h-[52px] transition-colors hover:bg-slate-50/80 border-b border-slate-100"
                       >
                         {/* ID */}
-                        <TableCell className="whitespace-nowrap py-3 pl-4 pr-3 font-mono font-bold text-slate-900">
-                          {g.grievance_number}
+                        <TableCell className="w-[140px] overflow-hidden text-ellipsis whitespace-nowrap py-3 pl-4 pr-3 font-mono font-semibold text-[13px] text-slate-900 align-middle">
+                          <span
+                            className="truncate block"
+                            title={g.grievance_number}
+                          >
+                            {g.grievance_number}
+                          </span>
                         </TableCell>
 
                         {/* Subject */}
-                        <TableCell className="px-3 py-3">
+                        <TableCell className="w-[270px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <TruncatedText
                             text={g.title}
-                            maxChars={32}
-                            className="font-semibold text-slate-900 border-none block truncate max-w-full"
+                            maxChars={35}
+                            className="font-medium text-slate-900 border-none block w-full truncate text-[13px]"
                           />
                         </TableCell>
 
                         {/* Category */}
-                        <TableCell className="px-3 py-3">
+                        <TableCell className="w-[170px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <TruncatedText
                             text={g.category_name}
                             maxChars={20}
-                            className="text-xs font-semibold text-slate-800 border-none block truncate max-w-full"
+                            className="text-[13px] font-medium text-slate-800 border-none block w-full truncate"
                           />
                         </TableCell>
 
                         {/* Sub Category */}
-                        <TableCell className="px-3 py-3">
+                        <TableCell className="w-[170px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <TruncatedText
                             text={g.subcategory_name}
                             maxChars={20}
-                            className="text-xs font-medium text-slate-600 border-none block truncate max-w-full"
+                            className="text-[13px] font-normal text-slate-600 border-none block w-full truncate"
                           />
                         </TableCell>
 
                         {/* Department */}
-                        <TableCell className="px-3 py-3">
+                        <TableCell className="w-[170px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           {g.department_name ? (
-                            <div className="flex items-center gap-1.5 max-w-full">
+                            <div className="flex items-center gap-1.5 min-w-0 max-w-full overflow-hidden">
                               <TruncatedText
                                 text={g.department_name}
                                 maxChars={18}
-                                className="text-xs font-medium text-slate-800 border-none truncate max-w-full"
+                                className="text-[13px] font-medium text-slate-800 border-none truncate block min-w-0 flex-1"
                               />
                               {g.involvement_type === "EQUAL" && (
-                                <span className="inline-flex shrink-0 items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                                <span className="inline-flex shrink-0 items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
                                   EQUAL
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">
+                            <span className="text-[13px] font-medium text-amber-800 whitespace-nowrap truncate block">
                               Unrouted Exception
                             </span>
                           )}
                         </TableCell>
 
                         {/* Supporting Depts */}
-                        <TableCell className="whitespace-nowrap px-3 py-3">
+                        <TableCell className="w-[150px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           {g.supporting_departments &&
                           g.supporting_departments.length > 0 ? (
                             <SupportingDeptsPopover
                               departments={g.supporting_departments}
                             />
                           ) : (
-                            <span className="text-xs text-slate-400 font-normal">
+                            <span className="text-[13px] text-slate-400 font-normal">
                               —
                             </span>
                           )}
                         </TableCell>
 
                         {/* Submitter Name */}
-                        <TableCell className="px-3 py-3 text-slate-600 overflow-hidden max-w-full">
+                        <TableCell className="w-[160px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <TruncatedText
                             text={g.submitted_by_name}
                             maxChars={18}
-                            className="font-medium text-slate-900 dark:text-slate-100 truncate block text-xs"
+                            className="text-[13px] font-medium text-slate-900 dark:text-slate-100 truncate block w-full"
                           />
                         </TableCell>
 
                         {/* Submitter Email */}
-                        <TableCell className="px-3 py-3 text-slate-600 overflow-hidden max-w-full">
+                        <TableCell className="w-[200px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <TruncatedText
                             text={g.submitted_by_email}
-                            maxChars={20}
+                            maxChars={22}
                             showCopy={true}
-                            className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate block"
+                            className="text-[13px] text-slate-500 dark:text-slate-400 font-mono truncate block w-full"
                           />
                         </TableCell>
 
                         {/* Priority */}
-                        <TableCell className="whitespace-nowrap px-3 py-3">
+                        <TableCell className="w-[100px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 text-[13px] font-medium text-slate-700 align-middle">
                           {g.priority}
                         </TableCell>
 
                         {/* Status */}
-                        <TableCell className="whitespace-nowrap px-3 py-3">
+                        <TableCell className="w-[160px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
                           <StatusBadge status={g.status} />
                         </TableCell>
 
                         {/* SLA Health */}
-                        <TableCell className="whitespace-nowrap px-3 py-3 text-xs font-medium text-slate-800 dark:text-slate-200">
+                        <TableCell className="w-[140px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 text-[13px] font-medium text-slate-800 dark:text-slate-200 align-middle">
                           {g.sla_status === "BREACHED"
                             ? "Breached"
                             : g.sla_status === "AT_RISK"
@@ -400,7 +405,7 @@ export function GrievanceTableList({
                         </TableCell>
 
                         {/* Actions */}
-                        <TableCell className="whitespace-nowrap py-3 pl-2 pr-4 text-right">
+                        <TableCell className="w-[90px] overflow-hidden whitespace-nowrap py-3 pl-2 pr-4 text-right align-middle">
                           <ActionMenu
                             widthClass="w-24"
                             items={[
