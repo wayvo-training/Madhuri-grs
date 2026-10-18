@@ -37,6 +37,7 @@ export function TruncatedText({
   onClick,
 }: TruncatedTextProps) {
   const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
   const elementId = useId();
 
   if (!text) {
@@ -51,7 +52,11 @@ export function TruncatedText({
   if (!isLong) {
     if (onClick) {
       return (
-        <button type="button" onClick={onClick} className={className}>
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn("text-left truncate", className)}
+        >
           {text}
         </button>
       );
@@ -70,69 +75,63 @@ export function TruncatedText({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const triggerContent = onClick ? (
-    <button
-      type="button"
-      id={`truncate-${elementId}`}
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 cursor-pointer transition-colors text-left max-w-full truncate",
-        className,
-      )}
-    >
-      {displayText}
-    </button>
-  ) : (
-    <span
-      id={`truncate-${elementId}`}
-      className={cn(
-        "inline-flex items-center gap-1 cursor-default transition-colors max-w-full truncate",
-        className,
-      )}
-    >
-      {displayText}
-    </span>
-  );
-
   return (
-    <TooltipProvider delay={150}>
-      <Tooltip>
-        <TooltipTrigger render={triggerContent} />
-        <TooltipContent
-          side={side}
-          align={align}
-          showArrow={showArrow}
-          className={cn(
-            "max-w-xs sm:max-w-sm md:max-w-md p-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900 text-slate-100 shadow-xl rounded-lg border border-slate-800 z-50",
-            tooltipClassName,
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger
+        id={`truncate-${elementId}`}
+        tabIndex={0}
+        closeOnClick={false}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((prev) => !prev);
+          onClick?.(e);
+        }}
+        className={cn(
+          "inline-flex items-center gap-1 text-left max-w-full truncate focus-visible:outline-none cursor-pointer rounded-xs",
+          className,
+        )}
+      >
+        <span className="truncate block" title={completeText}>
+          {displayText}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side={side}
+        sideOffset={6}
+        align={align}
+        showArrow={showArrow}
+        className={cn(
+          "max-w-xs sm:max-w-sm md:max-w-md p-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900 text-slate-100 shadow-xl rounded-lg border border-slate-800 z-50",
+          tooltipClassName,
+        )}
+      >
+        <div className="space-y-1.5">
+          <p className="text-slate-100 select-text font-medium">
+            {completeText}
+          </p>
+          {showCopy && (
+            <div className="pt-1 border-t border-slate-700/60 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1 text-[10px] text-slate-300 hover:text-white transition cursor-pointer px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3 w-3 text-emerald-400" />
+                    <span className="text-emerald-400">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" />
+                    <span>Copy Full Text</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
-        >
-          <div className="space-y-1.5">
-            <p className="text-slate-200 select-text">{completeText}</p>
-            {showCopy && (
-              <div className="pt-1 border-t border-slate-700/60 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="inline-flex items-center gap-1 text-[10px] text-slate-300 hover:text-white transition cursor-pointer px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3" />
-                      <span>Copy Full Text</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
