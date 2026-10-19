@@ -468,82 +468,75 @@ export function GrievanceQueue({
     }
   };
 
+  const colGroup = (
+    <colgroup>
+      <col className="w-[145px]" />
+      <col className="w-[260px]" />
+      <col className="w-[175px]" />
+      <col className="w-[170px]" />
+      <col className="w-[115px]" />
+      <col className="w-[130px]" />
+      <col className="w-[140px]" />
+      <col className="w-[130px]" />
+      <col className="w-[115px]" />
+    </colgroup>
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {activeTab !== "all" && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-slate-500">
-              Filtered:
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-              {getTabLabel(activeTab)} ({filteredGrievances.length})
+    <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
+      <div className="shrink-0 p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-b border-slate-200/80">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {activeTab !== "all" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-slate-500">
+                Filtered:
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                {getTabLabel(activeTab)} ({filteredGrievances.length})
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("all")}
+                  className="hover:text-teal-950 dark:hover:text-teal-100 cursor-pointer ml-0.5"
+                  title="Clear filter"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className="hover:text-teal-950 dark:hover:text-teal-100 cursor-pointer ml-0.5"
-                title="Clear filter"
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
               >
-                <X className="w-3 h-3" />
+                ← Back to All Cases
               </button>
-            </span>
-            <button
-              type="button"
-              onClick={() => setActiveTab("all")}
-              className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
-            >
-              ← Back to All Cases
-            </button>
+            </div>
+          )}
+          <div className="flex-1 min-w-0 w-full">
+            <AdvancedTableSearch
+              fields={searchFields}
+              onSearch={(conds, mode) => {
+                setAdvancedSearch(conds);
+                setFilterMode(mode);
+              }}
+              className="w-full"
+            />
           </div>
-        )}
-        <div className="flex-1 min-w-0 w-full">
-          <AdvancedTableSearch
-            fields={searchFields}
-            onSearch={(conds, mode) => {
-              setAdvancedSearch(conds);
-              setFilterMode(mode);
-            }}
-            className="w-full"
-          />
         </div>
       </div>
 
       {/* Grievances List - Table Format */}
-      {sortedGrievances.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 bg-white p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-            <Inbox className="w-6 h-6" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-slate-800">
-              No assigned grievances found
-            </h4>
-            <p className="text-sm text-slate-500 mt-0.5 max-w-sm mx-auto">
-              {hasActiveFilters
-                ? "No grievances match your current search or filter criteria. Try clearing filters."
-                : "You currently have no grievances assigned under this queue view."}
-            </p>
-          </div>
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)] rounded-xl border border-slate-200/90 bg-white shadow-2xs custom-scrollbar">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead className="sticky top-0 z-10 shadow-2xs backdrop-blur-xs">
+      <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
+        <div className="min-w-[1380px] flex-1 min-h-0 flex flex-col">
+          {/* Static Header Table: fixed at top, no horizontal mismatch */}
+          <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
+            {colGroup}
+            <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-[13px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200">
                 <SortableTh
                   field="grievanceNumber"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-2.5 px-3.5 whitespace-nowrap"
+                  className="py-2.5 pl-4 pr-3 whitespace-nowrap"
                 >
                   Grievance ID
                 </SortableTh>
@@ -555,14 +548,14 @@ export function GrievanceQueue({
                 >
                   Summary
                 </SortableTh>
-                <th className="py-2.5 px-3 text-slate-900 dark:text-slate-200 font-bold uppercase tracking-wider text-[13px] text-left whitespace-nowrap">
+                <th className="py-2.5 px-4 text-slate-900 dark:text-slate-200 font-bold uppercase tracking-wider text-[13px] text-left whitespace-nowrap">
                   Reopened Status
                 </th>
                 <SortableTh
                   field="category"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-2.5 px-3 whitespace-nowrap"
+                  className="py-2.5 px-4 whitespace-nowrap"
                 >
                   Category
                 </SortableTh>
@@ -598,219 +591,262 @@ export function GrievanceQueue({
                 >
                   Last Updated
                 </SortableTh>
-                <th className="py-2.5 px-3.5 text-right text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap">
+                <th className="py-2.5 pr-6 pl-2 text-right text-slate-900 dark:text-slate-200 font-bold whitespace-nowrap">
                   Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
-              {pagination.paginatedItems.map((item) => {
-                const isBreached = item.slaStatus === "BREACHED";
-                const isAtRisk = item.slaStatus === "AT_RISK";
-                const isReopened =
-                  item.reopenCount > 0 || item.status === "REOPENED";
-                const isClosed =
-                  item.status === "CLOSED" || item.overallStatus === "CLOSED";
-
-                return (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
-                  >
-                    {/* Grievance Number */}
-                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle">
-                      <span className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">
-                        {item.grievanceNumber}
-                      </span>
-                    </td>
-
-                    {/* Summary */}
-                    <td className="py-2.5 px-3.5 whitespace-nowrap align-middle max-w-[240px]">
-                      <TruncatedText
-                        text={item.title}
-                        maxChars={30}
-                        className="font-medium text-slate-900 dark:text-slate-100 border-none truncate whitespace-nowrap block max-w-[220px]"
-                      />
-                    </td>
-
-                    {/* Reopened Status */}
-                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                      {isReopened ? (
-                        <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
-                          Reopened ({item.reopenCount})
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 dark:text-slate-500 text-xs">
-                          -
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Category */}
-                    <td className="py-2.5 px-3 whitespace-nowrap align-middle max-w-[150px]">
-                      <TruncatedText
-                        text={item.category}
-                        maxChars={18}
-                        className="text-slate-900 dark:text-slate-200 border-none truncate whitespace-nowrap block max-w-[140px]"
-                      />
-                    </td>
-
-                    {/* Priority */}
-                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                      <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                        {item.priority === "CRITICAL"
-                          ? "Critical"
-                          : item.priority === "HIGH"
-                            ? "High"
-                            : item.priority === "MEDIUM"
-                              ? "Medium"
-                              : "Low"}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                      {item.status === "CLOSED" ||
-                      item.overallStatus === "CLOSED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 whitespace-nowrap">
-                          Closed
-                        </span>
-                      ) : item.status === "RESOLVED" ||
-                        item.overallStatus === "RESOLVED" ? (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 whitespace-nowrap">
-                          Resolved
-                        </span>
-                      ) : item.isMyDepartmentCompleted ||
-                        item.status === "COMPLETED" ? (
-                        <span
-                          title={
-                            item.overallStatus &&
-                            item.overallStatus !== "COMPLETED" &&
-                            item.overallStatus !== "CLOSED" &&
-                            item.overallStatus !== "RESOLVED"
-                              ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
-                              : undefined
-                          }
-                          className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                          {item.myInvolvementType === "SUPPORTING"
-                            ? "Findings Submitted"
-                            : "Work Completed"}
-                        </span>
-                      ) : item.status === "WAITING_ON_USER" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                          Waiting on User
-                        </span>
-                      ) : (
-                        <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
-                          {item.status === "IN_PROGRESS"
-                            ? "In Progress"
-                            : item.status === "ASSIGNED"
-                              ? "Assigned"
-                              : item.status === "UNDER_REVIEW"
-                                ? "Under Review"
-                                : item.status}
-                        </span>
-                      )}
-                    </td>
-
-                    {/* SLA */}
-                    <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                        <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
-                        {isBreached
-                          ? "SLA Breached"
-                          : isAtRisk
-                            ? "SLA At Risk"
-                            : "Within SLA"}
-                      </span>
-                    </td>
-
-                    {/* Last Updated */}
-                    <td className="py-2.5 px-3 text-slate-900 dark:text-slate-300 whitespace-nowrap align-middle text-[13px]">
-                      {item.assignedAt || item.submittedAt}
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-2.5 px-3.5 text-right whitespace-nowrap align-middle">
-                      <ActionMenu
-                        widthClass="w-36"
-                        items={[
-                          {
-                            label: "Examine",
-                            icon: (
-                              <Eye className="h-3.5 w-3.5 text-slate-500" />
-                            ),
-                            onClick: () => onExamine(item),
-                          },
-                          ...(!isClosed &&
-                          item.status !== "UNDER_REVIEW" &&
-                          item.status !== "RESOLVED" &&
-                          item.status !== "COMPLETED" &&
-                          item.overallStatus !== "RESOLVED" &&
-                          !item.isMyDepartmentCompleted &&
-                          item.status !== "ASSIGNED"
-                            ? [
-                                {
-                                  label: "Resolve",
-                                  icon: (
-                                    <FileCheck2 className="h-3.5 w-3.5 text-[#0F766E]" />
-                                  ),
-                                  variant: "primary" as const,
-                                  onClick: () => onResolve(item),
-                                },
-                              ]
-                            : item.status === "ASSIGNED"
-                              ? [
-                                  {
-                                    label: "Start Investigation",
-                                    icon: (
-                                      <Play className="h-3.5 w-3.5 text-emerald-600" />
-                                    ),
-                                    variant: "primary" as const,
-                                    onClick: () => onExamine(item),
-                                  },
-                                ]
-                              : []),
-                          ...(!item.hasProposedKb &&
-                          !locallyProposedIds.has(item.id) &&
-                          canStaffProposeKnowledge(item)
-                            ? [
-                                {
-                                  label: "Propose KB Article",
-                                  icon: (
-                                    <BookOpen className="h-3.5 w-3.5 text-teal-600" />
-                                  ),
-                                  variant: "default" as const,
-                                  onClick: () => setProposeKbItem(item),
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
           </table>
 
-          <div className="border-t border-slate-200/80 bg-white dark:bg-slate-900">
-            <Pagination
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
-              totalCount={pagination.totalCount}
-              pageSize={pagination.pageSize}
-              onPageChange={pagination.onPageChange}
-              onPageSizeChange={pagination.onPageSizeChange}
-              pageSizeOptions={pagination.pageSizeOptions}
-              itemLabel="grievances"
-            />
+          {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            {sortedGrievances.length === 0 ? (
+              <div className="p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                  <Inbox className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    No assigned grievances found
+                  </h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-sm mx-auto">
+                    {hasActiveFilters
+                      ? "No grievances match your current search or filter criteria. Try clearing filters."
+                      : "You currently have no grievances assigned under this queue view."}
+                  </p>
+                </div>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm table-fixed border-collapse">
+                {colGroup}
+                <tbody className="divide-y divide-slate-150 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
+                  {pagination.paginatedItems.map((item) => {
+                    const isBreached = item.slaStatus === "BREACHED";
+                    const isAtRisk = item.slaStatus === "AT_RISK";
+                    const isReopened =
+                      item.reopenCount > 0 || item.status === "REOPENED";
+                    const isClosed =
+                      item.status === "CLOSED" ||
+                      item.overallStatus === "CLOSED";
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition"
+                      >
+                        {/* Grievance Number */}
+                        <td className="py-2.5 pl-4 pr-3 whitespace-nowrap align-middle">
+                          <button
+                            type="button"
+                            onClick={() => onExamine(item)}
+                            className="font-mono text-sm font-bold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs transition"
+                            title={`Examine case ${item.grievanceNumber}`}
+                          >
+                            {item.grievanceNumber}
+                          </button>
+                        </td>
+
+                        {/* Summary */}
+                        <td className="py-2.5 px-3.5 whitespace-nowrap align-middle max-w-[240px]">
+                          <TruncatedText
+                            text={item.title}
+                            maxChars={30}
+                            className="font-medium text-slate-900 dark:text-slate-100 border-none truncate whitespace-nowrap block max-w-[220px]"
+                          />
+                        </td>
+
+                        {/* Reopened Status */}
+                        <td className="py-2.5 px-4 whitespace-nowrap align-middle">
+                          {isReopened ? (
+                            <span className="inline-flex items-center gap-0.5 text-[13px] font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                              Reopened ({item.reopenCount})
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 dark:text-slate-500 text-xs">
+                              -
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-2.5 px-4 whitespace-nowrap align-middle max-w-[170px]">
+                          <TruncatedText
+                            text={item.category}
+                            maxChars={18}
+                            className="text-slate-900 dark:text-slate-200 border-none truncate whitespace-nowrap block max-w-[155px]"
+                          />
+                        </td>
+
+                        {/* Priority */}
+                        <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                          <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                            {item.priority === "CRITICAL"
+                              ? "Critical"
+                              : item.priority === "HIGH"
+                                ? "High"
+                                : item.priority === "MEDIUM"
+                                  ? "Medium"
+                                  : "Low"}
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                          {item.status === "CLOSED" ||
+                          item.overallStatus === "CLOSED" ? (
+                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 whitespace-nowrap">
+                              Closed
+                            </span>
+                          ) : item.status === "RESOLVED" ||
+                            item.overallStatus === "RESOLVED" ? (
+                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 whitespace-nowrap">
+                              Resolved
+                            </span>
+                          ) : item.isMyDepartmentCompleted ||
+                            item.status === "COMPLETED" ? (
+                            <span
+                              title={
+                                item.overallStatus &&
+                                item.overallStatus !== "COMPLETED" &&
+                                item.overallStatus !== "CLOSED" &&
+                                item.overallStatus !== "RESOLVED"
+                                  ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
+                                  : undefined
+                              }
+                              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                              {item.myInvolvementType === "SUPPORTING"
+                                ? "Findings Submitted"
+                                : "Work Completed"}
+                            </span>
+                          ) : item.status === "WAITING_ON_USER" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
+                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Waiting on User
+                            </span>
+                          ) : (
+                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
+                              {item.status === "IN_PROGRESS"
+                                ? "In Progress"
+                                : item.status === "ASSIGNED"
+                                  ? "Assigned"
+                                  : item.status === "UNDER_REVIEW"
+                                    ? "Under Review"
+                                    : item.status}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* SLA */}
+                        <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
+                            <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
+                            {isBreached
+                              ? "SLA Breached"
+                              : isAtRisk
+                                ? "SLA At Risk"
+                                : "Within SLA"}
+                          </span>
+                        </td>
+
+                        {/* Last Updated */}
+                        <td className="py-2.5 px-3 text-slate-900 dark:text-slate-300 whitespace-nowrap align-middle text-[13px]">
+                          {item.assignedAt || item.submittedAt}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-2.5 pr-6 pl-2 text-right whitespace-nowrap align-middle">
+                          <div className="flex items-center justify-end">
+                            <ActionMenu
+                              widthClass="w-36"
+                              items={[
+                                {
+                                  label: "Examine",
+                                  icon: (
+                                    <Eye className="h-3.5 w-3.5 text-slate-500" />
+                                  ),
+                                  onClick: () => onExamine(item),
+                                },
+                                ...(!isClosed &&
+                                item.status !== "UNDER_REVIEW" &&
+                                item.status !== "RESOLVED" &&
+                                item.status !== "COMPLETED" &&
+                                item.overallStatus !== "RESOLVED" &&
+                                !item.isMyDepartmentCompleted &&
+                                item.status !== "ASSIGNED"
+                                  ? [
+                                      {
+                                        label: "Resolve",
+                                        icon: (
+                                          <FileCheck2 className="h-3.5 w-3.5 text-[#0F766E]" />
+                                        ),
+                                        variant: "primary" as const,
+                                        onClick: () => onResolve(item),
+                                      },
+                                    ]
+                                  : item.status === "ASSIGNED"
+                                    ? [
+                                        {
+                                          label: "Start Investigation",
+                                          icon: (
+                                            <Play className="h-3.5 w-3.5 text-emerald-600" />
+                                          ),
+                                          variant: "primary" as const,
+                                          onClick: () => onExamine(item),
+                                        },
+                                      ]
+                                    : []),
+                                ...(!item.hasProposedKb &&
+                                !locallyProposedIds.has(item.id) &&
+                                canStaffProposeKnowledge(item)
+                                  ? [
+                                      {
+                                        label: "Propose KB Article",
+                                        icon: (
+                                          <BookOpen className="h-3.5 w-3.5 text-teal-600" />
+                                        ),
+                                        variant: "default" as const,
+                                        onClick: () => setProposeKbItem(item),
+                                      },
+                                    ]
+                                  : []),
+                              ]}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Sticky pagination footer */}
+      <div className="border-t border-slate-200/80 bg-white dark:bg-slate-900 shrink-0 mt-auto sticky bottom-0 z-10">
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalCount={pagination.totalCount}
+          pageSize={pagination.pageSize}
+          onPageChange={pagination.onPageChange}
+          onPageSizeChange={pagination.onPageSizeChange}
+          pageSizeOptions={pagination.pageSizeOptions}
+          itemLabel="grievances"
+        />
+      </div>
 
       {proposeKbItem && (
         <ProposeKnowledgeModal

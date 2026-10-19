@@ -169,7 +169,7 @@ export function GrievanceDetails({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-      <div className="relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex flex-col border-b border-slate-200/90 bg-slate-50/70 px-6 py-4 shrink-0 gap-3">
           <div className="flex items-center justify-between">
@@ -196,7 +196,7 @@ export function GrievanceDetails({
           </div>
 
           <div className="flex flex-wrap items-start justify-between gap-3 pt-0.5">
-            <div className="space-y-1 max-w-[70%]">
+            <div className="space-y-1 max-w-[80%]">
               <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-[-0.02em] line-clamp-1">
                 {grievance.title}
               </h3>
@@ -260,7 +260,7 @@ export function GrievanceDetails({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0">
+        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0 overflow-x-auto custom-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("statement")}
@@ -359,7 +359,7 @@ export function GrievanceDetails({
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
           {activeTab === "statement" && (
             <StatementTab
               grievance={grievance}

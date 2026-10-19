@@ -24,8 +24,8 @@ export function QueueView({
   initialTab = "all",
 }: QueueViewProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+    <div className="flex-1 min-h-0 flex flex-col space-y-3">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <FileText className="w-4 h-4 text-[#0F766E]" />

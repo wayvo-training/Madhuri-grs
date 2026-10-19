@@ -29,6 +29,7 @@ export default async function StaffDashboardPage() {
       departmentName={deptName}
       title="Staff Workspace"
       subtitle={`Investigation & Resolution Desk • ${deptName}`}
+      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
     >
       <StaffDashboard
         staffName={fullName}
