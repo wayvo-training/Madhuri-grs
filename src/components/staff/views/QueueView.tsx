@@ -2,7 +2,7 @@
 
 import { FileText } from "lucide-react";
 import { GrievanceQueue } from "@/components/staff/grievance-queue";
-import type { StaffGrievanceItem } from "@/types/staff";
+import type { StaffGrievanceItem, StaffQueueTab } from "@/types/staff";
 
 interface QueueViewProps {
   grievances: StaffGrievanceItem[];
@@ -11,13 +11,7 @@ interface QueueViewProps {
   staffEmail: string;
   onExamine: (grievance: StaffGrievanceItem) => void;
   onResolve: (grievance: StaffGrievanceItem) => void;
-  initialTab?:
-    | "all"
-    | "in_progress"
-    | "at_risk"
-    | "breached"
-    | "reopened"
-    | "completed";
+  initialTab?: StaffQueueTab;
 }
 
 export function QueueView({

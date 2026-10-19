@@ -22,6 +22,7 @@ import type {
   StaffAuditItem,
   StaffDashboardData,
   StaffGrievanceItem,
+  StaffQueueTab,
   StaffResolutionData,
 } from "@/types/staff";
 
@@ -49,6 +50,12 @@ export function StaffDashboard({
 
   // Synchronized Hash Navigation
   const { activeView, switchView } = useStaffNavigation("overview");
+  const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>("all");
+
+  const handleFilterQueue = (tab: StaffQueueTab) => {
+    setQueueInitialTab(tab);
+    switchView("queue");
+  };
 
   // Modal states
   const [selectedGrievance, setSelectedGrievance] =
@@ -424,8 +431,14 @@ export function StaffDashboard({
           data={data}
           profile={profile}
           onExamine={handleExamineGrievance}
-          onSwitchView={switchView}
+          onSwitchView={(view) => {
+            if (view === "queue") {
+              setQueueInitialTab("all");
+            }
+            switchView(view);
+          }}
           onRefresh={() => fetchDashboardData(true)}
+          onFilterQueue={handleFilterQueue}
         />
       )}
 
@@ -437,7 +450,7 @@ export function StaffDashboard({
           staffEmail={staffEmail}
           onExamine={handleExamineGrievance}
           onResolve={handleResolveGrievance}
-          initialTab="all"
+          initialTab={queueInitialTab}
         />
       )}
 

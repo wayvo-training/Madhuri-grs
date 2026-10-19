@@ -40,6 +40,7 @@ import type {
   StaffGrievanceItem,
   StaffPriority,
   StaffQueueFilterState,
+  StaffQueueTab,
 } from "@/types/staff";
 
 interface GrievanceQueueProps {
@@ -49,13 +50,7 @@ interface GrievanceQueueProps {
   staffEmail?: string;
   onExamine: (grievance: StaffGrievanceItem) => void;
   onResolve: (grievance: StaffGrievanceItem) => void;
-  initialTab?:
-    | "all"
-    | "in_progress"
-    | "at_risk"
-    | "breached"
-    | "reopened"
-    | "completed";
+  initialTab?: StaffQueueTab;
 }
 
 export function GrievanceQueue({
@@ -65,9 +60,13 @@ export function GrievanceQueue({
   onResolve,
   initialTab = "all",
 }: GrievanceQueueProps) {
-  const [activeTab, setActiveTab] = useState<
-    "all" | "in_progress" | "at_risk" | "breached" | "reopened" | "completed"
-  >(initialTab);
+  const [activeTab, setActiveTab] = useState<StaffQueueTab>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   const [filters, setFilters] = useState<StaffQueueFilterState>({
     searchQuery: "",
@@ -288,14 +287,32 @@ export function GrievanceQueue({
   // Filtered grievances
   const filteredGrievances = useMemo(() => {
     return grievances.filter((item) => {
-      // 1. Tab-level filter (preserves initialTab functionality from dashboard)
       if (activeTab === "in_progress") {
         if (
           item.isMyDepartmentCompleted ||
           item.status === "COMPLETED" ||
+          item.status === "CLOSED" ||
           (item.status !== "IN_PROGRESS" &&
             item.status !== "ASSIGNED" &&
             item.status !== "WAITING_ON_USER")
+        ) {
+          return false;
+        }
+      } else if (activeTab === "under_review") {
+        if (
+          item.isMyDepartmentCompleted ||
+          item.status === "COMPLETED" ||
+          item.status === "CLOSED" ||
+          (item.status !== "UNDER_REVIEW" && item.status !== "REOPEN_REVIEW")
+        ) {
+          return false;
+        }
+      } else if (activeTab === "on_track") {
+        if (
+          item.slaStatus !== "ON_TRACK" ||
+          item.status === "CLOSED" ||
+          item.status === "COMPLETED" ||
+          item.isMyDepartmentCompleted
         ) {
           return false;
         }
@@ -430,17 +447,54 @@ export function GrievanceQueue({
     setAdvancedSearch([]);
   };
 
+  const getTabLabel = (tab: StaffQueueTab) => {
+    switch (tab) {
+      case "in_progress":
+        return "In Progress";
+      case "under_review":
+        return "Under Review";
+      case "reopened":
+        return "Reopened";
+      case "on_track":
+        return "SLA On Track";
+      case "at_risk":
+        return "SLA At Risk";
+      case "breached":
+        return "SLA Breached";
+      case "completed":
+        return "Completed";
+      default:
+        return "All Assigned";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {activeTab !== "all" && (
-          <button
-            type="button"
-            onClick={() => setActiveTab("all")}
-            className="text-sm font-medium text-slate-500 hover:text-slate-700 transition"
-          >
-            ← Back to All Cases
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-slate-500">
+              Filtered:
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+              {getTabLabel(activeTab)} ({filteredGrievances.length})
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className="hover:text-teal-950 dark:hover:text-teal-100 cursor-pointer ml-0.5"
+                title="Clear filter"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveTab("all")}
+              className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
+            >
+              ← Back to All Cases
+            </button>
+          </div>
         )}
         <div className="flex-1 min-w-0 w-full">
           <AdvancedTableSearch

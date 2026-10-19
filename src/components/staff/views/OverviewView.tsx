@@ -18,6 +18,7 @@ import type {
   StaffDashboardData,
   StaffGrievanceItem,
   StaffMemberProfile,
+  StaffQueueTab,
   StaffView,
 } from "@/types/staff";
 import { StaffPieCharts } from "./StaffPieCharts";
@@ -38,6 +39,7 @@ interface OverviewViewProps {
   onExamine: (grievance: StaffGrievanceItem) => void;
   onSwitchView: (view: StaffView) => void;
   onRefresh: () => void;
+  onFilterQueue?: (tab: StaffQueueTab) => void;
 }
 
 export function OverviewView({
@@ -46,6 +48,7 @@ export function OverviewView({
   onExamine,
   onSwitchView,
   onRefresh,
+  onFilterQueue,
 }: OverviewViewProps) {
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -184,7 +187,11 @@ export function OverviewView({
       </div>
 
       {/* Staff Pie Charts (Workload & SLA Overview) */}
-      <StaffPieCharts grievances={assignedGrievances} layout="horizontal" />
+      <StaffPieCharts
+        grievances={assignedGrievances}
+        layout="horizontal"
+        onFilterQueue={onFilterQueue}
+      />
 
       {/* 1. Grievances Requiring Immediate Attention (Compact Alert Section) */}
       <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white p-3 sm:p-3.5 space-y-2 min-h-0 shadow-2xs">

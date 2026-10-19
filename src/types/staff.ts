@@ -175,6 +175,16 @@ export interface StaffDashboardData {
   categories?: string[];
 }
 
+export type StaffQueueTab =
+  | "all"
+  | "in_progress"
+  | "under_review"
+  | "at_risk"
+  | "breached"
+  | "reopened"
+  | "completed"
+  | "on_track";
+
 export interface StaffQueueFilterState {
   searchQuery: string;
   status: string;
@@ -182,11 +192,5 @@ export interface StaffQueueFilterState {
   slaStatus: string;
   category: string;
   isReopenedOnly?: boolean;
-  tab?:
-    | "all"
-    | "in_progress"
-    | "at_risk"
-    | "breached"
-    | "reopened"
-    | "completed";
+  tab?: StaffQueueTab;
 }
