@@ -20,7 +20,7 @@ export function GrievanceCommunicationShell({
   const isConversationOpen = pathname !== basePath;
 
   return (
-    <div className="flex h-[calc(100vh-140px)] min-h-[600px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xs">
+    <div className="flex flex-1 min-h-0 h-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xs">
       <div
         className={`w-full md:w-[360px] lg:w-[380px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 flex flex-col ${
           isConversationOpen ? "hidden md:flex" : "flex"

@@ -351,9 +351,9 @@ export function QueueView({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
-      <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80">
+      <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80 shrink-0">
         {/* Title Header */}
         <div className="shrink-0 flex items-center gap-2">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
@@ -388,8 +388,8 @@ export function QueueView({
       </div>
 
       {/* Grievances Data Table */}
-      <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="min-w-[1650px]">
+      <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
+        <div className="min-w-[1650px] flex-1 min-h-0 flex flex-col">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <colgroup>
@@ -488,7 +488,7 @@ export function QueueView({
           </table>
 
           {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left text-sm table-fixed border-collapse">
               <colgroup>
                 <col className="w-[115px]" />
@@ -836,7 +836,7 @@ export function QueueView({
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-white dark:bg-slate-900">
+      <div className="sticky bottom-0 z-10 shrink-0 mt-auto border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
           totalPages={Math.ceil(filteredGrievances.length / pageSize)}

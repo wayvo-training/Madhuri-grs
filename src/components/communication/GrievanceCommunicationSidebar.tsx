@@ -148,7 +148,7 @@ export function GrievanceCommunicationSidebar({
       </div>
 
       {/* 2. Conversation List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
         {filteredConversations.length === 0 ? (
           <div className="p-8 text-center text-slate-400 space-y-2">
             <MessageSquare className="h-8 w-8 mx-auto opacity-40" />

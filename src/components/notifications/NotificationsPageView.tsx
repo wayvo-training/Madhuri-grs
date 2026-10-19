@@ -537,11 +537,11 @@ export function NotificationsPageView({
   ]);
 
   return (
-    <div className="space-y-3.5 sm:space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* ========================================================================= */}
       {/* 1. COMPRESSED SUMMARY CARDS                                               */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
         {/* Card 1: Total */}
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 shadow-2xs flex items-center justify-between">
           <div className="min-w-0">
@@ -621,7 +621,7 @@ export function NotificationsPageView({
       {/* ========================================================================= */}
       {/* 2. TABS & ACTIONS ROW                                                     */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-2 shrink-0">
         {/* Four Primary Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           <button
@@ -726,7 +726,7 @@ export function NotificationsPageView({
       {/* ========================================================================= */}
       {/* 3. ADVANCED TABLE SEARCH (TABLES ADVANCED SEARCH SYSTEM)                 */}
       {/* ========================================================================= */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 sm:p-2.5 shadow-2xs">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 sm:p-2.5 shadow-2xs shrink-0">
         <AdvancedTableSearch
           fields={searchFields}
           onSearch={handleAdvancedSearch}
@@ -736,7 +736,7 @@ export function NotificationsPageView({
 
       {/* Active Grievance Filter Banner */}
       {selectedGrievanceNumber && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-xs shadow-2xs animate-in fade-in">
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-xs shadow-2xs animate-in fade-in shrink-0">
           <div className="flex items-center gap-2 text-teal-900 dark:text-teal-200">
             <span className="font-semibold">Showing notifications for:</span>
             <span className="font-mono font-bold px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-teal-300 dark:border-teal-700 text-teal-900 dark:text-teal-100 shadow-2xs">
@@ -775,12 +775,12 @@ export function NotificationsPageView({
       {/* 4. COMPACT NOTIFICATION LIST (WITH INTERNAL SCROLLING TO FIT ONE PAGE)    */}
       {/* ========================================================================= */}
       {isLoading && notifications.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-center text-slate-500 shadow-2xs">
+        <div className="flex-1 min-h-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 flex flex-col items-center justify-center text-center text-slate-500 shadow-2xs">
           <div className="w-5 h-5 border-2 border-slate-900 dark:border-slate-100 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <p className="text-xs font-medium">Loading notifications...</p>
         </div>
       ) : filteredNotifications.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-center shadow-2xs">
+        <div className="flex-1 min-h-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 flex flex-col items-center justify-center text-center shadow-2xs">
           <div className="w-9 h-9 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-2.5">
             <Bell className="w-4.5 h-4.5" />
           </div>
@@ -808,7 +808,7 @@ export function NotificationsPageView({
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto max-h-[calc(100vh-320px)] min-h-75 custom-scrollbar">
+        <div className="flex-1 min-h-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/80 overflow-y-auto custom-scrollbar">
           {filteredNotifications.map((item) => {
             const semantic = getSemanticIcon(item.type, item.title);
             const Icon = semantic.icon;

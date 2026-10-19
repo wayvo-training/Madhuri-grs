@@ -159,7 +159,7 @@ export function GrievanceCommunicationWorkspace({
       </div>
 
       {/* 2. CHRONOLOGICAL COMMUNICATION AREA */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-slate-50/40 dark:bg-slate-950/40 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 bg-slate-50/40 dark:bg-slate-950/40 space-y-3">
         <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[#0F766E]" />
