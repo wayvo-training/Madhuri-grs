@@ -2,6 +2,7 @@
 
 import { AlertOctagon, LogIn, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,11 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import {
+  StaffActivitySkeleton,
+  StaffDashboardSkeleton,
+  StaffQueueSkeleton,
+} from "@/components/staff/skeletons";
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
@@ -24,6 +30,7 @@ import type {
   StaffGrievanceItem,
   StaffQueueTab,
   StaffResolutionData,
+  StaffView,
 } from "@/types/staff";
 
 interface StaffDashboardProps {
@@ -32,6 +39,7 @@ interface StaffDashboardProps {
   staffEmail: string;
   departmentName?: string;
   employeeCode?: string;
+  defaultView?: StaffView;
 }
 
 export function StaffDashboard({
@@ -40,7 +48,9 @@ export function StaffDashboard({
   staffEmail,
   departmentName = "Operations",
   employeeCode = "STF-01",
+  defaultView = "overview",
 }: StaffDashboardProps) {
+  const router = useRouter();
   const [data, setData] = useState<StaffDashboardData | null>(
     initialData || null,
   );
@@ -49,10 +59,17 @@ export function StaffDashboard({
   const [error, setError] = useState<string | null>(null);
 
   // Synchronized Hash Navigation
-  const { activeView, switchView } = useStaffNavigation("overview");
+  const { activeView, switchView } = useStaffNavigation(defaultView);
   const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>("all");
 
   const handleFilterQueue = (tab: StaffQueueTab) => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname === "/staff/dashboard"
+    ) {
+      router.push(`/staff/grievances?tab=${tab}`);
+      return;
+    }
     setQueueInitialTab(tab);
     switchView("queue");
   };
@@ -325,14 +342,13 @@ export function StaffDashboard({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
-        <p className="text-sm font-medium text-slate-500">
-          Loading assigned grievances & workload...
-        </p>
-      </div>
-    );
+    if (activeView === "queue") {
+      return <StaffQueueSkeleton />;
+    }
+    if (activeView === "activity") {
+      return <StaffActivitySkeleton />;
+    }
+    return <StaffDashboardSkeleton />;
   }
 
   if (error) {
@@ -433,6 +449,13 @@ export function StaffDashboard({
           onExamine={handleExamineGrievance}
           onSwitchView={(view) => {
             if (view === "queue") {
+              if (
+                typeof window !== "undefined" &&
+                window.location.pathname === "/staff/dashboard"
+              ) {
+                router.push("/staff/grievances");
+                return;
+              }
               setQueueInitialTab("all");
             }
             switchView(view);

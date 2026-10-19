@@ -161,7 +161,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
         },
         {
           title: "My Grievances",
-          href: "/staff/dashboard#queue",
+          href: "/staff/grievances",
           icon: FileText,
         },
         {
@@ -181,7 +181,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Activity",
-          href: "/staff/dashboard#activity",
+          href: "/staff/activity",
           icon: Activity,
         },
       ],

@@ -202,6 +202,8 @@ export function DashboardSidebar({
     return (
       itemHref !== "/admin/dashboard" &&
       itemHref !== "/end-user/dashboard" &&
+      itemHref !== "/staff/dashboard" &&
+      itemHref !== "/department-head/dashboard" &&
       pathname.startsWith(itemHref)
     );
   };

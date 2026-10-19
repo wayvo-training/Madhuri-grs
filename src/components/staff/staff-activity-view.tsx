@@ -19,6 +19,7 @@ import {
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { usePagination } from "@/hooks/usePagination";
@@ -171,11 +172,32 @@ export function StaffActivityView({ staffName }: StaffActivityViewProps) {
       {/* Activity Timeline List */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs overflow-hidden flex flex-col">
         {isLoading ? (
-          <div className="p-8 text-center space-y-3">
-            <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
-            <p className="text-xs text-slate-500">
-              Loading activity timeline...
-            </p>
+          <div className="w-full flex flex-col">
+            <div className="h-11 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shrink-0">
+              <Skeleton className="h-3.5 w-20" />
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3.5 w-48" />
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3.5 w-20" />
+            </div>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                  key={i}
+                  className="h-13 px-4 flex items-center justify-between"
+                >
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                  <Skeleton className="h-4 w-28 font-mono" />
+                  <Skeleton className="h-3.5 w-64" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-3.5 w-20" />
+                  </div>
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              ))}
+            </div>
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="p-12 text-center space-y-2">
