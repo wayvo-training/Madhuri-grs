@@ -222,7 +222,7 @@ export function KnowledgeView() {
           </div>
 
           {/* Search */}
-          <div className="flex-1 min-w-[250px] max-w-sm">
+          <div className="flex-1 min-w-0">
             <AdvancedTableSearch
               fields={filterFields}
               onSearch={handleSearchChange}
