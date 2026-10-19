@@ -20,6 +20,7 @@ export interface OverviewViewProps {
   grievances: GrievanceItem[];
   staffList: StaffMember[];
   governanceAuditFeed: EscalationAuditRecord[];
+  isLoading?: boolean;
   onViewQueue: () => void;
   onViewStaff: () => void;
   onViewActivity: () => void;
@@ -35,14 +36,15 @@ export function OverviewView({
   currentHodName,
   currentHodEmail,
   currentEmployeeCode,
-  metrics,
+  metrics: _metrics,
   attentionRequiredList,
   grievances,
-  staffList,
-  governanceAuditFeed,
+  staffList: _staffList,
+  governanceAuditFeed: _governanceAuditFeed,
+  isLoading = false,
   onViewQueue,
-  onViewStaff,
-  onViewActivity,
+  onViewStaff: _onViewStaff,
+  onViewActivity: _onViewActivity,
   onInspectGrievance,
   onFilterQueue,
 }: OverviewViewProps) {
@@ -56,24 +58,33 @@ export function OverviewView({
               <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 leading-tight">
-                  {currentDepartmentName}
-                </h2>
-                <span className="rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-2.5 font-semibold text-teal-800">
-                  Primary Queue
-                </span>
-              </div>
-              <p className="mt-0.5 text-xs font-normal text-slate-500 leading-tight">
-                Department Head:{" "}
-                <strong className="font-semibold text-slate-700">
-                  {currentHodName}
-                </strong>{" "}
-                &bull; {currentHodEmail} &bull; Code:{" "}
-                <span className="font-mono text-slate-600">
-                  {currentEmployeeCode}
-                </span>
-              </p>
+              {isLoading ? (
+                <div className="space-y-1 animate-pulse">
+                  <div className="h-4 w-40 bg-slate-200 rounded" />
+                  <div className="h-3 w-64 bg-slate-100 rounded" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 leading-tight">
+                      {currentDepartmentName}
+                    </h2>
+                    <span className="rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-2.5 font-semibold text-teal-800">
+                      Primary Queue
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs font-normal text-slate-500 leading-tight">
+                    Department Head:{" "}
+                    <strong className="font-semibold text-slate-700">
+                      {currentHodName}
+                    </strong>{" "}
+                    &bull; {currentHodEmail} &bull; Code:{" "}
+                    <span className="font-mono text-slate-600">
+                      {currentEmployeeCode}
+                    </span>
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -82,12 +93,14 @@ export function OverviewView({
       <div className="shrink-0">
         <GrievancePieCharts
           grievances={grievances}
+          isLoading={isLoading}
           onFilterQueue={onFilterQueue}
         />
       </div>
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}
+        isLoading={isLoading}
         onInspect={onInspectGrievance}
         onViewFullQueue={onViewQueue}
       />

@@ -193,69 +193,88 @@ export function DashboardPieChartCard({
         )}
 
         <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-1 justify-center max-w-[220px]">
-          {legendData.map((item) => {
-            const isClickable = Boolean(onItemClick);
-            const content = (
-              <>
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span
-                    className={cn(
-                      "h-2.5 w-2.5 rounded-full shrink-0 transition-transform",
-                      isClickable && "group-hover:scale-110",
-                    )}
-                    style={{ backgroundColor: item.fill }}
-                  />
-                  <div className="flex flex-col min-w-0">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={`legend-skeleton-${
+                    // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                    i
+                  }`}
+                  className="flex items-center justify-between py-1.5 animate-pulse"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-slate-200 dark:bg-slate-700" />
+                    <div className="space-y-1">
+                      <div className="h-3 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                      <div className="h-2 w-24 bg-slate-100 dark:bg-slate-800 rounded" />
+                    </div>
+                  </div>
+                  <div className="h-3.5 w-6 bg-slate-200 dark:bg-slate-700 rounded" />
+                </div>
+              ))
+            : legendData.map((item) => {
+                const isClickable = Boolean(onItemClick);
+                const content = (
+                  <>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={cn(
+                          "h-2.5 w-2.5 rounded-full shrink-0 transition-transform",
+                          isClickable && "group-hover:scale-110",
+                        )}
+                        style={{ backgroundColor: item.fill }}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span
+                          className={cn(
+                            "font-semibold text-slate-800 dark:text-slate-200 text-xs leading-none transition-colors",
+                            isClickable &&
+                              "group-hover:text-teal-700 dark:group-hover:text-teal-300",
+                          )}
+                        >
+                          {item.name}
+                        </span>
+                        {item.description && (
+                          <span className="text-[10.5px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                            {item.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <span
                       className={cn(
-                        "font-semibold text-slate-800 dark:text-slate-200 text-xs leading-none transition-colors",
+                        "font-bold text-slate-800 dark:text-slate-200 text-xs leading-none tabular-nums shrink-0 px-1.5 py-0.5 rounded transition-colors",
                         isClickable &&
-                          "group-hover:text-teal-700 dark:group-hover:text-teal-300",
+                          "group-hover:bg-teal-50 group-hover:text-teal-800 dark:group-hover:bg-teal-950/50 dark:group-hover:text-teal-300",
                       )}
                     >
-                      {item.name}
+                      {item.value}
                     </span>
-                    {item.description && (
-                      <span className="text-[10.5px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
-                        {item.description}
-                      </span>
-                    )}
+                  </>
+                );
+
+                if (isClickable) {
+                  return (
+                    <button
+                      type="button"
+                      key={item.name}
+                      onClick={() => onItemClick?.(item)}
+                      className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-all text-left select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 active:scale-[0.98] group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 border-none bg-transparent w-full"
+                    >
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <div
+                    key={item.name}
+                    className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md text-left select-none"
+                  >
+                    {content}
                   </div>
-                </div>
-                <span
-                  className={cn(
-                    "font-bold text-slate-800 dark:text-slate-200 text-xs leading-none tabular-nums shrink-0 px-1.5 py-0.5 rounded transition-colors",
-                    isClickable &&
-                      "group-hover:bg-teal-50 group-hover:text-teal-800 dark:group-hover:bg-teal-950/50 dark:group-hover:text-teal-300",
-                  )}
-                >
-                  {item.value}
-                </span>
-              </>
-            );
-
-            if (isClickable) {
-              return (
-                <button
-                  type="button"
-                  key={item.name}
-                  onClick={() => onItemClick?.(item)}
-                  className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-all text-left select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 active:scale-[0.98] group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 border-none bg-transparent w-full"
-                >
-                  {content}
-                </button>
-              );
-            }
-
-            return (
-              <div
-                key={item.name}
-                className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md text-left select-none"
-              >
-                {content}
-              </div>
-            );
-          })}
+                );
+              })}
         </div>
       </div>
     </div>

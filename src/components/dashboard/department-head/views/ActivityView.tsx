@@ -16,9 +16,13 @@ import type { EscalationAuditRecord } from "@/types/department-head";
 
 export interface ActivityViewProps {
   governanceAuditFeed: EscalationAuditRecord[];
+  isLoading?: boolean;
 }
 
-export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
+export function ActivityView({
+  governanceAuditFeed,
+  isLoading = false,
+}: ActivityViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [advancedConditions, setAdvancedConditions] = useState<
@@ -162,7 +166,39 @@ export function ActivityView({ governanceAuditFeed }: ActivityViewProps) {
 
               {/* Scrollable rows: scrollbar starts precisely below the header line */}
               <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent">
-                {paginatedFeed.length === 0 ? (
+                {isLoading ? (
+                  [
+                    "act-skel-1",
+                    "act-skel-2",
+                    "act-skel-3",
+                    "act-skel-4",
+                    "act-skel-5",
+                    "act-skel-6",
+                    "act-skel-7",
+                    "act-skel-8",
+                  ].map((skelId) => (
+                    <div
+                      key={skelId}
+                      className="flex items-center w-full px-4 py-3 animate-pulse text-[13px]"
+                    >
+                      <div className="w-36 shrink-0 pr-3">
+                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      </div>
+                      <div className="flex-1 min-w-[200px] px-3">
+                        <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      </div>
+                      <div className="w-60 shrink-0 px-3">
+                        <div className="h-4 w-36 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      </div>
+                      <div className="w-36 shrink-0 px-3">
+                        <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      </div>
+                      <div className="w-28 shrink-0 px-3">
+                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                      </div>
+                    </div>
+                  ))
+                ) : paginatedFeed.length === 0 ? (
                   <div className="py-8 text-center text-sm text-slate-400">
                     No activity records are available for this department yet.
                   </div>

@@ -43,6 +43,7 @@ export function AdminMetricCard({
   icon: Icon,
   accent = "emerald",
   active = false,
+  isLoading = false,
   onClick,
 }: {
   title: string;
@@ -51,6 +52,7 @@ export function AdminMetricCard({
   icon: LucideIcon;
   accent?: "emerald" | "rose" | "slate" | "amber";
   active?: boolean;
+  isLoading?: boolean;
   onClick?: () => void;
 }) {
   const accentStyles = {
@@ -117,17 +119,23 @@ export function AdminMetricCard({
         </div>
       </div>
       <div className="mt-1 flex items-baseline gap-2 min-w-0">
-        <span
-          className={cn(
-            "text-lg sm:text-xl font-bold tracking-tight leading-none shrink-0",
-            styles.value,
-          )}
-        >
-          {value}
-        </span>
-        <span className="text-[11px] font-medium text-slate-400 truncate">
-          {helper}
-        </span>
+        {isLoading ? (
+          <div className="h-6 w-16 bg-slate-200 rounded animate-pulse" />
+        ) : (
+          <>
+            <span
+              className={cn(
+                "text-lg sm:text-xl font-bold tracking-tight leading-none shrink-0",
+                styles.value,
+              )}
+            >
+              {value}
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 truncate">
+              {helper}
+            </span>
+          </>
+        )}
       </div>
     </button>
   );

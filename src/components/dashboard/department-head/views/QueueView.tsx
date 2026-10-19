@@ -73,6 +73,7 @@ export interface QueueViewProps {
   onDepartmentChange?: (deptId: string) => void;
   resetFilters: () => void;
   metrics: DepartmentMetricsSummary;
+  isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: CaseDrawerTab) => void;
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
   onIntervene: (item: GrievanceItem) => void;
@@ -107,6 +108,7 @@ export function QueueView({
   onDepartmentChange: _onDepartmentChange,
   resetFilters,
   metrics,
+  isLoading = false,
   onInspect,
   onAssign,
   onIntervene,
@@ -547,7 +549,54 @@ export function QueueView({
                 <col className="w-[95px]" />
               </colgroup>
               <TableBody>
-                {sortedGrievances.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <TableRow
+                      key={`queue-skel-${
+                        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                        i
+                      }`}
+                      className="animate-pulse"
+                    >
+                      <TableCell className="py-3.5 pl-4 pr-3">
+                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="space-y-1">
+                          <div className="h-3.5 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                          <div className="h-2.5 w-24 bg-slate-100 dark:bg-slate-800 rounded" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <div className="h-3.5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 pl-3 pr-4 text-right">
+                        <div className="h-7 w-8 bg-slate-200 dark:bg-slate-700 rounded-md ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : sortedGrievances.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={11}

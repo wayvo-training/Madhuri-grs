@@ -8,9 +8,11 @@ import type { GrievanceItem } from "@/types/department-head";
 
 export function GrievancePieCharts({
   grievances,
+  isLoading = false,
   onFilterQueue,
 }: {
   grievances: GrievanceItem[];
+  isLoading?: boolean;
   onFilterQueue?: (filterType: "status" | "priority", value: string) => void;
 }) {
   const statusDataRaw = React.useMemo(() => {
@@ -161,6 +163,7 @@ export function GrievancePieCharts({
         data={statusDataRaw}
         config={statusConfig}
         centerValue={totalActive}
+        isLoading={isLoading}
         onItemClick={onFilterQueue ? handleStatusItemClick : undefined}
       />
       <DashboardPieChartCard
@@ -171,6 +174,7 @@ export function GrievancePieCharts({
         centerValue={totalPriority}
         centerLabelTop="TOTAL"
         centerLabelBottom="GRIEVANCES"
+        isLoading={isLoading}
         onItemClick={onFilterQueue ? handlePriorityItemClick : undefined}
       />
     </div>

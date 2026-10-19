@@ -72,10 +72,12 @@ export function OverviewMetricsSection({
 
 export function AttentionRequiredPanel({
   attentionRequiredList,
+  isLoading = false,
   onInspect,
   onViewFullQueue,
 }: {
   attentionRequiredList: GrievanceItem[];
+  isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: "progress" | "statement") => void;
   onViewFullQueue: () => void;
 }) {
@@ -211,7 +213,89 @@ export function AttentionRequiredPanel({
         </button>
       </div>
 
-      {attentionRequiredList.length === 0 ? (
+      {isLoading ? (
+        <div className="flex-1 min-h-[120px] rounded-lg border border-slate-200/80 bg-white overflow-hidden flex flex-col my-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Grievance ID
+              </span>
+            </div>
+            <div className="flex-[1.4] min-w-0 pr-2">
+              <span className="text-xs font-semibold text-slate-700">
+                Grievance
+              </span>
+            </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <span className="text-xs font-semibold text-slate-700">
+                Category
+              </span>
+            </div>
+            <div className="w-16 sm:w-20 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Priority
+              </span>
+            </div>
+            <div className="w-24 sm:w-28 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Status
+              </span>
+            </div>
+            <div className="w-26 sm:w-30 shrink-0 text-center">
+              <span className="text-xs font-semibold text-slate-700">
+                SLA Status
+              </span>
+            </div>
+            <div className="flex-[0.9] min-w-0 hidden sm:block">
+              <span className="text-xs font-semibold text-slate-700">
+                Assigned To
+              </span>
+            </div>
+            <div className="w-18 sm:w-20 shrink-0 text-center">
+              <span className="text-xs font-semibold text-slate-700">
+                Action
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={`att-skel-${
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                  i
+                }`}
+                className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2.5 animate-pulse"
+              >
+                <div className="w-24 sm:w-28 shrink-0">
+                  <div className="h-3.5 w-16 bg-slate-200 rounded" />
+                </div>
+                <div className="flex-[1.4] min-w-0 pr-2 space-y-1">
+                  <div className="h-3.5 w-3/4 bg-slate-200 rounded" />
+                  <div className="h-2 w-1/2 bg-slate-100 rounded" />
+                </div>
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="h-3 w-16 bg-slate-200 rounded" />
+                </div>
+                <div className="w-16 sm:w-20 shrink-0">
+                  <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                </div>
+                <div className="w-24 sm:w-28 shrink-0">
+                  <div className="h-5 w-16 bg-slate-200 rounded-full" />
+                </div>
+                <div className="w-26 sm:w-30 shrink-0 flex justify-center">
+                  <div className="h-5 w-16 bg-slate-200 rounded-full" />
+                </div>
+                <div className="flex-[0.9] min-w-0 hidden sm:block">
+                  <div className="h-3.5 w-20 bg-slate-200 rounded" />
+                </div>
+                <div className="w-18 sm:w-20 shrink-0 flex justify-center">
+                  <div className="h-6 w-14 bg-slate-200 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : attentionRequiredList.length === 0 ? (
         <div className="py-6 flex-1 flex flex-col items-center justify-center text-center text-sm font-normal text-slate-400">
           <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1.5" />
           <p className="font-semibold text-slate-700 text-sm">

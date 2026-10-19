@@ -55,6 +55,7 @@ export function DepartmentHeadOverviewInner({
     setStaffList,
     governanceAuditFeed,
     setGovernanceAuditFeed,
+    isLoading,
     selectedDeptId,
     setSelectedDeptId,
     availableDepartments,
@@ -361,6 +362,7 @@ export function DepartmentHeadOverviewInner({
           grievances={grievances}
           staffList={staffList}
           governanceAuditFeed={governanceAuditFeed}
+          isLoading={isLoading}
           onViewQueue={() => switchView("queue")}
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
@@ -396,6 +398,7 @@ export function DepartmentHeadOverviewInner({
           setDepartmentFilter={setDepartmentFilter}
           availableDepartments={availableDepartments}
           selectedDeptId={selectedDeptId}
+          isLoading={isLoading}
           onDepartmentChange={(deptId) => {
             setSelectedDeptId(deptId);
             loadData(deptId);
@@ -416,6 +419,7 @@ export function DepartmentHeadOverviewInner({
           grievances={grievances}
           currentDepartmentName={currentDepartmentName}
           metrics={metrics}
+          isLoading={isLoading}
           onToggleAvailability={handleToggleStaffAvailability}
           onInspect={handleInspectCase}
           onReassign={(item, staffId) => handleOpenAssignModal(item, staffId)}
@@ -427,7 +431,10 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "activity" && (
-        <ActivityView governanceAuditFeed={governanceAuditFeed} />
+        <ActivityView
+          governanceAuditFeed={governanceAuditFeed}
+          isLoading={isLoading}
+        />
       )}
 
       {activeView === "sla" && (
@@ -449,6 +456,7 @@ export function DepartmentHeadOverviewInner({
           setDepartmentFilter={setDepartmentFilter}
           availableDepartments={availableDepartments}
           selectedDeptId={selectedDeptId}
+          isLoading={isLoading}
           onDepartmentChange={(deptId) => {
             setSelectedDeptId(deptId);
             loadData(deptId);

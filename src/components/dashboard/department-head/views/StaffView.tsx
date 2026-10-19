@@ -27,6 +27,7 @@ export interface StaffViewProps {
   grievances: GrievanceItem[];
   currentDepartmentName: string;
   metrics: DepartmentMetricsSummary;
+  isLoading?: boolean;
   onToggleAvailability: (staff: StaffMember) => void;
   onInspect: (item: GrievanceItem, tab?: CaseDrawerTab) => void;
   onReassign: (item: GrievanceItem, staffId: string) => void;
@@ -38,6 +39,7 @@ export function StaffView({
   grievances,
   currentDepartmentName,
   metrics,
+  isLoading = false,
   onToggleAvailability: _onToggleAvailability,
   onInspect: _onInspect,
   onReassign: _onReassign,
@@ -141,6 +143,7 @@ export function StaffView({
           helper={`${currentDepartmentName} department`}
           icon={Users}
           accent="emerald"
+          isLoading={isLoading}
         />
         <AdminMetricCard
           title="On Active Duty"
@@ -148,6 +151,7 @@ export function StaffView({
           helper={`${metrics.onLeaveStaffCount} staff member(s) on approved leave`}
           icon={UserCheck}
           accent="emerald"
+          isLoading={isLoading}
         />
         <AdminMetricCard
           title="Active Assigned Grievances"
@@ -155,6 +159,7 @@ export function StaffView({
           helper={`Across ${metrics.activeStaffCount} active staff`}
           icon={Inbox}
           accent="emerald"
+          isLoading={isLoading}
         />
         <AdminMetricCard
           title="Department Utilization"
@@ -164,6 +169,7 @@ export function StaffView({
           accent={
             loadFactor > 85 ? "rose" : loadFactor > 60 ? "amber" : "emerald"
           }
+          isLoading={isLoading}
         />
       </div>
 
@@ -271,7 +277,45 @@ export function StaffView({
                     <col className="w-[10%]" />
                   </colgroup>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">
-                    {paginatedStaff.length === 0 ? (
+                    {isLoading ? (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <tr
+                          key={`staff-skel-${
+                            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                            i
+                          }`}
+                          className="animate-pulse"
+                        >
+                          <td className="py-3.5 pl-4 pr-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0" />
+                              <div className="space-y-1.5 flex-1 min-w-0">
+                                <div className="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                                <div className="h-3 w-20 bg-slate-100 dark:bg-slate-800 rounded" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="space-y-1.5">
+                              <div className="h-3 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full" />
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="h-4 w-8 bg-slate-200 dark:bg-slate-700 rounded" />
+                          </td>
+                          <td className="py-3.5 px-3">
+                            <div className="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : paginatedStaff.length === 0 ? (
                       <tr>
                         <td
                           colSpan={6}
