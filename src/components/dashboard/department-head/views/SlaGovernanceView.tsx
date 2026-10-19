@@ -529,6 +529,9 @@ export function SlaGovernanceView({
                                   : []),
                                 ...(!hasAuthority &&
                                 !isClosedOrResolved &&
+                                !item.isBlocked &&
+                                item.status !== "BLOCKED" &&
+                                item.myDepartmentStatus !== "BLOCKED" &&
                                 (isEscalated || item.slaStatus === "BREACHED")
                                   ? [
                                       {

@@ -640,6 +640,9 @@ export function QueueView({
                               ...(!hasHeadResolutionAuthority(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
+                              !item.isBlocked &&
+                              item.status !== "BLOCKED" &&
+                              item.myDepartmentStatus !== "BLOCKED" &&
                               (item.status === "ESCALATED" ||
                                 item.slaStatus === "BREACHED")
                                 ? [

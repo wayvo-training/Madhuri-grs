@@ -226,6 +226,16 @@ export function DepartmentHeadOverviewInner({
         );
         return;
       }
+      if (
+        item.isBlocked ||
+        item.myDepartmentStatus === "BLOCKED" ||
+        item.status === "BLOCKED"
+      ) {
+        toast.error(
+          "Cannot intervene: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+        );
+        return;
+      }
       setEscalationModalGrievance(item);
       setEscalationBottleneck("STAFF_CAPACITY");
       setEscalationBottleneckExplanation("");
