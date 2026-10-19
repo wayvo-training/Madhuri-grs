@@ -37,7 +37,6 @@ import {
   KnowledgeView,
   OverviewView,
   QueueView,
-  SlaGovernanceView,
   StaffView,
 } from "./views";
 
@@ -432,13 +431,34 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "sla" && (
-        <SlaGovernanceView
+        <QueueView
           grievances={grievances}
+          filteredGrievances={filteredGrievances}
+          staffList={staffList}
+          selectedTab="ESCALATED"
+          setSelectedTab={setSelectedTab}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          priorityFilter={priorityFilter}
+          setPriorityFilter={setPriorityFilter}
+          staffFilter={staffFilter}
+          setStaffFilter={setStaffFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          departmentFilter={departmentFilter}
+          setDepartmentFilter={setDepartmentFilter}
+          availableDepartments={availableDepartments}
+          selectedDeptId={selectedDeptId}
+          onDepartmentChange={(deptId) => {
+            setSelectedDeptId(deptId);
+            loadData(deptId);
+          }}
+          resetFilters={resetFilters}
           metrics={metrics}
           onInspect={handleInspectCase}
+          onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
           onReviewResolution={handleOpenResolutionModal}
-          onAssign={handleOpenAssignModal}
           onProposeKb={handleOpenProposeKbModal}
         />
       )}

@@ -6,6 +6,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface DashboardShellProps {
   userRole: UserRole;
@@ -65,7 +66,7 @@ export function DashboardShell({
               mainClassName,
             )}
           >
-            {children}
+            <TooltipProvider delay={100}>{children}</TooltipProvider>
           </main>
         </SidebarInset>
       </div>

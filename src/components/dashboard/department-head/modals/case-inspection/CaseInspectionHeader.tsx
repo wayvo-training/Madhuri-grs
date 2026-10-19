@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, CheckCircle2, X } from "lucide-react";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 export interface HodInterventionInfo {
   actionType?: string;
@@ -75,7 +76,7 @@ export function CaseInspectionHeader({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-[#0F766E] transition cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to SLA Monitoring</span>
+          <span>Back to Live Queue</span>
         </button>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs font-bold text-[#0F766E]">
@@ -94,9 +95,16 @@ export function CaseInspectionHeader({
 
       <div className="flex flex-wrap items-start justify-between gap-3 pt-0.5">
         <div className="space-y-1 max-w-[70%]">
-          <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-[-0.02em] line-clamp-1">
-            {title}
-          </h3>
+          <TruncatedText
+            text={title}
+            maxChars={55}
+            alwaysShowTooltip={true}
+            className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-[-0.02em] block truncate cursor-pointer hover:text-[#0F766E] transition"
+            side="bottom"
+            align="start"
+            tooltipClassName="max-w-lg bg-slate-900 text-slate-100 p-3.5 rounded-xl shadow-2xl border border-slate-800 text-sm leading-relaxed"
+            showCopy={true}
+          />
           <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
             <span>{category}</span>
             <span className="text-slate-300">•</span>

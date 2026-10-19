@@ -82,6 +82,7 @@ export function AttentionRequiredPanel({
   type SortKey =
     | "ticketCode"
     | "title"
+    | "category"
     | "priority"
     | "status"
     | "slaStatus"
@@ -135,6 +136,9 @@ export function AttentionRequiredPanel({
         break;
       case "title":
         comp = a.title.localeCompare(b.title);
+        break;
+      case "category":
+        comp = (a.category || "").localeCompare(b.category || "");
         break;
       case "priority":
         comp =
@@ -220,32 +224,35 @@ export function AttentionRequiredPanel({
         </div>
       ) : (
         <div className="flex-1 min-h-[120px] rounded-lg border border-slate-200/80 bg-white overflow-hidden flex flex-col my-2.5">
-          <div className="flex items-center gap-3 w-full px-3 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0">
-            <div className="w-28 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
               {renderSortHeader("Grievance ID", "ticketCode")}
             </div>
-            <div className="flex-1 min-w-[180px] pr-3">
+            <div className="flex-[1.4] min-w-0 pr-2">
               {renderSortHeader("Grievance", "title")}
             </div>
-            <div className="w-20 shrink-0">
+            <div className="flex-1 min-w-0 pr-2">
+              {renderSortHeader("Category", "category")}
+            </div>
+            <div className="w-16 sm:w-20 shrink-0">
               {renderSortHeader("Priority", "priority")}
             </div>
-            <div className="w-24 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
               {renderSortHeader("Status", "status")}
             </div>
-            <div className="w-32 shrink-0 flex justify-center">
+            <div className="w-26 sm:w-30 shrink-0 flex justify-center">
               {renderSortHeader("SLA Status", "slaStatus")}
             </div>
-            <div className="w-34 shrink-0 hidden sm:block text-left">
+            <div className="flex-[0.9] min-w-0 hidden sm:block text-left">
               {renderSortHeader("Assigned To", "assignedStaffName")}
             </div>
-            <div className="w-[84px] shrink-0 text-center">
+            <div className="w-18 sm:w-20 shrink-0 text-center">
               <span className="text-xs font-semibold text-slate-700">
                 Action
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedList
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((item) => {
@@ -256,32 +263,40 @@ export function AttentionRequiredPanel({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 px-3 py-1.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-9 w-full"
+                    className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-9 w-full"
                   >
-                    <div className="w-28 shrink-0">
+                    <div className="w-24 sm:w-28 shrink-0">
                       <button
                         type="button"
                         onClick={() => onInspect(item, "statement")}
-                        className="font-mono text-xs font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                        className="font-mono text-xs font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs truncate block"
                       >
                         {item.ticketCode}
                       </button>
                     </div>
-                    <div className="flex-1 min-w-[180px] pr-3">
+                    <div className="flex-[1.4] min-w-0 pr-2">
                       <TruncatedText
                         text={item.title}
-                        maxChars={42}
-                        className="text-xs font-medium text-slate-800 dark:text-slate-200 block w-full border-none"
+                        maxChars={48}
+                        alwaysShowTooltip={true}
+                        className="text-xs font-medium text-slate-800 dark:text-slate-200 block w-full border-none truncate"
                       />
                     </div>
-
-                    <div className="w-20 shrink-0">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <TruncatedText
+                        text={item.category}
+                        maxChars={32}
+                        alwaysShowTooltip={true}
+                        className="text-xs text-slate-600 dark:text-slate-300 font-medium border-none block w-full truncate"
+                      />
+                    </div>
+                    <div className="w-16 sm:w-20 shrink-0">
                       <PriorityBadge priority={item.priority} />
                     </div>
-                    <div className="w-24 shrink-0">
+                    <div className="w-24 sm:w-28 shrink-0">
                       <StatusBadge status={item.status} />
                     </div>
-                    <div className="w-32 shrink-0 text-center">
+                    <div className="w-26 sm:w-30 shrink-0 text-center">
                       <span
                         className={`text-xs font-medium w-full whitespace-nowrap ${
                           highlightSla
@@ -292,11 +307,11 @@ export function AttentionRequiredPanel({
                         {item.slaTimeLeft}
                       </span>
                     </div>
-                    <div className="w-34 shrink-0 text-left truncate hidden sm:block">
+                    <div className="flex-[0.9] min-w-0 text-left truncate hidden sm:block">
                       <span className="text-[11px] font-normal text-slate-400">
                         To:{" "}
                       </span>
-                      <span className="text-xs font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700 truncate">
                         {item.isBlocked || item.status === "BLOCKED" ? (
                           <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                             Blocked
@@ -310,11 +325,11 @@ export function AttentionRequiredPanel({
                         )}
                       </span>
                     </div>
-                    <div className="w-[84px] shrink-0 flex justify-center">
+                    <div className="w-18 sm:w-20 shrink-0 flex justify-center">
                       <button
                         type="button"
                         onClick={() => onInspect(item, "progress")}
-                        className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
+                        className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs cursor-pointer"
                       >
                         <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
                         <span>Inspect</span>
