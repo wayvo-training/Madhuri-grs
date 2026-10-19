@@ -87,6 +87,9 @@ export function formatAuditActionTitle(action: string): string {
   ) {
     return "Investigation Note";
   }
+  if (act.includes("COLLABORATION_NOTE")) {
+    return "Collaboration Note Added";
+  }
   return action
     .replace(/_/g, " ")
     .toLowerCase()

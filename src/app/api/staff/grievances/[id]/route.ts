@@ -381,8 +381,51 @@ export async function GET(
         };
       });
 
-    const auditTrail: StaffAuditItem[] = (grievance.audit_logs || []).map(
-      (log) => {
+    const auditTrail: StaffAuditItem[] = (grievance.audit_logs || [])
+      .filter((log) => {
+        let logVal: {
+          details?: string;
+          note?: string;
+          author?: string;
+          scope?: string;
+          department_id?: string | number;
+        } | null = null;
+        if (typeof log.new_value === "string") {
+          try {
+            logVal = JSON.parse(log.new_value);
+          } catch {
+            logVal = { note: log.new_value };
+          }
+        } else if (log.new_value && typeof log.new_value === "object") {
+          logVal = log.new_value as unknown as typeof logVal;
+        }
+
+        const isInternalAction =
+          log.action === "HOD_DIRECTIVE_NOTE" ||
+          log.action === "INVESTIGATION_NOTE_ADDED" ||
+          log.action === "INTERNAL_NOTE_ADDED" ||
+          log.action === "HEAD_DIRECTIVE_ISSUED" ||
+          logVal?.scope === "INTERNAL";
+
+        const isCollab =
+          log.action === "COLLABORATION_NOTE_ADDED" ||
+          logVal?.scope === "COLLABORATION";
+
+        if (isCollab) {
+          return true;
+        }
+
+        if (isInternalAction && !isAdmin && departmentId) {
+          const authorDeptId =
+            log.users?.department_id?.toString() ||
+            (logVal?.department_id ? String(logVal.department_id) : null);
+          if (authorDeptId && authorDeptId !== departmentId.toString()) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((log) => {
         const user = log.users;
         const userRole = user?.roles?.role_name;
         let actorName = "System";
@@ -412,8 +455,7 @@ export async function GET(
           timestamp: log.created_at.toISOString(),
           relativeTime: formatRelativeTime(log.created_at),
         };
-      },
-    );
+      });
 
     // Fetch involved departments dynamically directly from grievance_departments
     const rawDepartments = await prisma.grievance_departments.findMany({

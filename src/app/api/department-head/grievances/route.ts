@@ -560,48 +560,82 @@ export async function GET(request: Request) {
           };
         });
 
-      const auditTrail = g.audit_logs.map((l) => {
-        const user = l.users;
-        const userRole = user?.roles?.role_name;
-        let actor = "System";
-        if (user) {
-          const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
-          if (userRole === "DEPARTMENT_HEAD") {
-            actor = `Department Head — ${rawName}`;
-          } else if (userRole === "STAFF") {
-            actor = `Staff — ${rawName}`;
-          } else {
-            actor = `${rawName} (${userRole || "User"})`;
+      const auditTrail = g.audit_logs
+        .filter((l) => {
+          const val = parseLogVal(l);
+          const isInternalAction =
+            l.action === "HOD_DIRECTIVE_NOTE" ||
+            l.action === "INVESTIGATION_NOTE_ADDED" ||
+            l.action === "INTERNAL_NOTE_ADDED" ||
+            l.action === "HEAD_DIRECTIVE_ISSUED" ||
+            val.scope === "INTERNAL";
+
+          const isCollab =
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            val.scope === "COLLABORATION";
+
+          if (isCollab) {
+            return true;
           }
-        }
 
-        const val = l.new_value as {
-          details?: string;
-          note?: string;
-          bottleneck?: string;
-          stage?: string;
-        } | null;
+          if (isInternalAction && !isAdmin && departmentId) {
+            const authorDeptId =
+              l.users?.department_id?.toString() ||
+              (val.department_id ? String(val.department_id) : null);
+            if (authorDeptId && authorDeptId !== departmentId.toString()) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .map((l) => {
+          const user = l.users;
+          const userRole = user?.roles?.role_name;
+          let actor = "System";
+          if (user) {
+            const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+            if (userRole === "DEPARTMENT_HEAD") {
+              actor = `Department Head — ${rawName}`;
+            } else if (userRole === "STAFF") {
+              actor = `Staff — ${rawName}`;
+            } else {
+              actor = `${rawName} (${userRole || "User"})`;
+            }
+          }
 
-        let actionTitle = l.action.replace(/_/g, " ");
-        if (l.action === "HOD_DIRECTIVE_NOTE") {
-          actionTitle = "Internal Note";
-        } else if (
-          l.action === "INVESTIGATION_NOTE_ADDED" ||
-          l.action === "INTERNAL_NOTE_ADDED"
-        ) {
-          actionTitle = "Investigation Note";
-        }
+          const val = l.new_value as {
+            details?: string;
+            note?: string;
+            bottleneck?: string;
+            stage?: string;
+            scope?: string;
+          } | null;
 
-        return {
-          id: l.audit_log_id.toString(),
-          timestamp: formatRelativeTime(l.created_at),
-          actor,
-          action: actionTitle,
-          bottleneck: val?.bottleneck,
-          details: formatAuditEntryDetails(l.action, l.new_value),
-          stage: val?.stage || g.status,
-        };
-      });
+          let actionTitle = l.action.replace(/_/g, " ");
+          if (l.action === "HOD_DIRECTIVE_NOTE") {
+            actionTitle = "Internal Note";
+          } else if (
+            l.action === "INVESTIGATION_NOTE_ADDED" ||
+            l.action === "INTERNAL_NOTE_ADDED"
+          ) {
+            actionTitle = "Investigation Note";
+          } else if (
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            val?.scope === "COLLABORATION"
+          ) {
+            actionTitle = "Collaboration Note Added";
+          }
+
+          return {
+            id: l.audit_log_id.toString(),
+            timestamp: formatRelativeTime(l.created_at),
+            actor,
+            action: actionTitle,
+            bottleneck: val?.bottleneck,
+            details: formatAuditEntryDetails(l.action, l.new_value),
+            stage: val?.stage || g.status,
+          };
+        });
 
       // Find any HOD intervention record from audit logs strictly scoped to this department in multi-dept cases
       const isMultiDeptCase = relatedDepts.length > 1;
