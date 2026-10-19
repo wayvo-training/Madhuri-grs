@@ -61,7 +61,7 @@ export function DashboardShell({
           />
           <main
             className={cn(
-              "flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-2 sm:py-2.5 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col",
+              "flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-1.5 sm:py-2 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col",
               mainClassName,
             )}
           >

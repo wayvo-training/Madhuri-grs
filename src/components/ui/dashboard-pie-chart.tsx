@@ -95,28 +95,28 @@ export function DashboardPieChartCard({
     <div
       className={cn(
         "rounded-2xl border border-slate-200 bg-white flex flex-col overflow-hidden shadow-2xs",
-        className || "h-auto sm:h-[270px]",
+        className || "h-auto sm:h-[235px]",
       )}
     >
-      <div className="p-4 sm:p-5 pb-1 flex justify-between items-center gap-3">
+      <div className="px-5 pt-3.5 pb-0 flex justify-between items-center gap-3 shrink-0">
         <div>
-          <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-tight">
+          <h3 className="text-sm font-bold text-slate-800 leading-tight">
             {title}
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">{description}</p>
         </div>
         {extraHeaderElement}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 px-4 py-2 flex-1">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-7 px-5 pt-1.5 pb-3 flex-1 min-h-0">
         {isLoading ? (
-          <div className="shrink-0 w-36 h-36 sm:w-42 sm:h-42 relative mx-auto flex items-center justify-center">
+          <div className="shrink-0 w-36 h-36 sm:w-40 sm:h-40 relative flex items-center justify-center">
             {/* Donut chart loading skeleton */}
             <div className="absolute inset-0 rounded-full border-[18px] border-slate-100 animate-pulse"></div>
             <div className="absolute inset-0 rounded-full border-[18px] border-t-slate-200 border-r-slate-200 border-b-transparent border-l-transparent animate-spin opacity-50"></div>
           </div>
         ) : hasData ? (
-          <div className="shrink-0 w-36 h-36 sm:w-42 sm:h-42 relative mx-auto">
+          <div className="shrink-0 w-36 h-36 sm:w-40 sm:h-40 relative flex items-center justify-center">
             <ChartContainer
               config={config}
               className="w-full h-full pb-0 [&_.recharts-pie-label-text]:fill-slate-700"
@@ -130,8 +130,8 @@ export function DashboardPieChartCard({
                   data={pieData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={52}
-                  outerRadius={70}
+                  innerRadius={55}
+                  outerRadius={75}
                   strokeWidth={0}
                 >
                   <Label
@@ -153,14 +153,14 @@ export function DashboardPieChartCard({
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={viewBox.cy + 10}
+                              y={viewBox.cy + 9}
                               className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase"
                             >
                               {centerLabelTop}
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={viewBox.cy + 21}
+                              y={viewBox.cy + 20}
                               className="fill-slate-500 dark:fill-slate-400 text-[9px] font-semibold tracking-wider uppercase"
                             >
                               {centerLabelBottom}
@@ -187,12 +187,12 @@ export function DashboardPieChartCard({
             </ChartContainer>
           </div>
         ) : (
-          <div className="shrink-0 w-36 h-36 sm:w-42 sm:h-42 relative mx-auto flex items-center justify-center rounded-full border-[18px] border-slate-50">
+          <div className="shrink-0 w-36 h-36 sm:w-40 sm:h-40 relative flex items-center justify-center rounded-full border-[18px] border-slate-50">
             <span className="text-xs font-medium text-slate-400">No data</span>
           </div>
         )}
 
-        <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-1 justify-center max-w-[210px]">
+        <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-1 justify-center max-w-[220px]">
           {legendData.map((item) => {
             const isClickable = Boolean(onItemClick);
             const content = (
@@ -200,7 +200,7 @@ export function DashboardPieChartCard({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span
                     className={cn(
-                      "h-3 w-3 rounded-full shrink-0 transition-transform",
+                      "h-2.5 w-2.5 rounded-full shrink-0 transition-transform",
                       isClickable && "group-hover:scale-110",
                     )}
                     style={{ backgroundColor: item.fill }}
@@ -216,7 +216,7 @@ export function DashboardPieChartCard({
                       {item.name}
                     </span>
                     {item.description && (
-                      <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                      <span className="text-[10.5px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                         {item.description}
                       </span>
                     )}
@@ -240,7 +240,7 @@ export function DashboardPieChartCard({
                   type="button"
                   key={item.name}
                   onClick={() => onItemClick?.(item)}
-                  className="flex items-center justify-between gap-2 p-1.5 -mx-1.5 rounded-lg transition-all text-left select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 active:scale-[0.98] group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 border-none bg-transparent w-full"
+                  className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md transition-all text-left select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 active:scale-[0.98] group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 border-none bg-transparent w-full"
                 >
                   {content}
                 </button>
@@ -250,7 +250,7 @@ export function DashboardPieChartCard({
             return (
               <div
                 key={item.name}
-                className="flex items-center justify-between gap-2 p-1.5 -mx-1.5 rounded-lg text-left select-none"
+                className="flex items-center justify-between gap-2 py-1 px-1.5 -mx-1.5 rounded-md text-left select-none"
               >
                 {content}
               </div>

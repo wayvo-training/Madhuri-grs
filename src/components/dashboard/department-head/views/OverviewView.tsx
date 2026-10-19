@@ -47,17 +47,17 @@ export function OverviewView({
   onFilterQueue,
 }: OverviewViewProps) {
   return (
-    <div className="space-y-3.5 sm:space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       {/* 1. Department Header Banner */}
-      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white px-4 py-3 sm:px-5 sm:py-3.5 shadow-xs">
-        <div className="relative z-10 flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 border border-teal-100 text-teal-700">
-              <Building2 className="h-4.5 w-4.5" />
+      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white px-4 py-2 sm:px-5 sm:py-2.5 shadow-xs shrink-0">
+        <div className="relative z-10 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-50 border border-teal-100 text-teal-700">
+              <Building2 className="h-4 w-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 leading-tight">
+                <h2 className="text-sm sm:text-base font-semibold tracking-tight text-slate-900 leading-tight">
                   {currentDepartmentName}
                 </h2>
                 <span className="rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5 text-2.5 font-semibold text-teal-800">
@@ -79,10 +79,12 @@ export function OverviewView({
         </div>
       </div>
 
-      <GrievancePieCharts
-        grievances={grievances}
-        onFilterQueue={onFilterQueue}
-      />
+      <div className="shrink-0">
+        <GrievancePieCharts
+          grievances={grievances}
+          onFilterQueue={onFilterQueue}
+        />
+      </div>
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}

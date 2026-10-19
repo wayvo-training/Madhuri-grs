@@ -330,7 +330,7 @@ export function DepartmentHeadOverviewInner({
   };
 
   return (
-    <div className="space-y-3.5 sm:space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       {/* Top View Navigation & Global Controls */}
       <DepartmentHeadViewSwitcher
         activeView={activeView}
