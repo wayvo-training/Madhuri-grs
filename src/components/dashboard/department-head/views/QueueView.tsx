@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Eye,
   GitBranch,
+  ShieldAlert,
+  ShieldCheck,
   User,
   UserCheck,
   UserPlus,
@@ -316,20 +318,21 @@ export function QueueView({
 
       {/* Grievances Data Table */}
       <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="min-w-[1340px]">
+        <div className="min-w-[1650px]">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <colgroup>
-              <col className="w-[110px]" />
-              <col className="w-[240px]" />
+              <col className="w-[115px]" />
+              <col className="w-[245px]" />
               <col className="w-[140px]" />
-              <col className="w-[130px]" />
+              <col className="w-[135px]" />
               <col className="w-[100px]" />
-              <col className="w-[110px]" />
-              <col className="w-[140px]" />
-              <col className="w-[150px]" />
-              <col className="w-[130px]" />
-              <col className="w-[90px]" />
+              <col className="w-[125px]" />
+              <col className="w-[155px]" />
+              <col className="w-[215px]" />
+              <col className="w-[170px]" />
+              <col className="w-[155px]" />
+              <col className="w-[95px]" />
             </colgroup>
             <thead>
               <tr>
@@ -385,15 +388,16 @@ export function QueueView({
                   field="slaStatus"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   SLA Status
                 </SortableTableHead>
+                <TableHead className="py-3 px-4">Head Intervention</TableHead>
                 <SortableTableHead
                   field="assignedStaffName"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   Assigned Staff
                 </SortableTableHead>
@@ -401,7 +405,7 @@ export function QueueView({
                   field="createdAt"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   Submitted
                 </SortableTableHead>
@@ -416,22 +420,23 @@ export function QueueView({
           <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left text-sm table-fixed border-collapse">
               <colgroup>
-                <col className="w-[110px]" />
-                <col className="w-[240px]" />
+                <col className="w-[115px]" />
+                <col className="w-[245px]" />
                 <col className="w-[140px]" />
-                <col className="w-[130px]" />
+                <col className="w-[135px]" />
                 <col className="w-[100px]" />
-                <col className="w-[110px]" />
-                <col className="w-[140px]" />
-                <col className="w-[150px]" />
-                <col className="w-[130px]" />
-                <col className="w-[90px]" />
+                <col className="w-[125px]" />
+                <col className="w-[155px]" />
+                <col className="w-[215px]" />
+                <col className="w-[170px]" />
+                <col className="w-[155px]" />
+                <col className="w-[95px]" />
               </colgroup>
               <TableBody>
                 {filteredGrievances.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={11}
                       className="py-12 text-center text-slate-400 font-normal"
                     >
                       <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -452,8 +457,21 @@ export function QueueView({
                   </TableRow>
                 ) : (
                   paginatedGrievances.map((item) => {
+                    const isItemBlocked = Boolean(
+                      item.isBlocked ||
+                        item.status === "BLOCKED" ||
+                        item.myDepartmentStatus === "BLOCKED",
+                    );
+                    const isItemClosed = Boolean(
+                      item.status === "CLOSED" ||
+                        item.status === "RESOLVED" ||
+                        item.myDepartmentStatus === "COMPLETED",
+                    );
                     const isEscalated = item.status === "ESCALATED";
-                    const isBreached = item.slaStatus === "BREACHED";
+                    const isBreached =
+                      !isItemBlocked &&
+                      !isItemClosed &&
+                      item.slaStatus === "BREACHED";
                     const highlightSla = !isEscalated && isBreached;
                     const hasAssignedStaff = Boolean(
                       item.assignedStaffId ||
@@ -495,7 +513,6 @@ export function QueueView({
                                   Multi Department
                                 </span>
                               )}
-                              {/* Removed Resolution Submitted badge per requirement */}
                             </div>
                           </div>
                         </TableCell>
@@ -524,67 +541,86 @@ export function QueueView({
                         {/* 4. Status */}
                         <TableCell className="py-3 px-3 whitespace-nowrap align-top">
                           <StatusBadge status={item.status} />
-                          {item.status === "BLOCKED" && (
+                          {isItemBlocked && (
                             <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                               Waiting for Prerequisite
-                            </span>
-                          )}
-                          {hasHeadResolutionAuthority(item) && (
-                            <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                              Head Intervention Active
                             </span>
                           )}
                         </TableCell>
 
                         {/* 5. SLA Status */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top max-w-[140px] overflow-hidden">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top max-w-[155px] overflow-hidden">
                           <div className="flex flex-col items-start gap-1 min-w-0">
-                            <span
-                              className={`text-sm font-medium whitespace-nowrap ${
-                                highlightSla
-                                  ? "text-rose-600 font-bold dark:text-rose-400"
-                                  : item.slaStatus === "AT_RISK"
-                                    ? "text-amber-800 font-semibold dark:text-amber-400"
-                                    : "text-slate-600 dark:text-slate-300"
-                              }`}
-                            >
-                              {item.slaTimeLeft}
-                            </span>
-                            {item.slaStatus === "AT_RISK" && (
-                              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                                SLA At Risk
+                            {isItemBlocked ? (
+                              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Paused (Blocked)
                               </span>
-                            )}
-                            {item.slaStatus === "BREACHED" && (
-                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                                Breached
+                            ) : isItemClosed ? (
+                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                Completed
                               </span>
+                            ) : (
+                              <>
+                                <span
+                                  className={`text-sm font-medium whitespace-nowrap ${
+                                    highlightSla
+                                      ? "text-rose-600 font-bold dark:text-rose-400"
+                                      : item.slaStatus === "AT_RISK"
+                                        ? "text-amber-800 font-semibold dark:text-amber-400"
+                                        : "text-slate-600 dark:text-slate-300"
+                                  }`}
+                                >
+                                  {item.slaTimeLeft}
+                                </span>
+                                {item.slaStatus === "AT_RISK" && (
+                                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                    SLA At Risk
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>
 
-                        {/* 6. Assigned Officer */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                          {item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.hodIntervention?.isResolutionAuthority ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-                                <UserCheck className="h-3 w-3 text-amber-600" />
-                                <span>
-                                  {item.hodIntervention
-                                    .resolutionAuthorityName ||
-                                    "Department Head"}{" "}
-                                  (Authority)
-                                </span>
+                        {/* 6. Head Intervention (New Column) */}
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                          {isItemBlocked ? (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          ) : isItemClosed ? (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          ) : hasHeadResolutionAuthority(item) ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                              <ShieldAlert className="h-3 w-3 text-amber-600 shrink-0" />
+                              <span>Intervention Active</span>
+                            </span>
+                          ) : item.hodIntervention ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-300 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800">
+                              <ShieldCheck className="h-3 w-3 text-teal-600 shrink-0" />
+                              <span>
+                                {item.hodIntervention.actionLabel ||
+                                  "Intervention Taken"}
                               </span>
-                              {hasAssignedStaff && (
-                                <span className="text-[11px] text-slate-500">
-                                  Staff: {item.assignedStaffName}
-                                </span>
-                              )}
-                            </div>
-                          ) : item.isBlocked || item.status === "BLOCKED" ? (
+                            </span>
+                          ) : item.status === "ESCALATED" ||
+                            item.slaStatus === "BREACHED" ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-800 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-800">
+                              <AlertCircle className="h-3 w-3 text-rose-600 shrink-0" />
+                              <span>Intervention Required</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* 7. Assigned Officer */}
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                          {isItemBlocked ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
                               Blocked
                             </span>
@@ -601,7 +637,7 @@ export function QueueView({
                         </TableCell>
 
                         {/* 7. Submitter & Date */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
                           <div className="text-sm">
                             <p className="font-medium text-slate-800">
                               {item.submitterName}

@@ -378,13 +378,22 @@ export function SlaGovernanceView({
                     </tr>
                   ) : (
                     paginatedList.map((item) => {
+                      const isItemBlocked = Boolean(
+                        item.isBlocked ||
+                          item.status === "BLOCKED" ||
+                          item.myDepartmentStatus === "BLOCKED",
+                      );
                       const isClosedOrResolved =
-                        item.status === "CLOSED" || item.status === "RESOLVED";
-                      const isEscalated = item.status === "ESCALATED";
+                        item.status === "CLOSED" ||
+                        item.status === "RESOLVED" ||
+                        item.myDepartmentStatus === "COMPLETED";
+                      const isEscalated =
+                        !isItemBlocked && item.status === "ESCALATED";
                       const hasAuthority = hasHeadResolutionAuthority(item);
                       const canSubmitResolution = canHeadSubmitResolution(item);
                       const isUnderIntervention =
                         !isClosedOrResolved &&
+                        !isItemBlocked &&
                         (hasAuthority ||
                           (item.status === "IN_PROGRESS" &&
                             !!item.hodIntervention));
@@ -399,6 +408,7 @@ export function SlaGovernanceView({
                               {item.ticketCode}
                             </span>
                           </td>
+
                           <td className="py-2.5 px-3 align-middle max-w-[230px] overflow-hidden">
                             <TruncatedText
                               text={item.title}
@@ -427,14 +437,22 @@ export function SlaGovernanceView({
                           <td className="py-2.5 px-3 align-middle whitespace-nowrap max-w-[150px] overflow-hidden">
                             <span
                               className={`inline-flex whitespace-nowrap text-[13px] font-medium ${
-                                item.slaStatus === "BREACHED"
-                                  ? "text-rose-600 dark:text-rose-400 font-bold"
-                                  : item.slaStatus === "AT_RISK"
-                                    ? "text-amber-800 dark:text-amber-400 font-semibold"
-                                    : "text-slate-600 dark:text-slate-400"
+                                isItemBlocked
+                                  ? "text-amber-700 dark:text-amber-400 font-semibold"
+                                  : isClosedOrResolved
+                                    ? "text-slate-500 dark:text-slate-400 font-normal"
+                                    : item.slaStatus === "BREACHED"
+                                      ? "text-rose-600 dark:text-rose-400 font-bold"
+                                      : item.slaStatus === "AT_RISK"
+                                        ? "text-amber-800 dark:text-amber-400 font-semibold"
+                                        : "text-slate-600 dark:text-slate-400"
                               }`}
                             >
-                              {item.slaTimeLeft}
+                              {isItemBlocked
+                                ? "Paused (Blocked)"
+                                : isClosedOrResolved
+                                  ? "Completed"
+                                  : item.slaTimeLeft}
                             </span>
                           </td>
 
@@ -447,31 +465,35 @@ export function SlaGovernanceView({
                                   : undefined)
                               }
                               className={`w-fit inline-flex items-center whitespace-nowrap text-[13px] ${
-                                hasAuthority
-                                  ? "font-semibold text-amber-800 dark:text-amber-300"
-                                  : isClosedOrResolved
-                                    ? "font-medium text-slate-500 dark:text-slate-400"
-                                    : isEscalated
-                                      ? "font-semibold text-slate-900 dark:text-slate-200"
-                                      : isUnderIntervention ||
-                                          canSubmitResolution
+                                isItemBlocked
+                                  ? "font-normal text-slate-400"
+                                  : hasAuthority
+                                    ? "font-semibold text-amber-800 dark:text-amber-300"
+                                    : isClosedOrResolved
+                                      ? "font-medium text-slate-500 dark:text-slate-400"
+                                      : isEscalated
                                         ? "font-semibold text-slate-900 dark:text-slate-200"
-                                        : "font-medium text-slate-700 dark:text-slate-300"
+                                        : isUnderIntervention ||
+                                            canSubmitResolution
+                                          ? "font-semibold text-slate-900 dark:text-slate-200"
+                                          : "font-medium text-slate-700 dark:text-slate-300"
                               }`}
                             >
-                              {hasAuthority
-                                ? "Head Intervention Active"
-                                : isClosedOrResolved
-                                  ? item.status === "RESOLVED"
-                                    ? "Resolved"
-                                    : "Closed"
-                                  : isEscalated
-                                    ? "Escalated"
-                                    : isUnderIntervention
-                                      ? "Under Intervention"
-                                      : canSubmitResolution
-                                        ? "Resolution Required"
-                                        : "Monitor"}
+                              {isItemBlocked
+                                ? "—"
+                                : hasAuthority
+                                  ? "Head Intervention Active"
+                                  : isClosedOrResolved
+                                    ? item.status === "RESOLVED"
+                                      ? "Resolved"
+                                      : "Closed"
+                                    : isEscalated
+                                      ? "Escalated"
+                                      : isUnderIntervention
+                                        ? "Under Intervention"
+                                        : canSubmitResolution
+                                          ? "Resolution Required"
+                                          : "Monitor"}
                             </span>
                           </td>
 

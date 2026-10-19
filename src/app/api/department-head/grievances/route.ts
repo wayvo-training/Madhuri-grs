@@ -857,22 +857,33 @@ export async function GET(request: Request) {
         priority: g.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
         status: resolvedStatus,
         slaStatus:
-          myDeptRecord?.status === "COMPLETED"
+          myDeptRecord?.status === "COMPLETED" ||
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED"
             ? "ON_TRACK"
-            : ((g.sla_status || "ON_TRACK") as
-                | "ON_TRACK"
-                | "AT_RISK"
-                | "BREACHED"),
-        slaDeadline: formatFriendlyDate(g.due_at),
+            : myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+              ? "ON_TRACK"
+              : ((g.sla_status || "ON_TRACK") as
+                  | "ON_TRACK"
+                  | "AT_RISK"
+                  | "BREACHED"),
+        slaDeadline:
+          myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+            ? "Paused (Blocked)"
+            : formatFriendlyDate(g.due_at),
         slaTimeLeft:
-          myDeptRecord?.status === "COMPLETED"
+          myDeptRecord?.status === "COMPLETED" ||
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED"
             ? "Completed"
-            : formatSlaTimeLeft(
-                g.due_at,
-                g.sla_status,
-                g.priority,
-                g.created_at,
-              ),
+            : myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+              ? "Paused (Blocked)"
+              : formatSlaTimeLeft(
+                  g.due_at,
+                  g.sla_status,
+                  g.priority,
+                  g.created_at,
+                ),
         slaConsumptionPercent: calculateSlaConsumption(
           g.created_at,
           g.due_at,
