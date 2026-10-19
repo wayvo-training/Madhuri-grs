@@ -366,6 +366,15 @@ export function DepartmentHeadOverviewInner({
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
           onInspectGrievance={handleInspectCase}
+          onFilterQueue={(filterType, value) => {
+            resetFilters();
+            if (filterType === "status") {
+              setStatusFilter(value);
+            } else if (filterType === "priority") {
+              setPriorityFilter(value);
+            }
+            switchView("queue");
+          }}
         />
       )}
 

@@ -260,16 +260,19 @@ export function AttentionRequiredPanel({
                     className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-11 w-full"
                   >
                     <div className="w-28 shrink-0">
-                      <span className="font-mono text-sm font-medium text-slate-900 dark:text-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => onInspect(item, "statement")}
+                        className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                      >
                         {item.ticketCode}
-                      </span>
+                      </button>
                     </div>
                     <div className="w-80 shrink-0 pr-4">
                       <TruncatedText
                         text={item.title}
                         maxChars={38}
-                        onClick={() => onInspect(item, "statement")}
-                        className="text-sm font-medium text-slate-800 hover:text-emerald-900 transition text-left block w-full border-none cursor-pointer"
+                        className="text-sm font-medium text-slate-800 dark:text-slate-200 block w-full border-none"
                       />
                     </div>
 

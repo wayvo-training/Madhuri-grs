@@ -27,6 +27,7 @@ export interface OverviewViewProps {
     item: GrievanceItem,
     tab?: "progress" | "statement",
   ) => void;
+  onFilterQueue?: (filterType: "status" | "priority", value: string) => void;
 }
 
 export function OverviewView({
@@ -43,6 +44,7 @@ export function OverviewView({
   onViewStaff,
   onViewActivity,
   onInspectGrievance,
+  onFilterQueue,
 }: OverviewViewProps) {
   return (
     <div className="space-y-3.5 sm:space-y-4">
@@ -77,7 +79,10 @@ export function OverviewView({
         </div>
       </div>
 
-      <GrievancePieCharts grievances={grievances} />
+      <GrievancePieCharts
+        grievances={grievances}
+        onFilterQueue={onFilterQueue}
+      />
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}

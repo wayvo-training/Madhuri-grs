@@ -7,7 +7,6 @@ import { useId, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -91,9 +90,7 @@ export function TruncatedText({
           className,
         )}
       >
-        <span className="truncate block" title={completeText}>
-          {displayText}
-        </span>
+        <span className="truncate block">{displayText}</span>
       </TooltipTrigger>
       <TooltipContent
         side={side}

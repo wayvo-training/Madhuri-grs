@@ -46,18 +46,21 @@ export function formatSLALabel(sla: string) {
   }
 }
 
+export interface DashboardPieChartItem {
+  name: string;
+  value: number;
+  fill: string;
+  description?: string;
+  key?: string;
+}
+
 interface DashboardPieChartCardProps {
   title: string;
   description: string;
   // data contains the actual count for each category.
-  data: { name: string; value: number; fill: string; description?: string }[];
+  data: DashboardPieChartItem[];
   // fullLegendData is optional: use this if you want the legend to show 0-count items that don't appear in the pie
-  fullLegendData?: {
-    name: string;
-    value: number;
-    fill: string;
-    description?: string;
-  }[];
+  fullLegendData?: DashboardPieChartItem[];
   config: ChartConfig;
   centerValue: number;
   centerLabelTop?: string;
@@ -65,6 +68,7 @@ interface DashboardPieChartCardProps {
   isLoading?: boolean;
   extraHeaderElement?: React.ReactNode;
   className?: string;
+  onItemClick?: (item: DashboardPieChartItem) => void;
 }
 
 export function DashboardPieChartCard({
@@ -79,6 +83,7 @@ export function DashboardPieChartCard({
   isLoading = false,
   extraHeaderElement,
   className,
+  onItemClick,
 }: DashboardPieChartCardProps) {
   // Only render non-zero slices in the donut
   const pieData = data.filter((d) => d.value > 0);
@@ -166,7 +171,16 @@ export function DashboardPieChartCard({
                     }}
                   />
                   {pieData.map((entry) => (
-                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                    <Cell
+                      key={`cell-${entry.name}`}
+                      fill={entry.fill}
+                      className={
+                        onItemClick
+                          ? "cursor-pointer hover:opacity-85 transition-opacity outline-none"
+                          : undefined
+                      }
+                      onClick={() => onItemClick?.(entry)}
+                    />
                   ))}
                 </Pie>
               </PieChart>
@@ -178,33 +192,70 @@ export function DashboardPieChartCard({
           </div>
         )}
 
-        <div className="flex flex-col gap-2.5 w-full sm:w-auto sm:flex-1 justify-center max-w-[210px]">
-          {legendData.map((item) => (
-            <div
-              key={item.name}
-              className="flex items-center justify-between gap-2"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span
-                  className="h-3 w-3 rounded-full shrink-0"
-                  style={{ backgroundColor: item.fill }}
-                />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-semibold text-slate-800 text-xs leading-none">
-                    {item.name}
-                  </span>
-                  {item.description && (
-                    <span className="text-[11px] font-normal text-slate-500 mt-0.5 leading-snug">
-                      {item.description}
+        <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-1 justify-center max-w-[210px]">
+          {legendData.map((item) => {
+            const isClickable = Boolean(onItemClick);
+            const content = (
+              <>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className={cn(
+                      "h-3 w-3 rounded-full shrink-0 transition-transform",
+                      isClickable && "group-hover:scale-110",
+                    )}
+                    style={{ backgroundColor: item.fill }}
+                  />
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className={cn(
+                        "font-semibold text-slate-800 dark:text-slate-200 text-xs leading-none transition-colors",
+                        isClickable &&
+                          "group-hover:text-teal-700 dark:group-hover:text-teal-300",
+                      )}
+                    >
+                      {item.name}
                     </span>
-                  )}
+                    {item.description && (
+                      <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                        {item.description}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                <span
+                  className={cn(
+                    "font-bold text-slate-800 dark:text-slate-200 text-xs leading-none tabular-nums shrink-0 px-1.5 py-0.5 rounded transition-colors",
+                    isClickable &&
+                      "group-hover:bg-teal-50 group-hover:text-teal-800 dark:group-hover:bg-teal-950/50 dark:group-hover:text-teal-300",
+                  )}
+                >
+                  {item.value}
+                </span>
+              </>
+            );
+
+            if (isClickable) {
+              return (
+                <button
+                  type="button"
+                  key={item.name}
+                  onClick={() => onItemClick?.(item)}
+                  className="flex items-center justify-between gap-2 p-1.5 -mx-1.5 rounded-lg transition-all text-left select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-800/60 active:scale-[0.98] group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 border-none bg-transparent w-full"
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <div
+                key={item.name}
+                className="flex items-center justify-between gap-2 p-1.5 -mx-1.5 rounded-lg text-left select-none"
+              >
+                {content}
               </div>
-              <span className="font-bold text-slate-800 text-xs leading-none tabular-nums shrink-0">
-                {item.value}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

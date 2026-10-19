@@ -404,17 +404,20 @@ export function SlaGovernanceView({
                           className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
                         >
                           <td className="py-2.5 pl-4 pr-3 align-middle whitespace-nowrap">
-                            <span className="inline-block font-mono text-sm font-semibold text-slate-900 dark:text-slate-200">
+                            <button
+                              type="button"
+                              onClick={() => onInspect(item, "statement")}
+                              className="inline-block font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                            >
                               {item.ticketCode}
-                            </span>
+                            </button>
                           </td>
 
                           <td className="py-2.5 px-3 align-middle max-w-[230px] overflow-hidden">
                             <TruncatedText
                               text={item.title}
                               maxChars={24}
-                              onClick={() => onInspect(item, "statement")}
-                              className="truncate whitespace-nowrap block text-left text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition max-w-[205px] border-none cursor-pointer"
+                              className="truncate whitespace-nowrap block text-left text-sm font-semibold text-slate-900 dark:text-slate-100 max-w-[205px] border-none"
                             />
                           </td>
 

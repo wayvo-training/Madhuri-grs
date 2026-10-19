@@ -88,11 +88,11 @@ export function QueueView({
   setSelectedTab: _setSelectedTab,
   searchQuery: _searchQuery,
   setSearchQuery: _setSearchQuery,
-  priorityFilter: _priorityFilter,
+  priorityFilter = "ALL",
   setPriorityFilter: _setPriorityFilter,
-  staffFilter: _staffFilter,
+  staffFilter = "ALL",
   setStaffFilter: _setStaffFilter,
-  statusFilter: _statusFilter = "ALL",
+  statusFilter = "ALL",
   setStatusFilter: _setStatusFilter,
   departmentFilter: _departmentFilter = "ALL",
   setDepartmentFilter: _setDepartmentFilter,
@@ -139,10 +139,65 @@ export function QueueView({
   }, []);
 
   const localFilteredGrievances = useMemo(() => {
-    return grievances.filter((g) =>
-      evaluateSearchConditions(g, advancedConditions, advancedMode),
-    );
-  }, [grievances, advancedConditions, advancedMode]);
+    return grievances.filter((g) => {
+      // 1. Status Filter from parent (e.g. from clicking Status chart or tab)
+      if (statusFilter && statusFilter !== "ALL") {
+        if (statusFilter === "UNASSIGNED") {
+          const isUnassigned =
+            !g.assignedStaffId ||
+            !g.assignedStaffName ||
+            g.assignedStaffName === "Unassigned" ||
+            g.status === "SUBMITTED" ||
+            g.status === "ROUTED" ||
+            g.status === "PENDING_ASSIGNMENT" ||
+            g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+          if (!isUnassigned) return false;
+        } else if (statusFilter === "IN_PROGRESS") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
+          const isInProgress =
+            g.status === "IN_PROGRESS" ||
+            g.status === "ASSIGNED" ||
+            g.myDepartmentStatus === "IN_PROGRESS" ||
+            g.myDepartmentStatus === "ASSIGNED";
+          if (!isInProgress) return false;
+        } else if (statusFilter === "UNDER_REVIEW") {
+          if (g.status !== "UNDER_REVIEW") return false;
+        } else if (statusFilter === "ASSIGNED") {
+          if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
+            return false;
+        } else if (statusFilter === "REOPENED") {
+          if (!g.isReopened && g.status !== "REOPENED") return false;
+        } else if (statusFilter === "RESOLVED") {
+          if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
+        } else if (g.status !== statusFilter) {
+          return false;
+        }
+      }
+
+      // 2. Priority Filter from parent
+      if (priorityFilter && priorityFilter !== "ALL") {
+        if (g.priority !== priorityFilter) return false;
+      }
+
+      // 3. Staff Filter from parent
+      if (staffFilter && staffFilter !== "ALL") {
+        if (staffFilter === "UNASSIGNED") {
+          if (g.assignedStaffId) return false;
+        } else if (g.assignedStaffId !== staffFilter) {
+          return false;
+        }
+      }
+
+      return evaluateSearchConditions(g, advancedConditions, advancedMode);
+    });
+  }, [
+    grievances,
+    advancedConditions,
+    advancedMode,
+    statusFilter,
+    priorityFilter,
+    staffFilter,
+  ]);
 
   const sortedGrievances = useMemo(() => {
     const list = [...localFilteredGrievances];
@@ -300,10 +355,26 @@ export function QueueView({
       {/* Queue Filter Controls Bar */}
       <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80">
         {/* Title Header */}
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Live Grievance Oversight Queue
           </h2>
+          {(statusFilter !== "ALL" || priorityFilter !== "ALL") && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+              Filtered:{" "}
+              {statusFilter !== "ALL"
+                ? statusFilter.replace("_", " ")
+                : priorityFilter}
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="hover:text-teal-950 font-bold ml-1 cursor-pointer"
+                title="Clear filter"
+              >
+                &times;
+              </button>
+            </span>
+          )}
         </div>
 
         {/* Controls Bar: View & Filter */}
@@ -433,7 +504,7 @@ export function QueueView({
                 <col className="w-[95px]" />
               </colgroup>
               <TableBody>
-                {filteredGrievances.length === 0 ? (
+                {sortedGrievances.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={11}
@@ -487,9 +558,13 @@ export function QueueView({
                       >
                         {/* 1. Ticket Code */}
                         <TableCell className="py-3 pl-4 pr-3 align-top">
-                          <span className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 inline-block">
+                          <button
+                            type="button"
+                            onClick={() => onInspect(item, "statement")}
+                            className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline inline-block cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                          >
                             {item.ticketCode}
-                          </span>
+                          </button>
                         </TableCell>
 
                         {/* 2. Title & Badges */}
@@ -498,8 +573,7 @@ export function QueueView({
                             <TruncatedText
                               text={item.title}
                               maxChars={24}
-                              onClick={() => onInspect(item, "statement")}
-                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition text-left group-hover:text-emerald-900 dark:group-hover:text-teal-200 block cursor-pointer max-w-[215px] truncate border-none"
+                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 block max-w-[215px] truncate border-none"
                             />
 
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">

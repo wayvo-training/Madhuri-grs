@@ -105,7 +105,13 @@ export function computeDepartmentMetrics(
   ).length;
 
   const inProgressCount = grievances.filter(
-    (g) => g.status === "IN_PROGRESS" || g.status === "ASSIGNED",
+    (g) =>
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED" &&
+      (g.status === "IN_PROGRESS" ||
+        g.status === "ASSIGNED" ||
+        g.myDepartmentStatus === "IN_PROGRESS" ||
+        g.myDepartmentStatus === "ASSIGNED"),
   ).length;
 
   // SLA At Risk = 75%+ consumed, but not yet breached/escalated
@@ -276,11 +282,14 @@ export function filterDepartmentGrievances(
       if (!isException) return false;
     }
     if (selectedTab === "UNASSIGNED" && g.assignedStaffId) return false;
-    if (
-      selectedTab === "IN_PROGRESS" &&
-      !["IN_PROGRESS", "ASSIGNED"].includes(g.status)
-    ) {
-      return false;
+    if (selectedTab === "IN_PROGRESS") {
+      const isInProgress =
+        !["CLOSED", "RESOLVED"].includes(g.status) &&
+        (g.status === "IN_PROGRESS" ||
+          g.status === "ASSIGNED" ||
+          g.myDepartmentStatus === "IN_PROGRESS" ||
+          g.myDepartmentStatus === "ASSIGNED");
+      if (!isInProgress) return false;
     }
     if (
       selectedTab === "HIGH_CRITICAL" &&
@@ -322,7 +331,30 @@ export function filterDepartmentGrievances(
       if (statusFilter === "RESOLVED") {
         if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
       } else if (statusFilter === "IN_PROGRESS") {
-        if (!["IN_PROGRESS", "ASSIGNED"].includes(g.status)) return false;
+        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
+        const isInProgress =
+          g.status === "IN_PROGRESS" ||
+          g.status === "ASSIGNED" ||
+          g.myDepartmentStatus === "IN_PROGRESS" ||
+          g.myDepartmentStatus === "ASSIGNED";
+        if (!isInProgress) return false;
+      } else if (statusFilter === "UNDER_REVIEW") {
+        if (g.status !== "UNDER_REVIEW") return false;
+      } else if (statusFilter === "ASSIGNED") {
+        if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
+          return false;
+      } else if (statusFilter === "UNASSIGNED") {
+        const isUnassigned =
+          !g.assignedStaffId ||
+          !g.assignedStaffName ||
+          g.assignedStaffName === "Unassigned" ||
+          g.status === "SUBMITTED" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+        if (!isUnassigned) return false;
+      } else if (statusFilter === "REOPENED") {
+        if (!g.isReopened && g.status !== "REOPENED") return false;
       } else if (g.status !== statusFilter) {
         return false;
       }
