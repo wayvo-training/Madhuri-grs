@@ -208,26 +208,26 @@ export function EndUserPortal({
   };
 
   return (
-    <div className="h-full flex flex-col gap-6 min-h-0">
+    <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3">
       {/* KPI Stats Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Filed
             </span>
-            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <FileText className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <FileText className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
             {totalCases}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               {waitingOnUserCases.length > 0 && (
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -236,57 +236,57 @@ export function EndUserPortal({
               )}
               Action Required
             </span>
-            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <AlertCircle className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <AlertCircle className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
             {waitingOnUserCases.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               In Progress
             </span>
-            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <RefreshCw className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <RefreshCw className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
             {inProgressCases.length}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-2xs">
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Resolved
             </span>
-            <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-              <CheckCircle2 className="w-4 h-4" />
+            <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <div className="mt-1 text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
             {closedCases.length}
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 shrink-0">
         {/* Track Grievance Card */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 shrink-0">
-              <Search className="w-5 h-5" />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5 mb-2">
+            <div className="p-1.5 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 shrink-0">
+              <Search className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                 Track a Grievance
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Enter grievance number to view current status.
               </p>
             </div>
@@ -300,41 +300,41 @@ export function EndUserPortal({
                 if (e.key === "Enter") handleTrack();
               }}
               placeholder="e.g. GRS-2026-0007"
-              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition h-9"
             />
             <button
               type="button"
               onClick={handleTrack}
               disabled={!trackSearchId.trim()}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-950 hover:bg-teal-900 dark:bg-teal-900 dark:hover:bg-teal-800 px-4 py-2 text-sm font-bold text-white shadow-sm transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-950 hover:bg-teal-900 dark:bg-teal-900 dark:hover:bg-teal-800 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition shrink-0 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer h-9"
               title="Track grievance"
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-3.5 h-3.5" />
               <span>Track</span>
             </button>
           </div>
         </div>
 
         {/* Raise New Grievance Card */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 shrink-0">
-              <FilePlus className="w-5 h-5" />
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-start gap-2.5 mb-2">
+            <div className="p-1.5 rounded-xl bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 shrink-0">
+              <FilePlus className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                 Need to raise a new grievance?
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Submit a new grievance regarding any workplace issue.
               </p>
             </div>
           </div>
           <Link
             href="/end-user/submit"
-            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition"
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition h-9"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             <span>File New Grievance</span>
           </Link>
         </div>
@@ -383,9 +383,12 @@ export function EndUserPortal({
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-teal-700 dark:text-teal-400 text-sm">
+                    <Link
+                      href={`/end-user/grievances/${item.id}`}
+                      className="font-mono font-bold text-teal-700 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300 hover:underline text-sm transition-colors cursor-pointer"
+                    >
                       {item.grievanceNumber}
-                    </span>
+                    </Link>
                     <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm">
                       {item.title}
                     </span>
@@ -419,13 +422,13 @@ export function EndUserPortal({
       )}
 
       {/* Recent Grievances Area */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs flex flex-col flex-1 min-h-0">
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 shrink-0">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
               Recent Grievances
             </h3>
-            <p className="mt-0.5 text-xs font-normal text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-[11px] font-normal text-slate-500 dark:text-slate-400">
               Your latest submitted grievances
             </p>
           </div>
@@ -438,7 +441,7 @@ export function EndUserPortal({
           </Link>
         </div>
 
-        <div className="mt-4 overflow-y-auto custom-scrollbar flex-1 relative min-h-0">
+        <div className="mt-2 overflow-y-auto custom-scrollbar flex-1 relative min-h-0">
           <table className="w-full text-left border-collapse text-sm">
             <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
               <tr>
@@ -478,20 +481,27 @@ export function EndUserPortal({
                     key={g.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                   >
-                    <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap align-middle">
-                      {g.grievanceNumber}
+                    <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold whitespace-nowrap align-middle">
+                      <Link
+                        href={`/end-user/grievances/${g.id}`}
+                        className="text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer"
+                      >
+                        {g.grievanceNumber}
+                      </Link>
                     </td>
                     <td className="py-2.5 px-2 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={g.title}
-                        maxChars={30}
+                        maxChars={25}
+                        alwaysShowTooltip={true}
                         className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px]"
                       />
                     </td>
                     <td className="py-2.5 px-2 whitespace-nowrap align-middle max-w-[180px]">
                       <TruncatedText
                         text={g.category}
-                        maxChars={22}
+                        maxChars={20}
+                        alwaysShowTooltip={true}
                         className="text-slate-600 dark:text-slate-400 text-sm border-none truncate whitespace-nowrap block max-w-[160px]"
                       />
                     </td>
@@ -536,7 +546,7 @@ export function EndUserPortal({
         </div>
 
         {grievances.length > 0 && (
-          <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4 shrink-0">
+          <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-2 shrink-0">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

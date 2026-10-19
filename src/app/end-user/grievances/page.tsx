@@ -83,6 +83,7 @@ export default async function EndUserGrievancesPage() {
       departmentName={user.departments?.department_name || "General Public"}
       title="My Grievances"
       subtitle="Track all grievances you have submitted"
+      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
     >
       <GrievanceList initialGrievances={serializedGrievances} />
     </DashboardShell>

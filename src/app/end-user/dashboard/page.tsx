@@ -85,8 +85,9 @@ export default async function UserDashboardPage() {
       departmentName={user.departments?.department_name || "Employee"}
       title="End User Grievance Portal"
       subtitle="Corporate grievance registration & resolution tracking"
+      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
     >
-      <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Live End User Portal with Inquiry Response & Document Upload */}
         <EndUserPortal
           initialGrievances={serializedGrievances}

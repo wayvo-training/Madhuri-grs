@@ -57,13 +57,18 @@ export function TruncatedText({
         <button
           type="button"
           onClick={onClick}
+          title={completeText}
           className={cn("text-left truncate", className)}
         >
           {text}
         </button>
       );
     }
-    return <span className={className}>{text}</span>;
+    return (
+      <span title={completeText} className={className}>
+        {text}
+      </span>
+    );
   }
 
   const displayText =

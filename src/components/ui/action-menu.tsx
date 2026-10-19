@@ -28,7 +28,7 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900 data-[state=open]:bg-slate-900 data-[state=open]:text-white data-[state=open]:border-slate-900 transition-colors shadow-2xs cursor-pointer focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-100 dark:hover:text-slate-900 dark:hover:border-slate-100"
+        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-teal-600 hover:text-white hover:border-teal-600 data-[state=open]:bg-teal-600 data-[state=open]:text-white data-[state=open]:border-teal-600 transition-colors shadow-2xs cursor-pointer focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-teal-600 dark:hover:text-white dark:hover:border-teal-600 dark:data-[state=open]:bg-teal-600 dark:data-[state=open]:text-white dark:data-[state=open]:border-teal-600"
         title="More actions"
       >
         <MoreHorizontal className="h-4 w-4" />
