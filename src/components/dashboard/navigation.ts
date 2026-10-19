@@ -142,11 +142,6 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           icon: Users,
         },
         {
-          title: "SLA & Escalations",
-          href: "/department-head/dashboard#sla",
-          icon: AlertTriangle,
-        },
-        {
           title: "Activity",
           href: "/department-head/dashboard#activity",
           icon: Activity,

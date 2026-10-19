@@ -82,10 +82,10 @@ export interface QueueViewProps {
 
 export function QueueView({
   grievances,
-  filteredGrievances,
+  filteredGrievances: _filteredGrievances,
   staffList,
-  selectedTab: _selectedTab,
-  setSelectedTab: _setSelectedTab,
+  selectedTab,
+  setSelectedTab,
   searchQuery: _searchQuery,
   setSearchQuery: _setSearchQuery,
   priorityFilter = "ALL",
@@ -93,7 +93,7 @@ export function QueueView({
   staffFilter = "ALL",
   setStaffFilter: _setStaffFilter,
   statusFilter = "ALL",
-  setStatusFilter: _setStatusFilter,
+  setStatusFilter,
   departmentFilter: _departmentFilter = "ALL",
   setDepartmentFilter: _setDepartmentFilter,
   slaFilter: _slaFilter = "ALL",
@@ -106,7 +106,7 @@ export function QueueView({
   selectedDeptId: _selectedDeptId,
   onDepartmentChange: _onDepartmentChange,
   resetFilters,
-  metrics: _metrics,
+  metrics,
   onInspect,
   onAssign,
   onIntervene,
@@ -140,6 +140,39 @@ export function QueueView({
 
   const localFilteredGrievances = useMemo(() => {
     return grievances.filter((g) => {
+      // 0. Preset Quick Filter Tab
+      if (selectedTab === "ESCALATED") {
+        const isEscalated =
+          g.status === "ESCALATED" ||
+          g.slaStatus === "BREACHED" ||
+          Boolean(g.hodIntervention);
+        if (!isEscalated) return false;
+      } else if (selectedTab === "UNASSIGNED") {
+        const isUnassigned =
+          !g.assignedStaffId ||
+          !g.assignedStaffName ||
+          g.assignedStaffName === "Unassigned" ||
+          g.status === "SUBMITTED" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+        if (!isUnassigned) return false;
+      } else if (selectedTab === "IN_PROGRESS") {
+        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
+        const isInProgress =
+          g.status === "IN_PROGRESS" ||
+          g.status === "ASSIGNED" ||
+          g.myDepartmentStatus === "IN_PROGRESS" ||
+          g.myDepartmentStatus === "ASSIGNED";
+        if (!isInProgress) return false;
+      } else if (selectedTab === "RESOLUTION_REVIEW") {
+        if (g.status !== "UNDER_REVIEW" && !canHeadSubmitResolution(g)) {
+          return false;
+        }
+      } else if (selectedTab === "CLOSED") {
+        if (!["CLOSED", "RESOLVED"].includes(g.status)) return false;
+      }
+
       // 1. Status Filter from parent (e.g. from clicking Status chart or tab)
       if (statusFilter && statusFilter !== "ALL") {
         if (statusFilter === "UNASSIGNED") {
@@ -192,6 +225,7 @@ export function QueueView({
     });
   }, [
     grievances,
+    selectedTab,
     advancedConditions,
     advancedMode,
     statusFilter,
@@ -353,37 +387,46 @@ export function QueueView({
   return (
     <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
-      <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80 shrink-0">
-        {/* Title Header */}
-        <div className="shrink-0 flex items-center gap-2">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Live Grievance Oversight Queue
-          </h2>
-          {(statusFilter !== "ALL" || priorityFilter !== "ALL") && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-              Filtered:{" "}
-              {statusFilter !== "ALL"
-                ? statusFilter.replace("_", " ")
-                : priorityFilter}
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="hover:text-teal-950 font-bold ml-1 cursor-pointer"
-                title="Clear filter"
-              >
-                &times;
-              </button>
-            </span>
-          )}
-        </div>
+      <div className="p-3 sm:p-3.5 bg-white border-b border-slate-200/80 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 sm:gap-4">
+          {/* Title Header */}
+          <div className="shrink-0 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Live Grievance Oversight Queue
+            </h2>
+            {(statusFilter !== "ALL" ||
+              priorityFilter !== "ALL" ||
+              (selectedTab && selectedTab !== "ALL")) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                Filtered:{" "}
+                {selectedTab && selectedTab !== "ALL"
+                  ? selectedTab.replace(/_/g, " ")
+                  : statusFilter !== "ALL"
+                    ? statusFilter.replace(/_/g, " ")
+                    : priorityFilter}
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetFilters();
+                    if (setSelectedTab) setSelectedTab("ALL");
+                  }}
+                  className="hover:text-teal-950 font-bold ml-1 cursor-pointer"
+                  title="Clear filter"
+                >
+                  &times;
+                </button>
+              </span>
+            )}
+          </div>
 
-        {/* Controls Bar: View & Filter */}
-        <div className="flex-1 min-w-0">
-          <AdvancedTableSearch
-            fields={filterFields}
-            onSearch={handleSearchChange}
-            className="w-full"
-          />
+          {/* Controls Bar: View & Filter */}
+          <div className="flex-1 min-w-0 w-full">
+            <AdvancedTableSearch
+              fields={filterFields}
+              onSearch={handleSearchChange}
+              className="w-full"
+            />
+          </div>
         </div>
       </div>
 
@@ -839,8 +882,8 @@ export function QueueView({
       <div className="sticky bottom-0 z-10 shrink-0 mt-auto border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
-          totalPages={Math.ceil(filteredGrievances.length / pageSize)}
-          totalCount={filteredGrievances.length}
+          totalPages={Math.ceil(localFilteredGrievances.length / pageSize)}
+          totalCount={localFilteredGrievances.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}

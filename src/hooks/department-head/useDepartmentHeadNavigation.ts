@@ -9,10 +9,11 @@ export function useDepartmentHeadNavigation() {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (
+      if (hash === "sla") {
+        setActiveView("queue");
+      } else if (
         hash === "queue" ||
         hash === "staff" ||
-        hash === "sla" ||
         hash === "activity" ||
         hash === "knowledge"
       ) {
