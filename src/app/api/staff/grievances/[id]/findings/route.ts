@@ -235,8 +235,8 @@ export async function POST(
           userId: primaryHod.user_id,
           grievanceId,
           type: "HEAD_INTERNAL_NOTE",
-          title: `Supporting Findings Completed (${grievance.grievance_number})`,
-          message: `${deptName} has completed their supporting investigation for ${grievance.grievance_number}.`,
+          title: `Supportive Findings Completed (${grievance.grievance_number})`,
+          message: `${deptName} has completed their supportive investigation for ${grievance.grievance_number}.`,
         });
       }
     }

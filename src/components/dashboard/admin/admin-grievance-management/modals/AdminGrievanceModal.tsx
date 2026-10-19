@@ -192,8 +192,8 @@ export function AdminGrievanceModal({
             <div>
               <p className="text-slate-400">
                 {grievance.involvement_type === "EQUAL"
-                  ? "Collaborating Co-Leads / Supporting"
-                  : "Supporting Departments"}
+                  ? "Collaborating Co-Leads / Supportive"
+                  : "Supportive Departments"}
               </p>
               <div className="mt-0.5 flex flex-wrap gap-1">
                 {grievance.supporting_departments &&
@@ -277,8 +277,8 @@ export function AdminGrievanceModal({
               </div>
               <p className="mt-1 text-xs text-amber-700">
                 {!grievance.department_name
-                  ? "This grievance requires manual department allocation because automated routing rules did not match. Assign 1 Primary Department and optionally designate Supporting Departments."
-                  : "Update the primary department assignment, add/remove supporting departments, or adjust the collaboration workflow mode."}
+                  ? "This grievance requires manual department allocation because automated routing rules did not match. Assign 1 Primary Department and optionally designate Supportive Departments."
+                  : "Update the primary department assignment, add/remove supportive departments, or adjust the collaboration workflow mode."}
               </p>
 
               <div className="mt-3.5 space-y-3">
@@ -313,7 +313,7 @@ export function AdminGrievanceModal({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <p className="block text-xs font-semibold uppercase tracking-wider text-amber-900/80">
-                      Supporting Departments (Optional)
+                      Supportive Departments (Optional)
                     </p>
                     {selectedSupportingDeptIds.length > 0 && (
                       <span className="text-xs text-amber-800 font-medium">
@@ -389,7 +389,7 @@ export function AdminGrievanceModal({
                           ⏳ Sequential (Step-by-Step)
                         </span>
                         <span className="text-[11px] text-slate-500 font-normal mt-0.5">
-                          Supporting departments activate after primary
+                          Supportive departments activate after primary
                           completes.
                         </span>
                       </button>

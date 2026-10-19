@@ -155,7 +155,9 @@ export function CaseCollaborationTab({
                             : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                       }`}
                     >
-                      {dept.involvementType}
+                      {dept.involvementType === "SUPPORTING"
+                        ? "SUPPORTIVE"
+                        : dept.involvementType}
                     </span>
                   </div>
 

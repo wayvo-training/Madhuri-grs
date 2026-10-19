@@ -463,7 +463,7 @@ export function GrievanceDetails({
                         >
                           <Clock className="h-3.5 w-3.5 text-amber-600" />
                           <span>
-                            Awaiting Supporting Findings (
+                            Awaiting Supportive Findings (
                             {pendingSupporting
                               .map((d) => d.departmentName)
                               .join(", ")}

@@ -306,7 +306,7 @@ export function KnowledgeArticleViewerModal({
             <div className="space-y-1">
               <span className="font-semibold text-slate-700 flex items-center gap-1.5">
                 <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                Supporting Policy References &amp; Links:
+                Supportive Policy References &amp; Links:
               </span>
               <div className="rounded-xl border border-blue-200 p-3 bg-blue-50/30 text-slate-800 leading-relaxed font-normal whitespace-pre-wrap">
                 {article.references}

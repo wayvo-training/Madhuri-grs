@@ -72,7 +72,7 @@ export async function POST(
         {
           success: false,
           message:
-            "Forbidden: As a supporting department, only Primary Lead or Equal Co-Lead Department Heads can approve or submit the final resolution.",
+            "Forbidden: As a supportive department, only Primary Lead or Equal Co-Lead Department Heads can approve or submit the final resolution.",
         },
         { status: 403 },
       );
@@ -111,7 +111,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          message: `Cannot finalize resolution: Required supporting department(s) [${incompleteNames}] have not completed their findings.`,
+          message: `Cannot finalize resolution: Required supportive department(s) [${incompleteNames}] have not completed their findings.`,
         },
         { status: 400 },
       );

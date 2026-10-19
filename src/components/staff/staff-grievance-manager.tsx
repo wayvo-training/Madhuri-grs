@@ -185,7 +185,7 @@ export function StaffGrievanceManager({
     );
     if (g.isPrimaryOwner !== false && pendingSupporting.length > 0) {
       toast.error(
-        `Cannot submit final resolution: Awaiting findings from supporting department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
+        `Cannot submit final resolution: Awaiting findings from supportive department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
       );
       handleExamine(g);
       return;

@@ -36,7 +36,7 @@ export function DepartmentFindingsTab({
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                  Supporting Department Findings
+                  Supportive Department Findings
                 </h4>
                 <span className="inline-flex items-center rounded-full bg-teal-100/90 text-teal-900 px-2 py-0.5 text-[10px] font-bold border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800">
                   {findings.length}{" "}
@@ -65,7 +65,7 @@ export function DepartmentFindingsTab({
             </h5>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
               {emptyMessage ||
-                "When supporting or collaborating departments conclude their departmental inquiry and sign off on their findings, their formal report will appear here for review."}
+                "When supportive or collaborating departments conclude their departmental inquiry and sign off on their findings, their formal report will appear here for review."}
             </p>
           </div>
           <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-slate-400 font-medium">
@@ -86,7 +86,7 @@ export function DepartmentFindingsTab({
                   <span className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 text-xs font-bold text-teal-900 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
                     <Building2 className="h-3.5 w-3.5 text-teal-700 dark:text-teal-400" />
                     <span>
-                      {item.departmentName || "Supporting Department"}
+                      {item.departmentName || "Supportive Department"}
                     </span>
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2.5 py-0.5 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">

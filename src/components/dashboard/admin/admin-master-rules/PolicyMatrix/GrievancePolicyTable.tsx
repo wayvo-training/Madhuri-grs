@@ -49,7 +49,7 @@ export function GrievancePolicyTable({
             <th className="py-2.5 pl-3 pr-2">Grievance Type</th>
             <th className="px-3 py-2.5">Priority</th>
             <th className="px-3 py-2.5">Primary Route</th>
-            <th className="px-3 py-2.5">Supporting Dept</th>
+            <th className="px-3 py-2.5">Supportive Dept</th>
             <th className="px-3 py-2.5">SLA Target</th>
             <th className="py-2.5 pl-3 pr-3 text-right">Actions</th>
           </tr>

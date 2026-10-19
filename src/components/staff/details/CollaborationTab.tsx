@@ -99,7 +99,9 @@ export function CollaborationTab({
                           : "bg-slate-200 text-slate-700"
                     }`}
                   >
-                    {dept.involvementType}
+                    {dept.involvementType === "SUPPORTING"
+                      ? "SUPPORTIVE"
+                      : dept.involvementType}
                   </span>
                 </div>
                 <div className="text-xs text-slate-600 space-y-1">

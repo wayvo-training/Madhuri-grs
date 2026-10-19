@@ -49,7 +49,7 @@ function SupportingDeptsPopover({
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-300"
       >
-        <Building2 className="h-3 w-3" />+{departments.length} supporting
+        <Building2 className="h-3 w-3" />+{departments.length} supportive
       </button>
 
       {open && (
@@ -57,7 +57,7 @@ function SupportingDeptsPopover({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Supporting Depts
+              Supportive Depts
             </span>
             <button
               type="button"
@@ -213,7 +213,7 @@ export function GrievanceTableList({
                   Department
                 </SortableTableHead>
                 <TableHead className="w-[150px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
-                  Supporting Depts
+                  Supportive Depts
                 </TableHead>
                 <SortableTableHead
                   field="submitted_by_name"

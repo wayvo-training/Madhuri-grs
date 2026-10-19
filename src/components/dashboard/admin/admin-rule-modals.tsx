@@ -400,7 +400,7 @@ export function AdminRuleConfigModal({
                   >
                     <option value="PRIMARY">PRIMARY (Lead Owner)</option>
                     <option value="SUPPORTING">
-                      SUPPORTING (Collaborator)
+                      SUPPORTIVE (Collaborator)
                     </option>
                     <option value="EQUAL">EQUAL (Joint Co-Lead)</option>
                   </select>
@@ -463,7 +463,7 @@ export function AdminRuleConfigModal({
 
               <div>
                 <span className="block font-semibold text-slate-700 mb-1">
-                  Supporting Department(s)
+                  Supportive Department(s)
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {departments

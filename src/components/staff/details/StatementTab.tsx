@@ -607,7 +607,9 @@ export function StatementTab({
                             : "bg-slate-100 text-slate-700"
                       }`}
                     >
-                      {dept.involvementType}
+                      {dept.involvementType === "SUPPORTING"
+                        ? "SUPPORTIVE"
+                        : dept.involvementType}
                     </span>
                   </div>
                   <div className="space-y-1.5 text-xs text-slate-600">
@@ -654,7 +656,9 @@ export function StatementTab({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Role:</span>
                       <span className="font-semibold text-slate-900 capitalize">
-                        {myDept.involvementType.toLowerCase()}
+                        {myDept.involvementType === "SUPPORTING"
+                          ? "supportive"
+                          : myDept.involvementType.toLowerCase()}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">

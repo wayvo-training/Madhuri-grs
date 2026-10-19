@@ -293,7 +293,7 @@ export function ResolutionForm({
                 Case {grievance.grievanceNumber} &bull; {grievance.title}
                 {grievance.isPrimaryOwner === false && (
                   <span className="ml-1 text-amber-600 font-medium">
-                    (Supporting Contributor)
+                    (Supportive Contributor)
                   </span>
                 )}
               </p>
@@ -313,7 +313,7 @@ export function ResolutionForm({
           <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
-              <strong>Supporting Department Role:</strong> Submitting your
+              <strong>Supportive Department Role:</strong> Submitting your
               departmental findings completes your investigation and updates
               your departmental status to <strong>COMPLETED</strong>. Your
               findings will be shared with the Lead Department to compile the
@@ -534,7 +534,7 @@ export function ResolutionForm({
               htmlFor="resolution-evidence"
               className="font-semibold text-slate-700"
             >
-              Supporting Evidence References (Optional)
+              Supportive Evidence References (Optional)
             </label>
             <input
               id="resolution-evidence"
@@ -549,7 +549,7 @@ export function ResolutionForm({
           {/* Supporting Documents (Optional) */}
           <div className="space-y-1.5">
             <div className="font-semibold text-slate-700 flex items-center justify-between text-xs">
-              <span>Supporting Documents (Optional)</span>
+              <span>Supportive Documents (Optional)</span>
               <span className="text-[11px] font-normal text-slate-500">
                 PDF, Images, Sheets, Docs
               </span>
@@ -742,7 +742,7 @@ export function ResolutionForm({
               {supportingFiles.length > 0 && (
                 <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/50">
                   <span className="font-medium text-slate-500">
-                    Supporting Files:
+                    Supportive Files:
                   </span>
                   <span className="font-semibold text-slate-800">
                     {supportingFiles.length} file(s) attached

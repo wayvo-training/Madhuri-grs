@@ -855,13 +855,13 @@ export function EndUserCaseHub({
             {canProvideAdditionalInfo && (
               <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
                 <h4 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-3">
-                  Upload Additional Supporting Documents
+                  Upload Additional Supportive Documents
                 </h4>
                 {submissionCheck.allowed ? (
                   <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                       <h5 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Staff has requested supporting clarification or
+                        Staff has requested supportive clarification or
                         documentation
                       </h5>
                       <p className="text-xs text-slate-500 mt-0.5">

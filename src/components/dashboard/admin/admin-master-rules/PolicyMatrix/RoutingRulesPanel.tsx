@@ -30,7 +30,7 @@ export function RoutingRulesPanel({
         <div className="hidden sm:grid grid-cols-12 items-center gap-3 px-3 py-1.5 text-2xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-200/60">
           <div className="col-span-5">Rule & Target</div>
           <div className="col-span-2">Involvement</div>
-          <div className="col-span-2">Supporting Dept</div>
+          <div className="col-span-2">Supportive Dept</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-1 text-right">Action</div>
         </div>
@@ -69,7 +69,9 @@ export function RoutingRulesPanel({
                     : "bg-amber-50 text-amber-700 border border-amber-200"
                 }`}
               >
-                {rr.involvement_type}
+                {rr.involvement_type === "SUPPORTING"
+                  ? "SUPPORTIVE"
+                  : rr.involvement_type}
               </span>
             </div>
 

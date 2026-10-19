@@ -667,7 +667,7 @@ export function SmartStaffAssignmentModal({
                 <div className="pt-2 border-t border-slate-200/70 text-xs text-slate-600 flex items-center gap-1.5">
                   <Briefcase className="h-3.5 w-3.5 text-slate-400" />
                   <span>
-                    Supporting Departments:{" "}
+                    Supportive Departments:{" "}
                     {grievance.collaboratingDepartments.join(", ")}
                   </span>
                 </div>

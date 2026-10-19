@@ -68,7 +68,7 @@ const BOTTLENECK_OPTIONS: {
     value: "MISSING_DOCS",
     title: "Incomplete Information / Documentation",
     description:
-      "Required information or supporting documents are unavailable or insufficient.",
+      "Required information or supportive documents are unavailable or insufficient.",
   },
   {
     value: "COMPLEX_INVESTIGATION",
@@ -105,7 +105,7 @@ const INTERVENTION_OPTIONS: {
   },
   {
     value: "CROSS_DEPT",
-    title: "Add Supporting Staff / Department",
+    title: "Add Supportive Staff / Department",
     purpose:
       "Add additional resources to increase investigation or processing capacity.",
     icon: Users,
@@ -135,7 +135,7 @@ const INTERVENTION_OPTIONS: {
     value: "REQUEST_ADDITIONAL_INFO",
     title: "Request Additional Information",
     purpose:
-      "Request missing information or supporting documentation required to continue processing.",
+      "Request missing information or supportive documentation required to continue processing.",
     icon: FileText,
   },
   {
@@ -209,7 +209,7 @@ export function DepartmentHeadEscalationModal({
       case "REQUEST_STATUS_UPDATE":
         return "Specify what specific status or investigation report is required from the assigned officer within 4 hours...";
       case "CROSS_DEPT":
-        return "Detail the specific inter-departmental collaboration needed from the supporting department...";
+        return "Detail the specific inter-departmental collaboration needed from the supportive department...";
       case "NOTIFY_STAFF":
         return "Provide specific operational direction to the assigned Staff for the next action...";
       case "REQUEST_ADDITIONAL_INFO":
@@ -596,7 +596,7 @@ export function DepartmentHeadEscalationModal({
                     Request Additional Information
                   </div>
                   <div className="text-amber-800 text-[11px] mt-0.5 leading-snug">
-                    Request missing information or supporting documentation
+                    Request missing information or supportive documentation
                     required to continue processing and investigation.
                   </div>
                 </div>
@@ -745,7 +745,7 @@ export function DepartmentHeadEscalationModal({
               {interventionType === "CROSS_DEPT" && targetDept && (
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-medium text-slate-500">
-                    Supporting Dept:
+                    Supportive Dept:
                   </span>
                   <span className="font-semibold text-[#0F766E]">
                     {availableDepartments.find((d) => d.id === targetDept)

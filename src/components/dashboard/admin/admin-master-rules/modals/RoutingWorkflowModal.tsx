@@ -234,7 +234,9 @@ export function RoutingWorkflowModal({
                               <span
                                 className={`inline-flex items-center rounded px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider shrink-0 border ${roleBadgeClass}`}
                               >
-                                {dept.involvement_type}
+                                {dept.involvement_type === "SUPPORT"
+                                  ? "SUPPORTIVE"
+                                  : dept.involvement_type}
                               </span>
                             </div>
 
@@ -333,7 +335,9 @@ export function RoutingWorkflowModal({
                           <span
                             className={`inline-flex items-center rounded px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider border ${roleBadgeClass}`}
                           >
-                            {dept.involvement_type}
+                            {dept.involvement_type === "SUPPORT"
+                              ? "SUPPORTIVE"
+                              : dept.involvement_type}
                           </span>
                         </td>
                         <td className="px-3 py-2.5">

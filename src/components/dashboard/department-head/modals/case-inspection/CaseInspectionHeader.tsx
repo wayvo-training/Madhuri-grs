@@ -132,7 +132,11 @@ export function CaseInspectionHeader({
                 >
                   <span>{dept.departmentName}</span>
                   <span className="text-[9px] opacity-75 font-normal">
-                    ({dept.involvementType})
+                    (
+                    {dept.involvementType === "SUPPORTING"
+                      ? "SUPPORTIVE"
+                      : dept.involvementType}
+                    )
                   </span>
                 </span>
               ))}
