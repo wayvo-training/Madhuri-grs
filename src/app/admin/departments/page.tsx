@@ -19,8 +19,29 @@ export default async function AdminDepartmentsPage() {
           department_name: true,
           description: true,
           status: true,
+          users: {
+            where: {
+              status: "ACTIVE",
+              roles: { role_name: "DEPARTMENT_HEAD" },
+            },
+            select: {
+              user_id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
+            take: 1,
+          },
           _count: {
-            select: { grievance_departments: true, users: true },
+            select: {
+              grievance_departments: true,
+              users: {
+                where: {
+                  status: "ACTIVE",
+                  roles: { role_name: "STAFF" },
+                },
+              },
+            },
           },
         },
         orderBy: { department_name: "asc" },
@@ -42,16 +63,21 @@ export default async function AdminDepartmentsPage() {
       }),
     ]);
 
-  const serializedDepartments: SerializedDepartment[] = departments.map(
-    (d) => ({
+  const serializedDepartments: SerializedDepartment[] = departments.map((d) => {
+    const head = d.users?.[0];
+    return {
       department_id: d.department_id.toString(),
       department_name: d.department_name,
       description: d.description,
       status: d.status,
       user_count: d._count.users,
       grievance_count: d._count.grievance_departments,
-    }),
-  );
+      head_name: head
+        ? `${head.first_name} ${head.last_name || ""}`.trim()
+        : null,
+      head_email: head?.email || null,
+    };
+  });
 
   const serializedHeads = deptHeads.map((h) => ({
     user_id: h.user_id.toString(),

@@ -1,9 +1,12 @@
-"use client";
-
-import { AlertTriangle, Building2, FileText, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Building2, FileText } from "lucide-react";
+import { useMemo, useState } from "react";
 import { StatusBadge } from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Pagination } from "@/components/ui/pagination";
 import {
   SortableTableHead,
@@ -23,67 +26,53 @@ import type {
 } from "@/types/admin/grievances";
 
 /* ── Supporting Departments Popover ─────────────────────────────────── */
+/* ── Supporting Departments Dropdown (Portaled for guaranteed visibility) ── */
 function SupportingDeptsPopover({
   departments,
 }: {
   departments: SupportingDepartment[];
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function handleOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [open]);
-
   return (
-    <div ref={ref} className="relative inline-block">
-      <button
+    <DropdownMenu>
+      <DropdownMenuTrigger
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-300"
+        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-indigo-50 hover:text-indigo-700 hover:ring-indigo-300 cursor-pointer focus:outline-none"
       >
         <Building2 className="h-3 w-3" />+{departments.length} supportive
-      </button>
+      </DropdownMenuTrigger>
 
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1.5 min-w-[180px] rounded-xl border border-slate-200 bg-white shadow-lg ring-1 ring-black/5">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Supportive Depts
-            </span>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-          {/* List */}
-          <ul className="py-1">
-            {departments.map((d) => (
-              <li
-                key={d.department_id}
-                className="flex items-center gap-2 px-3 py-1.5"
-              >
-                <Building2 className="h-3 w-3 shrink-0 text-indigo-400" />
-                <span className="text-xs text-slate-700">
-                  {d.department_name}
-                </span>
-              </li>
-            ))}
-          </ul>
+      <DropdownMenuContent
+        align="start"
+        className="z-50 min-w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-800"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-2 py-1.5 mb-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Supportive Departments
+          </span>
+          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">
+            {departments.length}
+          </span>
         </div>
-      )}
-    </div>
+        <div className="py-0.5 space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
+          {departments.map((d) => (
+            <div
+              key={d.department_id}
+              className="flex flex-col px-2 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
+                <span className="font-semibold">{d.department_name}</span>
+              </div>
+              {d.head_name && (
+                <span className="ml-5.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  HOD: {d.head_name}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 /* ─────────────────────────────────────────────────────────────────────── */
@@ -153,6 +142,7 @@ export function GrievanceTableList({
       <col className="w-[170px]" />
       <col className="w-[170px]" />
       <col className="w-[170px]" />
+      <col className="w-[160px]" />
       <col className="w-[150px]" />
       <col className="w-[160px]" />
       <col className="w-[200px]" />
@@ -164,11 +154,11 @@ export function GrievanceTableList({
   );
 
   return (
-    <div className="flex flex-col overflow-hidden">
-      <div className="overflow-x-auto w-full custom-scrollbar">
-        <div className="min-w-[1920px]">
-          {/* Static Header Table: no scrollbar next to header */}
-          <table className="w-full text-left text-[12px] table-fixed border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
+        <div className="min-w-[2080px] flex-1 min-h-0 flex flex-col">
+          {/* Static Header Table: fixed at top, no scrollbar next to header */}
+          <table className="w-full text-left text-[12px] table-fixed shrink-0 border-b border-slate-200 bg-slate-50/80 dark:bg-slate-800/50">
             {colGroup}
             <TableHeader className="bg-transparent shadow-none">
               <TableRow className="hover:bg-transparent border-none">
@@ -211,6 +201,14 @@ export function GrievanceTableList({
                   className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
                 >
                   Department
+                </SortableTableHead>
+                <SortableTableHead
+                  field="department_head_name"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle"
+                >
+                  Department Head
                 </SortableTableHead>
                 <TableHead className="w-[150px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis align-middle">
                   Supportive Depts
@@ -262,19 +260,65 @@ export function GrievanceTableList({
             </TableHeader>
           </table>
 
-          {/* Scrollable Table Body: vertical scrollbar starts directly below header at marked line */}
-          <div className="max-h-[calc(100vh-370px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {/* Scrollable Table Body: internal vertical scrolling filling available space */}
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left text-[13px] table-fixed">
               {colGroup}
-              <TableBody
-                className={`font-normal text-slate-700 transition-opacity duration-150 ${
-                  isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
-                }`}
-              >
-                {grievancesList.length === 0 ? (
+              <TableBody className="font-normal text-slate-700">
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <TableRow
+                      key={`admin-queue-skel-${
+                        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                        i
+                      }`}
+                      className="h-[52px] animate-pulse border-b border-slate-100 dark:border-slate-800"
+                    >
+                      <TableCell className="w-[140px] py-3 pl-4 pr-3 align-middle">
+                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[270px] px-3 py-3 align-middle">
+                        <div className="h-4 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[170px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[170px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[170px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[160px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[150px] px-3 py-3 align-middle">
+                        <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="w-[160px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[200px] px-3 py-3 align-middle">
+                        <div className="h-3.5 w-36 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[100px] px-3 py-3 align-middle">
+                        <div className="h-5 w-14 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="w-[160px] px-3 py-3 align-middle">
+                        <div className="h-5 w-18 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="w-[140px] px-3 py-3 align-middle">
+                        <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="w-[90px] py-3 pl-2 pr-4 text-right align-middle">
+                        <div className="h-7 w-7 bg-slate-200 dark:bg-slate-700 rounded ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : grievancesList.length === 0 ? (
                   <TableRow className="h-[52px]">
                     <TableCell
-                      colSpan={12}
+                      colSpan={13}
                       className="py-12 text-center text-slate-400 font-normal text-[13px]"
                     >
                       <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -346,6 +390,22 @@ export function GrievanceTableList({
                           ) : (
                             <span className="text-[13px] font-medium text-amber-800 whitespace-nowrap truncate block">
                               Unrouted Exception
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* Department Head (HOD) */}
+                        <TableCell className="w-[160px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
+                          {g.department_head_name ? (
+                            <span
+                              className="text-[13px] font-medium text-slate-800 dark:text-slate-200 truncate block"
+                              title={`Head of Department: ${g.department_head_name}${g.department_head_email ? ` (${g.department_head_email})` : ""}`}
+                            >
+                              {g.department_head_name}
+                            </span>
+                          ) : (
+                            <span className="text-[13px] text-slate-400 font-normal italic">
+                              —
                             </span>
                           )}
                         </TableCell>
@@ -437,7 +497,8 @@ export function GrievanceTableList({
           </div>
         </div>
       </div>
-      <div className="border-t border-slate-200 bg-white dark:bg-slate-900">
+      {/* Sticky Fixed Bottom Pagination */}
+      <div className="sticky bottom-0 z-10 shrink-0 mt-auto border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

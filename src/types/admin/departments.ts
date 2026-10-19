@@ -5,6 +5,8 @@ export interface SerializedDepartment {
   status?: string;
   user_count?: number;
   grievance_count: number;
+  head_name?: string | null;
+  head_email?: string | null;
 }
 
 export interface DepartmentHeadOption {

@@ -191,6 +191,22 @@ export function DepartmentTable({
                 Department
               </SortableTh>
               <SortableTh
+                field="head_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Department Head
+              </SortableTh>
+              <SortableTh
+                field="head_email"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Head Email
+              </SortableTh>
+              <SortableTh
                 field="description"
                 currentSort={sortState}
                 onSort={handleSort}
@@ -230,7 +246,7 @@ export function DepartmentTable({
           <tbody>
             {filteredDepartments.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-14 text-center">
+                <td colSpan={9} className="py-14 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-8 ring-emerald-50/50">
                       <Building2 className="h-6 w-6" />
@@ -274,7 +290,7 @@ export function DepartmentTable({
                     </td>
 
                     {/* Department Name */}
-                    <td className="px-4 py-3.5 max-w-[200px] overflow-hidden">
+                    <td className="px-4 py-3.5 max-w-[180px] overflow-hidden">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <TruncatedText
                           text={dept.department_name}
@@ -284,11 +300,41 @@ export function DepartmentTable({
                       </div>
                     </td>
 
+                    {/* Department Head */}
+                    <td className="px-4 py-3.5 max-w-[160px] overflow-hidden whitespace-nowrap">
+                      {dept.head_name ? (
+                        <span
+                          className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate block"
+                          title={dept.head_name}
+                        >
+                          {dept.head_name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                          Unassigned
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Head Email */}
+                    <td className="px-4 py-3.5 max-w-[200px] overflow-hidden whitespace-nowrap">
+                      {dept.head_email ? (
+                        <span
+                          className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate block"
+                          title={dept.head_email}
+                        >
+                          {dept.head_email}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">—</span>
+                      )}
+                    </td>
+
                     {/* Description */}
-                    <td className="max-w-[220px] px-4 py-3.5">
+                    <td className="max-w-[200px] px-4 py-3.5">
                       <TruncatedText
                         text={dept.description}
-                        maxChars={30}
+                        maxChars={28}
                         className="text-sm font-normal text-slate-500 border-none block"
                       />
                     </td>

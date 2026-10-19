@@ -188,6 +188,21 @@ export function AdminGrievanceModal({
                   </button>
                 )}
               </div>
+              {grievance.department_head_name && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <span className="text-slate-400 font-medium">
+                    Head of Department (HOD):
+                  </span>{" "}
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">
+                    {grievance.department_head_name}
+                  </span>
+                  {grievance.department_head_email && (
+                    <span className="text-slate-400 ml-1">
+                      ({grievance.department_head_email})
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-slate-400">
@@ -195,7 +210,7 @@ export function AdminGrievanceModal({
                   ? "Collaborating Co-Leads / Supportive"
                   : "Supportive Departments"}
               </p>
-              <div className="mt-0.5 flex flex-wrap gap-1">
+              <div className="mt-0.5 flex flex-wrap gap-1.5">
                 {grievance.supporting_departments &&
                 grievance.supporting_departments.length > 0 ? (
                   grievance.supporting_departments.map((sd) => {
@@ -204,13 +219,18 @@ export function AdminGrievanceModal({
                     return (
                       <span
                         key={sd.department_id}
-                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
+                        className={`inline-flex flex-col rounded-md border px-2 py-1 text-xs font-medium ${
                           isCoLead
                             ? "border-teal-200 dark:border-teal-700/60 bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 font-semibold"
                             : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                         }`}
                       >
-                        {sd.department_name}
+                        <span>{sd.department_name}</span>
+                        {sd.head_name && (
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            HOD: {sd.head_name}
+                          </span>
+                        )}
                       </span>
                     );
                   })
