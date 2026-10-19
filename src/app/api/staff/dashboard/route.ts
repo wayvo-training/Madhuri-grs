@@ -271,7 +271,12 @@ export async function GET(request: Request) {
 
       const attachments = filterAuthorizedAttachments(
         user,
-        (g.attachments || []).filter((att) => !att.resolution_id),
+        (g.attachments || []).filter(
+          (att) =>
+            !att.resolution_id &&
+            !att.grievance_department_id &&
+            BigInt(att.uploaded_by) === BigInt(g.submitted_by),
+        ),
         {
           grievance_id: g.grievance_id,
           submitted_by: g.submitted_by,
@@ -525,6 +530,17 @@ export async function GET(request: Request) {
             if (!findings) findings = noteStr;
           }
 
+          const attList = Array.isArray(val?.attachments)
+            ? (val.attachments as Array<{
+                id: string;
+                name: string;
+                size?: string;
+                type?: string;
+                path: string;
+                downloadUrl?: string;
+              }>)
+            : undefined;
+
           return {
             id: l.audit_log_id.toString(),
             departmentName: deptName,
@@ -532,6 +548,7 @@ export async function GET(request: Request) {
             findings,
             actionTaken: actionTaken || undefined,
             notes: notes || undefined,
+            attachments: attList,
             createdAt: l.created_at
               ? new Date(l.created_at).toISOString()
               : new Date().toISOString(),

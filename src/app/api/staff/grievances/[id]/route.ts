@@ -192,7 +192,12 @@ export async function GET(
 
     const authorizedDossierAttachments = filterAuthorizedAttachments(
       user,
-      (grievance.attachments || []).filter((att) => !att.resolution_id),
+      (grievance.attachments || []).filter(
+        (att) =>
+          !att.resolution_id &&
+          !att.grievance_department_id &&
+          BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+      ),
       {
         ...grievanceContext,
         title: grievance.title,
@@ -369,6 +374,17 @@ export async function GET(
           if (!findings) findings = noteStr;
         }
 
+        const attList = Array.isArray(val?.attachments)
+          ? (val.attachments as Array<{
+              id: string;
+              name: string;
+              size?: string;
+              type?: string;
+              path: string;
+              downloadUrl?: string;
+            }>)
+          : undefined;
+
         return {
           id: l.audit_log_id.toString(),
           departmentName: deptName,
@@ -376,6 +392,7 @@ export async function GET(
           findings,
           actionTaken: actionTaken || undefined,
           notes: notes || undefined,
+          attachments: attList,
           createdAt: l.created_at.toISOString(),
           timestamp: formatRelativeTime(l.created_at),
         };

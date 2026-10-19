@@ -1038,7 +1038,12 @@ export async function GET(
           submitterRole: grievance.users?.roles?.role_name || "END_USER",
           attachments: filterAuthorizedAttachments(
             user,
-            grievance.attachments || [],
+            (grievance.attachments || []).filter(
+              (att) =>
+                !att.resolution_id &&
+                !att.grievance_department_id &&
+                BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+            ),
             {
               grievance_id: grievance.grievance_id,
               submitted_by: grievance.submitted_by,

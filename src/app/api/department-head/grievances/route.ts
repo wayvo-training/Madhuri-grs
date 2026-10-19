@@ -281,6 +281,7 @@ export async function GET(request: Request) {
               knowledge_articles: {
                 select: { article_id: true },
               },
+              attachments: true,
             },
           },
           attachments: true,
@@ -339,15 +340,6 @@ export async function GET(request: Request) {
           )
         : null;
 
-      // Find partner co-lead assignment (for EQUAL involvement)
-      const otherCoLeadAssignment = departmentId
-        ? grievanceAssignments.find(
-            (a) =>
-              a.grievance_departments?.department_id !== departmentId &&
-              a.grievance_departments?.involvement_type === "EQUAL",
-          )
-        : null;
-
       // When a department head is viewing, only their department's staff counts as their active assignee
       const activeAssignment = departmentId
         ? myDeptAssignment
@@ -359,29 +351,8 @@ export async function GET(request: Request) {
       let resolvedAssignedStaffName: string | null = null;
       if (myDeptAssignment) {
         const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
-        const myStaffName =
-          `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
-        if (otherCoLeadAssignment) {
-          const partnerStaff =
-            otherCoLeadAssignment.users_assignments_staff_idTousers;
-          const partnerDept =
-            otherCoLeadAssignment.grievance_departments?.departments
-              ?.department_name || "Partner";
-          resolvedAssignedStaffName =
-            `${myStaffName} (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
-            ")";
-        } else {
-          resolvedAssignedStaffName = myStaffName;
-        }
-      } else if (otherCoLeadAssignment) {
-        const partnerStaff =
-          otherCoLeadAssignment.users_assignments_staff_idTousers;
-        const partnerDept =
-          otherCoLeadAssignment.grievance_departments?.departments
-            ?.department_name || "Partner";
         resolvedAssignedStaffName =
-          `Unassigned (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
-          ")";
+          `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
       } else if (!departmentId && grievanceAssignments.length > 0) {
         resolvedAssignedStaffName = grievanceAssignments
           .map((a) =>
@@ -548,6 +519,17 @@ export async function GET(request: Request) {
             if (!findings) findings = noteStr;
           }
 
+          const attList = Array.isArray(val.attachments)
+            ? (val.attachments as Array<{
+                id: string;
+                name: string;
+                size?: string;
+                type?: string;
+                path: string;
+                downloadUrl?: string;
+              }>)
+            : undefined;
+
           return {
             id: l.audit_log_id.toString(),
             departmentName: deptName,
@@ -555,6 +537,7 @@ export async function GET(request: Request) {
             findings,
             actionTaken: actionTaken || undefined,
             notes: notes || undefined,
+            attachments: attList,
             createdAt: l.created_at.toISOString(),
             timestamp: formatRelativeTime(l.created_at),
           };
@@ -931,12 +914,28 @@ export async function GET(request: Request) {
                 latestResolution.action_taken ||
                 latestResolution.problem_summary,
               submittedAt: formatRelativeTime(latestResolution.submitted_at),
+              attachments: (latestResolution.attachments || []).map((att) => ({
+                id: att.attachment_id.toString(),
+                name: att.file_name,
+                size: att.file_size
+                  ? `${Math.round(Number(att.file_size) / 1024)} KB`
+                  : undefined,
+                type: att.file_type || undefined,
+                path: att.file_path,
+                downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+                uploadedAt: formatFriendlyDate(att.uploaded_at),
+              })),
             }
           : null,
         auditTrail,
         attachments: filterAuthorizedAttachments(
           user,
-          g.attachments,
+          (g.attachments || []).filter(
+            (att) =>
+              !att.resolution_id &&
+              !att.grievance_department_id &&
+              BigInt(att.uploaded_by) === BigInt(g.submitted_by),
+          ),
           {
             grievance_id: g.grievance_id,
             submitted_by: g.submitted_by,

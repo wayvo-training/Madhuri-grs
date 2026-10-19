@@ -19,6 +19,15 @@ export interface InternalNoteItem {
   createdAt?: string;
 }
 
+export interface FindingAttachment {
+  id: string;
+  name: string;
+  size?: string;
+  type?: string;
+  path: string;
+  downloadUrl?: string;
+}
+
 export interface SupportingDepartmentFinding {
   id: string;
   departmentName: string;
@@ -28,6 +37,7 @@ export interface SupportingDepartmentFinding {
   notes?: string;
   createdAt: string;
   timestamp: string;
+  attachments?: FindingAttachment[];
 }
 
 export interface GrievanceItem {
@@ -119,6 +129,15 @@ export interface GrievanceItem {
     outcome?: string;
     note: string;
     submittedAt: string;
+    attachments?: {
+      id?: string;
+      name: string;
+      size?: string;
+      type?: string;
+      path?: string;
+      downloadUrl?: string;
+      uploadedAt?: string;
+    }[];
   } | null;
   auditTrail?: EscalationAuditRecord[];
   description?: string;

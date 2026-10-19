@@ -65,6 +65,15 @@ export interface StaffAuditItem {
   grievanceNumber?: string;
 }
 
+export interface FindingAttachment {
+  id: string;
+  name: string;
+  size?: string;
+  type?: string;
+  path: string;
+  downloadUrl?: string;
+}
+
 export interface SupportingDepartmentFinding {
   id: string;
   departmentName: string;
@@ -74,6 +83,7 @@ export interface SupportingDepartmentFinding {
   notes?: string;
   createdAt: string;
   timestamp: string;
+  attachments?: FindingAttachment[];
 }
 
 export interface StaffResolutionData {

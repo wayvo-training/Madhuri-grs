@@ -5,9 +5,12 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Clock,
+  Download,
+  Eye,
   FileSearch,
   FileText,
   Lightbulb,
+  Paperclip,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -143,6 +146,70 @@ export function DepartmentFindingsTab({
                     </div>
                     <div className="rounded-xl border border-amber-100/70 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-3.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-normal">
                       {item.notes}
+                    </div>
+                  </div>
+                )}
+
+                {/* Attached Documents Section */}
+                {item.attachments && item.attachments.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <Paperclip className="h-4 w-4 text-teal-700 dark:text-teal-400" />
+                      <span>
+                        Attached Documents & Evidences (
+                        {item.attachments.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {item.attachments.map((att, attIdx) => (
+                        <div
+                          key={att.id || `att-${attIdx}`}
+                          className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 shadow-2xs hover:border-teal-300 dark:hover:border-teal-700 transition"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-200/60 dark:border-teal-800 text-teal-700 dark:text-teal-400 shrink-0">
+                              <FileText className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                {att.name}
+                              </p>
+                              {att.size && (
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                                  {att.size}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {att.downloadUrl && (
+                              <>
+                                <a
+                                  href={att.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-teal-50 hover:bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 dark:hover:bg-teal-900/80 border border-teal-200 dark:border-teal-800 transition"
+                                  title="View document in new tab"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  <span>View</span>
+                                </a>
+                                <a
+                                  href={att.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={att.name}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 transition"
+                                  title="Download document file"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  <span>Download</span>
+                                </a>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -122,15 +122,22 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     categoryName: grievance.categories?.category_name || "General",
     subcategoryName: grievance.subcategories?.subcategory_name || "General",
     departmentName: primaryDept,
-    attachments: (grievance.attachments || []).map((att) => ({
-      id: att.attachment_id.toString(),
-      name: att.file_name,
-      path: `/api/attachments/${att.attachment_id}/download`,
-      size: att.file_size
-        ? `${Math.round(Number(att.file_size) / 1024)} KB`
-        : undefined,
-      type: att.file_type,
-    })),
+    attachments: (grievance.attachments || [])
+      .filter(
+        (att) =>
+          !att.resolution_id &&
+          !att.grievance_department_id &&
+          BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+      )
+      .map((att) => ({
+        id: att.attachment_id.toString(),
+        name: att.file_name,
+        path: `/api/attachments/${att.attachment_id}/download`,
+        size: att.file_size
+          ? `${Math.round(Number(att.file_size) / 1024)} KB`
+          : undefined,
+        type: att.file_type,
+      })),
     statusHistory: (grievance.grievance_status_history || []).map((h) => ({
       id: h.history_id.toString(),
       status: h.new_status,

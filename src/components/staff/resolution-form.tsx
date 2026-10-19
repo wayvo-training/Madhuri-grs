@@ -192,6 +192,12 @@ export function ResolutionForm({
               findings: findings.trim(),
               actionTaken: actionTaken.trim(),
               notes: `${problemSummary.trim()}\n\nOutcome / Recommendations:\n${outcome.trim()}`,
+              attachments: attachmentPayloads.map((att) => ({
+                fileName: att.name,
+                fileType: att.type,
+                fileSize: Number.parseFloat(att.size) * 1024,
+                filePath: att.path,
+              })),
             }),
           },
         );

@@ -785,15 +785,20 @@ export function QueueView({
                         </TableCell>
 
                         {/* 7. Assigned Officer */}
-                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top overflow-hidden">
                           {isItemBlocked ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
                               Blocked
                             </span>
                           ) : hasAssignedStaff ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
-                              <User className="h-3 w-3 text-slate-400" />
-                              <span>{item.assignedStaffName}</span>
+                            <span
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 max-w-full truncate"
+                              title={item.assignedStaffName || undefined}
+                            >
+                              <User className="h-3 w-3 text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {item.assignedStaffName}
+                              </span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-sm font-normal text-slate-500">

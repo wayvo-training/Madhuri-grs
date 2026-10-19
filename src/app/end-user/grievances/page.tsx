@@ -44,15 +44,22 @@ export default async function EndUserGrievancesPage() {
       status: g.status,
       createdAt: g.created_at.toISOString(),
       dueAt: g.due_at ? g.due_at.toISOString() : null,
-      attachments: (g.attachments || []).map((a) => ({
-        id: a.attachment_id.toString(),
-        name: a.file_name,
-        size: a.file_size
-          ? `${Math.round(Number(a.file_size) / 1024)} KB`
-          : "Document",
-        type: a.file_type,
-        path: a.file_path,
-      })),
+      attachments: (g.attachments || [])
+        .filter(
+          (a) =>
+            !a.resolution_id &&
+            !a.grievance_department_id &&
+            BigInt(a.uploaded_by) === BigInt(g.submitted_by),
+        )
+        .map((a) => ({
+          id: a.attachment_id.toString(),
+          name: a.file_name,
+          size: a.file_size
+            ? `${Math.round(Number(a.file_size) / 1024)} KB`
+            : "Document",
+          type: a.file_type,
+          path: a.file_path,
+        })),
       latestInquiry: inquiryVal
         ? {
             subject: inquiryVal.subject,

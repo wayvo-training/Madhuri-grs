@@ -1,6 +1,13 @@
 "use client";
 
-import { CheckCircle2, X } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  Eye,
+  FileText,
+  Paperclip,
+  X,
+} from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import type { GrievanceItem } from "@/types/department-head";
@@ -142,7 +149,7 @@ export function DepartmentHeadResolutionModal({
 
         <form onSubmit={handleFormSubmit} className="mt-4 space-y-4">
           {!isDirectResolution && grievance.submittedResolution && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-1.5">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-2">
               <div className="flex items-center justify-between font-semibold text-emerald-950">
                 <span>
                   Assigned Staff Findings:{" "}
@@ -155,6 +162,68 @@ export function DepartmentHeadResolutionModal({
               <p className="font-normal leading-relaxed">
                 {grievance.submittedResolution.note}
               </p>
+
+              {grievance.submittedResolution.attachments &&
+                grievance.submittedResolution.attachments.length > 0 && (
+                  <div className="pt-2 border-t border-emerald-200/80 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-950">
+                      <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
+                      <span>
+                        Resolution Attachments (
+                        {grievance.submittedResolution.attachments.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {grievance.submittedResolution.attachments.map(
+                        (att, idx) => (
+                          <div
+                            key={att.id || `res-att-${idx}`}
+                            className="flex items-center justify-between gap-2 p-2 rounded-lg border border-emerald-200/60 bg-white/90 shadow-2xs"
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <FileText className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-medium text-slate-800 truncate">
+                                  {att.name}
+                                </p>
+                                {att.size && (
+                                  <p className="text-[9px] text-slate-400">
+                                    {att.size}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {att.downloadUrl && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <a
+                                  href={att.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"
+                                  title="View document"
+                                >
+                                  <Eye className="h-2.5 w-2.5" />
+                                  <span>View</span>
+                                </a>
+                                <a
+                                  href={att.downloadUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download={att.name}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
+                                  title="Download document"
+                                >
+                                  <Download className="h-2.5 w-2.5" />
+                                  <span>Download</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
             </div>
           )}
 
