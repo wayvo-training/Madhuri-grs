@@ -99,27 +99,27 @@ export function AdminMetricCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-xl border p-4 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between h-[115px] sm:h-[120px]",
+        "relative overflow-hidden rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between min-h-[84px] sm:min-h-[88px]",
         styles.ring,
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
+        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
           {title}
         </span>
         <div
           className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            "flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg",
             styles.icon,
           )}
         >
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <div className="mt-1 flex items-baseline gap-2">
+      <div className="mt-1 flex items-baseline gap-2 min-w-0">
         <span
           className={cn(
-            "text-xl font-bold tracking-tight leading-none",
+            "text-lg sm:text-xl font-bold tracking-tight leading-none shrink-0",
             styles.value,
           )}
         >

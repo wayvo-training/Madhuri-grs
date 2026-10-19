@@ -132,9 +132,9 @@ export function StaffView({
   }, [sortedStaff, currentPage, pageSize]);
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* Team Capacity Metrics Banner */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 shrink-0">
         <AdminMetricCard
           title="Total Staff"
           value={staffList.length}
@@ -151,8 +151,8 @@ export function StaffView({
         />
         <AdminMetricCard
           title="Active Assigned Grievances"
-          value={`${metrics.totalActiveTickets} Grievances`}
-          helper={`Across ${metrics.activeStaffCount} active staff members`}
+          value={metrics.totalActiveTickets}
+          helper={`Across ${metrics.activeStaffCount} active staff`}
           icon={Inbox}
           accent="emerald"
         />
@@ -168,10 +168,10 @@ export function StaffView({
       </div>
 
       {/* Full-Width Staff Roster Cards Grid */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <div className="flex-1 flex flex-col min-h-0 rounded-2xl border border-slate-200/80 bg-white dark:bg-slate-900/60 p-4 sm:p-5 shadow-xs overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 shrink-0 pb-2.5 border-b border-slate-100 dark:border-slate-800">
           <div className="shrink-0">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+            <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               Staff Workload & Availability
             </h2>
             <p className="mt-0.5 text-[13px] font-normal text-slate-500">
@@ -197,11 +197,11 @@ export function StaffView({
         </div>
 
         {/* Full Staff Table with Row-only Vertical Scrolling */}
-        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs">
-          <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[900px]">
+        <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden my-2.5">
+          <div className="overflow-x-auto custom-scrollbar flex-1 min-h-0 flex flex-col">
+            <div className="min-w-[900px] flex-1 min-h-0 flex flex-col">
               {/* Header Table (Static, no scrollbar next to header) */}
-              <table className="w-full text-left text-sm table-fixed border-b border-slate-200/80 bg-slate-50 dark:bg-slate-900">
+              <table className="w-full text-left text-sm table-fixed shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
                 <colgroup>
                   <col className="w-[28%]" />
                   <col className="w-[14%]" />
@@ -260,7 +260,7 @@ export function StaffView({
               </table>
 
               {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
-              <div className="max-h-[420px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <table className="w-full text-left text-sm table-fixed">
                   <colgroup>
                     <col className="w-[28%]" />
@@ -282,16 +282,22 @@ export function StaffView({
                       </tr>
                     ) : (
                       paginatedStaff.map((staff) => {
-                        const loadPercentage =
-                          staff.maxCapacity > 0
-                            ? Math.round(
-                                (staff.activeTickets / staff.maxCapacity) * 100,
-                              )
-                            : 0;
-                        const isOverloaded = loadPercentage >= 80;
                         const staffTickets = grievances.filter(
                           (g) => g.assignedStaffId === staff.id,
                         );
+                        const activeTicketsCount = staffTickets.filter(
+                          (g) =>
+                            g.status !== "CLOSED" && g.status !== "RESOLVED",
+                        ).length;
+                        const effectiveActiveTickets = activeTicketsCount;
+                        const loadPercentage =
+                          staff.maxCapacity > 0
+                            ? Math.round(
+                                (effectiveActiveTickets / staff.maxCapacity) *
+                                  100,
+                              )
+                            : 0;
+                        const isOverloaded = loadPercentage >= 80;
 
                         return (
                           <tr
@@ -346,9 +352,9 @@ export function StaffView({
                             <td className="py-3 px-3 align-top">
                               <div className="space-y-1.5 w-full min-w-48 max-w-[240px]">
                                 <div className="flex items-center justify-between text-[13px]">
-                                  <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                                  <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
                                     <span>
-                                      {staff.activeTickets} /{" "}
+                                      {effectiveActiveTickets} /{" "}
                                       {staff.maxCapacity || 10}
                                     </span>
                                     <span className="text-slate-400 font-normal">
@@ -356,7 +362,7 @@ export function StaffView({
                                     </span>
                                     <span
                                       className={`text-[13px] ${
-                                        staff.activeTickets >=
+                                        effectiveActiveTickets >=
                                         (staff.maxCapacity || 10)
                                           ? "text-slate-900 dark:text-slate-200 font-bold"
                                           : "text-slate-900 dark:text-slate-200 font-medium"
@@ -366,7 +372,7 @@ export function StaffView({
                                       {Math.max(
                                         0,
                                         (staff.maxCapacity || 10) -
-                                          staff.activeTickets,
+                                          effectiveActiveTickets,
                                       )}
                                     </span>
                                   </div>
@@ -390,9 +396,20 @@ export function StaffView({
 
                             {/* Assigned Cases Count & Quick Actions */}
                             <td className="py-3 px-3 align-top">
-                              <div className="flex flex-col gap-1 items-start">
-                                <span className="text-sm font-semibold text-slate-700">
-                                  {staffTickets.length} assigned
+                              <div className="flex flex-col gap-0.5 items-start">
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                  {activeTicketsCount > 0 ? (
+                                    <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                                      {activeTicketsCount} active
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500 font-normal">
+                                      0 active
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[11px] text-slate-400">
+                                  {staffTickets.length} total assigned
                                 </span>
                                 {staffTickets.length > 0 && (
                                   <button
@@ -400,7 +417,7 @@ export function StaffView({
                                     onClick={() =>
                                       onFilterStaffInQueue(staff.id)
                                     }
-                                    className="text-[13px] font-medium text-emerald-700 hover:text-emerald-900 transition underline cursor-pointer"
+                                    className="text-[12px] font-medium text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 transition underline cursor-pointer mt-0.5"
                                   >
                                     View in Queue
                                   </button>
@@ -439,17 +456,19 @@ export function StaffView({
             </div>
           </div>
 
-          {/* Non-Sticky Solid Pagination Footer */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={Math.ceil(staffList.length / pageSize)}
-            totalCount={staffList.length}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50]}
-            itemLabel="staff members"
-          />
+          {/* Sticky Solid Pagination Footer */}
+          <div className="sticky bottom-0 z-10 shrink-0 mt-auto pt-2 border-t border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(filteredStaff.length / pageSize)}
+              totalCount={filteredStaff.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemLabel="staff members"
+            />
+          </div>
         </div>
       </div>
     </div>
