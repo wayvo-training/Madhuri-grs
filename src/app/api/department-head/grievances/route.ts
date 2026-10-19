@@ -330,13 +330,18 @@ export async function GET(request: Request) {
         (d) => d.grievance_id === g.grievance_id,
       );
       const myDeptRecord = departmentId
-        ? relatedDepts.find((d) => d.department_id === departmentId)
+        ? relatedDepts.find(
+            (d) => BigInt(d.department_id) === BigInt(departmentId),
+          )
         : null;
 
       // Find assignment in this head's department
       const myDeptAssignment = departmentId
         ? grievanceAssignments.find(
-            (a) => a.grievance_departments?.department_id === departmentId,
+            (a) =>
+              a.grievance_departments?.department_id &&
+              BigInt(a.grievance_departments.department_id) ===
+                BigInt(departmentId),
           )
         : null;
 
@@ -349,23 +354,29 @@ export async function GET(request: Request) {
 
       // Compute display name for Assigned To column
       let resolvedAssignedStaffName: string | null = null;
-      if (myDeptAssignment) {
-        const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
-        resolvedAssignedStaffName =
-          `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
-      } else if (!departmentId && grievanceAssignments.length > 0) {
-        resolvedAssignedStaffName = grievanceAssignments
-          .map((a) =>
-            `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
-          )
-          .join(", ");
-      } else if (assignedStaff) {
-        resolvedAssignedStaffName =
-          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
-      } else if (myDeptRecord?.status === "BLOCKED") {
-        resolvedAssignedStaffName = "Blocked";
+      if (departmentId) {
+        if (myDeptAssignment) {
+          const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
+          resolvedAssignedStaffName =
+            `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
+        } else if (myDeptRecord?.status === "BLOCKED") {
+          resolvedAssignedStaffName = "Blocked";
+        } else {
+          resolvedAssignedStaffName = "Unassigned";
+        }
       } else {
-        resolvedAssignedStaffName = "Unassigned";
+        if (grievanceAssignments.length > 0) {
+          resolvedAssignedStaffName = grievanceAssignments
+            .map((a) =>
+              `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
+            )
+            .join(", ");
+        } else if (assignedStaff) {
+          resolvedAssignedStaffName =
+            `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+        } else {
+          resolvedAssignedStaffName = "Unassigned";
+        }
       }
 
       const latestEscalation = g.escalations[0];
@@ -872,9 +883,12 @@ export async function GET(request: Request) {
           g.due_at,
           g.priority,
         ).consumptionPercent,
-        assignedStaffId: assignedStaff
-          ? assignedStaff.user_id.toString()
-          : null,
+        assignedStaffId: departmentId
+          ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
+            null
+          : assignedStaff
+            ? assignedStaff.user_id.toString()
+            : null,
         assignedStaffName: resolvedAssignedStaffName,
         createdAt: formatFriendlyDate(g.created_at),
         isReopened: g.reopen_count > 0 || g.status === "REOPENED",

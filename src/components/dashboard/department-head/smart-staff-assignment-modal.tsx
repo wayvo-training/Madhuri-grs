@@ -26,6 +26,13 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PriorityBadge } from "@/components/dashboard/badges";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { StaffRecommendationResult } from "@/lib/engines/staff-recommendation-engine";
 import type { GrievanceItem, StaffMember } from "@/types/department-head";
 
@@ -915,48 +922,72 @@ export function SmartStaffAssignmentModal({
                   </label>
 
                   {manualCandidates.length > 0 ? (
-                    <select
-                      id="available-staff-select"
-                      value={selectedStaffId}
-                      onChange={(e) => setSelectedStaffId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
+                    <Select
+                      value={
+                        topCandidate && selectedStaffId === topCandidate.staffId
+                          ? ""
+                          : selectedStaffId
+                      }
+                      onValueChange={(val) => {
+                        if (val) setSelectedStaffId(val);
+                      }}
                     >
-                      <option value="">
-                        Select another available staff (Ranked by Score)
-                      </option>
-                      {manualCandidates.map((candidate) => {
-                        const recCandidate = recommendations.find(
-                          (r) => r.staffId === candidate.id,
-                        );
-                        const isAtCap =
-                          candidate.activeTickets >=
-                          (candidate.maxCapacity || 10);
-                        const availCap = Math.max(
-                          0,
-                          (candidate.maxCapacity || 10) -
-                            candidate.activeTickets,
-                        );
-                        return (
-                          <option
-                            key={candidate.id}
-                            value={candidate.id}
-                            disabled={
-                              candidate.status === "ON_LEAVE" || isAtCap
-                            }
-                          >
-                            {candidate.name}
-                            {recCandidate
-                              ? ` (${recCandidate.score}% Score)`
-                              : ""}{" "}
-                            — Active Workload: {candidate.activeTickets} /{" "}
-                            {candidate.maxCapacity || 10}{" "}
-                            {isAtCap
-                              ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
-                              : `(Available Capacity: ${availCap})`}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      <SelectTrigger
+                        id="available-staff-select"
+                        className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
+                      >
+                        <SelectValue placeholder="Select another available staff (Ranked by Score)" />
+                      </SelectTrigger>
+                      <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-60">
+                        {manualCandidates.map((candidate) => {
+                          const recCandidate = recommendations.find(
+                            (r) => r.staffId === candidate.id,
+                          );
+                          const isAtCap =
+                            candidate.activeTickets >=
+                            (candidate.maxCapacity || 10);
+                          const availCap = Math.max(
+                            0,
+                            (candidate.maxCapacity || 10) -
+                              candidate.activeTickets,
+                          );
+                          return (
+                            <SelectItem
+                              key={candidate.id}
+                              value={candidate.id}
+                              disabled={
+                                candidate.status === "ON_LEAVE" || isAtCap
+                              }
+                              className="text-xs py-2 cursor-pointer"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-2">
+                                <span className="font-medium text-slate-800">
+                                  {candidate.name}
+                                  {recCandidate && (
+                                    <span className="ml-1.5 text-emerald-600 font-semibold">
+                                      ({recCandidate.score}% Score)
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[11px] text-slate-500">
+                                  Workload: {candidate.activeTickets} /{" "}
+                                  {candidate.maxCapacity || 10}{" "}
+                                  {isAtCap ? (
+                                    <span className="text-red-500 font-semibold">
+                                      (At Capacity)
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">
+                                      ({availCap} free)
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <div className="w-full rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-2 text-xs text-slate-500 text-center italic">
                       No other staff available in this department.
