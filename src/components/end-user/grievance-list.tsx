@@ -224,7 +224,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   >
                     <td className="py-2.5 px-5 whitespace-nowrap align-middle">
                       <Link
-                        href={`/end-user/grievances/${item.id}`}
+                        href={`/end-user/grievances/${item.id}?tab=overview`}
                         className="font-mono text-xs font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors"
                       >
                         {item.grievanceNumber}
@@ -266,7 +266,9 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
                             onClick: () =>
-                              router.push(`/end-user/grievances/${item.id}`),
+                              router.push(
+                                `/end-user/grievances/${item.id}?tab=overview`,
+                              ),
                           },
                           {
                             label: "Track",

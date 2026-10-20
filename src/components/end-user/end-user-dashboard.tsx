@@ -525,7 +525,9 @@ export function EndUserPortal({
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
                             onClick: () =>
-                              router.push(`/end-user/grievances/${g.id}`),
+                              router.push(
+                                `/end-user/grievances/${g.id}?tab=overview`,
+                              ),
                           },
                           {
                             label: "Track",

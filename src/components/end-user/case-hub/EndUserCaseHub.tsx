@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { AdditionalInfoModal } from "@/components/end-user/additional-info-modal";
 import { PrintSectionButton } from "@/components/end-user/print-button";
@@ -110,7 +110,7 @@ export function EndUserCaseHub({
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab") as TabType | null;
 
-  // Determine initial tab: if query param exists use that; otherwise if resolved/closed default to resolution
+  // Determine initial tab: always default to overview unless urlTab is explicitly provided
   const defaultTab: TabType = useMemo(() => {
     if (
       urlTab &&
@@ -118,18 +118,30 @@ export function EndUserCaseHub({
     ) {
       return urlTab;
     }
-    if (
-      resolution ||
-      grievance.status === "RESOLVED" ||
-      grievance.status === "UNDER_REVIEW" ||
-      grievance.status === "CLOSED"
-    ) {
-      return "resolution";
-    }
     return "overview";
-  }, [urlTab, grievance.status, resolution]);
+  }, [urlTab]);
 
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+
+  // Keep activeTab in sync whenever URL tab parameter changes
+  useEffect(() => {
+    if (
+      urlTab &&
+      ["overview", "resolution", "tracking", "documents"].includes(urlTab)
+    ) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
   const [docCategoryFilter, setDocCategoryFilter] = useState<
     "all" | "end-user" | "staff"
   >("all");
@@ -506,7 +518,7 @@ export function EndUserCaseHub({
         <div className="flex items-center gap-2 sm:gap-6 border-t border-slate-100 dark:border-slate-800 mt-3 pt-1.5 overflow-x-auto custom-scrollbar text-xs sm:text-sm font-semibold">
           <button
             type="button"
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleTabChange("overview")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "overview"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -519,7 +531,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("resolution")}
+            onClick={() => handleTabChange("resolution")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "resolution"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -537,7 +549,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("tracking")}
+            onClick={() => handleTabChange("tracking")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "tracking"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -550,7 +562,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("documents")}
+            onClick={() => handleTabChange("documents")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "documents"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
