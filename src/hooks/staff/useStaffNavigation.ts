@@ -6,6 +6,15 @@ import type { StaffView } from "@/types/staff";
 export function useStaffNavigation(defaultView: StaffView = "overview") {
   const [activeView, setActiveView] = useState<StaffView>(() => {
     if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const viewParam = searchParams.get("view");
+      if (
+        viewParam === "profile" ||
+        viewParam === "queue" ||
+        viewParam === "activity"
+      ) {
+        return viewParam as StaffView;
+      }
       const hash = window.location.hash.replace("#", "").toLowerCase();
       if (hash === "queue" || hash === "assigned") {
         return "queue";
@@ -23,6 +32,17 @@ export function useStaffNavigation(defaultView: StaffView = "overview") {
   useEffect(() => {
     const handleHash = () => {
       if (typeof window === "undefined") return;
+      const searchParams = new URLSearchParams(window.location.search);
+      const viewParam = searchParams.get("view");
+      if (
+        viewParam === "profile" ||
+        viewParam === "queue" ||
+        viewParam === "activity"
+      ) {
+        setActiveView(viewParam as StaffView);
+        return;
+      }
+
       const hash = window.location.hash.replace("#", "").toLowerCase();
       if (hash === "queue" || hash === "assigned") {
         setActiveView("queue");
@@ -49,7 +69,7 @@ export function useStaffNavigation(defaultView: StaffView = "overview") {
     setActiveView(view);
     if (typeof window !== "undefined") {
       if (view === "overview") {
-        if (window.location.hash) {
+        if (window.location.hash || window.location.search) {
           history.replaceState(null, "", window.location.pathname);
         }
       } else {

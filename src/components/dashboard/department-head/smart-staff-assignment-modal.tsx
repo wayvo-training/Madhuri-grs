@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { StaffRecommendationResult } from "@/lib/engines/staff-recommendation-engine";
 import type { GrievanceItem, StaffMember } from "@/types/department-head";
 
@@ -719,13 +720,47 @@ export function SmartStaffAssignmentModal({
             </div>
 
             {loading ? (
-              <div className="space-y-2.5 py-4">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-24 rounded-xl border border-slate-200 bg-slate-50/60 animate-pulse"
-                  />
-                ))}
+              <div className="space-y-3 py-3">
+                {["smart-rec-top", "smart-rec-second", "smart-rec-third"].map(
+                  (cardKey, idx) => (
+                    <div
+                      key={cardKey}
+                      className={`relative rounded-xl border p-4 transition ${
+                        idx === 0
+                          ? "border-teal-200/80 bg-teal-50/20"
+                          : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      {idx === 0 && (
+                        <div className="absolute -top-2.5 right-4">
+                          <Skeleton className="h-4 w-28 rounded-full" />
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-4 w-20 rounded-full" />
+                              </div>
+                              <Skeleton className="h-3 w-44" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                            <Skeleton className="h-5 rounded-lg" />
+                            <Skeleton className="h-5 rounded-lg" />
+                          </div>
+                        </div>
+                        <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                          <Skeleton className="h-8 w-16 rounded-xl" />
+                          <Skeleton className="h-6 w-20 rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                )}
               </div>
             ) : recommendations.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-500">

@@ -1,6 +1,5 @@
 import {
   Activity,
-  AlertTriangle,
   Bell,
   BookOpen,
   Building2,
@@ -191,7 +190,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Profile",
-          href: "/staff/dashboard#profile",
+          href: "/staff/profile",
           icon: User,
         },
       ],

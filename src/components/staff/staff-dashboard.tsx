@@ -55,11 +55,31 @@ export function StaffDashboard({
     initialData || null,
   );
   const [isLoading, setIsLoading] = useState(!initialData);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Synchronized Hash Navigation
-  const { activeView, switchView } = useStaffNavigation(defaultView);
+  const { activeView: internalActiveView, switchView: rawSwitchView } =
+    useStaffNavigation(defaultView);
+  const activeView: StaffView = internalActiveView;
+
+  const switchView = useCallback(
+    (view: StaffView) => {
+      if (view === "profile") {
+        router.push("/staff/profile");
+        return;
+      }
+      rawSwitchView(view);
+    },
+    [rawSwitchView, router],
+  );
+
+  useEffect(() => {
+    if (internalActiveView === "profile") {
+      router.replace("/staff/profile");
+    }
+  }, [internalActiveView, router]);
+
   const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>("all");
 
   const handleFilterQueue = (tab: StaffQueueTab) => {
@@ -348,6 +368,21 @@ export function StaffDashboard({
     if (activeView === "activity") {
       return <StaffActivitySkeleton />;
     }
+    if (activeView === "profile") {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-slate-200" />
+              <div className="space-y-2 flex-1">
+                <div className="h-5 w-44 bg-slate-200 rounded" />
+                <div className="h-3.5 w-60 bg-slate-100 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return <StaffDashboardSkeleton />;
   }
 
@@ -429,13 +464,13 @@ export function StaffDashboard({
 
   const assignedItems = data?.assignedGrievances || [];
   const activeCases = assignedItems.filter((g) => g.status !== "CLOSED");
-  const investigationCount = activeCases.filter(
+  const _investigationCount = activeCases.filter(
     (g) =>
       g.status === "IN_PROGRESS" ||
       g.status === "ASSIGNED" ||
       g.status === "WAITING_ON_USER",
   ).length;
-  const resolutionCount = assignedItems.filter(
+  const _resolutionCount = assignedItems.filter(
     (g) => g.hasResolution || g.status === "UNDER_REVIEW",
   ).length;
 

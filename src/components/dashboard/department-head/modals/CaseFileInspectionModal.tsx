@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  CaseNotesSkeleton,
+  CaseProgressSlaSkeleton,
+  CaseTimelineSkeleton,
+} from "@/components/common/skeletons";
 import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import type {
   CaseDrawerTab,
@@ -303,16 +308,19 @@ export function CaseFileInspectionModal({
 
         {/* Drawer Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
-          {activeTab === "progress" && (
-            <CaseProgressTab
-              currentGrievance={currentGrievance}
-              caseProgressData={caseProgressData}
-              staffList={staffList}
-              currentHodEmail={currentHodEmail}
-              hodEmail={hodEmail}
-              onAssignClick={onAssignClick}
-            />
-          )}
+          {activeTab === "progress" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseProgressSlaSkeleton />
+            ) : (
+              <CaseProgressTab
+                currentGrievance={currentGrievance}
+                caseProgressData={caseProgressData}
+                staffList={staffList}
+                currentHodEmail={currentHodEmail}
+                hodEmail={hodEmail}
+                onAssignClick={onAssignClick}
+              />
+            ))}
 
           {activeTab === "statement" && (
             <CaseStatementTab
@@ -325,35 +333,44 @@ export function CaseFileInspectionModal({
             />
           )}
 
-          {activeTab === "notes" && (
-            <CaseNotesTab
-              currentGrievance={currentGrievance}
-              onAddInternalNote={onAddInternalNote}
-              onGrievanceUpdated={setCurrentGrievance}
-            />
-          )}
+          {activeTab === "notes" &&
+            (caseProgressLoading && !currentGrievance.internalNotes?.length ? (
+              <CaseNotesSkeleton count={3} />
+            ) : (
+              <CaseNotesTab
+                currentGrievance={currentGrievance}
+                onAddInternalNote={onAddInternalNote}
+                onGrievanceUpdated={setCurrentGrievance}
+              />
+            ))}
 
-          {activeTab === "activity" && (
-            <CaseActivityTab
-              currentGrievance={currentGrievance}
-              caseProgressData={caseProgressData}
-            />
-          )}
+          {activeTab === "activity" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseTimelineSkeleton stepsCount={4} />
+            ) : (
+              <CaseActivityTab
+                currentGrievance={currentGrievance}
+                caseProgressData={caseProgressData}
+              />
+            ))}
 
-          {activeTab === "collaboration" && (
-            <CaseCollaborationTab
-              currentGrievance={{
-                ...currentGrievance,
-                departmentsInvolved:
-                  currentGrievance.departmentsInvolved ||
-                  caseProgressData?.departmentsInvolved,
-              }}
-              onAddCollaborationNote={
-                onAddCollaborationNote || onAddInternalNote
-              }
-              onGrievanceUpdated={setCurrentGrievance}
-            />
-          )}
+          {activeTab === "collaboration" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseNotesSkeleton count={2} />
+            ) : (
+              <CaseCollaborationTab
+                currentGrievance={{
+                  ...currentGrievance,
+                  departmentsInvolved:
+                    currentGrievance.departmentsInvolved ||
+                    caseProgressData?.departmentsInvolved,
+                }}
+                onAddCollaborationNote={
+                  onAddCollaborationNote || onAddInternalNote
+                }
+                onGrievanceUpdated={setCurrentGrievance}
+              />
+            ))}
 
           {activeTab === "findings" && (
             <DepartmentFindingsTab

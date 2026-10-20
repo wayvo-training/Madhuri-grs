@@ -5,7 +5,8 @@ export default function DepartmentHeadDashboardLoading() {
   return (
     <DashboardShell
       userRole="DEPARTMENT_HEAD"
-      userName="Loading..."
+      userName="Department Head"
+      userEmail="department.head@grs.gov.in"
       designation="Department Head"
       departmentName="Department Operations"
       title="Department Head Portal"

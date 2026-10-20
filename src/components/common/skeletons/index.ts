@@ -1,3 +1,4 @@
+export * from "./CaseCommonSkeletons";
 export * from "./DepartmentHeadDashboardSkeleton";
 export * from "./EndUserDashboardSkeleton";
 export * from "./EndUserGrievancesSkeleton";
