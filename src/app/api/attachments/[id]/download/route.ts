@@ -49,7 +49,7 @@ export async function GET(
       },
     });
 
-    if (!attachment || !attachment.grievances) {
+    if (!attachment?.grievances) {
       return NextResponse.json(
         { error: "Attachment not found" },
         { status: 404 },
@@ -111,8 +111,17 @@ export async function GET(
       );
     }
 
+    const isDownload =
+      request.nextUrl.searchParams.get("download") === "true" ||
+      request.nextUrl.searchParams.has("download");
+
     // Generate time-limited signed URL (valid for 5 minutes / 300 seconds)
-    const signedUrl = await getAttachmentUrl(normalized.storagePath, 300, true);
+    const signedUrl = await getAttachmentUrl(
+      normalized.storagePath,
+      300,
+      true,
+      isDownload ? attachment.file_name : undefined,
+    );
 
     const isJsonRequest =
       request.headers.get("accept")?.includes("application/json") ||
@@ -125,6 +134,18 @@ export async function GET(
         fileName: attachment.file_name,
         expiresInSeconds: 300,
       });
+    }
+
+    const ext = attachment.file_name.split(".").pop()?.toLowerCase();
+    const isOfficeDoc = ["docx", "doc", "xlsx", "xls", "pptx", "ppt"].includes(
+      ext || "",
+    );
+
+    if (!isDownload && isOfficeDoc) {
+      // Browsers lack native rendering support for Microsoft Office files (.docx, .xlsx, etc.).
+      // Route through Google Docs Viewer so the user can view the document directly in the browser without downloading it.
+      const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}`;
+      return NextResponse.redirect(viewerUrl);
     }
 
     // Direct browser navigation redirect

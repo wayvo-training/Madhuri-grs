@@ -32,7 +32,23 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     include: {
       categories: true,
       subcategories: true,
-      attachments: true,
+      attachments: {
+        include: {
+          users: {
+            select: {
+              first_name: true,
+              last_name: true,
+              roles: { select: { role_name: true } },
+            },
+          },
+          grievance_departments: {
+            include: {
+              departments: { select: { department_name: true } },
+            },
+          },
+        },
+        orderBy: { uploaded_at: "asc" },
+      },
       grievance_departments: {
         include: {
           departments: true,
@@ -175,6 +191,97 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
       };
     });
 
+  const rawAttachments = grievance.attachments || [];
+
+  // 1. Documents shared by the End User (Initial submission proofs & additional clarification documents)
+  const endUserAttachments = rawAttachments
+    .filter(
+      (att) =>
+        !att.resolution_id &&
+        !att.grievance_department_id &&
+        BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+    )
+    .map((att) => ({
+      id: att.attachment_id.toString(),
+      name: att.file_name,
+      path: `/api/attachments/${att.attachment_id}/download`,
+      size: att.file_size
+        ? `${Math.round(Number(att.file_size) / 1024)} KB`
+        : undefined,
+      type: att.file_type,
+      uploadedAt: att.uploaded_at.toISOString(),
+      uploadedBy: "You (End User)",
+      sourceTag: "End User Submission",
+    }));
+
+  // 2. Documents shared by Investigation Staff (Findings, department evidence, and resolution files)
+  const staffAttachmentsMap = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      path: string;
+      size?: string;
+      type?: string;
+      uploadedAt?: string;
+      uploadedBy?: string;
+      sourceTag?: string;
+    }
+  >();
+
+  rawAttachments
+    .filter(
+      (att) =>
+        att.resolution_id ||
+        att.grievance_department_id ||
+        BigInt(att.uploaded_by) !== BigInt(grievance.submitted_by),
+    )
+    .forEach((att) => {
+      const uploaderName = att.users
+        ? `${att.users.first_name} ${att.users.last_name || ""}`.trim()
+        : "Investigation Staff";
+      const deptName = att.grievance_departments?.departments?.department_name;
+      const sourceTag = att.resolution_id
+        ? "Official Resolution Evidence"
+        : deptName
+          ? `${deptName} Findings`
+          : "Investigation Staff Evidence";
+
+      staffAttachmentsMap.set(att.attachment_id.toString(), {
+        id: att.attachment_id.toString(),
+        name: att.file_name,
+        path: `/api/attachments/${att.attachment_id}/download`,
+        size: att.file_size
+          ? `${Math.round(Number(att.file_size) / 1024)} KB`
+          : undefined,
+        type: att.file_type,
+        uploadedAt: att.uploaded_at.toISOString(),
+        uploadedBy: deptName ? `${uploaderName} (${deptName})` : uploaderName,
+        sourceTag,
+      });
+    });
+
+  // Also include any resolution attachments from latestResolution
+  (latestResolution?.attachments || []).forEach((att) => {
+    const idStr = att.attachment_id.toString();
+    if (!staffAttachmentsMap.has(idStr)) {
+      staffAttachmentsMap.set(idStr, {
+        id: idStr,
+        name: att.file_name,
+        path: `/api/attachments/${att.attachment_id}/download`,
+        size: att.file_size
+          ? `${Math.round(Number(att.file_size) / 1024)} KB`
+          : undefined,
+        type: att.file_type,
+        uploadedAt: att.uploaded_at?.toISOString() || new Date().toISOString(),
+        uploadedBy: "Resolution Officer",
+        sourceTag: "Official Resolution Evidence",
+      });
+    }
+  });
+
+  const staffAttachments = Array.from(staffAttachmentsMap.values());
+
   const serializedGrievance: CaseHubGrievance = {
     id: Number(grievance.grievance_id),
     grievanceNumber: grievance.grievance_number,
@@ -188,22 +295,8 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     departmentName: primaryDept,
     departments: allDepts,
     supportingFindings,
-    attachments: (grievance.attachments || [])
-      .filter(
-        (att) =>
-          !att.resolution_id &&
-          !att.grievance_department_id &&
-          BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
-      )
-      .map((att) => ({
-        id: att.attachment_id.toString(),
-        name: att.file_name,
-        path: `/api/attachments/${att.attachment_id}/download`,
-        size: att.file_size
-          ? `${Math.round(Number(att.file_size) / 1024)} KB`
-          : undefined,
-        type: att.file_type,
-      })),
+    attachments: endUserAttachments,
+    staffAttachments,
     statusHistory: (grievance.grievance_status_history || []).map((h) => ({
       id: h.history_id.toString(),
       status: h.new_status,
