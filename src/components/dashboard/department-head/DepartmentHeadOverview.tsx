@@ -46,6 +46,7 @@ export function DepartmentHeadOverviewInner({
   hodEmail = "",
   employeeCode = "HOD-01",
   isAdminPreview: _isAdminPreview = false,
+  initialView = "overview",
 }: DepartmentHeadOverviewProps) {
   // Data management
   const {
@@ -72,7 +73,7 @@ export function DepartmentHeadOverviewInner({
   });
 
   // Navigation
-  const { activeView, switchView } = useDepartmentHeadNavigation();
+  const { activeView, switchView } = useDepartmentHeadNavigation(initialView);
 
   // Queue Filters & Metrics
   const {

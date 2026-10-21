@@ -229,6 +229,7 @@ export interface DepartmentHeadOverviewProps {
   hodEmail?: string;
   employeeCode?: string;
   isAdminPreview?: boolean;
+  initialView?: DepartmentHeadView;
 }
 
 export interface DocumentPreviewData {

@@ -112,12 +112,12 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
         },
         {
           title: "Grievance Queue",
-          href: "/department-head/dashboard#queue",
+          href: "/department-head/queue",
           icon: FileText,
         },
         {
           title: "Knowledge Base",
-          href: "/department-head/dashboard#knowledge",
+          href: "/department-head/knowledge",
           icon: BookOpen,
         },
         {
@@ -137,12 +137,12 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Staff Workload",
-          href: "/department-head/dashboard#staff",
+          href: "/department-head/workload",
           icon: Users,
         },
         {
           title: "Activity",
-          href: "/department-head/dashboard#activity",
+          href: "/department-head/activity",
           icon: Activity,
         },
       ],

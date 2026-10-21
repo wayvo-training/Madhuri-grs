@@ -22,6 +22,10 @@ const ROUTE_TITLES: Record<string, string> = {
 
   // Department Head
   "/department-head/dashboard": "Department Overview",
+  "/department-head/queue": "Department Grievance Queue",
+  "/department-head/workload": "Staff Workload & Capacity",
+  "/department-head/activity": "Department Governance Activity",
+  "/department-head/knowledge": "Department Knowledge Base",
   "/department-head/messages": "Grievance Communication",
   "/department-head/notifications": "Notifications",
 
