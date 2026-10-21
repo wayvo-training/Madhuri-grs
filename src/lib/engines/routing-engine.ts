@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { DEFAULT_ROUTING_CONFIG } from "@/lib/constants/routing";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { prisma } from "@/lib/prisma";
 import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
@@ -40,14 +41,17 @@ export function buildDepartmentMdiData(
     status: options.status ?? (isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT"),
     assigned_at: options.assignedAt ?? new Date(),
     allocated_duration_minutes: options.allocatedDurationMinutes ?? null,
-    sla_percent_allocation: options.slaPercentAllocation ?? 100.0,
+    sla_percent_allocation:
+      options.slaPercentAllocation ??
+      DEFAULT_ROUTING_CONFIG.DEFAULT_SLA_PERCENT,
     due_at: isBlocked ? null : (options.dueAt ?? null),
     sla_status: "ON_TRACK",
     dependency_type: options.dependencyType ?? "PARALLEL",
     prerequisite_department_ids: options.prerequisiteDepartmentIds
       ? options.prerequisiteDepartmentIds.map((id) => Number(id))
       : [],
-    execution_order: options.executionOrder ?? 1,
+    execution_order:
+      options.executionOrder ?? DEFAULT_ROUTING_CONFIG.DEFAULT_EXECUTION_ORDER,
     activated_at: activatedAt,
   };
 }
@@ -110,7 +114,7 @@ export function calculateDepartmentSlaDuration(
   // 3. Fallback: full overall budget duration
   return {
     allocatedDurationMinutes: totalBudgetMinutes,
-    slaPercentAllocation: 100.0,
+    slaPercentAllocation: DEFAULT_ROUTING_CONFIG.DEFAULT_SLA_PERCENT,
   };
 }
 
@@ -131,9 +135,13 @@ export function calculateDepartmentDeadline(
   const durationMs = allocatedDurationMinutes * 60 * 1000;
   const targetEnd = new Date(activatedAt.getTime() + durationMs);
 
-  // Department deadline must never exceed overall grievance deadline
+  // Department deadline must never exceed overall grievance deadline,
+  // unless the grievance deadline is already in the past relative to activation.
   if (grievanceDueAt && targetEnd > grievanceDueAt) {
-    return grievanceDueAt;
+    if (grievanceDueAt.getTime() > activatedAt.getTime()) {
+      return grievanceDueAt;
+    }
+    return targetEnd;
   }
 
   return targetEnd;
@@ -322,7 +330,45 @@ export async function determineDepartmentRouting(
     };
   }
 
-  // Step 3: No active routing rule matched -> Returns null for Manual Routing Queue
+  // Step 3: Global fallback rule (category_id is null and subcategory_id is null)
+  const globalMatch = activeRules.find(
+    (r) => r.category_id === null && r.subcategory_id === null,
+  );
+
+  if (globalMatch) {
+    const { names: suppNames, ids: suppIds } = resolveSupportingDepartments(
+      globalMatch.supporting_departments,
+      globalMatch.department_id,
+      activeDepartments,
+    );
+
+    return {
+      departmentId: globalMatch.department_id,
+      departmentName: globalMatch.departments.department_name,
+      involvementType:
+        (globalMatch.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+        "PRIMARY",
+      supportingDepartments: suppNames,
+      supportingDepartmentIds: suppIds,
+      dependencyType:
+        (
+          globalMatch.conditions as {
+            dependency_type?: "PARALLEL" | "SEQUENTIAL";
+          }
+        )?.dependency_type || "PARALLEL",
+      dependencies:
+        (
+          globalMatch.conditions as {
+            dependencies?: DepartmentDependencyNode[];
+          }
+        )?.dependencies || undefined,
+      routingRuleId: globalMatch.routing_rule_id,
+      matchedRuleName: globalMatch.rule_name,
+      matchType: "CATEGORY_FALLBACK",
+    };
+  }
+
+  // Step 4: No active routing rule matched -> Returns null for Manual Routing Queue
   return null;
 }
 
@@ -365,7 +411,7 @@ export async function populateGrievanceDepartments(
     let totalDurationMinutes: number =
       DEFAULT_SLA_DURATIONS_MINUTES[
         grievance?.priority?.toUpperCase() || "MEDIUM"
-      ] || 2880;
+      ] || DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
 
     if (grievance?.due_at && grievance?.created_at) {
       const diffMinutes = Math.round(
@@ -523,19 +569,22 @@ export async function populateGrievanceDepartments(
 
     for (const partner of existingPartners) {
       if (!supportingDeptIds.includes(partner.department_id)) {
-        const hasHistory =
-          partner.assignments !== null ||
-          partner.attachments.length > 0 ||
-          partner.status === "COMPLETED";
+        // Only completely untouched departments can be hard-deleted;
+        // active or historical records must be soft-removed to protect the audit trail.
+        const isUntouched =
+          !partner.assignments &&
+          partner.attachments.length === 0 &&
+          (partner.status === "PENDING_ASSIGNMENT" ||
+            partner.status === "BLOCKED");
 
-        if (hasHistory) {
+        if (isUntouched) {
+          await client.grievance_departments.delete({
+            where: { grievance_department_id: partner.grievance_department_id },
+          });
+        } else {
           await client.grievance_departments.update({
             where: { grievance_department_id: partner.grievance_department_id },
             data: { status: "REMOVED" },
-          });
-        } else {
-          await client.grievance_departments.delete({
-            where: { grievance_department_id: partner.grievance_department_id },
           });
         }
       }
@@ -733,16 +782,26 @@ export async function activateNextSequentialDepartments(
       ? (rawPrereqs as (number | string | bigint)[]).map((id) => String(id))
       : [];
 
-    // AND semantics: all prerequisites must be completed
+    // AND semantics: all prerequisites must be completed.
+    // If no explicit prerequisite IDs are configured, fall back to checking that all departments
+    // with a lower execution order have completed to prevent sequential deadlocks.
     const allPrereqsCompleted =
-      prereqIds.length > 0 && prereqIds.every((id) => completedDeptIds.has(id));
+      prereqIds.length > 0
+        ? prereqIds.every((id) => completedDeptIds.has(id))
+        : allDepts
+            .filter(
+              (d) =>
+                d.execution_order < blocked.execution_order &&
+                d.department_id !== blocked.department_id,
+            )
+            .every((d) => completedDeptIds.has(d.department_id.toString()));
 
     if (allPrereqsCompleted) {
       const now = new Date();
       let totalBudgetMinutes =
         DEFAULT_SLA_DURATIONS_MINUTES[
           blocked.grievances?.priority?.toUpperCase() || "MEDIUM"
-        ] || 2880;
+        ] || DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
 
       if (blocked.grievances?.due_at && blocked.grievances?.created_at) {
         const diff = Math.round(

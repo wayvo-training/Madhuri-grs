@@ -313,7 +313,9 @@ export async function POST(request: Request) {
           dependencies: cond?.dependencies,
           routingRuleId: activeRule.routing_rule_id,
           matchedRuleName: activeRule.rule_name,
-          matchType: "EXACT_SUBCATEGORY",
+          matchType: activeRule.subcategory_id
+            ? "EXACT_SUBCATEGORY"
+            : "CATEGORY_FALLBACK",
         },
         prisma,
       );
