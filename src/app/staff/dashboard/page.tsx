@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { StaffDashboard } from "@/components/staff/staff-dashboard";
 import { requirePageRole } from "@/lib/permissions";
 import type { StaffView } from "@/types/staff";
@@ -20,13 +19,6 @@ export default async function StaffDashboardPage({
   const deptName = user.departments?.department_name || "Operations";
   const employeeCode = user.employee_code || "STF-01";
 
-  const designation =
-    user.roles.role_name === "ADMIN"
-      ? "System Administrator"
-      : user.roles.role_name === "DEPARTMENT_HEAD"
-        ? "Department Head"
-        : "Grievance Staff";
-
   const resolvedParams = searchParams ? await searchParams : {};
   if (resolvedParams?.view === "profile") {
     redirect("/staff/profile");
@@ -40,24 +32,12 @@ export default async function StaffDashboardPage({
         : "overview";
 
   return (
-    <DashboardShell
-      userRole="STAFF"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation={designation}
+    <StaffDashboard
+      staffName={fullName}
+      staffEmail={user.email}
       departmentName={deptName}
-      title="Staff Workspace"
-      subtitle={`Investigation & Resolution Desk • ${deptName}`}
-      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
-    >
-      <StaffDashboard
-        staffName={fullName}
-        staffEmail={user.email}
-        departmentName={deptName}
-        employeeCode={employeeCode}
-        defaultView={defaultView}
-      />
-    </DashboardShell>
+      employeeCode={employeeCode}
+      defaultView={defaultView}
+    />
   );
 }

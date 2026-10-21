@@ -1,11 +1,9 @@
-import { DashboardShell } from "@/components/dashboard/shell";
 import { SubmitGrievanceForm } from "@/components/end-user/submit-grievance-form";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function EndUserSubmitPage() {
-  const user = await requirePageRole("END_USER");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("END_USER");
 
   const categories = await prisma.categories.findMany({
     where: { status: "ACTIVE" },
@@ -30,22 +28,11 @@ export default async function EndUserSubmitPage() {
   }));
 
   return (
-    <DashboardShell
-      userRole="END_USER"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Employee"
-      departmentName={user.departments?.department_name || "General Public"}
-      title="File a New Grievance"
-      subtitle="Submit a workplace grievance for review and resolution."
-    >
-      <div className="w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 h-full flex flex-col py-2 sm:py-3">
-        <SubmitGrievanceForm
-          categories={serializedCategories}
-          subcategories={serializedSubcategories}
-        />
-      </div>
-    </DashboardShell>
+    <div className="w-full max-w-5xl lg:max-w-6xl mx-auto flex-1 min-h-0 h-full flex flex-col py-2 sm:py-3">
+      <SubmitGrievanceForm
+        categories={serializedCategories}
+        subcategories={serializedSubcategories}
+      />
+    </div>
   );
 }

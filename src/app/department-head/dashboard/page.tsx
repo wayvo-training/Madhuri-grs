@@ -1,5 +1,4 @@
 import { DepartmentHeadOverview } from "@/components/dashboard/department-head";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -41,27 +40,12 @@ export default async function DepartmentHeadDashboardPage() {
   const finalDeptName = deptName || "Department Operations";
 
   return (
-    <DashboardShell
-      userRole={
-        isAdmin
-          ? "DEPARTMENT_HEAD"
-          : (user.roles.role_name as "DEPARTMENT_HEAD")
-      }
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Department Head"
+    <DepartmentHeadOverview
       departmentName={finalDeptName}
-      title="Department Head Portal"
-      subtitle={`Operational queue, staff assignment & SLA oversight for ${finalDeptName}`}
-    >
-      <DepartmentHeadOverview
-        departmentName={finalDeptName}
-        hodName={hodName}
-        hodEmail={hodEmail}
-        employeeCode={employeeCode}
-        isAdminPreview={isAdmin}
-      />
-    </DashboardShell>
+      hodName={hodName}
+      hodEmail={hodEmail}
+      employeeCode={employeeCode}
+      isAdminPreview={isAdmin}
+    />
   );
 }

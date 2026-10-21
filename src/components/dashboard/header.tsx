@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const ROUTE_TITLES: Record<string, string> = {
+  // Admin
   "/admin/dashboard": "Admin Control Center",
   "/admin/users": "User Directory & Access Control",
   "/admin/roles": "Roles & Security Permissions",
@@ -18,6 +19,28 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin/audit-logs": "Enterprise Audit Trail & Observability Logs",
   "/admin/messages": "Grievance Communication",
   "/admin/notifications": "Notifications",
+
+  // Department Head
+  "/department-head/dashboard": "Department Overview",
+  "/department-head/messages": "Grievance Communication",
+  "/department-head/notifications": "Notifications",
+
+  // Staff
+  "/staff/dashboard": "Staff Dashboard",
+  "/staff/grievances": "My Grievances",
+  "/staff/activity": "Activity Log",
+  "/staff/profile": "Staff Profile",
+  "/staff/messages": "Grievance Communication",
+  "/staff/notifications": "Notifications",
+
+  // End User
+  "/end-user/dashboard": "Grievance Portal Overview",
+  "/end-user/grievances": "My Grievances",
+  "/end-user/submit": "Submit Grievance",
+  "/end-user/track": "Track Grievance",
+  "/end-user/profile": "My Profile",
+  "/end-user/messages": "Grievance Communication",
+  "/end-user/notifications": "Notifications",
 };
 
 interface DashboardHeaderProps {

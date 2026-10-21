@@ -1,7 +1,6 @@
 import { Check, SearchX } from "lucide-react";
 import Link from "next/link";
 import { StatusBadge } from "@/components/dashboard/badges";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { TrackSearch } from "@/components/end-user/track-search";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -99,7 +98,6 @@ const getStageInfo = (id: string, grievance: GrievanceWithDept | null) => {
 
 export default async function EndUserTrackPage(props: PageProps) {
   const user = await requirePageRole("END_USER");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
   const searchParams = await props.searchParams;
   const trackId = searchParams.id;
@@ -233,206 +231,133 @@ export default async function EndUserTrackPage(props: PageProps) {
   }
 
   return (
-    <DashboardShell
-      userRole="END_USER"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Employee"
-      departmentName={user.departments?.department_name || "General Public"}
-      title="Track Your Grievance"
-      subtitle="Enter your grievance number to view the current status."
-    >
-      <div className="w-full space-y-6">
-        {/* Search Bar Container */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
-            Check Status
-          </h2>
-          <div className="w-full max-w-md">
-            <TrackSearch />
-          </div>
+    <div className="w-full space-y-6">
+      {/* Search Bar Container */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+          Check Status
+        </h2>
+        <div className="w-full max-w-md">
+          <TrackSearch />
         </div>
+      </div>
 
-        {/* Results Container */}
-        {trackId && !grievance && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-12 shadow-sm text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
-              <SearchX className="h-6 w-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-              Grievance Not Found
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">
-              We couldn't find a grievance matching{" "}
-              <span className="font-mono font-bold">"{trackId}"</span>.
-            </p>
+      {/* Results Container */}
+      {trackId && !grievance && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-12 shadow-sm text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 mb-4">
+            <SearchX className="h-6 w-6" />
           </div>
-        )}
+          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+            Grievance Not Found
+          </h3>
+          <p className="mt-2 text-sm text-slate-500">
+            We couldn't find a grievance matching{" "}
+            <span className="font-mono font-bold">"{trackId}"</span>.
+          </p>
+        </div>
+      )}
 
-        {trackId && grievance && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
-            {/* Compact Grievance Summary */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 dark:border-slate-800 pb-5 mb-8 gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                    {grievance.grievance_number}
-                  </h3>
-                  <Link
-                    href={`/end-user/grievances/${grievance.grievance_id}`}
-                    className="text-xs font-semibold text-[#0F766E] hover:underline"
-                  >
-                    View Full Case File &rarr;
-                  </Link>
-                </div>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-0.5">
-                  {grievance.title}
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Submitted:{" "}
-                  {new Date(grievance.created_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
+      {trackId && grievance && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
+          {/* Compact Grievance Summary */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 dark:border-slate-800 pb-5 mb-8 gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                  {grievance.grievance_number}
+                </h3>
+                <Link
+                  href={`/end-user/grievances/${grievance.grievance_id}`}
+                  className="text-xs font-semibold text-[#0F766E] hover:underline"
+                >
+                  View Full Case File &rarr;
+                </Link>
               </div>
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                <span className="text-xs font-medium text-slate-500">
-                  Current Status
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-0.5">
+                {grievance.title}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Submitted:{" "}
+                {new Date(grievance.created_at).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
+              <span className="text-xs font-medium text-slate-500">
+                Current Status
+              </span>
+              <StatusBadge status={grievance.status} />
+            </div>
+          </div>
+
+          {/* Stepper Timeline */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                Grievance Progress
+              </h4>
+              {timelineNodes.length > 5 && (
+                <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                  Scroll horizontally to view full timeline &rarr;
                 </span>
-                <StatusBadge status={grievance.status} />
-              </div>
+              )}
             </div>
 
-            {/* Stepper Timeline */}
-            <div>
-              <div className="flex items-center justify-between mb-5">
-                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  Grievance Progress
-                </h4>
-                {timelineNodes.length > 5 && (
-                  <span className="hidden md:inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
-                    Scroll horizontally to view full timeline &rarr;
-                  </span>
-                )}
-              </div>
+            {/* Desktop / Tablet: Horizontally Scrollable Stepper */}
+            <div className="hidden md:block overflow-x-auto pb-4 pt-1 custom-scrollbar">
+              <div
+                className="flex items-start relative min-w-max px-2"
+                style={{
+                  minWidth: `${Math.max(timelineNodes.length * 155, 750)}px`,
+                }}
+              >
+                {/* Connecting Track Line */}
+                <div className="absolute top-[14px] left-[77px] right-[77px] h-0.5 bg-slate-200 dark:bg-slate-700 z-0" />
 
-              {/* Desktop / Tablet: Horizontally Scrollable Stepper */}
-              <div className="hidden md:block overflow-x-auto pb-4 pt-1 custom-scrollbar">
-                <div
-                  className="flex items-start relative min-w-max px-2"
-                  style={{
-                    minWidth: `${Math.max(timelineNodes.length * 155, 750)}px`,
-                  }}
-                >
-                  {/* Connecting Track Line */}
-                  <div className="absolute top-[14px] left-[77px] right-[77px] h-0.5 bg-slate-200 dark:bg-slate-700 z-0" />
-
-                  {timelineNodes.map((node) => {
-                    const info = getStageInfo(node.id, grievance);
-
-                    return (
-                      <div
-                        key={node.id}
-                        className="relative z-10 flex flex-col items-center text-center w-[155px] px-2 shrink-0"
-                      >
-                        {/* Circle */}
-                        <div className="relative z-10 bg-white dark:bg-slate-900 px-2 py-0.5">
-                          {node.isCompleted ? (
-                            <div className="h-7 w-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xs">
-                              <Check className="h-4 w-4 stroke-[2.5]" />
-                            </div>
-                          ) : node.isCurrent ? (
-                            <div className="h-7 w-7 rounded-full bg-teal-600 ring-4 ring-teal-100 dark:ring-teal-900/50 text-white flex items-center justify-center shadow-2xs">
-                              <div className="h-2 w-2 rounded-full bg-white" />
-                            </div>
-                          ) : (
-                            <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center">
-                              <div className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Text */}
-                        <div className="mt-2.5 space-y-1">
-                          <div
-                            className={`text-xs font-bold leading-tight ${
-                              node.isCurrent
-                                ? "text-teal-700 dark:text-teal-400"
-                                : node.isCompleted
-                                  ? "text-slate-800 dark:text-slate-200"
-                                  : "text-slate-400 dark:text-slate-500"
-                            }`}
-                          >
-                            {info.label}
-                          </div>
-                          {node.date && (
-                            <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                              {new Date(node.date).toLocaleString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          )}
-                          <div
-                            className={`text-[11px] leading-tight max-w-[135px] mx-auto ${
-                              node.isFuture
-                                ? "text-slate-400 dark:text-slate-600"
-                                : "text-slate-600 dark:text-slate-400"
-                            }`}
-                          >
-                            {info.desc}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Mobile: Vertical Stepper */}
-              <div className="md:hidden relative pl-6 space-y-6 before:absolute before:left-[17px] before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-700">
                 {timelineNodes.map((node) => {
                   const info = getStageInfo(node.id, grievance);
+
                   return (
                     <div
                       key={node.id}
-                      className="relative flex items-start gap-3"
+                      className="relative z-10 flex flex-col items-center text-center w-[155px] px-2 shrink-0"
                     >
-                      <div className="relative z-10 -ml-6 bg-white dark:bg-slate-900 p-0.5">
+                      {/* Circle */}
+                      <div className="relative z-10 bg-white dark:bg-slate-900 px-2 py-0.5">
                         {node.isCompleted ? (
-                          <div className="h-6 w-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                          <div className="h-7 w-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-2xs">
+                            <Check className="h-4 w-4 stroke-[2.5]" />
                           </div>
                         ) : node.isCurrent ? (
-                          <div className="h-6 w-6 rounded-full bg-teal-600 ring-2 ring-teal-100 text-white flex items-center justify-center">
+                          <div className="h-7 w-7 rounded-full bg-teal-600 ring-4 ring-teal-100 dark:ring-teal-900/50 text-white flex items-center justify-center shadow-2xs">
                             <div className="h-2 w-2 rounded-full bg-white" />
                           </div>
                         ) : (
-                          <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 flex items-center justify-center">
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                          <div className="h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />
                           </div>
                         )}
                       </div>
-                      <div className="min-w-0 flex-1 pt-0.5">
+
+                      {/* Text */}
+                      <div className="mt-2.5 space-y-1">
                         <div
-                          className={`text-xs font-bold ${
+                          className={`text-xs font-bold leading-tight ${
                             node.isCurrent
                               ? "text-teal-700 dark:text-teal-400"
                               : node.isCompleted
                                 ? "text-slate-800 dark:text-slate-200"
-                                : "text-slate-400"
+                                : "text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           {info.label}
                         </div>
                         {node.date && (
-                          <div className="text-[11px] text-slate-500 mt-0.5">
+                          <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {new Date(node.date).toLocaleString("en-IN", {
                               day: "numeric",
                               month: "short",
@@ -442,7 +367,13 @@ export default async function EndUserTrackPage(props: PageProps) {
                             })}
                           </div>
                         )}
-                        <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        <div
+                          className={`text-[11px] leading-tight max-w-[135px] mx-auto ${
+                            node.isFuture
+                              ? "text-slate-400 dark:text-slate-600"
+                              : "text-slate-600 dark:text-slate-400"
+                          }`}
+                        >
                           {info.desc}
                         </div>
                       </div>
@@ -451,9 +382,65 @@ export default async function EndUserTrackPage(props: PageProps) {
                 })}
               </div>
             </div>
+
+            {/* Mobile: Vertical Stepper */}
+            <div className="md:hidden relative pl-6 space-y-6 before:absolute before:left-[17px] before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-700">
+              {timelineNodes.map((node) => {
+                const info = getStageInfo(node.id, grievance);
+                return (
+                  <div
+                    key={node.id}
+                    className="relative flex items-start gap-3"
+                  >
+                    <div className="relative z-10 -ml-6 bg-white dark:bg-slate-900 p-0.5">
+                      {node.isCompleted ? (
+                        <div className="h-6 w-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                          <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                        </div>
+                      ) : node.isCurrent ? (
+                        <div className="h-6 w-6 rounded-full bg-teal-600 ring-2 ring-teal-100 text-white flex items-center justify-center">
+                          <div className="h-2 w-2 rounded-full bg-white" />
+                        </div>
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 flex items-center justify-center">
+                          <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <div
+                        className={`text-xs font-bold ${
+                          node.isCurrent
+                            ? "text-teal-700 dark:text-teal-400"
+                            : node.isCompleted
+                              ? "text-slate-800 dark:text-slate-200"
+                              : "text-slate-400"
+                        }`}
+                      >
+                        {info.label}
+                      </div>
+                      {node.date && (
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {new Date(node.date).toLocaleString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      )}
+                      <div className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                        {info.desc}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        )}
-      </div>
-    </DashboardShell>
+        </div>
+      )}
+    </div>
   );
 }

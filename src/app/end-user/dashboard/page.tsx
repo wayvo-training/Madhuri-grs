@@ -1,4 +1,3 @@
-import { DashboardShell } from "@/components/dashboard/shell";
 import {
   EndUserPortal,
   type UserGrievanceItem,
@@ -8,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 
 export default async function UserDashboardPage() {
   const user = await requirePageRole("END_USER");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
   const userGrievances = await prisma.grievances.findMany({
     where: { submitted_by: user.user_id },
@@ -76,24 +74,12 @@ export default async function UserDashboardPage() {
   });
 
   return (
-    <DashboardShell
-      userRole="END_USER"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Employee"
-      departmentName={user.departments?.department_name || "Employee"}
-      title="End User Grievance Portal"
-      subtitle="Corporate grievance registration & resolution tracking"
-      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
-    >
-      <div className="flex-1 min-h-0 flex flex-col">
-        {/* Live End User Portal with Inquiry Response & Document Upload */}
-        <EndUserPortal
-          initialGrievances={serializedGrievances}
-          userEmail={user.email}
-        />
-      </div>
-    </DashboardShell>
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* Live End User Portal with Inquiry Response & Document Upload */}
+      <EndUserPortal
+        initialGrievances={serializedGrievances}
+        userEmail={user.email}
+      />
+    </div>
   );
 }

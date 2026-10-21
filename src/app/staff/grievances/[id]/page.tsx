@@ -1,4 +1,3 @@
-import { DashboardShell } from "@/components/dashboard/shell";
 import { StaffSingleGrievanceView } from "@/components/staff/staff-single-grievance-view";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -10,11 +9,6 @@ interface PageProps {
 export default async function StaffGrievanceDetailPage({ params }: PageProps) {
   const user = await requirePageRole(["STAFF", "ADMIN", "DEPARTMENT_HEAD"]);
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
-  const isAdmin =
-    user.roles.role_name === "ADMIN" ||
-    user.roles.role_name === "DEPARTMENT_HEAD";
-  const deptName = user.departments?.department_name || "Operations";
-
   const { id } = await params;
 
   // Fetch HOD info
@@ -43,31 +37,13 @@ export default async function StaffGrievanceDetailPage({ params }: PageProps) {
     ? `${hodUser.first_name} ${hodUser.last_name || ""}`.trim()
     : undefined;
 
-  const designation =
-    user.roles.role_name === "ADMIN"
-      ? "System Administrator"
-      : user.roles.role_name === "DEPARTMENT_HEAD"
-        ? "Department Head"
-        : "Grievance Staff";
-
   return (
-    <DashboardShell
-      userRole={isAdmin ? "STAFF" : (user.roles.role_name as "STAFF")}
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation={designation}
-      departmentName={deptName}
-      title="Grievance Examination"
-      subtitle={`Case file review & investigation workspace • ${deptName}`}
-    >
-      <StaffSingleGrievanceView
-        grievanceId={id}
-        staffName={fullName}
-        staffEmail={user.email}
-        hodEmail={hodUser?.email}
-        hodName={hodFullName}
-      />
-    </DashboardShell>
+    <StaffSingleGrievanceView
+      grievanceId={id}
+      staffName={fullName}
+      staffEmail={user.email}
+      hodEmail={hodUser?.email}
+      hodName={hodFullName}
+    />
   );
 }

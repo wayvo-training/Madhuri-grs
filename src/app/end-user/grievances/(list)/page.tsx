@@ -1,4 +1,3 @@
-import { DashboardShell } from "@/components/dashboard/shell";
 import { GrievanceList } from "@/components/end-user/grievance-list";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -6,7 +5,6 @@ import type { EndUserGrievance } from "@/types/end-user";
 
 export default async function EndUserGrievancesPage() {
   const user = await requirePageRole("END_USER");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
 
   const userGrievances = await prisma.grievances.findMany({
     where: { submitted_by: user.user_id },
@@ -73,19 +71,5 @@ export default async function EndUserGrievancesPage() {
     };
   });
 
-  return (
-    <DashboardShell
-      userRole="END_USER"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Employee"
-      departmentName={user.departments?.department_name || "General Public"}
-      title="My Grievances"
-      subtitle="Track all grievances you have submitted"
-      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
-    >
-      <GrievanceList initialGrievances={serializedGrievances} />
-    </DashboardShell>
-  );
+  return <GrievanceList initialGrievances={serializedGrievances} />;
 }

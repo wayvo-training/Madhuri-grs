@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { DashboardShell } from "@/components/dashboard/shell";
 import {
   type CaseHubGrievance,
   EndUserCaseHub,
@@ -18,7 +17,6 @@ interface PageProps {
 
 export default async function GrievanceDetailsPage({ params }: PageProps) {
   const user = await requirePageRole("END_USER");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
   const { id } = await params;
 
   const grievanceId = parseInt(id, 10);
@@ -319,24 +317,12 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     : [];
 
   return (
-    <DashboardShell
-      userRole="END_USER"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="Employee"
-      departmentName={user.departments?.department_name || "General Public"}
-      title={`Grievance ${grievance.grievance_number}`}
-      subtitle="View full details, resolution, tracking, and documents."
-      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
-    >
-      <EndUserCaseHub
-        grievance={serializedGrievance}
-        resolution={resolutionData}
-        canProvideAdditionalInfo={canProvideAdditionalInfo}
-        submissionCheck={submissionCheck}
-        requestedDocs={requestedDocs}
-      />
-    </DashboardShell>
+    <EndUserCaseHub
+      grievance={serializedGrievance}
+      resolution={resolutionData}
+      canProvideAdditionalInfo={canProvideAdditionalInfo}
+      submissionCheck={submissionCheck}
+      requestedDocs={requestedDocs}
+    />
   );
 }
