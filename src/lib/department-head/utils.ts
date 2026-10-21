@@ -57,8 +57,18 @@ export function formatAuditActionTitle(action: string): string {
   if (act.includes("SLA_100") || act.includes("BREACH")) {
     return "SLA Deadline Breached (Escalated)";
   }
-  if (act.includes("SLA_75")) {
-    return "SLA Warning Alert Dispatched";
+  if (act.includes("CRITICAL")) {
+    return "SLA Critical Alert Dispatched";
+  }
+  if (
+    act.includes("SLA_75") ||
+    act.includes("PERCENT_ALERT") ||
+    act.includes("AT_RISK")
+  ) {
+    return "SLA At Risk Alert Dispatched";
+  }
+  if (act.includes("WARNING")) {
+    return "SLA Priority Warning Dispatched";
   }
   if (act === "ROUTE" || act === "ROUTED") {
     return "Department Routing";
@@ -124,8 +134,29 @@ export function formatAuditLogContent(
         return `SLA resolution deadline elapsed. Case automatically escalated${escalatedTo} for intervention directives.`;
       }
 
-      if (act.includes("SLA_75") || parsed.slaStatus === "AT_RISK") {
-        return "SLA reached 75% threshold. Department Head notified for proactive review and guidance.";
+      if (act.includes("CRITICAL")) {
+        const threshold = parsed.threshold
+          ? `${parsed.threshold} threshold`
+          : "critical threshold";
+        return `SLA reached ${threshold}. Urgent intervention required before deadline breach.`;
+      }
+
+      if (
+        act.includes("SLA_75") ||
+        act.includes("PERCENT_ALERT") ||
+        parsed.slaStatus === "AT_RISK"
+      ) {
+        const threshold = parsed.threshold
+          ? `${parsed.threshold} threshold`
+          : "risk threshold";
+        return `SLA reached ${threshold}. Department Head notified for proactive review and guidance.`;
+      }
+
+      if (act.includes("WARNING")) {
+        const threshold = parsed.threshold
+          ? `${parsed.threshold} threshold`
+          : "warning threshold";
+        return `SLA reached ${threshold}. Priority alert dispatched to assigned staff member.`;
       }
 
       if (act.includes("ROUTE") || parsed.status === "ROUTED") {

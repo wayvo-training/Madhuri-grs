@@ -22,7 +22,7 @@ const faqs = [
   {
     question: "How does SLA monitoring work?",
     answer:
-      "Each grievance follows its configured SLA with 50% staff reminders, 75% HOD risk warnings, and 100% automated escalation upon breach.",
+      "Each grievance follows its configured SLA policy with progressive threshold reminders, at-risk/critical alerts, and automated escalation upon breach.",
   },
   {
     question: "Can more than one department work on the same grievance?",

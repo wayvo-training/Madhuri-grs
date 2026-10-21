@@ -1,3 +1,4 @@
+import { DEFAULT_SLA_THRESHOLDS } from "@/lib/constants/sla";
 import { prisma } from "@/lib/prisma";
 
 export type NotificationType =
@@ -87,38 +88,51 @@ export class NotificationService {
     slaPercentage: number,
     staffId: bigint,
     departmentHeadId: bigint,
+    thresholds: {
+      warning?: number;
+      atRisk?: number;
+      critical?: number;
+      breach?: number;
+    } = {},
   ) {
-    if (slaPercentage >= 50 && slaPercentage < 75) {
+    const warning =
+      thresholds.warning ?? DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT;
+    const atRisk = thresholds.atRisk ?? DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT;
+    const critical =
+      thresholds.critical ?? DEFAULT_SLA_THRESHOLDS.CRITICAL_PERCENT;
+    const breach = thresholds.breach ?? DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT;
+
+    if (slaPercentage >= warning && slaPercentage < atRisk) {
       await NotificationService.send({
         userId: staffId,
         grievanceId,
         type: "SLA_HALF_TIME",
-        title: "SLA Reminder: 50%",
-        message: `Grievance #${grievanceId} has reached 50% of its target resolution time.`,
+        title: `SLA Reminder: ${warning}%`,
+        message: `Grievance #${grievanceId} has reached ${warning}% of its target resolution time.`,
       });
-    } else if (slaPercentage >= 75 && slaPercentage < 90) {
+    } else if (slaPercentage >= atRisk && slaPercentage < critical) {
       await NotificationService.send({
         userId: departmentHeadId,
         grievanceId,
         type: "SLA_AT_RISK",
-        title: "SLA At Risk: 75%",
-        message: `Grievance #${grievanceId} has reached 75% of its SLA.`,
+        title: `SLA At Risk: ${atRisk}%`,
+        message: `Grievance #${grievanceId} has reached ${atRisk}% of its SLA.`,
       });
-    } else if (slaPercentage >= 90 && slaPercentage < 100) {
+    } else if (slaPercentage >= critical && slaPercentage < breach) {
       await NotificationService.send({
         userId: departmentHeadId,
         grievanceId,
         type: "SLA_URGENT",
-        title: "SLA Urgent: 90%",
-        message: `Grievance #${grievanceId} has reached 90% of its SLA and requires immediate attention.`,
+        title: `SLA Urgent: ${critical}%`,
+        message: `Grievance #${grievanceId} has reached ${critical}% of its SLA and requires immediate attention.`,
       });
-    } else if (slaPercentage >= 100) {
+    } else if (slaPercentage >= breach) {
       await NotificationService.send({
         userId: departmentHeadId,
         grievanceId,
         type: "SLA_BREACHED",
         title: "SLA Breached",
-        message: `Grievance #${grievanceId} has breached its SLA.`,
+        message: `Grievance #${grievanceId} has reached or exceeded ${breach}% and breached its SLA.`,
       });
     }
   }

@@ -1,3 +1,4 @@
+import { DEFAULT_SLA_THRESHOLDS } from "@/lib/constants/sla";
 import type { StaffGrievanceItem, StaffSlaState } from "@/types/staff";
 
 export interface SlaCalculationResult {
@@ -73,7 +74,9 @@ export function calculateSlaStatus(
       ? `${diffDays}d ${diffHours}h remaining`
       : `${diffHours}h ${diffMins}m remaining`;
 
-  const isAtRisk = consumptionPercent >= 75 || overrideStatus === "AT_RISK";
+  const isAtRisk =
+    consumptionPercent >= DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT ||
+    overrideStatus === "AT_RISK";
 
   return {
     consumptionPercent,
@@ -142,10 +145,30 @@ export const GRS_STAFF_RELEVANT_ACTIONS = new Set([
 ]);
 
 export function isStaffRelevantAuditAction(action: string): boolean {
+  if (
+    action.startsWith("SLA_") ||
+    action.startsWith("DEPT_SLA_") ||
+    action === "DEPARTMENT_SLA_WARNING"
+  ) {
+    return true;
+  }
   return GRS_STAFF_RELEVANT_ACTIONS.has(action);
 }
 
 export function formatAuditActionTitle(action: string): string {
+  if (
+    action.startsWith("SLA_") ||
+    action.startsWith("DEPT_SLA_") ||
+    action === "DEPARTMENT_SLA_WARNING"
+  ) {
+    if (action.includes("BREACH")) return "SLA Breach Escalated";
+    if (action.includes("CRITICAL")) return "SLA Critical Alert";
+    if (action.includes("ALERT") || action.includes("AT_RISK"))
+      return "SLA At Risk Alert";
+    if (action.includes("WARNING")) return "SLA Warning";
+    return "SLA Notification";
+  }
+
   switch (action) {
     case "GRIEVANCE_SUBMITTED":
       return "Grievance Registered";

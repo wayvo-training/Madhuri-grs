@@ -177,18 +177,37 @@ export function NotificationDrawer({
     ) {
       return <BookOpen className="h-4 w-4 text-[#0F766E]" />;
     }
-    if (type === "SLA_BREACH" || t.includes("breach")) {
+    if (
+      type === "SLA_BREACH" ||
+      type === "SLA_BREACHED" ||
+      t.includes("breach")
+    ) {
       return <CircleAlert className="h-4 w-4 text-red-500" />;
     }
-    if (t.includes("urgent") || t.includes("90%")) {
+    if (
+      type.includes("CRITICAL") ||
+      type === "SLA_URGENT" ||
+      t.includes("urgent") ||
+      t.includes("critical")
+    ) {
       return (
         <CircleAlert className="h-4 w-4 text-orange-600 dark:text-orange-500" />
       );
     }
-    if (type === "SLA_WARNING" || t.includes("75%")) {
+    if (
+      type.includes("RISK") ||
+      type === "SLA_AT_RISK" ||
+      t.includes("at risk") ||
+      t.includes("risk")
+    ) {
       return <CircleAlert className="h-4 w-4 text-orange-500" />;
     }
-    if (t.includes("50%")) {
+    if (
+      type.includes("WARN") ||
+      type.includes("HALF_TIME") ||
+      t.includes("warning") ||
+      t.includes("reminder")
+    ) {
       return <CircleAlert className="h-4 w-4 text-amber-500" />;
     }
     if (type === "GRIEVANCE_UPDATE" || t.includes("internal note")) {

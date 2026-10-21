@@ -161,6 +161,9 @@ export async function GET() {
             (userRole === "DEPARTMENT_HEAD" &&
               (n.notification_type === "SLA_BREACHED" ||
                 n.notification_type === "SLA_AT_RISK" ||
+                n.notification_type.startsWith("SLA_CRITICAL") ||
+                n.notification_type.startsWith("SLA_RISK") ||
+                n.notification_type.startsWith("DEPT_SLA_") ||
                 n.notification_type === "RESOLUTION_SUBMITTED")) ||
             title.toLowerCase().includes("action required") ||
             title.toLowerCase().includes("review required") ||
@@ -168,12 +171,11 @@ export async function GET() {
 
         const isSla =
           n.notification_type.startsWith("SLA_") ||
+          n.notification_type.startsWith("DEPT_SLA_") ||
           n.notification_type === "GRIEVANCE_ESCALATED" ||
           title.toLowerCase().includes("sla") ||
           title.toLowerCase().includes("breach") ||
           title.toLowerCase().includes("escalat");
-
-        const isUpdate = !isActionRequired && !isSla;
 
         return {
           id: n.notification_id.toString(),

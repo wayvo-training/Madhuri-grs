@@ -194,12 +194,30 @@ export async function GET(request: Request) {
 
       // User-friendly action title
       let formattedAction = `${ticketNum}: ${log.action.replace(/_/g, " ")}`;
-      if (log.action === "SLA_100_BREACH_ESCALATED") {
+      const val = log.new_value as Record<string, unknown> | null;
+
+      if (log.action.includes("BREACH")) {
         formattedAction = `${ticketNum}: SLA Breached & Case Escalated`;
-      } else if (log.action === "SLA_75_PERCENT_HOD_ALERT") {
-        formattedAction = `${ticketNum}: SLA At Risk (75% Threshold Alert)`;
-      } else if (log.action === "SLA_50_PERCENT_WARNING") {
-        formattedAction = `${ticketNum}: 50% SLA Priority Warning`;
+      } else if (
+        log.action.includes("CRITICAL") ||
+        log.action.includes("URGENT")
+      ) {
+        const threshold = val?.threshold ? String(val.threshold) : "Critical";
+        formattedAction = `${ticketNum}: SLA Critical (${threshold} Alert)`;
+      } else if (
+        log.action === "SLA_75_PERCENT_HOD_ALERT" ||
+        log.action.includes("PERCENT_ALERT") ||
+        log.action.includes("AT_RISK")
+      ) {
+        const threshold = val?.threshold ? String(val.threshold) : "At Risk";
+        formattedAction = `${ticketNum}: SLA At Risk (${threshold} Alert)`;
+      } else if (
+        log.action === "SLA_50_PERCENT_WARNING" ||
+        log.action.includes("PERCENT_WARNING") ||
+        log.action === "DEPARTMENT_SLA_WARNING"
+      ) {
+        const threshold = val?.threshold ? String(val.threshold) : "Priority";
+        formattedAction = `${ticketNum}: ${threshold} SLA Warning`;
       } else if (log.action === "INTERVENTION_MONITOR") {
         formattedAction = `${ticketNum}: HOD Continuing Monitoring`;
       } else if (log.action === "INTERVENTION_NOTIFY_STAFF") {
@@ -212,30 +230,54 @@ export async function GET(request: Request) {
 
       // Friendly human-readable summary without raw JSON dumping
       let formattedDetails = "";
-      const val = log.new_value as Record<string, unknown> | null;
 
       if (val && typeof val === "object") {
-        if (log.action === "SLA_100_BREACH_ESCALATED") {
+        if (log.action.includes("BREACH")) {
           const consumption =
             val.consumptionPercent != null
               ? `${Math.round(Number(val.consumptionPercent))}%`
-              : "100%";
+              : val.threshold
+                ? String(val.threshold)
+                : "100%";
           const escalatedTo = val.escalatedTo
             ? ` to ${String(val.escalatedTo)}`
             : "";
           formattedDetails = `Critical SLA breach (${consumption} elapsed). Auto-escalated${escalatedTo} for intervention.`;
-        } else if (log.action === "SLA_75_PERCENT_HOD_ALERT") {
+        } else if (
+          log.action.includes("CRITICAL") ||
+          log.action.includes("URGENT")
+        ) {
           const consumption =
             val.consumptionPercent != null
               ? `${Math.round(Number(val.consumptionPercent))}%`
-              : "75%";
+              : val.threshold
+                ? String(val.threshold)
+                : "Critical";
+          formattedDetails = `SLA critical at ${consumption} capacity. Immediate intervention required before deadline breach.`;
+        } else if (
+          log.action === "SLA_75_PERCENT_HOD_ALERT" ||
+          log.action.includes("PERCENT_ALERT") ||
+          log.action.includes("AT_RISK")
+        ) {
+          const consumption =
+            val.consumptionPercent != null
+              ? `${Math.round(Number(val.consumptionPercent))}%`
+              : val.threshold
+                ? String(val.threshold)
+                : "At Risk";
           formattedDetails = `SLA reached ${consumption} capacity. Department Head alerted for monitoring without auto-reassignment.`;
-        } else if (log.action === "SLA_50_PERCENT_WARNING") {
+        } else if (
+          log.action === "SLA_50_PERCENT_WARNING" ||
+          log.action.includes("PERCENT_WARNING") ||
+          log.action === "DEPARTMENT_SLA_WARNING"
+        ) {
           const consumption =
             val.consumptionPercent != null
               ? `${Math.round(Number(val.consumptionPercent))}%`
-              : "50%";
-          formattedDetails = `50% SLA consumed (${consumption}). Priority alert dispatched to assigned staff member.`;
+              : val.threshold
+                ? String(val.threshold)
+                : "Warning";
+          formattedDetails = `SLA warning threshold consumed (${consumption}). Priority alert dispatched to assigned staff member.`;
         } else if (val.note) {
           formattedDetails = String(val.note);
         } else if (val.remarks) {
