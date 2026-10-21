@@ -352,6 +352,18 @@ export async function POST(
           },
         });
 
+        // Mark any active staff assignment for this department stage as COMPLETED
+        await tx.assignments.updateMany({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+            assignment_status: "ASSIGNED",
+          },
+          data: {
+            assignment_status: "COMPLETED",
+            completed_at: new Date(),
+          },
+        });
+
         // Mark department stage as completed and trigger next sequential department activation
         await tx.grievance_departments.update({
           where: {
