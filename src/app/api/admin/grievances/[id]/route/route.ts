@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
-import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
-import {
-  buildDepartmentMdiData,
-  calculateDepartmentDeadline,
-  calculateDepartmentSlaDuration,
-} from "@/lib/engines/routing-engine";
+import { populateGrievanceDepartments } from "@/lib/engines/routing-engine";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
-import {
-  type DepartmentDependencyNode,
-  validateRoutingPolicy,
-} from "@/lib/validations/dependency-graph";
+import { validateRoutingPolicy } from "@/lib/validations/dependency-graph";
 
 export async function POST(
   request: Request,
@@ -151,319 +143,41 @@ export async function POST(
       );
     }
 
+    const depType =
+      dependency_type === "SEQUENTIAL" ? "SEQUENTIAL" : "PARALLEL";
+
     let isPrimaryBlocked = false;
 
     // Perform database transaction for manual routing exception
     await prisma.$transaction(async (tx) => {
-      // 1. Handle primary department assignment
-      const existingPrimary = await tx.grievance_departments.findFirst({
-        where: {
-          grievance_id: grievanceId,
-          involvement_type: "PRIMARY",
-        },
-      });
-
-      let totalDurationMinutes: number =
-        DEFAULT_SLA_DURATIONS_MINUTES[
-          grievance.priority?.toUpperCase() || "MEDIUM"
-        ] || 2880;
-
-      if (grievance.due_at && grievance.created_at) {
-        const diffMinutes = Math.round(
-          (grievance.due_at.getTime() - grievance.created_at.getTime()) / 60000,
-        );
-        if (diffMinutes > 0) totalDurationMinutes = diffMinutes;
-      }
-
-      const primaryDepNode = Array.isArray(dependencies)
-        ? dependencies.find(
-            (n: DepartmentDependencyNode) =>
-              (n.department_id &&
-                n.department_id.toString() ===
-                  primaryDepartmentId.toString()) ||
-              (n.department_name &&
-                n.department_name.toLowerCase() ===
-                  primaryDept.department_name.toLowerCase()),
-          )
-        : undefined;
-
-      const primaryAlloc = calculateDepartmentSlaDuration(
-        totalDurationMinutes,
-        primaryDepNode,
-      );
-      const depType =
-        dependency_type === "SEQUENTIAL" ? "SEQUENTIAL" : "PARALLEL";
-
-      const allActiveDepts = [primaryDept, ...validSupportingDepts];
-      let primaryExecutionOrder = 1;
-      const primaryPrereqIds: bigint[] = [];
-
-      if (depType === "SEQUENTIAL" && primaryDepNode) {
-        primaryExecutionOrder = primaryDepNode.execution_order ?? 1;
-        const rawPrereqs = (primaryDepNode.prerequisites || [])
-          .map((p: string) => p.trim())
-          .filter((p: string) => p.length > 0);
-
-        if (rawPrereqs.length > 0) {
-          isPrimaryBlocked = true;
-          for (const p of rawPrereqs) {
-            const matched = allActiveDepts.find(
-              (d) =>
-                (d.department_id.toString() === p ||
-                  d.department_name.toLowerCase() === p.toLowerCase()) &&
-                d.department_id !== primaryDepartmentId,
-            );
-            if (matched && !primaryPrereqIds.includes(matched.department_id)) {
-              primaryPrereqIds.push(matched.department_id);
-            }
-          }
-        }
-      }
-
-      const isSamePrimary =
-        existingPrimary &&
-        existingPrimary.department_id === primaryDepartmentId;
-
-      if (
-        isSamePrimary &&
-        (existingPrimary.status === "COMPLETED" ||
-          existingPrimary.status === "RESOLVED") &&
-        isPrimaryBlocked
-      ) {
-        throw new Error(
-          `Cannot block primary department "${primaryDept.department_name}" because it has already completed investigation.`,
-        );
-      }
-
-      let primaryStatus = isPrimaryBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
-      let primaryActivatedAt: Date | null = isPrimaryBlocked
-        ? null
-        : new Date();
-      let primaryDueAt: Date | null = isPrimaryBlocked
-        ? null
-        : calculateDepartmentDeadline(
-            primaryActivatedAt,
-            primaryAlloc.allocatedDurationMinutes,
-            grievance.due_at,
-          ) ||
-          grievance.due_at ||
-          new Date(Date.now() + totalDurationMinutes * 60 * 1000);
-
-      if (isSamePrimary && existingPrimary) {
-        if (
-          existingPrimary.status === "COMPLETED" ||
-          existingPrimary.status === "RESOLVED"
-        ) {
-          primaryStatus = existingPrimary.status;
-        } else if (existingPrimary.status !== "BLOCKED" && !isPrimaryBlocked) {
-          primaryStatus = existingPrimary.status;
-        }
-
-        if (existingPrimary.activated_at && !isPrimaryBlocked) {
-          primaryActivatedAt = existingPrimary.activated_at;
-          primaryDueAt = existingPrimary.due_at ?? primaryDueAt;
-        }
-      }
-
-      const primaryMdiData = buildDepartmentMdiData(primaryDepartmentId, {
-        involvementType: "PRIMARY",
-        dependencyType: depType,
-        executionOrder: primaryExecutionOrder,
-        prerequisiteDepartmentIds: primaryPrereqIds,
-        slaPercentAllocation: primaryAlloc.slaPercentAllocation,
-        allocatedDurationMinutes: primaryAlloc.allocatedDurationMinutes,
-        dueAt: primaryDueAt,
-        status: primaryStatus,
-        activatedAt: primaryActivatedAt,
-        assignedAt:
-          isSamePrimary && existingPrimary
-            ? existingPrimary.assigned_at
-            : undefined,
-      });
-
-      if (existingPrimary) {
-        await tx.grievance_departments.update({
-          where: {
-            grievance_department_id: existingPrimary.grievance_department_id,
-          },
-          data: primaryMdiData,
-        });
-      } else {
-        await tx.grievance_departments.create({
-          data: {
-            grievance_id: grievanceId,
-            ...primaryMdiData,
-          },
-        });
-      }
-
-      // 2. Preserve audit history: soft-remove removed supporting departments with history, delete empty placeholders
-      const existingSupporting = await tx.grievance_departments.findMany({
-        where: {
-          grievance_id: grievanceId,
-          involvement_type: "SUPPORTING",
-        },
-        include: {
-          assignments: true,
-          attachments: true,
-        },
-      });
-
-      const existingSuppMap = new Map(
-        existingSupporting.map((s) => [s.department_id.toString(), s]),
-      );
-      const newSuppIds = new Set(
-        validSupportingDepts.map((d) => d.department_id),
-      );
-
-      for (const supp of existingSupporting) {
-        if (!newSuppIds.has(supp.department_id)) {
-          const hasHistory =
-            supp.assignments !== null ||
-            supp.attachments.length > 0 ||
-            supp.status === "COMPLETED";
-
-          if (hasHistory) {
-            await tx.grievance_departments.update({
-              where: { grievance_department_id: supp.grievance_department_id },
-              data: { status: "REMOVED" },
-            });
-          } else {
-            await tx.grievance_departments.delete({
-              where: { grievance_department_id: supp.grievance_department_id },
-            });
-          }
-        }
-      }
-
-      // 3. Upsert fresh SUPPORTING entries
-      for (let i = 0; i < validSupportingDepts.length; i++) {
-        const supp = validSupportingDepts[i];
-        const depNode = Array.isArray(dependencies)
-          ? dependencies.find(
-              (n: DepartmentDependencyNode) =>
-                (n.department_id &&
-                  n.department_id.toString() ===
-                    supp.department_id.toString()) ||
-                (n.department_name &&
-                  n.department_name.toLowerCase() ===
-                    supp.department_name.toLowerCase()),
-            )
-          : undefined;
-
-        let executionOrder = 1;
-        let prereqDepartmentIds: bigint[] = [];
-        let isBlocked = false;
-
-        if (depType === "SEQUENTIAL") {
-          if (depNode) {
-            executionOrder = depNode.execution_order || i + 2;
-            const rawPrereqs = (depNode.prerequisites || [])
-              .map((p: string) => p.trim())
-              .filter((p: string) => p.length > 0);
-
-            if (rawPrereqs.length > 0) {
-              isBlocked = true;
-              for (const prereqStr of rawPrereqs) {
-                const matched = allActiveDepts.find(
-                  (d) =>
-                    (d.department_id.toString() === prereqStr ||
-                      d.department_name.toLowerCase() ===
-                        prereqStr.toLowerCase()) &&
-                    d.department_id !== supp.department_id,
-                );
-                if (
-                  matched &&
-                  !prereqDepartmentIds.includes(matched.department_id)
-                ) {
-                  prereqDepartmentIds.push(matched.department_id);
-                }
-              }
-            }
-          } else {
-            executionOrder = i + 2;
-            prereqDepartmentIds = [primaryDepartmentId];
-            isBlocked = true;
-          }
-        }
-
-        const existingRecord = existingSuppMap.get(
-          supp.department_id.toString(),
-        );
-
-        if (
-          existingRecord &&
-          (existingRecord.status === "COMPLETED" ||
-            existingRecord.status === "RESOLVED") &&
-          isBlocked
-        ) {
-          throw new Error(
-            `Cannot block department "${supp.department_name}" because it has already completed investigation.`,
-          );
-        }
-
-        const suppAlloc = calculateDepartmentSlaDuration(
-          totalDurationMinutes,
-          depNode,
-        );
-
-        let suppStatus = isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
-        let suppActivatedAt: Date | null = isBlocked ? null : new Date();
-        let suppDueAt: Date | null = isBlocked
-          ? null
-          : calculateDepartmentDeadline(
-              suppActivatedAt,
-              suppAlloc.allocatedDurationMinutes,
-              grievance.due_at,
-            );
-
-        if (existingRecord) {
-          if (
-            existingRecord.status === "COMPLETED" ||
-            existingRecord.status === "RESOLVED"
-          ) {
-            suppStatus = existingRecord.status;
-          } else if (existingRecord.status !== "BLOCKED" && !isBlocked) {
-            suppStatus = existingRecord.status;
-          }
-
-          if (existingRecord.activated_at && !isBlocked) {
-            suppActivatedAt = existingRecord.activated_at;
-            suppDueAt = existingRecord.due_at ?? suppDueAt;
-          }
-        }
-
-        const suppMdiData = buildDepartmentMdiData(supp.department_id, {
-          involvementType: "SUPPORTING",
+      const popResult = await populateGrievanceDepartments(
+        grievanceId,
+        {
+          departmentId: primaryDepartmentId,
+          departmentName: primaryDept.department_name,
+          involvementType: "PRIMARY",
+          supportingDepartments: validSupportingDepts.map(
+            (d) => d.department_name,
+          ),
+          supportingDepartmentIds: validSupportingDepts.map(
+            (d) => d.department_id,
+          ),
           dependencyType: depType,
-          executionOrder,
-          prerequisiteDepartmentIds: prereqDepartmentIds,
-          slaPercentAllocation: suppAlloc.slaPercentAllocation,
-          allocatedDurationMinutes: suppAlloc.allocatedDurationMinutes,
-          dueAt: suppDueAt,
-          status: suppStatus,
-          activatedAt: suppActivatedAt,
-          assignedAt: existingRecord ? existingRecord.assigned_at : undefined,
-        });
+          dependencies: Array.isArray(dependencies) ? dependencies : undefined,
+          routingRuleId: BigInt(0),
+          matchedRuleName: "MANUAL_ADMIN_ROUTING",
+          matchType: "CATEGORY_FALLBACK",
+        },
+        tx,
+        {
+          dependencyType: depType,
+          dependencies: Array.isArray(dependencies) ? dependencies : undefined,
+        },
+      );
 
-        if (existingRecord) {
-          await tx.grievance_departments.update({
-            where: {
-              grievance_department_id: existingRecord.grievance_department_id,
-            },
-            data: suppMdiData,
-          });
-        } else {
-          await tx.grievance_departments.create({
-            data: {
-              grievance_id: grievanceId,
-              ...suppMdiData,
-            },
-          });
-        }
-      }
+      isPrimaryBlocked = popResult.blockedDeptIds.includes(primaryDepartmentId);
 
-      // 4. Update grievance status to ROUTED and increment manual review counter
+      // Update grievance status to ROUTED and increment manual review counter
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
@@ -473,7 +187,7 @@ export async function POST(
         },
       });
 
-      // 5. Record status transition history
+      // Record status transition history
       const suppText =
         validSupportingDepts.length > 0
           ? ` | Supporting: ${validSupportingDepts.map((d) => d.department_name).join(", ")}`
@@ -489,7 +203,7 @@ export async function POST(
         },
       });
 
-      // 6. Record audit log
+      // Record audit log
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,

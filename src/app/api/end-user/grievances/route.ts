@@ -2,11 +2,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { DEFAULT_ROUTING_CONFIG } from "@/lib/constants/routing";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
-import { populateGrievanceDepartments } from "@/lib/engines/routing-engine";
+import {
+  determineDepartmentRouting,
+  populateGrievanceDepartments,
+} from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { uploadToSupabase } from "@/lib/supabase";
-import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 
 export async function POST(request: Request) {
   try {
@@ -127,34 +130,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Apply Routing Rules
-    let activeRule = await prisma.routing_rules.findFirst({
-      where: {
-        category_id: BigInt(categoryId),
-        subcategory_id: BigInt(subcategoryId),
-        status: "ACTIVE",
-      },
+    // Apply Routing Rules via centralized routing engine
+    const routingResult = await determineDepartmentRouting({
+      categoryId,
+      subcategoryId,
     });
-
-    if (!activeRule) {
-      activeRule = await prisma.routing_rules.findFirst({
-        where: {
-          category_id: BigInt(categoryId),
-          subcategory_id: null,
-          status: "ACTIVE",
-        },
-      });
-    }
-
-    if (!activeRule) {
-      activeRule = await prisma.routing_rules.findFirst({
-        where: {
-          category_id: null,
-          subcategory_id: null,
-          status: "ACTIVE",
-        },
-      });
-    }
 
     // Resolve category and subcategory names for priority matching
     const subcategoryRecord = await prisma.subcategories.findUnique({
@@ -186,11 +166,11 @@ export async function POST(request: Request) {
     const targetMinutes =
       slaPolicy?.target_duration_minutes ||
       DEFAULT_SLA_DURATIONS_MINUTES[priorityLevel] ||
-      2880;
+      DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
     const now = new Date();
     const dueAt = new Date(now.getTime() + targetMinutes * 60 * 1000);
 
-    const isAutoRouted = Boolean(activeRule?.department_id);
+    const isAutoRouted = Boolean(routingResult);
     const initialStatus = isAutoRouted ? "ROUTED" : "SUBMITTED";
 
     // Create the grievance with status ROUTED (if rule matched) or SUBMITTED (if manual routing needed), priority, calculated due_at, and sla_status
@@ -262,61 +242,11 @@ export async function POST(request: Request) {
       message: `Your grievance ${newGrievance.grievance_number} has been submitted successfully and is being processed.`,
     });
 
-    // 1. Resolve primary department if routing rule exists
-    let primaryDept = null;
-    if (activeRule?.department_id) {
-      primaryDept = await prisma.departments.findFirst({
-        where: {
-          department_id: activeRule.department_id,
-          status: "ACTIVE",
-        },
-      });
-    }
-
-    // If there is an active routing rule and active department, assign it
-    if (activeRule && primaryDept) {
-      const supportingDeptNames = Array.isArray(
-        activeRule.supporting_departments,
-      )
-        ? (activeRule.supporting_departments as string[])
-        : [];
-
-      const supportingDepts =
-        supportingDeptNames.length > 0
-          ? await prisma.departments.findMany({
-              where: {
-                department_name: { in: supportingDeptNames },
-                status: "ACTIVE",
-              },
-              select: { department_id: true, department_name: true },
-            })
-          : [];
-
-      const cond = activeRule.conditions as {
-        dependency_type?: "PARALLEL" | "SEQUENTIAL";
-        dependencies?: DepartmentDependencyNode[];
-      } | null;
-
+    // If there is an active routing rule match with an active department, assign it
+    if (routingResult) {
       const popResult = await populateGrievanceDepartments(
         newGrievance.grievance_id,
-        {
-          departmentId: primaryDept.department_id,
-          departmentName: primaryDept.department_name,
-          involvementType:
-            (activeRule.involvement_type as
-              | "PRIMARY"
-              | "SUPPORTING"
-              | "EQUAL") || "PRIMARY",
-          supportingDepartments: supportingDepts.map((d) => d.department_name),
-          supportingDepartmentIds: supportingDepts.map((d) => d.department_id),
-          dependencyType: cond?.dependency_type || "PARALLEL",
-          dependencies: cond?.dependencies,
-          routingRuleId: activeRule.routing_rule_id,
-          matchedRuleName: activeRule.rule_name,
-          matchType: activeRule.subcategory_id
-            ? "EXACT_SUBCATEGORY"
-            : "CATEGORY_FALLBACK",
-        },
+        routingResult,
         prisma,
       );
 
@@ -337,7 +267,7 @@ export async function POST(request: Request) {
           old_status: "SUBMITTED",
           new_status: "ROUTED",
           changed_by: user.user_id,
-          remarks: `Auto-routed to ${primaryDept.department_name}`,
+          remarks: `Auto-routed to ${routingResult.departmentName || "Primary Department"}`,
         },
       });
 

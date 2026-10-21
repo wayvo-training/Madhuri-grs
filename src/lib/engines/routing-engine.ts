@@ -240,9 +240,12 @@ export async function determineDepartmentRouting(
     where: { status: "ACTIVE" },
     select: { department_id: true, department_name: true },
   });
+  const activeDeptIdSet = new Set(
+    activeDepartments.map((d) => d.department_id.toString()),
+  );
 
   // Fetch active routing rules ordered by rule_order ASC with department details
-  const activeRules = await prisma.routing_rules.findMany({
+  const allActiveRules = await prisma.routing_rules.findMany({
     where: { status: "ACTIVE" },
     include: {
       departments: {
@@ -251,6 +254,11 @@ export async function determineDepartmentRouting(
     },
     orderBy: { rule_order: "asc" },
   });
+
+  // Only consider rules whose target primary department is currently active
+  const activeRules = allActiveRules.filter(
+    (r) => r.department_id && activeDeptIdSet.has(r.department_id.toString()),
+  );
 
   // Step 1: Exact match on Category + Subcategory
   const exactMatch = activeRules.find(
@@ -479,16 +487,72 @@ export async function populateGrievanceDepartments(
       primaryDepNode,
     );
 
-    // 2. Main department (Primary or Equal co-lead): upsert in grievance_departments
-    const existingMain = await client.grievance_departments.findFirst({
-      where: {
-        grievance_id: gId,
-        involvement_type: { in: ["PRIMARY", "EQUAL"] },
+    // 2. Fetch all existing department records for this grievance
+    const existingDeptRecords = await client.grievance_departments.findMany({
+      where: { grievance_id: gId },
+      include: {
+        assignments: true,
+        attachments: true,
       },
     });
 
-    const isSamePrimary =
-      existingMain && existingMain.department_id === primaryDeptId;
+    const existingRecordMap = new Map(
+      existingDeptRecords.map((d) => [d.department_id.toString(), d]),
+    );
+
+    const existingPrimaryRecord = existingRecordMap.get(
+      primaryDeptId.toString(),
+    );
+
+    // If there was an old PRIMARY row for a different department, demote or handle it first
+    // to strictly avoid violating uq_grievance_single_primary.
+    const oldPrimaryRecord = existingDeptRecords.find(
+      (d) =>
+        d.involvement_type === "PRIMARY" && d.department_id !== primaryDeptId,
+    );
+
+    if (oldPrimaryRecord) {
+      const isDemotedToSupporting = supportingDeptIds.includes(
+        oldPrimaryRecord.department_id,
+      );
+
+      if (isDemotedToSupporting) {
+        // Demote previous primary to partner involvement so uq_grievance_single_primary is not violated
+        await client.grievance_departments.update({
+          where: {
+            grievance_department_id: oldPrimaryRecord.grievance_department_id,
+          },
+          data: {
+            involvement_type: partnerInvolvement,
+          },
+        });
+      } else {
+        // Old primary is no longer involved in the grievance
+        const isUntouched =
+          !oldPrimaryRecord.assignments &&
+          oldPrimaryRecord.attachments.length === 0 &&
+          (oldPrimaryRecord.status === "PENDING_ASSIGNMENT" ||
+            oldPrimaryRecord.status === "BLOCKED");
+
+        if (isUntouched) {
+          await client.grievance_departments.delete({
+            where: {
+              grievance_department_id: oldPrimaryRecord.grievance_department_id,
+            },
+          });
+        } else {
+          await client.grievance_departments.update({
+            where: {
+              grievance_department_id: oldPrimaryRecord.grievance_department_id,
+            },
+            data: {
+              status: "REMOVED",
+              involvement_type: "SUPPORTING",
+            },
+          });
+        }
+      }
+    }
 
     let primaryStatus = isPrimaryBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
     let primaryActivatedAt: Date | null = isPrimaryBlocked ? null : new Date();
@@ -502,21 +566,29 @@ export async function populateGrievanceDepartments(
         grievance?.due_at ||
         new Date(Date.now() + totalDurationMinutes * 60 * 1000);
 
-    if (isSamePrimary && existingMain) {
-      // Preserve completed / resolved status
+    if (existingPrimaryRecord) {
+      // Preserve completed / resolved status, or active in-progress status if not blocked
       if (
-        existingMain.status === "COMPLETED" ||
-        existingMain.status === "RESOLVED"
+        existingPrimaryRecord.status === "COMPLETED" ||
+        existingPrimaryRecord.status === "RESOLVED"
       ) {
-        primaryStatus = existingMain.status;
-      } else if (existingMain.status !== "BLOCKED" && !isPrimaryBlocked) {
-        primaryStatus = existingMain.status;
+        primaryStatus = existingPrimaryRecord.status;
+      } else if (
+        (existingPrimaryRecord.status === "IN_PROGRESS" ||
+          existingPrimaryRecord.status === "ASSIGNED") &&
+        !isPrimaryBlocked
+      ) {
+        primaryStatus = existingPrimaryRecord.status;
       }
 
-      // Preserve existing SLA timestamps if active
-      if (existingMain.activated_at && !isPrimaryBlocked) {
-        primaryActivatedAt = existingMain.activated_at;
-        primaryDueAt = existingMain.due_at ?? primaryDueAt;
+      // Preserve existing SLA timestamps if active and previously activated
+      if (
+        existingPrimaryRecord.activated_at &&
+        !isPrimaryBlocked &&
+        existingPrimaryRecord.status !== "REMOVED"
+      ) {
+        primaryActivatedAt = existingPrimaryRecord.activated_at;
+        primaryDueAt = existingPrimaryRecord.due_at ?? primaryDueAt;
       }
     }
 
@@ -530,14 +602,16 @@ export async function populateGrievanceDepartments(
       dueAt: primaryDueAt,
       status: primaryStatus,
       activatedAt: primaryActivatedAt,
-      assignedAt:
-        isSamePrimary && existingMain ? existingMain.assigned_at : undefined,
+      assignedAt: existingPrimaryRecord
+        ? existingPrimaryRecord.assigned_at
+        : undefined,
     });
 
-    if (existingMain) {
+    if (existingPrimaryRecord) {
       await client.grievance_departments.update({
         where: {
-          grievance_department_id: existingMain.grievance_department_id,
+          grievance_department_id:
+            existingPrimaryRecord.grievance_department_id,
         },
         data: primaryMdiData,
       });
@@ -551,39 +625,27 @@ export async function populateGrievanceDepartments(
     }
 
     // 3. Preserve audit history: soft-remove removed supporting departments with history, delete empty placeholders
-    const existingPartners = await client.grievance_departments.findMany({
-      where: {
-        grievance_id: gId,
-        involvement_type: { in: ["SUPPORTING", "EQUAL"] },
-        department_id: { not: primaryDeptId },
-      },
-      include: {
-        assignments: true,
-        attachments: true,
-      },
-    });
-
-    const existingPartnerMap = new Map(
-      existingPartners.map((p) => [p.department_id.toString(), p]),
-    );
-
-    for (const partner of existingPartners) {
-      if (!supportingDeptIds.includes(partner.department_id)) {
+    for (const record of existingDeptRecords) {
+      if (
+        record.department_id !== primaryDeptId &&
+        !supportingDeptIds.includes(record.department_id) &&
+        record.department_id !== oldPrimaryRecord?.department_id
+      ) {
         // Only completely untouched departments can be hard-deleted;
         // active or historical records must be soft-removed to protect the audit trail.
         const isUntouched =
-          !partner.assignments &&
-          partner.attachments.length === 0 &&
-          (partner.status === "PENDING_ASSIGNMENT" ||
-            partner.status === "BLOCKED");
+          !record.assignments &&
+          record.attachments.length === 0 &&
+          (record.status === "PENDING_ASSIGNMENT" ||
+            record.status === "BLOCKED");
 
         if (isUntouched) {
           await client.grievance_departments.delete({
-            where: { grievance_department_id: partner.grievance_department_id },
+            where: { grievance_department_id: record.grievance_department_id },
           });
         } else {
           await client.grievance_departments.update({
-            where: { grievance_department_id: partner.grievance_department_id },
+            where: { grievance_department_id: record.grievance_department_id },
             data: { status: "REMOVED" },
           });
         }
@@ -658,7 +720,7 @@ export async function populateGrievanceDepartments(
         depNode,
       );
 
-      const existingRecord = existingPartnerMap.get(suppId.toString());
+      const existingRecord = existingRecordMap.get(suppId.toString());
 
       let suppStatus = isBlocked ? "BLOCKED" : "PENDING_ASSIGNMENT";
       let suppActivatedAt: Date | null = isBlocked ? null : new Date();
@@ -676,11 +738,19 @@ export async function populateGrievanceDepartments(
           existingRecord.status === "RESOLVED"
         ) {
           suppStatus = existingRecord.status;
-        } else if (existingRecord.status !== "BLOCKED" && !isBlocked) {
+        } else if (
+          (existingRecord.status === "IN_PROGRESS" ||
+            existingRecord.status === "ASSIGNED") &&
+          !isBlocked
+        ) {
           suppStatus = existingRecord.status;
         }
 
-        if (existingRecord.activated_at && !isBlocked) {
+        if (
+          existingRecord.activated_at &&
+          !isBlocked &&
+          existingRecord.status !== "REMOVED"
+        ) {
           suppActivatedAt = existingRecord.activated_at;
           suppDueAt = existingRecord.due_at ?? suppDueAt;
         }
@@ -764,9 +834,14 @@ export async function activateNextSequentialDepartments(
     },
   });
 
-  const completedDeptIds = new Set(
+  const completedOrRemovedDeptIds = new Set(
     allDepts
-      .filter((d) => d.status === "COMPLETED" || d.status === "RESOLVED")
+      .filter(
+        (d) =>
+          d.status === "COMPLETED" ||
+          d.status === "RESOLVED" ||
+          d.status === "REMOVED",
+      )
       .map((d) => d.department_id.toString()),
   );
 
@@ -782,19 +857,24 @@ export async function activateNextSequentialDepartments(
       ? (rawPrereqs as (number | string | bigint)[]).map((id) => String(id))
       : [];
 
-    // AND semantics: all prerequisites must be completed.
-    // If no explicit prerequisite IDs are configured, fall back to checking that all departments
+    // AND semantics: all prerequisites must be completed (or removed from case).
+    // If no explicit prerequisite IDs are configured, fall back to checking that all active departments
     // with a lower execution order have completed to prevent sequential deadlocks.
     const allPrereqsCompleted =
       prereqIds.length > 0
-        ? prereqIds.every((id) => completedDeptIds.has(id))
+        ? prereqIds.every(
+            (id) =>
+              completedOrRemovedDeptIds.has(id) ||
+              !allDepts.some((d) => d.department_id.toString() === id),
+          )
         : allDepts
             .filter(
               (d) =>
                 d.execution_order < blocked.execution_order &&
-                d.department_id !== blocked.department_id,
+                d.department_id !== blocked.department_id &&
+                d.status !== "REMOVED",
             )
-            .every((d) => completedDeptIds.has(d.department_id.toString()));
+            .every((d) => d.status === "COMPLETED" || d.status === "RESOLVED");
 
     if (allPrereqsCompleted) {
       const now = new Date();

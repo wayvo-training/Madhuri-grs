@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { AuthUser } from "@/lib/auth";
+import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -105,13 +106,8 @@ export function formatSlaTimeLeft(
   let effectiveDue = dueAt;
   if (!effectiveDue && createdAt && priority) {
     const mins =
-      priority === "CRITICAL"
-        ? 720
-        : priority === "HIGH"
-          ? 1440
-          : priority === "LOW"
-            ? 4320
-            : 2880;
+      DEFAULT_SLA_DURATIONS_MINUTES[priority.toUpperCase()] ||
+      DEFAULT_SLA_DURATIONS_MINUTES.MEDIUM;
     effectiveDue = new Date(new Date(createdAt).getTime() + mins * 60 * 1000);
   }
 

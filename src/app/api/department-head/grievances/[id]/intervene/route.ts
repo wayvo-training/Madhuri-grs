@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_ROUTING_CONFIG } from "@/lib/constants/routing";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
@@ -354,7 +355,7 @@ export async function POST(
             let totalMins =
               DEFAULT_SLA_DURATIONS_MINUTES[
                 grievance.priority?.toUpperCase() || "MEDIUM"
-              ] || 2880;
+              ] || DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
 
             if (grievance.due_at && grievance.created_at) {
               const diffMinutes = Math.round(
