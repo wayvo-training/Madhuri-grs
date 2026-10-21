@@ -423,9 +423,21 @@ export function SmartStaffAssignmentModal({
 
   const recommendedCandidates = [...recommendations]
     .filter((candidate) => candidate.availabilityStatus !== "ON_LEAVE")
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      const aEligible = a.activeWorkload < (a.maxCapacity || 10);
+      const bEligible = b.activeWorkload < (b.maxCapacity || 10);
+      if (aEligible !== bEligible) {
+        return aEligible ? -1 : 1;
+      }
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return a.activeWorkload - b.activeWorkload;
+    });
 
-  const topCandidate = recommendedCandidates[0];
+  const topCandidate =
+    recommendations.find((r) => r.isTopRecommendation) ||
+    recommendedCandidates[0];
 
   const manualCandidates = [...staffList]
     .filter((s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE")

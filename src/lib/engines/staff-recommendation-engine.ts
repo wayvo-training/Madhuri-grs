@@ -175,13 +175,13 @@ export async function calculateStaffRecommendations(
     resolvedDeptName = dept?.department_name;
   }
 
-  // 2. Fetch eligible staff in this department
+  // 2. Fetch eligible staff in this department (include DEPARTMENT_HEAD as fallback candidate if no dedicated staff)
   const eligibleStaff = await prisma.users.findMany({
     where: {
       department_id: targetDeptId,
       status: "ACTIVE",
       roles: {
-        role_name: "STAFF",
+        role_name: { in: ["STAFF", "DEPARTMENT_HEAD"] },
       },
     },
     include: {
@@ -234,12 +234,16 @@ export async function calculateStaffRecommendations(
   const scoredList: StaffRecommendationResult[] = candidates.map((staff) => {
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
-    // Workload calculation (only active assigned cases, excluding closed)
+    // Workload calculation: count active in-flight assignments only
+    // Excludes the current grievance being (re)assigned and non-active grievance states (CLOSED, RESOLVED, UNDER_REVIEW)
     const activeAssignments =
       staff.assignments_assignments_staff_idTousers.filter(
         (a) =>
           a.assignment_status === "ASSIGNED" &&
-          a.grievances?.status !== "CLOSED",
+          a.grievance_id !== grievanceId &&
+          !["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(
+            a.grievances?.status || "",
+          ),
       );
     const activeWorkload = activeAssignments.length;
 
@@ -265,9 +269,12 @@ export async function calculateStaffRecommendations(
         matchWeight = 25 * mult;
         matchedSkills.push(us.skills.skill_name);
       } else if (
-        categoryName.includes(skillName) ||
-        skillName.includes(categoryName) ||
-        subcategoryName.includes(skillName)
+        (categoryName.length > 0 &&
+          (categoryName.includes(skillName) ||
+            skillName.includes(categoryName))) ||
+        (subcategoryName.length > 0 &&
+          (subcategoryName.includes(skillName) ||
+            skillName.includes(subcategoryName)))
       ) {
         matchWeight = 20 * mult;
         matchedSkills.push(us.skills.skill_name);
