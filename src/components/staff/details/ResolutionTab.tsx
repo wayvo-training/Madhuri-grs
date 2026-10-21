@@ -130,12 +130,12 @@ export function ResolutionTab({
         </div>
       )}
 
-      {/* Staff Supporting Documents Section */}
+      {/* Staff Supportive Documents Section */}
       {resolutionAttachments.length > 0 && (
         <div className="space-y-2 pt-2">
           <span className="font-semibold text-slate-800 flex items-center gap-1.5">
             <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
-            Staff Supporting Resolution Documents (
+            Staff Supportive Resolution Documents (
             {resolutionAttachments.length}):
           </span>
           <div className="space-y-2">
@@ -150,7 +150,7 @@ export function ResolutionTab({
                     onOpenDocumentPreview?.({
                       name: file.name,
                       size: file.size,
-                      type: file.type || "Supporting Document",
+                      type: file.type || "Supportive Document",
                       path: file.path,
                       uploadedAt: file.uploadedAt,
                       grievanceNumber: grievance.grievanceNumber,
@@ -182,7 +182,7 @@ export function ResolutionTab({
                       {file.name}
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      {file.size} &bull; {file.type || "Supporting Document"}
+                      {file.size} &bull; {file.type || "Supportive Document"}
                     </div>
                   </div>
                 </button>
@@ -193,7 +193,7 @@ export function ResolutionTab({
                     onOpenDocumentPreview?.({
                       name: file.name,
                       size: file.size,
-                      type: file.type || "Supporting Document",
+                      type: file.type || "Supportive Document",
                       path: file.path,
                       uploadedAt: file.uploadedAt,
                       grievanceNumber: grievance.grievanceNumber,

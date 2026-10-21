@@ -48,7 +48,7 @@ const STEPS = [
   {
     number: 2,
     title: "Attach Documents",
-    subtitle: "Upload supporting files",
+    subtitle: "Upload supportive files",
   },
   {
     number: 3,
@@ -572,7 +572,7 @@ export function SubmitGrievanceForm({
                     Attach Documents
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Upload supporting files such as screenshots, emails, or
+                    Upload supportive files such as screenshots, emails, or
                     receipts (Optional, Max 5 MB each).
                   </p>
                 </div>
@@ -696,7 +696,7 @@ export function SubmitGrievanceForm({
 
                   <div className="text-xs">
                     <span className="text-slate-400 block font-medium">
-                      Supporting Documents:
+                      Supportive Documents:
                     </span>
                     <span className="font-semibold text-slate-800">
                       {files.length > 0

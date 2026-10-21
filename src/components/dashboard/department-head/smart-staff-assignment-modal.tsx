@@ -26,6 +26,14 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PriorityBadge } from "@/components/dashboard/badges";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { StaffRecommendationResult } from "@/lib/engines/staff-recommendation-engine";
 import type { GrievanceItem, StaffMember } from "@/types/department-head";
 
@@ -667,7 +675,7 @@ export function SmartStaffAssignmentModal({
                 <div className="pt-2 border-t border-slate-200/70 text-xs text-slate-600 flex items-center gap-1.5">
                   <Briefcase className="h-3.5 w-3.5 text-slate-400" />
                   <span>
-                    Supporting Departments:{" "}
+                    Supportive Departments:{" "}
                     {grievance.collaboratingDepartments.join(", ")}
                   </span>
                 </div>
@@ -712,13 +720,47 @@ export function SmartStaffAssignmentModal({
             </div>
 
             {loading ? (
-              <div className="space-y-2.5 py-4">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-24 rounded-xl border border-slate-200 bg-slate-50/60 animate-pulse"
-                  />
-                ))}
+              <div className="space-y-3 py-3">
+                {["smart-rec-top", "smart-rec-second", "smart-rec-third"].map(
+                  (cardKey, idx) => (
+                    <div
+                      key={cardKey}
+                      className={`relative rounded-xl border p-4 transition ${
+                        idx === 0
+                          ? "border-teal-200/80 bg-teal-50/20"
+                          : "border-slate-200 bg-white"
+                      }`}
+                    >
+                      {idx === 0 && (
+                        <div className="absolute -top-2.5 right-4">
+                          <Skeleton className="h-4 w-28 rounded-full" />
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-4 w-20 rounded-full" />
+                              </div>
+                              <Skeleton className="h-3 w-44" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                            <Skeleton className="h-5 rounded-lg" />
+                            <Skeleton className="h-5 rounded-lg" />
+                          </div>
+                        </div>
+                        <div className="flex sm:flex-col items-end justify-between sm:justify-start gap-2 shrink-0">
+                          <Skeleton className="h-8 w-16 rounded-xl" />
+                          <Skeleton className="h-6 w-20 rounded-lg" />
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                )}
               </div>
             ) : recommendations.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-500">
@@ -915,48 +957,72 @@ export function SmartStaffAssignmentModal({
                   </label>
 
                   {manualCandidates.length > 0 ? (
-                    <select
-                      id="available-staff-select"
-                      value={selectedStaffId}
-                      onChange={(e) => setSelectedStaffId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
+                    <Select
+                      value={
+                        topCandidate && selectedStaffId === topCandidate.staffId
+                          ? ""
+                          : selectedStaffId
+                      }
+                      onValueChange={(val) => {
+                        if (val) setSelectedStaffId(val);
+                      }}
                     >
-                      <option value="">
-                        Select another available staff (Ranked by Score)
-                      </option>
-                      {manualCandidates.map((candidate) => {
-                        const recCandidate = recommendations.find(
-                          (r) => r.staffId === candidate.id,
-                        );
-                        const isAtCap =
-                          candidate.activeTickets >=
-                          (candidate.maxCapacity || 10);
-                        const availCap = Math.max(
-                          0,
-                          (candidate.maxCapacity || 10) -
-                            candidate.activeTickets,
-                        );
-                        return (
-                          <option
-                            key={candidate.id}
-                            value={candidate.id}
-                            disabled={
-                              candidate.status === "ON_LEAVE" || isAtCap
-                            }
-                          >
-                            {candidate.name}
-                            {recCandidate
-                              ? ` (${recCandidate.score}% Score)`
-                              : ""}{" "}
-                            — Active Workload: {candidate.activeTickets} /{" "}
-                            {candidate.maxCapacity || 10}{" "}
-                            {isAtCap
-                              ? `(At Capacity - ${candidate.maxCapacity || 10}/${candidate.maxCapacity || 10})`
-                              : `(Available Capacity: ${availCap})`}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      <SelectTrigger
+                        id="available-staff-select"
+                        className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
+                      >
+                        <SelectValue placeholder="Select another available staff (Ranked by Score)" />
+                      </SelectTrigger>
+                      <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-60">
+                        {manualCandidates.map((candidate) => {
+                          const recCandidate = recommendations.find(
+                            (r) => r.staffId === candidate.id,
+                          );
+                          const isAtCap =
+                            candidate.activeTickets >=
+                            (candidate.maxCapacity || 10);
+                          const availCap = Math.max(
+                            0,
+                            (candidate.maxCapacity || 10) -
+                              candidate.activeTickets,
+                          );
+                          return (
+                            <SelectItem
+                              key={candidate.id}
+                              value={candidate.id}
+                              disabled={
+                                candidate.status === "ON_LEAVE" || isAtCap
+                              }
+                              className="text-xs py-2 cursor-pointer"
+                            >
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-2">
+                                <span className="font-medium text-slate-800">
+                                  {candidate.name}
+                                  {recCandidate && (
+                                    <span className="ml-1.5 text-emerald-600 font-semibold">
+                                      ({recCandidate.score}% Score)
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[11px] text-slate-500">
+                                  Workload: {candidate.activeTickets} /{" "}
+                                  {candidate.maxCapacity || 10}{" "}
+                                  {isAtCap ? (
+                                    <span className="text-red-500 font-semibold">
+                                      (At Capacity)
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400">
+                                      ({availCap} free)
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
                   ) : (
                     <div className="w-full rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-2 text-xs text-slate-500 text-center italic">
                       No other staff available in this department.

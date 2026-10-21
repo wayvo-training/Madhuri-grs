@@ -162,8 +162,9 @@ export function DashboardSidebar({
     }
 
     if (itemHref.includes("#")) {
-      const [itemPath, itemHash] = itemHref.split("#");
-      if (pathname === itemPath) {
+      const [itemPathWithQuery, itemHash] = itemHref.split("#");
+      const itemBaseRoute = itemPathWithQuery.split("?")[0];
+      if (pathname === itemBaseRoute) {
         e.preventDefault();
         const cleanHash = itemHash.toLowerCase();
         setCurrentHash(`#${cleanHash}`);
@@ -184,9 +185,11 @@ export function DashboardSidebar({
 
   const isItemActive = (itemHref: string) => {
     if (itemHref.includes("#")) {
-      const [itemPath, itemHash] = itemHref.split("#");
+      const [itemPathWithQuery, itemHash] = itemHref.split("#");
+      const itemBaseRoute = itemPathWithQuery.split("?")[0];
       return (
-        pathname === itemPath && currentHash === `#${itemHash.toLowerCase()}`
+        pathname === itemBaseRoute &&
+        currentHash === `#${itemHash.toLowerCase()}`
       );
     }
 
@@ -202,6 +205,8 @@ export function DashboardSidebar({
     return (
       itemHref !== "/admin/dashboard" &&
       itemHref !== "/end-user/dashboard" &&
+      itemHref !== "/staff/dashboard" &&
+      itemHref !== "/department-head/dashboard" &&
       pathname.startsWith(itemHref)
     );
   };

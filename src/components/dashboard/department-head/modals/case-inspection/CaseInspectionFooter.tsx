@@ -103,12 +103,12 @@ export function CaseInspectionFooter({
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Back to SLA Monitoring</span>
+          <span>Back to Live Queue</span>
         </button>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* If assigned to staff, show contact button */}
-          {staffEmail && !isSelfAssigned ? (
+          {staffEmail && !isSelfAssigned && !isClosedOrResolved ? (
             <button
               type="button"
               onClick={() => setIsDirectiveModalOpen(true)}

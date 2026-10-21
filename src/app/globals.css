@@ -694,3 +694,12 @@
 .animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
+
+/* Theme Action Menu Trigger: 3-dots active & open state matching enterprise teal green */
+[data-slot="dropdown-menu-trigger"][data-popup-open],
+[data-slot="dropdown-menu-trigger"][data-open],
+[data-slot="dropdown-menu-trigger"][data-state="open"] {
+  background-color: var(--teal-primary, #0f766e) !important;
+  border-color: var(--teal-primary, #0f766e) !important;
+  color: #ffffff !important;
+}

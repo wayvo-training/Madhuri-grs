@@ -68,7 +68,7 @@ const BOTTLENECK_OPTIONS: {
     value: "MISSING_DOCS",
     title: "Incomplete Information / Documentation",
     description:
-      "Required information or supporting documents are unavailable or insufficient.",
+      "Required information or supportive documents are unavailable or insufficient.",
   },
   {
     value: "COMPLEX_INVESTIGATION",
@@ -105,7 +105,7 @@ const INTERVENTION_OPTIONS: {
   },
   {
     value: "CROSS_DEPT",
-    title: "Add Supporting Staff / Department",
+    title: "Add Supportive Staff / Department",
     purpose:
       "Add additional resources to increase investigation or processing capacity.",
     icon: Users,
@@ -135,7 +135,7 @@ const INTERVENTION_OPTIONS: {
     value: "REQUEST_ADDITIONAL_INFO",
     title: "Request Additional Information",
     purpose:
-      "Request missing information or supporting documentation required to continue processing.",
+      "Request missing information or supportive documentation required to continue processing.",
     icon: FileText,
   },
   {
@@ -209,7 +209,7 @@ export function DepartmentHeadEscalationModal({
       case "REQUEST_STATUS_UPDATE":
         return "Specify what specific status or investigation report is required from the assigned officer within 4 hours...";
       case "CROSS_DEPT":
-        return "Detail the specific inter-departmental collaboration needed from the supporting department...";
+        return "Detail the specific inter-departmental collaboration needed from the supportive department...";
       case "NOTIFY_STAFF":
         return "Provide specific operational direction to the assigned Staff for the next action...";
       case "REQUEST_ADDITIONAL_INFO":
@@ -226,8 +226,13 @@ export function DepartmentHeadEscalationModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-      <div className="relative flex flex-col w-full max-w-2xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 flex flex-col w-full max-w-2xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 bg-white shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
@@ -591,7 +596,7 @@ export function DepartmentHeadEscalationModal({
                     Request Additional Information
                   </div>
                   <div className="text-amber-800 text-[11px] mt-0.5 leading-snug">
-                    Request missing information or supporting documentation
+                    Request missing information or supportive documentation
                     required to continue processing and investigation.
                   </div>
                 </div>
@@ -740,7 +745,7 @@ export function DepartmentHeadEscalationModal({
               {interventionType === "CROSS_DEPT" && targetDept && (
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-medium text-slate-500">
-                    Supporting Dept:
+                    Supportive Dept:
                   </span>
                   <span className="font-semibold text-[#0F766E]">
                     {availableDepartments.find((d) => d.id === targetDept)

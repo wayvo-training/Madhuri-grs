@@ -142,17 +142,38 @@ export async function calculateStaffRecommendations(
     grievance.subcategories?.subcategory_name || ""
   ).toLowerCase();
   const priority = (grievance.priority || "MEDIUM").toUpperCase();
-  const targetDeptRecord =
-    grievance.grievance_departments.find(
-      (gd) => gd.department_id === departmentId,
-    ) || getPrimaryDepartment(grievance);
+  const targetDeptRecord = departmentId
+    ? grievance.grievance_departments.find(
+        (gd) => BigInt(gd.department_id) === BigInt(departmentId),
+      )
+    : getPrimaryDepartment(grievance);
 
-  const targetDeptId = targetDeptRecord?.department_id || departmentId;
+  const targetDeptId = departmentId
+    ? BigInt(departmentId)
+    : targetDeptRecord?.department_id ||
+      getPrimaryDepartment(grievance)?.department_id;
 
-  // Active assignment if already assigned
+  if (!targetDeptId) {
+    throw new Error(
+      `Target department could not be resolved for grievance ${grievanceId}`,
+    );
+  }
+
+  // Active assignment if already assigned in this specific department
   const activeAssignment = targetDeptRecord?.assignments;
   const currentAssignedUser =
-    activeAssignment?.users_assignments_staff_idTousers;
+    activeAssignment?.assignment_status === "ASSIGNED"
+      ? activeAssignment.users_assignments_staff_idTousers
+      : null;
+
+  let resolvedDeptName = targetDeptRecord?.departments?.department_name;
+  if (!resolvedDeptName && targetDeptId) {
+    const dept = await prisma.departments.findUnique({
+      where: { department_id: targetDeptId },
+      select: { department_name: true },
+    });
+    resolvedDeptName = dept?.department_name;
+  }
 
   // 2. Fetch eligible staff in this department
   const eligibleStaff = await prisma.users.findMany({
@@ -525,7 +546,9 @@ export async function calculateStaffRecommendations(
       slaStatus: grievance.sla_status || "ON_TRACK",
       dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
       departmentName:
-        targetDeptRecord?.departments?.department_name || "Department Queue",
+        resolvedDeptName ||
+        targetDeptRecord?.departments?.department_name ||
+        "Department Queue",
       assignedStaffId: currentAssignedUser
         ? currentAssignedUser.user_id.toString()
         : null,

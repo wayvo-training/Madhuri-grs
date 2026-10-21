@@ -192,7 +192,12 @@ export async function GET(
 
     const authorizedDossierAttachments = filterAuthorizedAttachments(
       user,
-      (grievance.attachments || []).filter((att) => !att.resolution_id),
+      (grievance.attachments || []).filter(
+        (att) =>
+          !att.resolution_id &&
+          !att.grievance_department_id &&
+          BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+      ),
       {
         ...grievanceContext,
         title: grievance.title,
@@ -369,6 +374,17 @@ export async function GET(
           if (!findings) findings = noteStr;
         }
 
+        const attList = Array.isArray(val?.attachments)
+          ? (val.attachments as Array<{
+              id: string;
+              name: string;
+              size?: string;
+              type?: string;
+              path: string;
+              downloadUrl?: string;
+            }>)
+          : undefined;
+
         return {
           id: l.audit_log_id.toString(),
           departmentName: deptName,
@@ -376,13 +392,57 @@ export async function GET(
           findings,
           actionTaken: actionTaken || undefined,
           notes: notes || undefined,
+          attachments: attList,
           createdAt: l.created_at.toISOString(),
           timestamp: formatRelativeTime(l.created_at),
         };
       });
 
-    const auditTrail: StaffAuditItem[] = (grievance.audit_logs || []).map(
-      (log) => {
+    const auditTrail: StaffAuditItem[] = (grievance.audit_logs || [])
+      .filter((log) => {
+        let logVal: {
+          details?: string;
+          note?: string;
+          author?: string;
+          scope?: string;
+          department_id?: string | number;
+        } | null = null;
+        if (typeof log.new_value === "string") {
+          try {
+            logVal = JSON.parse(log.new_value);
+          } catch {
+            logVal = { note: log.new_value };
+          }
+        } else if (log.new_value && typeof log.new_value === "object") {
+          logVal = log.new_value as unknown as typeof logVal;
+        }
+
+        const isInternalAction =
+          log.action === "HOD_DIRECTIVE_NOTE" ||
+          log.action === "INVESTIGATION_NOTE_ADDED" ||
+          log.action === "INTERNAL_NOTE_ADDED" ||
+          log.action === "HEAD_DIRECTIVE_ISSUED" ||
+          logVal?.scope === "INTERNAL";
+
+        const isCollab =
+          log.action === "COLLABORATION_NOTE_ADDED" ||
+          logVal?.scope === "COLLABORATION";
+
+        if (isCollab) {
+          return true;
+        }
+
+        if (isInternalAction && !isAdmin && departmentId) {
+          const authorDeptId =
+            log.users?.department_id?.toString() ||
+            (logVal?.department_id ? String(logVal.department_id) : null);
+          if (authorDeptId && authorDeptId !== departmentId.toString()) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((log) => {
         const user = log.users;
         const userRole = user?.roles?.role_name;
         let actorName = "System";
@@ -412,8 +472,7 @@ export async function GET(
           timestamp: log.created_at.toISOString(),
           relativeTime: formatRelativeTime(log.created_at),
         };
-      },
-    );
+      });
 
     // Fetch involved departments dynamically directly from grievance_departments
     const rawDepartments = await prisma.grievance_departments.findMany({
@@ -594,6 +653,7 @@ export async function PATCH(
       note?: string;
       parentId?: string;
       replyToAuthor?: string;
+      scope?: "INTERNAL" | "COLLABORATION";
       subject?: string;
       message?: string;
       channels?: ("IN_APP" | "EMAIL")[];
@@ -848,6 +908,16 @@ export async function PATCH(
         status: "IN_PROGRESS",
       });
     } else if (body.action === "ADD_NOTE" && body.note?.trim()) {
+      if (grievance.status === "CLOSED") {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "This grievance is closed. Internal notes and collaboration messages cannot be added to closed cases.",
+          },
+          { status: 400 },
+        );
+      }
       if (grievance.status === "ASSIGNED") {
         return NextResponse.json(
           {
@@ -862,14 +932,31 @@ export async function PATCH(
       const staffUser = auth.user;
       const rawStaffName =
         `${staffUser.first_name} ${staffUser.last_name || ""}`.trim();
-      const authorDisplay = `Staff — ${rawStaffName}`;
+      const scope =
+        body.scope === "COLLABORATION" ? "COLLABORATION" : "INTERNAL";
+
+      const staffDept = staffUser.department_id
+        ? await prisma.departments.findUnique({
+            where: { department_id: staffUser.department_id },
+            select: { department_name: true },
+          })
+        : null;
+      const deptName = staffDept?.department_name || "Department";
+
+      const authorDisplay =
+        scope === "COLLABORATION"
+          ? `Staff — ${rawStaffName} (${deptName})`
+          : `Staff — ${rawStaffName}`;
       const noteContent = body.note.trim();
 
       const createdAudit = await prisma.audit_logs.create({
         data: {
           grievance_id: grievanceId,
           user_id: staffId,
-          action: "INVESTIGATION_NOTE_ADDED",
+          action:
+            scope === "COLLABORATION"
+              ? "COLLABORATION_NOTE_ADDED"
+              : "INVESTIGATION_NOTE_ADDED",
           entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
@@ -879,7 +966,8 @@ export async function PATCH(
             department_id: staffUser.department_id
               ? staffUser.department_id.toString()
               : null,
-            scope: "INTERNAL",
+            departmentName: deptName,
+            scope,
             details: noteContent,
             parentId: body.parentId?.trim() || null,
             replyToAuthor: body.replyToAuthor?.trim() || null,
@@ -887,26 +975,71 @@ export async function PATCH(
         },
       });
 
-      // Notify strictly the Department Head of this staff member's department
-      if (staffUser.department_id) {
-        const deptHeads = await prisma.users.findMany({
-          where: {
-            department_id: staffUser.department_id,
-            roles: { role_name: "DEPARTMENT_HEAD" },
-            status: "ACTIVE",
+      if (scope === "COLLABORATION") {
+        // Broadcast notification to HODs and assigned staff of ALL collaborating departments
+        const involvedDepts = await prisma.grievance_departments.findMany({
+          where: { grievance_id: grievanceId },
+          include: {
+            assignments: {
+              include: { users_assignments_staff_idTousers: true },
+            },
           },
         });
-        for (const dh of deptHeads) {
-          if (dh.user_id !== staffId) {
+
+        for (const gd of involvedDepts) {
+          // Notify HOD
+          const hods = await prisma.users.findMany({
+            where: {
+              department_id: gd.department_id,
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+          });
+          for (const hod of hods) {
+            if (hod.user_id !== staffId) {
+              await NotificationService.send({
+                userId: hod.user_id,
+                grievanceId,
+                type: "HEAD_INTERNAL_NOTE",
+                title: "Cross-Department Collaboration Note",
+                message: `${authorDisplay} added a note on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              });
+            }
+          }
+
+          // Notify assigned staff
+          if (gd.assignments && gd.assignments.staff_id !== staffId) {
             await NotificationService.send({
-              userId: dh.user_id,
+              userId: gd.assignments.staff_id,
               grievanceId,
               type: "HEAD_INTERNAL_NOTE",
-              title: body.parentId
-                ? "Internal Discussion Reply"
-                : "Internal Discussion Note",
-              message: `${authorDisplay} posted an internal ${body.parentId ? "reply" : "note"} on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              title: "Cross-Department Collaboration Note",
+              message: `${authorDisplay} posted on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
             });
+          }
+        }
+      } else {
+        // Notify strictly the Department Head of this staff member's department
+        if (staffUser.department_id) {
+          const deptHeads = await prisma.users.findMany({
+            where: {
+              department_id: staffUser.department_id,
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+          });
+          for (const dh of deptHeads) {
+            if (dh.user_id !== staffId) {
+              await NotificationService.send({
+                userId: dh.user_id,
+                grievanceId,
+                type: "HEAD_INTERNAL_NOTE",
+                title: body.parentId
+                  ? "Internal Discussion Reply"
+                  : "Internal Discussion Note",
+                message: `${authorDisplay} posted an internal ${body.parentId ? "reply" : "note"} on grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              });
+            }
           }
         }
       }
@@ -916,13 +1049,19 @@ export async function PATCH(
         userId: staffId,
         grievanceId,
         type: "HEAD_INTERNAL_NOTE",
-        title: "Internal Note Logged",
-        message: `You added an internal investigation note to grievance ${grievance.grievance_number}.`,
+        title:
+          scope === "COLLABORATION"
+            ? "Collaboration Note Logged"
+            : "Internal Note Logged",
+        message: `You added a ${scope === "COLLABORATION" ? "collaboration note" : "internal investigation note"} to grievance ${grievance.grievance_number}.`,
       });
 
       return NextResponse.json({
         success: true,
-        message: "Internal investigation note logged successfully",
+        message:
+          scope === "COLLABORATION"
+            ? "Collaboration note logged successfully"
+            : "Internal investigation note logged successfully",
         note: {
           id: createdAudit.audit_log_id.toString(),
           author: authorDisplay,

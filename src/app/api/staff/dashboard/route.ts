@@ -122,6 +122,7 @@ export async function GET(request: Request) {
                     first_name: true,
                     last_name: true,
                     roles: true,
+                    department_id: true,
                   },
                 },
               },
@@ -270,7 +271,12 @@ export async function GET(request: Request) {
 
       const attachments = filterAuthorizedAttachments(
         user,
-        (g.attachments || []).filter((att) => !att.resolution_id),
+        (g.attachments || []).filter(
+          (att) =>
+            !att.resolution_id &&
+            !att.grievance_department_id &&
+            BigInt(att.uploaded_by) === BigInt(g.submitted_by),
+        ),
         {
           grievance_id: g.grievance_id,
           submitted_by: g.submitted_by,
@@ -370,7 +376,51 @@ export async function GET(request: Request) {
         });
 
       const auditTrail: StaffAuditItem[] = (g.audit_logs || [])
-        .filter((log) => isStaffRelevantAuditAction(log.action))
+        .filter((log) => {
+          if (!isStaffRelevantAuditAction(log.action)) return false;
+
+          let logVal: {
+            details?: string;
+            note?: string;
+            author?: string;
+            scope?: string;
+            department_id?: string | number;
+          } | null = null;
+          if (typeof log.new_value === "string") {
+            try {
+              logVal = JSON.parse(log.new_value);
+            } catch {
+              logVal = { note: log.new_value };
+            }
+          } else if (log.new_value && typeof log.new_value === "object") {
+            logVal = log.new_value as unknown as typeof logVal;
+          }
+
+          const isInternalAction =
+            log.action === "HOD_DIRECTIVE_NOTE" ||
+            log.action === "INVESTIGATION_NOTE_ADDED" ||
+            log.action === "INTERNAL_NOTE_ADDED" ||
+            log.action === "HEAD_DIRECTIVE_ISSUED" ||
+            logVal?.scope === "INTERNAL";
+
+          const isCollab =
+            log.action === "COLLABORATION_NOTE_ADDED" ||
+            logVal?.scope === "COLLABORATION";
+
+          if (isCollab) {
+            return true;
+          }
+
+          if (isInternalAction && !isAdmin && departmentId) {
+            const authorDeptId =
+              log.users?.department_id?.toString() ||
+              (logVal?.department_id ? String(logVal.department_id) : null);
+            if (authorDeptId && authorDeptId !== departmentId.toString()) {
+              return false;
+            }
+          }
+          return true;
+        })
         .map((log) => {
           const user = log.users;
           const userRole = user?.roles?.role_name;
@@ -480,6 +530,17 @@ export async function GET(request: Request) {
             if (!findings) findings = noteStr;
           }
 
+          const attList = Array.isArray(val?.attachments)
+            ? (val.attachments as Array<{
+                id: string;
+                name: string;
+                size?: string;
+                type?: string;
+                path: string;
+                downloadUrl?: string;
+              }>)
+            : undefined;
+
           return {
             id: l.audit_log_id.toString(),
             departmentName: deptName,
@@ -487,6 +548,7 @@ export async function GET(request: Request) {
             findings,
             actionTaken: actionTaken || undefined,
             notes: notes || undefined,
+            attachments: attList,
             createdAt: l.created_at
               ? new Date(l.created_at).toISOString()
               : new Date().toISOString(),

@@ -214,7 +214,7 @@ export async function POST(request: Request) {
         {
           success: false,
           message:
-            "Forbidden: As a supporting department contributor, please submit your department findings via the Collaboration tab. Only Primary Lead or Equal Co-Lead department officers can submit the final customer resolution.",
+            "Forbidden: As a supportive department contributor, please submit your department findings via the Collaboration tab. Only Primary Lead or Equal Co-Lead department officers can submit the final customer resolution.",
         },
         { status: 403 },
       );
@@ -239,7 +239,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: `Cannot submit final resolution: Required supporting department(s) [${incompleteNames}] have not completed their findings.`,
+          message: `Cannot submit final resolution: Required supportive department(s) [${incompleteNames}] have not completed their findings.`,
         },
         { status: 400 },
       );

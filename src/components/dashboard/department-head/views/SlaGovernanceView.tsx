@@ -378,13 +378,22 @@ export function SlaGovernanceView({
                     </tr>
                   ) : (
                     paginatedList.map((item) => {
+                      const isItemBlocked = Boolean(
+                        item.isBlocked ||
+                          item.status === "BLOCKED" ||
+                          item.myDepartmentStatus === "BLOCKED",
+                      );
                       const isClosedOrResolved =
-                        item.status === "CLOSED" || item.status === "RESOLVED";
-                      const isEscalated = item.status === "ESCALATED";
+                        item.status === "CLOSED" ||
+                        item.status === "RESOLVED" ||
+                        item.myDepartmentStatus === "COMPLETED";
+                      const isEscalated =
+                        !isItemBlocked && item.status === "ESCALATED";
                       const hasAuthority = hasHeadResolutionAuthority(item);
                       const canSubmitResolution = canHeadSubmitResolution(item);
                       const isUnderIntervention =
                         !isClosedOrResolved &&
+                        !isItemBlocked &&
                         (hasAuthority ||
                           (item.status === "IN_PROGRESS" &&
                             !!item.hodIntervention));
@@ -395,16 +404,20 @@ export function SlaGovernanceView({
                           className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
                         >
                           <td className="py-2.5 pl-4 pr-3 align-middle whitespace-nowrap">
-                            <span className="inline-block font-mono text-sm font-semibold text-slate-900 dark:text-slate-200">
+                            <button
+                              type="button"
+                              onClick={() => onInspect(item, "statement")}
+                              className="inline-block font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                            >
                               {item.ticketCode}
-                            </span>
+                            </button>
                           </td>
+
                           <td className="py-2.5 px-3 align-middle max-w-[230px] overflow-hidden">
                             <TruncatedText
                               text={item.title}
                               maxChars={24}
-                              onClick={() => onInspect(item, "statement")}
-                              className="truncate whitespace-nowrap block text-left text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition max-w-[205px] border-none cursor-pointer"
+                              className="truncate whitespace-nowrap block text-left text-sm font-semibold text-slate-900 dark:text-slate-100 max-w-[205px] border-none"
                             />
                           </td>
 
@@ -427,14 +440,22 @@ export function SlaGovernanceView({
                           <td className="py-2.5 px-3 align-middle whitespace-nowrap max-w-[150px] overflow-hidden">
                             <span
                               className={`inline-flex whitespace-nowrap text-[13px] font-medium ${
-                                item.slaStatus === "BREACHED"
-                                  ? "text-rose-600 dark:text-rose-400 font-bold"
-                                  : item.slaStatus === "AT_RISK"
-                                    ? "text-amber-800 dark:text-amber-400 font-semibold"
-                                    : "text-slate-600 dark:text-slate-400"
+                                isItemBlocked
+                                  ? "text-amber-700 dark:text-amber-400 font-semibold"
+                                  : isClosedOrResolved
+                                    ? "text-slate-500 dark:text-slate-400 font-normal"
+                                    : item.slaStatus === "BREACHED"
+                                      ? "text-rose-600 dark:text-rose-400 font-bold"
+                                      : item.slaStatus === "AT_RISK"
+                                        ? "text-amber-800 dark:text-amber-400 font-semibold"
+                                        : "text-slate-600 dark:text-slate-400"
                               }`}
                             >
-                              {item.slaTimeLeft}
+                              {isItemBlocked
+                                ? "Paused (Blocked)"
+                                : isClosedOrResolved
+                                  ? "Completed"
+                                  : item.slaTimeLeft}
                             </span>
                           </td>
 
@@ -447,31 +468,35 @@ export function SlaGovernanceView({
                                   : undefined)
                               }
                               className={`w-fit inline-flex items-center whitespace-nowrap text-[13px] ${
-                                hasAuthority
-                                  ? "font-semibold text-amber-800 dark:text-amber-300"
-                                  : isClosedOrResolved
-                                    ? "font-medium text-slate-500 dark:text-slate-400"
-                                    : isEscalated
-                                      ? "font-semibold text-slate-900 dark:text-slate-200"
-                                      : isUnderIntervention ||
-                                          canSubmitResolution
+                                isItemBlocked
+                                  ? "font-normal text-slate-400"
+                                  : hasAuthority
+                                    ? "font-semibold text-amber-800 dark:text-amber-300"
+                                    : isClosedOrResolved
+                                      ? "font-medium text-slate-500 dark:text-slate-400"
+                                      : isEscalated
                                         ? "font-semibold text-slate-900 dark:text-slate-200"
-                                        : "font-medium text-slate-700 dark:text-slate-300"
+                                        : isUnderIntervention ||
+                                            canSubmitResolution
+                                          ? "font-semibold text-slate-900 dark:text-slate-200"
+                                          : "font-medium text-slate-700 dark:text-slate-300"
                               }`}
                             >
-                              {hasAuthority
-                                ? "Head Intervention Active"
-                                : isClosedOrResolved
-                                  ? item.status === "RESOLVED"
-                                    ? "Resolved"
-                                    : "Closed"
-                                  : isEscalated
-                                    ? "Escalated"
-                                    : isUnderIntervention
-                                      ? "Under Intervention"
-                                      : canSubmitResolution
-                                        ? "Resolution Required"
-                                        : "Monitor"}
+                              {isItemBlocked
+                                ? "—"
+                                : hasAuthority
+                                  ? "Head Intervention Active"
+                                  : isClosedOrResolved
+                                    ? item.status === "RESOLVED"
+                                      ? "Resolved"
+                                      : "Closed"
+                                    : isEscalated
+                                      ? "Escalated"
+                                      : isUnderIntervention
+                                        ? "Under Intervention"
+                                        : canSubmitResolution
+                                          ? "Resolution Required"
+                                          : "Monitor"}
                             </span>
                           </td>
 
@@ -529,6 +554,9 @@ export function SlaGovernanceView({
                                   : []),
                                 ...(!hasAuthority &&
                                 !isClosedOrResolved &&
+                                !item.isBlocked &&
+                                item.status !== "BLOCKED" &&
+                                item.myDepartmentStatus !== "BLOCKED" &&
                                 (isEscalated || item.slaStatus === "BREACHED")
                                   ? [
                                       {

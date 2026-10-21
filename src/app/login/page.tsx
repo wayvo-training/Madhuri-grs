@@ -94,24 +94,24 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-50 py-12 sm:px-6 lg:px-8">
+    <main className="relative flex h-screen max-h-screen w-full flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 py-2 sm:px-6">
       {/* Ambient background glow matching hero */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 h-125 w-200 rounded-full bg-linear-to-b from-teal-100/50 via-teal-50/25 to-transparent blur-3xl" />
       </div>
 
-      <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md text-center">
+      <div className="relative z-10 w-full max-w-md text-center">
         {/* Brand Logo Header */}
         <Link
           href="/"
-          className="group inline-flex items-center gap-3 transition-transform hover:scale-[1.02]"
+          className="group inline-flex items-center gap-2.5 transition-transform hover:scale-[1.02]"
         >
-          <Logo size={44} />
+          <Logo size={38} />
           <div className="text-left">
-            <p className="text-lg font-bold tracking-tight text-slate-900">
+            <p className="text-base font-bold tracking-tight text-slate-900 leading-tight">
               GRS
             </p>
-            <p className="text-2.5 font-medium uppercase tracking-wider text-slate-500">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Grievance Resolution System
             </p>
           </div>
@@ -119,24 +119,24 @@ export default function LoginPage() {
       </div>
 
       {/* Login Card */}
-      <div className="relative z-10 mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-7 sm:p-9 shadow-xl shadow-slate-200/60">
-          <div className="mb-6">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-[#F0FDFA] px-3 py-1 text-xs font-semibold text-[#0F766E]">
+      <div className="relative z-10 mt-3 sm:mt-4 w-full max-w-md">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xl shadow-slate-200/60">
+          <div className="mb-3.5 sm:mb-4">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-[#F0FDFA] px-2.5 py-0.5 text-xs font-semibold text-[#0F766E]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#0F766E]" />
               Secure Portal
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               Welcome back
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-0.5 text-xs sm:text-sm text-slate-500">
               Sign in with your organizational credentials
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
             {error && (
-              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/90 px-3.5 py-2 text-xs sm:text-sm text-red-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                 <span>{error}</span>
               </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-700"
               >
                 Email Address
               </label>
@@ -162,14 +162,14 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   placeholder="name@organization.com"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <div className="mb-1.5 flex items-center justify-between">
+              <div className="mb-1 flex items-center justify-between">
                 <label
                   htmlFor="password"
                   className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
@@ -195,7 +195,7 @@ export default function LoginPage() {
                   required
                   disabled={loading}
                   placeholder="Enter your password"
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                  className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -221,7 +221,7 @@ export default function LoginPage() {
               />
               <label
                 htmlFor="remember"
-                className="text-sm text-slate-600 select-none cursor-pointer"
+                className="text-xs sm:text-sm text-slate-600 select-none cursor-pointer"
               >
                 Remember me on this device
               </label>
@@ -231,7 +231,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F766E] text-sm font-semibold text-white shadow-md shadow-teal-950/25 transition-all duration-200 hover:bg-[#115E59] hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0F766E] text-sm font-semibold text-white shadow-md shadow-teal-950/25 transition-all duration-200 hover:bg-[#115E59] hover:shadow-lg active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>
@@ -248,19 +248,19 @@ export default function LoginPage() {
           </form>
 
           {/* Security Assurance */}
-          <div className="mt-6 border-t border-slate-100 pt-5 flex items-center justify-center gap-2 text-xs text-slate-500">
+          <div className="mt-3.5 sm:mt-4 border-t border-slate-100 pt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
             <ShieldCheck className="h-4 w-4 text-[#0F766E]" />
             <span>Controlled access & auditability</span>
           </div>
         </div>
 
         {/* Back to Home */}
-        <div className="mt-6 text-center">
+        <div className="mt-3 sm:mt-4 text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 transition hover:text-slate-900"
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-slate-500 transition hover:text-slate-900"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Back to Home
           </Link>
         </div>

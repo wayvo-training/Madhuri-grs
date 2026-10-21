@@ -516,7 +516,9 @@ export function CaseProgressTab({
                               : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
                         }`}
                       >
-                        {dept.involvementType}
+                        {dept.involvementType === "SUPPORTING"
+                          ? "SUPPORTIVE"
+                          : dept.involvementType}
                       </span>
                     </div>
 

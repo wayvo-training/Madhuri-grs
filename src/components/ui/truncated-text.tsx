@@ -21,6 +21,7 @@ export interface TruncatedTextProps {
   align?: "center" | "start" | "end";
   showCopy?: boolean;
   showArrow?: boolean;
+  alwaysShowTooltip?: boolean;
   onClick?: (e: React.MouseEvent) => void;
 }
 
@@ -34,6 +35,7 @@ export function TruncatedText({
   align = "center",
   showCopy = false,
   showArrow = false,
+  alwaysShowTooltip = false,
   onClick,
 }: TruncatedTextProps) {
   const [copied, setCopied] = useState(false);
@@ -45,18 +47,28 @@ export function TruncatedText({
 
   const completeText = fullText || text;
   const isLong =
+    alwaysShowTooltip ||
     text.length > maxChars ||
     Boolean(fullText && fullText.length > text.length);
 
   if (!isLong) {
     if (onClick) {
       return (
-        <button type="button" onClick={onClick} className={className}>
+        <button
+          type="button"
+          onClick={onClick}
+          title={completeText}
+          className={cn("text-left truncate", className)}
+        >
           {text}
         </button>
       );
     }
-    return <span className={className}>{text}</span>;
+    return (
+      <span title={completeText} className={className}>
+        {text}
+      </span>
+    );
   }
 
   const displayText =
@@ -70,45 +82,34 @@ export function TruncatedText({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const triggerContent = onClick ? (
-    <button
-      type="button"
-      id={`truncate-${elementId}`}
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 cursor-pointer transition-colors text-left max-w-full truncate",
-        className,
-      )}
-    >
-      {displayText}
-    </button>
-  ) : (
-    <span
-      id={`truncate-${elementId}`}
-      className={cn(
-        "inline-flex items-center gap-1 cursor-default transition-colors max-w-full truncate",
-        className,
-      )}
-    >
-      {displayText}
-    </span>
-  );
-
   return (
-    <TooltipProvider delay={150}>
+    <TooltipProvider delay={100}>
       <Tooltip>
-        <TooltipTrigger render={triggerContent} />
+        <TooltipTrigger
+          id={`truncate-${elementId}`}
+          tabIndex={0}
+          onClick={onClick}
+          className={cn(
+            "inline-flex items-center gap-1 text-left max-w-full truncate focus-visible:outline-none cursor-pointer rounded-xs",
+            className,
+          )}
+        >
+          <span className="truncate block">{displayText}</span>
+        </TooltipTrigger>
         <TooltipContent
           side={side}
+          sideOffset={6}
           align={align}
           showArrow={showArrow}
           className={cn(
-            "max-w-xs sm:max-w-sm md:max-w-md p-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900 text-slate-100 shadow-xl rounded-lg border border-slate-800 z-50",
+            "max-w-xs sm:max-w-sm md:max-w-md p-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900 text-slate-100 shadow-xl rounded-lg border border-slate-800 z-[9999]",
             tooltipClassName,
           )}
         >
           <div className="space-y-1.5">
-            <p className="text-slate-200 select-text">{completeText}</p>
+            <p className="text-slate-100 select-text font-medium">
+              {completeText}
+            </p>
             {showCopy && (
               <div className="pt-1 border-t border-slate-700/60 flex items-center justify-end">
                 <button

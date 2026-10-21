@@ -4,6 +4,7 @@ import { resolveStaffAuth } from "@/lib/staff/permissions";
 import { calculateSlaStatus } from "@/lib/staff/utils";
 import type {
   StaffGrievanceItem,
+  StaffInvolvedDepartment,
   StaffPriority,
   StaffSlaState,
 } from "@/types/staff";
@@ -49,6 +50,9 @@ export async function GET(req: NextRequest) {
             grievance_departments: {
               include: {
                 departments: true,
+                assignments: {
+                  include: { users_assignments_staff_idTousers: true },
+                },
               },
             },
           },
@@ -155,6 +159,40 @@ export async function GET(req: NextRequest) {
                   : g.status
       ) as StaffGrievanceItem["status"];
 
+      const rawDepts = g.grievance_departments || [];
+      const departmentsInvolved: StaffInvolvedDepartment[] = rawDepts.map(
+        (gd) => {
+          const deptAssignment =
+            gd.assignments &&
+            (gd.assignments.assignment_status === "ASSIGNED" ||
+              gd.assignments.assignment_status === "COMPLETED")
+              ? gd.assignments
+              : null;
+          const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+          const assignedStaff = staffUser
+            ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+            : null;
+
+          return {
+            id: gd.grievance_department_id.toString(),
+            departmentName:
+              gd.departments?.department_name || "Unknown Department",
+            involvementType:
+              (gd.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+              "PRIMARY",
+            status: gd.status,
+            assignedStaff,
+            isMyAssignment:
+              gd.grievance_department_id === a.grievance_department_id,
+          };
+        },
+      );
+
+      const isCrossDepartment = departmentsInvolved.length > 1;
+      const collaboratingDepartments = departmentsInvolved.map(
+        (d) => d.departmentName,
+      );
+
       return {
         id: String(g.grievance_id),
         grievanceNumber: g.grievance_number,
@@ -200,6 +238,9 @@ export async function GET(req: NextRequest) {
         activeDepartmentName,
         myDepartmentStatus: myDeptStatus,
         isMyDepartmentCompleted: isMyDeptCompleted,
+        departmentsInvolved,
+        isCrossDepartment,
+        collaboratingDepartments,
       };
     });
 

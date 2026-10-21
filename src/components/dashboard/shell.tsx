@@ -1,10 +1,12 @@
 "use client";
 
+import { cn } from "cn";
 import type { ReactNode } from "react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface DashboardShellProps {
   userRole: UserRole;
@@ -19,6 +21,7 @@ interface DashboardShellProps {
   searchValue?: string;
   onSearchChange?: (val: string) => void;
   searchPlaceholder?: string;
+  mainClassName?: string;
 }
 
 export function DashboardShell({
@@ -34,6 +37,7 @@ export function DashboardShell({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  mainClassName,
 }: DashboardShellProps) {
   return (
     <SidebarProvider>
@@ -56,8 +60,13 @@ export function DashboardShell({
             onSearchChange={onSearchChange}
             searchPlaceholder={searchPlaceholder}
           />
-          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4 sm:px-6 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col">
-            {children}
+          <main
+            className={cn(
+              "flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-4 py-1.5 sm:py-2 max-w-[1600px] w-full mx-auto custom-scrollbar flex flex-col",
+              mainClassName,
+            )}
+          >
+            <TooltipProvider delay={100}>{children}</TooltipProvider>
           </main>
         </SidebarInset>
       </div>

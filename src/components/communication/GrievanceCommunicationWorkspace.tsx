@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import type { GrievanceCommunicationThreadData } from "@/lib/communication/service";
 import { GrievanceCommunicationComposer } from "./GrievanceCommunicationComposer";
 
@@ -42,19 +43,24 @@ export function GrievanceCommunicationWorkspace({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 min-w-0">
           {/* Grievance Identity */}
           <div className="space-y-0.5 min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="font-mono text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 shrink-0 whitespace-nowrap">
                 {data.grievanceNumber}
               </span>
               <span className="text-slate-300 dark:text-slate-700 shrink-0">
                 •
               </span>
-              <h2
-                className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 truncate min-w-0 cursor-default"
-                title={data.title}
-              >
-                {data.title}
-              </h2>
+              <div className="min-w-0 flex-1 max-w-[650px]">
+                <TruncatedText
+                  text={data.title}
+                  maxChars={60}
+                  className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 block truncate min-w-0 cursor-default"
+                  side="bottom"
+                  align="start"
+                  tooltipClassName="max-w-md bg-slate-900 text-slate-100 p-3 rounded-xl shadow-xl border border-slate-800"
+                  showCopy={true}
+                />
+              </div>
             </div>
 
             {/* Hierarchy & Status */}
@@ -159,7 +165,7 @@ export function GrievanceCommunicationWorkspace({
       </div>
 
       {/* 2. CHRONOLOGICAL COMMUNICATION AREA */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-slate-50/40 dark:bg-slate-950/40 space-y-3">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 sm:p-4 bg-slate-50/40 dark:bg-slate-950/40 space-y-3">
         <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-[#0F766E]" />
@@ -310,7 +316,7 @@ export function GrievanceCommunicationWorkspace({
                     }`}
                   >
                     <p
-                      className={`whitespace-pre-wrap text-xs sm:text-[13px] leading-snug ${
+                      className={`whitespace-pre-wrap text-xs sm:text-[13px] leading-snug break-words [overflow-wrap:anywhere] ${
                         isSender ? "text-white" : ""
                       }`}
                     >

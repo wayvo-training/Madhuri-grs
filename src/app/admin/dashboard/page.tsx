@@ -39,7 +39,7 @@ export default async function AdminDashboardPage() {
         orderBy: { department_name: "asc" },
       }),
       prisma.grievances.findMany({
-        take: 10,
+        take: 50,
         orderBy: { created_at: "desc" },
         include: {
           categories: true,
@@ -217,6 +217,7 @@ export default async function AdminDashboardPage() {
       }
       title="Admin Control Center"
       subtitle="Executive system oversight, operational health & enterprise governance"
+      mainClassName="overflow-y-auto lg:overflow-hidden"
     >
       <AdminDashboard
         routingExceptionsCount={routingExceptionsCount}

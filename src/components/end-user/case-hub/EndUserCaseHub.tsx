@@ -1,11 +1,13 @@
 "use client";
 
+import { cn } from "cn";
 import {
   ArrowLeft,
   Building2,
   Check,
   CheckCircle2,
   Clock,
+  Download,
   Eye,
   FileCheck,
   FileText,
@@ -13,12 +15,14 @@ import {
   Lock,
   MessageSquare,
   Search,
+  Shield,
   ShieldCheck,
+  User,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { AdditionalInfoModal } from "@/components/end-user/additional-info-modal";
 import { PrintSectionButton } from "@/components/end-user/print-button";
@@ -34,6 +38,9 @@ export interface CaseAttachment {
   path: string;
   size?: string;
   type?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  sourceTag?: string;
 }
 
 export interface StatusHistoryItem {
@@ -42,6 +49,24 @@ export interface StatusHistoryItem {
   changedAt: string;
   changedBy?: string;
   roleName?: string;
+}
+
+export interface DepartmentItem {
+  id: number;
+  name: string;
+  involvementType: string;
+  status?: string;
+  assignedStaffName?: string | null;
+  completedAt?: string | null;
+}
+
+export interface SupportingFindingItem {
+  id: string;
+  department: string;
+  submittedBy?: string;
+  findings?: string;
+  notes?: string;
+  submittedAt: string;
 }
 
 export interface CaseHubGrievance {
@@ -55,7 +80,10 @@ export interface CaseHubGrievance {
   categoryName: string;
   subcategoryName: string;
   departmentName: string;
+  departments?: DepartmentItem[];
+  supportingFindings?: SupportingFindingItem[];
   attachments: CaseAttachment[];
+  staffAttachments?: CaseAttachment[];
   statusHistory: StatusHistoryItem[];
 }
 
@@ -82,7 +110,7 @@ export function EndUserCaseHub({
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab") as TabType | null;
 
-  // Determine initial tab: if query param exists use that; otherwise if resolved/closed default to resolution
+  // Determine initial tab: always default to overview unless urlTab is explicitly provided
   const defaultTab: TabType = useMemo(() => {
     if (
       urlTab &&
@@ -90,18 +118,33 @@ export function EndUserCaseHub({
     ) {
       return urlTab;
     }
-    if (
-      resolution ||
-      grievance.status === "RESOLVED" ||
-      grievance.status === "UNDER_REVIEW" ||
-      grievance.status === "CLOSED"
-    ) {
-      return "resolution";
-    }
     return "overview";
-  }, [urlTab, grievance.status, resolution]);
+  }, [urlTab]);
 
   const [activeTab, setActiveTab] = useState<TabType>(defaultTab);
+
+  // Keep activeTab in sync whenever URL tab parameter changes
+  useEffect(() => {
+    if (
+      urlTab &&
+      ["overview", "resolution", "tracking", "documents"].includes(urlTab)
+    ) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  const [docCategoryFilter, setDocCategoryFilter] = useState<
+    "all" | "end-user" | "staff"
+  >("all");
 
   const isResolvedOrClosed =
     Boolean(resolution) ||
@@ -124,7 +167,26 @@ export function EndUserCaseHub({
       icon: typeof Check;
     }
 
-    const stageMap = [
+    interface TimelineStageItem {
+      id: string;
+      title: string;
+      defaultDesc: string;
+      icon: typeof Check;
+      customDate?: string;
+      isCustomCompleted?: boolean;
+    }
+
+    const assignedWithStaff = (grievance.departments || []).filter((d) =>
+      Boolean(d.assignedStaffName),
+    );
+    const assignedDesc =
+      assignedWithStaff.length > 0
+        ? assignedWithStaff
+            .map((d) => `${d.name}: Assigned to ${d.assignedStaffName}`)
+            .join(" • ")
+        : "Assigned for detailed investigation";
+
+    const baseStages: TimelineStageItem[] = [
       {
         id: "SUBMITTED",
         title: "Grievance Submitted",
@@ -134,25 +196,49 @@ export function EndUserCaseHub({
       {
         id: "ROUTED",
         title: "Routed to Department",
-        defaultDesc: `Assigned to ${grievance.departmentName || "Department"}`,
+        defaultDesc:
+          grievance.departments && grievance.departments.length > 1
+            ? `Assigned to ${grievance.departments.map((d) => `${d.name}${d.involvementType === "PRIMARY" ? " (Lead)" : " (Collaborator)"}`).join(", ")}`
+            : `Assigned to ${grievance.departmentName || "Department"}`,
         icon: Building2,
       },
       {
         id: "ASSIGNED",
         title: "Assigned to Staff",
-        defaultDesc: "Assigned for detailed investigation",
+        defaultDesc: assignedDesc,
         icon: UserCheck,
       },
       {
         id: "IN_PROGRESS",
         title: "Investigation In Progress",
-        defaultDesc: "Evidence analysis and verification underway",
+        defaultDesc: "Evidence analysis and departmental verification underway",
         icon: Search,
       },
+    ];
+
+    // Departmental findings submitted by supporting departments (e.g. HR submitted to Finance)
+    const supportingFindingStages: TimelineStageItem[] = (
+      grievance.supportingFindings || []
+    ).map((f) => ({
+      id: `FINDINGS_${f.department.replace(/\s+/g, "_").toUpperCase()}_${f.id}`,
+      title: `${f.department} Findings Submitted`,
+      defaultDesc: `${f.department} completed investigation and submitted findings to ${grievance.departmentName || "Lead Department"}${f.submittedBy ? ` (by ${f.submittedBy})` : ""}`,
+      icon: FileCheck,
+      customDate: f.submittedAt,
+      isCustomCompleted: true,
+    }));
+
+    const endStages: TimelineStageItem[] = [
       {
         id: "RESOLUTION",
-        title: "Resolution Submitted",
-        defaultDesc: "Department filed findings and action outcome",
+        title:
+          grievance.departments && grievance.departments.length > 1
+            ? "Final Consolidated Resolution"
+            : "Resolution Submitted",
+        defaultDesc:
+          grievance.departments && grievance.departments.length > 1
+            ? `${grievance.departmentName || "Lead Department"} compiled departmental findings and filed resolution`
+            : "Department filed findings and action outcome",
         icon: FileCheck,
       },
       {
@@ -170,6 +256,12 @@ export function EndUserCaseHub({
         defaultDesc: "Resolution accepted and archived",
         icon: ShieldCheck,
       },
+    ];
+
+    const stageMap: TimelineStageItem[] = [
+      ...baseStages,
+      ...supportingFindingStages,
+      ...endStages,
     ];
 
     // Find chronological dates from history
@@ -252,32 +344,66 @@ export function EndUserCaseHub({
           ?.changedAt || grievance.createdAt;
     }
 
-    // Map current status to stage index
-    const statusToIndex: Record<string, number> = {
-      SUBMITTED: 0,
-      ROUTED: 1,
-      ASSIGNED: 2,
-      IN_PROGRESS: 3,
-      ESCALATED: 3,
-      UNDER_REVIEW: 5,
-      RESOLVED: 5,
-      CLOSED: 6,
-    };
+    const isCaseClosed = grievance.status === "CLOSED";
 
-    const currentIndex = statusToIndex[grievance.status] ?? 0;
+    // Find the index of the current active stage dynamically
+    const currentStageIndex = stageMap.findIndex((s) => {
+      if (isCaseClosed) return s.id === "CLOSED";
+      if (
+        grievance.status === "RESOLVED" ||
+        grievance.status === "UNDER_REVIEW"
+      ) {
+        return s.id === "UNDER_REVIEW";
+      }
+      if (
+        grievance.status === "IN_PROGRESS" ||
+        grievance.status === "ESCALATED"
+      ) {
+        return s.id === "IN_PROGRESS";
+      }
+      if (grievance.status === "ASSIGNED") return s.id === "ASSIGNED";
+      if (grievance.status === "ROUTED") return s.id === "ROUTED";
+      return s.id === "SUBMITTED";
+    });
+
+    const activeIdx = currentStageIndex >= 0 ? currentStageIndex : 0;
 
     return stageMap.map((stage, idx): StageNode => {
-      const isCompleted =
-        idx < currentIndex ||
-        (idx === currentIndex && grievance.status === "CLOSED");
-      const isCurrent = idx === currentIndex && grievance.status !== "CLOSED";
-      const isFuture = idx > currentIndex;
+      if (isCaseClosed) {
+        return {
+          id: stage.id,
+          title: stage.title,
+          description: stage.defaultDesc,
+          date: stage.customDate || historyDates[stage.id],
+          isCompleted: true,
+          isCurrent: false,
+          isFuture: false,
+          icon: stage.icon,
+        };
+      }
+
+      if (stage.isCustomCompleted) {
+        return {
+          id: stage.id,
+          title: stage.title,
+          description: stage.defaultDesc,
+          date: stage.customDate,
+          isCompleted: true,
+          isCurrent: false,
+          isFuture: false,
+          icon: stage.icon,
+        };
+      }
+
+      const isCompleted = idx < activeIdx;
+      const isCurrent = idx === activeIdx;
+      const isFuture = idx > activeIdx;
 
       return {
         id: stage.id,
         title: stage.title,
         description: stage.defaultDesc,
-        date: historyDates[stage.id],
+        date: stage.customDate || historyDates[stage.id],
         isCompleted,
         isCurrent,
         isFuture,
@@ -286,37 +412,46 @@ export function EndUserCaseHub({
     });
   }, [grievance, resolution?.submittedAt]);
 
-  // Combine citizen attachments and resolution attachments for the Documents tab
-  const allDocuments = useMemo(() => {
-    const docs = [
-      ...grievance.attachments.map((att) => ({
-        ...att,
-        source: "Complainant Initial Proof",
-      })),
-    ];
+  // Separate documents into End User Documents and Investigation Staff Documents
+  const endUserDocuments = useMemo(() => {
+    return (grievance.attachments || []).map((att) => ({
+      ...att,
+      sourceTag: att.sourceTag || "End User Submission",
+    }));
+  }, [grievance.attachments]);
+
+  const staffDocuments = useMemo(() => {
+    const list = [...(grievance.staffAttachments || [])];
+    const seenIds = new Set(list.map((d) => d.id));
     if (resolution?.attachments) {
       resolution.attachments.forEach((att) => {
-        docs.push({
-          id: att.id,
-          name: att.name,
-          path: att.path,
-          size: att.size,
-          type: att.type,
-          source: "Official Department Resolution Evidence",
-        });
+        if (!seenIds.has(att.id)) {
+          seenIds.add(att.id);
+          list.push({
+            id: att.id,
+            name: att.name,
+            path: att.path,
+            size: att.size,
+            type: att.type,
+            sourceTag: "Official Resolution Evidence",
+            uploadedBy: "Resolution Officer",
+          });
+        }
       });
     }
-    return docs;
-  }, [grievance.attachments, resolution]);
+    return list;
+  }, [grievance.staffAttachments, resolution]);
+
+  const totalDocumentsCount = endUserDocuments.length + staffDocuments.length;
 
   return (
-    <div className="w-full h-full flex flex-col gap-5">
+    <div className="w-full h-full flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
       {/* 1. TOP HEADER & BREADCRUMBS */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-2xs">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-4 sm:p-5 shadow-2xs shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5 min-w-0">
             <Link
-              href="/end-user/dashboard"
+              href="/end-user/grievances"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#0F766E] transition-colors"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -341,7 +476,9 @@ export function EndUserCaseHub({
                 &bull;
               </span>
               <span className="text-slate-600 dark:text-slate-300">
-                {grievance.departmentName || "Assigned Department"}
+                {grievance.departments && grievance.departments.length > 1
+                  ? grievance.departments.map((d) => d.name).join(" • ")
+                  : grievance.departmentName || "Assigned Department"}
               </span>
             </p>
           </div>
@@ -378,10 +515,10 @@ export function EndUserCaseHub({
         </div>
 
         {/* 2. CASE HUB NAVIGATION TABS */}
-        <div className="flex items-center gap-2 sm:gap-6 border-t border-slate-100 dark:border-slate-800 mt-4 pt-2 overflow-x-auto custom-scrollbar text-xs sm:text-sm font-semibold">
+        <div className="flex items-center gap-2 sm:gap-6 border-t border-slate-100 dark:border-slate-800 mt-3 pt-1.5 overflow-x-auto custom-scrollbar text-xs sm:text-sm font-semibold">
           <button
             type="button"
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleTabChange("overview")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "overview"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -394,7 +531,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("resolution")}
+            onClick={() => handleTabChange("resolution")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "resolution"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -412,7 +549,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("tracking")}
+            onClick={() => handleTabChange("tracking")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "tracking"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -425,7 +562,7 @@ export function EndUserCaseHub({
 
           <button
             type="button"
-            onClick={() => setActiveTab("documents")}
+            onClick={() => handleTabChange("documents")}
             className={`py-2.5 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === "documents"
                 ? "border-[#0F766E] text-[#0F766E] font-bold"
@@ -435,21 +572,21 @@ export function EndUserCaseHub({
             <FolderOpen className="h-4 w-4" />
             <span>Documents</span>
             <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 text-[11px] text-slate-600 dark:text-slate-300 font-bold">
-              {allDocuments.length}
+              {totalDocumentsCount}
             </span>
           </button>
         </div>
       </div>
 
       {/* 3. TAB CONTENT PANELS */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div
             id="overview-tab-content"
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm space-y-6 animate-in fade-in duration-150"
+            className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-5 animate-in fade-in duration-150"
           >
-            {resolution && (
+            {resolution && needsCitizenReview && (
               <div className="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                 <div className="flex items-start sm:items-center gap-3">
                   <div className="p-2 bg-emerald-100 dark:bg-emerald-900/60 rounded-lg text-emerald-700 dark:text-emerald-300 shrink-0">
@@ -516,9 +653,35 @@ export function EndUserCaseHub({
                 <div>
                   <div className="text-xs font-medium text-slate-500 mb-1">
                     Responsible Department
+                    {grievance.departments && grievance.departments.length > 1
+                      ? "s"
+                      : ""}
                   </div>
                   <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {grievance.departmentName || "Under Department Routing"}
+                    {grievance.departments &&
+                    grievance.departments.length > 1 ? (
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {grievance.departments.map((d) => (
+                          <span
+                            key={d.id}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-xs font-semibold"
+                          >
+                            <span>{d.name}</span>
+                            {d.involvementType === "PRIMARY" ? (
+                              <span className="text-[10px] bg-teal-600 text-white px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                                Lead
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-teal-600/80 dark:text-teal-400 font-medium">
+                                ({d.involvementType.toLowerCase()})
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      grievance.departmentName || "Under Department Routing"
+                    )}
                   </div>
                 </div>
 
@@ -540,6 +703,53 @@ export function EndUserCaseHub({
                   {grievance.description}
                 </div>
               </div>
+
+              {/* Collaborative Department Findings Section */}
+              {grievance.supportingFindings &&
+                grievance.supportingFindings.length > 0 && (
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Collaborative Department Findings & Input
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {grievance.supportingFindings.map((f) => (
+                        <div
+                          key={f.id}
+                          className="p-3.5 rounded-xl border border-teal-200/80 dark:border-teal-800/60 bg-teal-50/30 dark:bg-teal-950/20 text-xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between pb-1.5 border-b border-teal-100 dark:border-teal-900/40">
+                            <span className="font-bold text-teal-900 dark:text-teal-200">
+                              {f.department} Findings
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                              Submitted to{" "}
+                              {grievance.departmentName || "Lead Department"}{" "}
+                              {new Date(f.submittedAt).toLocaleDateString(
+                                "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {f.findings || f.notes}
+                          </p>
+                          {f.submittedBy && (
+                            <div className="text-[11px] text-teal-700 dark:text-teal-400 font-medium">
+                              Investigated by: {f.submittedBy}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
 
             {/* Quick Document Strip */}
@@ -588,7 +798,7 @@ export function EndUserCaseHub({
 
         {/* TAB 2: RESOLUTION */}
         {activeTab === "resolution" && (
-          <div className="space-y-6 animate-in fade-in duration-150">
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-6 animate-in fade-in duration-150">
             {resolution ? (
               <ResolutionCard
                 resolution={resolution}
@@ -656,7 +866,7 @@ export function EndUserCaseHub({
 
         {/* TAB 3: TRACKING */}
         {activeTab === "tracking" && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm space-y-6 animate-in fade-in duration-150">
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6 animate-in fade-in duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
@@ -675,82 +885,95 @@ export function EndUserCaseHub({
               </div>
             </div>
 
-            {/* Vertical Stepper List (Representation 3) */}
-            <div className="relative pl-6 space-y-8 before:absolute before:left-[17px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
-              {timelineNodes.map((node) => {
+            {/* Vertical Stepper List */}
+            <div className="space-y-0 pt-1">
+              {timelineNodes.map((node, index) => {
                 const IconComponent = node.icon;
+                const isLast = index === timelineNodes.length - 1;
 
                 return (
-                  <div
-                    key={node.id}
-                    className="relative flex items-start justify-between gap-4"
-                  >
-                    {/* Stepper Bullet */}
-                    <div className="absolute -left-[27px] top-0 flex items-center justify-center">
-                      {node.isCompleted ? (
-                        <div className="h-6 w-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                          <Check className="h-3.5 w-3.5 stroke-[2.5]" />
-                        </div>
-                      ) : node.isCurrent ? (
-                        <div className="h-6 w-6 rounded-full bg-teal-600 ring-4 ring-teal-100 dark:ring-teal-950 text-white flex items-center justify-center shadow-xs animate-pulse">
-                          <IconComponent className="h-3.5 w-3.5" />
-                        </div>
-                      ) : (
-                        <div className="h-6 w-6 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-300 flex items-center justify-center">
-                          <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                        </div>
+                  <div key={node.id} className="flex items-stretch gap-4">
+                    {/* Stepper Column (Bullet + Vertical Centered Line) */}
+                    <div className="flex flex-col items-center shrink-0 w-6">
+                      {/* Stepper Bullet */}
+                      <div className="flex items-center justify-center shrink-0">
+                        {node.isCompleted ? (
+                          <div className="h-6 w-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                          </div>
+                        ) : node.isCurrent ? (
+                          <div className="h-6 w-6 rounded-full bg-teal-600 ring-4 ring-teal-100 dark:ring-teal-950 text-white flex items-center justify-center shadow-xs animate-pulse">
+                            <IconComponent className="h-3.5 w-3.5" />
+                          </div>
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-300 flex items-center justify-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Line to next node - perfectly centered */}
+                      {!isLast && (
+                        <div className="w-0.5 flex-1 bg-slate-200 dark:bg-slate-800 my-1" />
                       )}
                     </div>
 
                     {/* Step Content */}
-                    <div className="min-w-0 flex-1 pl-2">
-                      <div
-                        className={`text-sm font-bold leading-tight ${
-                          node.isCurrent
-                            ? "text-[#0F766E] dark:text-teal-400 font-extrabold"
-                            : node.isCompleted
-                              ? "text-slate-800 dark:text-slate-200"
-                              : "text-slate-400 dark:text-slate-500"
-                        }`}
-                      >
-                        {node.title}
-                      </div>
-                      <p
-                        className={`text-xs mt-0.5 ${
-                          node.isCurrent
-                            ? "text-slate-700 dark:text-slate-300 font-medium"
-                            : "text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {node.description}
-                      </p>
-                    </div>
-
-                    {/* Date / Timestamp */}
-                    <div className="text-right shrink-0">
-                      {node.date ? (
-                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                          {new Date(node.date).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                          <span className="block text-[11px] font-normal text-slate-400">
-                            {new Date(node.date).toLocaleTimeString("en-IN", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                      ) : node.isCompleted ? (
-                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">
-                          Pending
-                        </span>
+                    <div
+                      className={cn(
+                        "min-w-0 flex-1 flex items-start justify-between gap-4",
+                        !isLast && "pb-7",
                       )}
+                    >
+                      <div className="min-w-0">
+                        <div
+                          className={`text-sm font-bold leading-tight ${
+                            node.isCurrent
+                              ? "text-[#0F766E] dark:text-teal-400 font-extrabold"
+                              : node.isCompleted
+                                ? "text-slate-800 dark:text-slate-200"
+                                : "text-slate-400 dark:text-slate-500"
+                          }`}
+                        >
+                          {node.title}
+                        </div>
+                        <p
+                          className={`text-xs mt-0.5 ${
+                            node.isCurrent
+                              ? "text-slate-700 dark:text-slate-300 font-medium"
+                              : "text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          {node.description}
+                        </p>
+                      </div>
+
+                      {/* Date / Timestamp */}
+                      <div className="text-right shrink-0">
+                        {node.date ? (
+                          <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                            {new Date(node.date).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                            <span className="block text-[11px] font-normal text-slate-400">
+                              {new Date(node.date).toLocaleTimeString("en-IN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                        ) : node.isCompleted ? (
+                          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                            Completed
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic">
+                            Pending
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -761,93 +984,289 @@ export function EndUserCaseHub({
 
         {/* TAB 4: DOCUMENTS */}
         {activeTab === "documents" && (
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm space-y-6 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-7 animate-in fade-in duration-150">
+            {/* Header with Category Filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   Case Documents & Verification Proofs
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  All citizen attached proof documentation and official
-                  department resolution evidence.
+                  Separated repository of documents submitted by you and records
+                  shared by the investigation staff.
                 </p>
               </div>
-              <span className="text-xs font-semibold text-slate-500">
-                {allDocuments.length} document
-                {allDocuments.length !== 1 ? "s" : ""}
-              </span>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl shrink-0 self-start sm:self-center">
+                <button
+                  type="button"
+                  onClick={() => setDocCategoryFilter("all")}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer",
+                    docCategoryFilter === "all"
+                      ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs font-bold"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
+                  )}
+                >
+                  All ({totalDocumentsCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocCategoryFilter("end-user")}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1",
+                    docCategoryFilter === "end-user"
+                      ? "bg-white dark:bg-slate-900 text-teal-700 dark:text-teal-300 shadow-2xs font-bold"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
+                  )}
+                >
+                  <User className="h-3 w-3" />
+                  <span>Shared by You ({endUserDocuments.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocCategoryFilter("staff")}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1",
+                    docCategoryFilter === "staff"
+                      ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 shadow-2xs font-bold"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200",
+                  )}
+                >
+                  <Shield className="h-3 w-3" />
+                  <span>Investigation Staff ({staffDocuments.length})</span>
+                </button>
+              </div>
             </div>
 
-            {allDocuments.length > 0 ? (
-              <div className="space-y-3">
-                {allDocuments.map((doc) => {
-                  const isResolutionEvidence =
-                    doc.source === "Official Department Resolution Evidence";
+            {/* SECTION 1: DOCUMENTS SHARED BY END USER */}
+            {(docCategoryFilter === "all" ||
+              docCategoryFilter === "end-user") && (
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-[#0F766E] dark:text-teal-400">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                        Documents Shared by You (End User / Complainant)
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Initial grievance statement proofs and additional
+                        supportive documents uploaded by you.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-[#0F766E] dark:text-teal-300 border border-teal-200/50 dark:border-teal-800">
+                    {endUserDocuments.length} file
+                    {endUserDocuments.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
 
-                  return (
-                    <div
-                      key={doc.id}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition gap-4 ${
-                        isResolutionEvidence
-                          ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div
-                          className={`p-2.5 rounded-xl shrink-0 ${
-                            isResolutionEvidence
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
-                              : "bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400"
-                          }`}
-                        >
-                          <FileText className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {doc.name}
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                isResolutionEvidence
-                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/70 dark:text-emerald-300"
-                                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-                              }`}
-                            >
-                              {doc.source}
-                            </span>
+                {endUserDocuments.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2.5 max-h-80 overflow-y-auto custom-scrollbar pr-1.5">
+                    {endUserDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-teal-300 dark:hover:border-teal-700 transition gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-teal-50 text-[#0F766E] dark:bg-teal-950/40 dark:text-teal-400 shrink-0">
+                            <FileText className="h-4 w-4" />
                           </div>
-                          <span className="text-xs text-slate-500 mt-0.5 block">
-                            {doc.size || "Document File"} &bull;{" "}
-                            {doc.type || "Official Record"}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                                {doc.name}
+                              </span>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                {doc.sourceTag || "Complainant Proof"}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span>{doc.size || "Document File"}</span>
+                              <span>&bull;</span>
+                              <span>{doc.type || "Official Record"}</span>
+                              {doc.uploadedAt && (
+                                <>
+                                  <span>&bull;</span>
+                                  <span>
+                                    Uploaded on{" "}
+                                    {new Date(
+                                      doc.uploadedAt,
+                                    ).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <Link
+                            href={doc.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              <span>View</span>
+                            </Button>
+                          </Link>
+
+                          <Link
+                            href={`${doc.path}?download=true`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Download className="h-3.5 w-3.5 mr-1 text-slate-500" />
+                              <span>Download</span>
+                            </Button>
+                          </Link>
                         </div>
                       </div>
-
-                      <Link
-                        href={doc.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0"
-                      >
-                        <Button
-                          variant="outline"
-                          className="h-8 px-3.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1.5" />
-                          <span>View Proof</span>
-                        </Button>
-                      </Link>
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-6 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <p className="text-xs text-slate-500">
+                      No initial or additional documents have been uploaded by
+                      you for this grievance.
+                    </p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="text-center p-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                <p className="text-xs text-slate-500">
-                  No documents or proofs filed for this grievance.
-                </p>
+            )}
+
+            {/* SECTION 2: DOCUMENTS SHARED BY INVESTIGATION STAFF */}
+            {(docCategoryFilter === "all" || docCategoryFilter === "staff") && (
+              <div className="space-y-3.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                        Documents Shared by Investigation Staff
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Official inquiry findings, departmental evidence, and
+                        formal resolution documentation shared with you.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-800">
+                    {staffDocuments.length} file
+                    {staffDocuments.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                {staffDocuments.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2.5 max-h-80 overflow-y-auto custom-scrollbar pr-1.5">
+                    {staffDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/20 dark:bg-emerald-950/10 hover:border-emerald-300 transition gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 shrink-0">
+                            <FileCheck className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                                {doc.name}
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/70 dark:text-emerald-300">
+                                {doc.sourceTag || "Investigation Evidence"}
+                              </span>
+                              {doc.uploadedBy && (
+                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                  by {doc.uploadedBy}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span>{doc.size || "Document File"}</span>
+                              <span>&bull;</span>
+                              <span>{doc.type || "Official Record"}</span>
+                              {doc.uploadedAt && (
+                                <>
+                                  <span>&bull;</span>
+                                  <span>
+                                    Shared on{" "}
+                                    {new Date(
+                                      doc.uploadedAt,
+                                    ).toLocaleDateString("en-IN", {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    })}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <Link
+                            href={doc.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              <span>View</span>
+                            </Button>
+                          </Link>
+
+                          <Link
+                            href={`${doc.path}?download=true`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Download className="h-3.5 w-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                              <span>Download</span>
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center p-6 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                    <p className="text-xs text-slate-500">
+                      No investigation or resolution documents have been shared
+                      by the staff team yet.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -855,13 +1274,13 @@ export function EndUserCaseHub({
             {canProvideAdditionalInfo && (
               <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
                 <h4 className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-3">
-                  Upload Additional Supporting Documents
+                  Upload Additional Supportive Documents
                 </h4>
                 {submissionCheck.allowed ? (
                   <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                       <h5 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Staff has requested supporting clarification or
+                        Staff has requested supportive clarification or
                         documentation
                       </h5>
                       <p className="text-xs text-slate-500 mt-0.5">

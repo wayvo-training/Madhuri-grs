@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import { activateNextSequentialDepartments } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
+import { SUPABASE_BUCKET } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
@@ -18,8 +20,23 @@ export async function POST(
 
   try {
     const grievanceId = BigInt(id);
-    const body = await request.json();
-    const { findings = "", actionTaken = "", notes = "" } = body;
+    const body = (await request.json()) as {
+      findings?: string;
+      actionTaken?: string;
+      notes?: string;
+      attachments?: Array<{
+        fileName: string;
+        filePath?: string;
+        fileType?: string;
+        fileSize?: number;
+      }>;
+    };
+    const {
+      findings = "",
+      actionTaken = "",
+      notes = "",
+      attachments = [],
+    } = body;
 
     if (!findings.trim() && !notes.trim()) {
       return NextResponse.json(
@@ -185,7 +202,38 @@ export async function POST(
         await activateNextSequentialDepartments(grievanceId, tx);
       }
 
-      // 2. Create Audit Log for Department Findings
+      // 2. Save any uploaded supportive findings attachments
+      const savedAttachments = [];
+      if (Array.isArray(attachments) && attachments.length > 0) {
+        for (const att of attachments) {
+          if (att.fileName) {
+            const raw = att.filePath || `findings/${att.fileName}`;
+            const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
+            const relativeStoragePath = norm.valid ? norm.storagePath : raw;
+            const newAtt = await tx.attachments.create({
+              data: {
+                grievance_id: grievanceId,
+                grievance_department_id: myDeptRecord?.grievance_department_id,
+                file_name: att.fileName,
+                file_path: relativeStoragePath,
+                file_type: att.fileType || "application/octet-stream",
+                file_size: att.fileSize ? BigInt(att.fileSize) : BigInt(1024),
+                uploaded_by: staffId,
+              },
+            });
+            savedAttachments.push({
+              id: newAtt.attachment_id.toString(),
+              name: newAtt.file_name,
+              size: `${Math.round(Number(newAtt.file_size || 1024) / 1024)} KB`,
+              type: newAtt.file_type,
+              path: newAtt.file_path,
+              downloadUrl: `/api/attachments/${newAtt.attachment_id}/download`,
+            });
+          }
+        }
+      }
+
+      // 3. Create Audit Log for Department Findings
       await tx.audit_logs.create({
         data: {
           grievance_id: grievanceId,
@@ -199,6 +247,7 @@ export async function POST(
             findings: findings.trim(),
             actionTaken: actionTaken.trim(),
             notes: notes.trim(),
+            attachments: savedAttachments,
           },
         },
       });
@@ -235,8 +284,8 @@ export async function POST(
           userId: primaryHod.user_id,
           grievanceId,
           type: "HEAD_INTERNAL_NOTE",
-          title: `Supporting Findings Completed (${grievance.grievance_number})`,
-          message: `${deptName} has completed their supporting investigation for ${grievance.grievance_number}.`,
+          title: `Supportive Findings Completed (${grievance.grievance_number})`,
+          message: `${deptName} has completed their supportive investigation for ${grievance.grievance_number}.`,
         });
       }
     }

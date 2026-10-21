@@ -136,7 +136,7 @@ export function useGrievanceActions({
         MONITOR: "Continue Monitoring",
         REQUEST_STATUS_UPDATE: `Immediate Status Update Requested from ${targetStaffName}`,
         NOTIFY_STAFF: `Operational Direction Provided to ${targetStaffName}`,
-        CROSS_DEPT: `Supporting Department Added (${targetDept})`,
+        CROSS_DEPT: `Supportive Department Added (${targetDept})`,
         REASSIGN: `Reassigned to ${targetStaffName}`,
         ASSUME_RESOLUTION_AUTHORITY: `Resolution Authority Assumed by ${currentHodName}`,
         DIRECT_OVERSIGHT: `Resolution Authority Assumed by ${currentHodName}`,
@@ -392,7 +392,7 @@ export function useGrievanceActions({
       replyToAuthor?: string,
     ) => {
       const trimmedNote = noteText.trim();
-      if (!trimmedNote) return;
+      if (!trimmedNote || grievance.status === "CLOSED") return;
 
       const headDisplayName = currentHodName.startsWith("Department Head")
         ? currentHodName
@@ -463,7 +463,7 @@ export function useGrievanceActions({
       replyToAuthor?: string,
     ) => {
       const trimmedNote = noteText.trim();
-      if (!trimmedNote) return;
+      if (!trimmedNote || grievance.status === "CLOSED") return;
 
       const headDisplayName = currentHodName.startsWith("Department Head")
         ? currentHodName

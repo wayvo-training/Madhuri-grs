@@ -10,24 +10,49 @@ export async function GET() {
     const departments = await prisma.departments.findMany({
       orderBy: { department_name: "asc" },
       include: {
+        users: {
+          where: {
+            status: "ACTIVE",
+            roles: { role_name: "DEPARTMENT_HEAD" },
+          },
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+          take: 1,
+        },
         _count: {
           select: {
-            users: true,
+            users: {
+              where: {
+                status: "ACTIVE",
+                roles: { role_name: "STAFF" },
+              },
+            },
             grievance_departments: true,
           },
         },
       },
     });
 
-    const serialized = departments.map((d) => ({
-      department_id: d.department_id.toString(),
-      department_name: d.department_name,
-      description: d.description,
-      status: d.status,
-      user_count: d._count.users,
-      grievance_count: d._count.grievance_departments,
-      created_at: d.created_at.toISOString(),
-    }));
+    const serialized = departments.map((d) => {
+      const head = d.users?.[0];
+      return {
+        department_id: d.department_id.toString(),
+        department_name: d.department_name,
+        description: d.description,
+        status: d.status,
+        user_count: d._count.users,
+        grievance_count: d._count.grievance_departments,
+        created_at: d.created_at.toISOString(),
+        head_name: head
+          ? `${head.first_name} ${head.last_name || ""}`.trim()
+          : null,
+        head_email: head?.email || null,
+      };
+    });
 
     return NextResponse.json({ success: true, departments: serialized });
   } catch (error) {

@@ -22,8 +22,8 @@ export default async function StaffActivityPage() {
       permissions={user.permissions}
       designation={designation}
       departmentName={deptName}
-      title="Staff Workspace"
-      subtitle={`Investigation & Resolution Desk • ${deptName}`}
+      title="Activity"
+      subtitle={`Activity Logs & Timeline • ${deptName}`}
     >
       <StaffActivityView staffName={fullName} />
     </DashboardShell>

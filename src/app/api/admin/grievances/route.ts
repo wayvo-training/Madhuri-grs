@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
       conditions.push({
         status: {
-          in: ["ROUTED", "ASSIGNED", "IN_PROGRESS", "UNDER_REVIEW"],
+          notIn: ["CLOSED", "RESOLVED"],
         },
       });
     } else if (tab === "SLA_RISK") {
@@ -107,13 +107,35 @@ export async function GET(request: Request) {
 
     // 5. Status filter
     if (status !== "ALL") {
-      const stats = status.split(",");
+      let stats = status.split(",").map((s) => s.trim().toUpperCase());
+
+      // Expand UNASSIGNED to SUBMITTED and ROUTED (awaiting staff assignment)
+      if (stats.includes("UNASSIGNED")) {
+        stats = stats
+          .filter((s) => s !== "UNASSIGNED")
+          .concat(["SUBMITTED", "ROUTED"]);
+      }
+      // Expand IN_PROGRESS to include UNDER_REVIEW and ESCALATED
+      if (stats.includes("IN_PROGRESS")) {
+        if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
+        if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
+      }
+      // Expand REOPENED to include REOPEN_REVIEW
+      if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
+        stats.push("REOPEN_REVIEW");
+      }
+
       conditions.push({ status: { in: stats } });
     }
 
     // 6. SLA Status filter
     if (slaStatus !== "ALL") {
-      const slas = slaStatus.split(",");
+      let slas = slaStatus.split(",").map((s) => s.trim().toUpperCase());
+      slas = slas.map((s) => {
+        if (s === "SLA_CRITICAL") return "BREACHED";
+        if (s === "SLA_RISK") return "AT_RISK";
+        return s;
+      });
       conditions.push({ sla_status: { in: slas } });
     }
 
@@ -180,7 +202,23 @@ export async function GET(request: Request) {
           },
           grievance_departments: {
             include: {
-              departments: true,
+              departments: {
+                include: {
+                  users: {
+                    where: {
+                      status: "ACTIVE",
+                      roles: { role_name: "DEPARTMENT_HEAD" },
+                    },
+                    select: {
+                      user_id: true,
+                      first_name: true,
+                      last_name: true,
+                      email: true,
+                    },
+                    take: 1,
+                  },
+                },
+              },
             },
           },
         },
@@ -222,15 +260,34 @@ export async function GET(request: Request) {
         getPrimaryDepartment(g)?.departments?.department_name ||
         null;
 
-      const otherEqualDepts = equalLinks.slice(1).map((s) => ({
-        department_id: s.department_id.toString(),
-        department_name: `${s.departments.department_name} (Joint Co-Lead)`,
-      }));
+      const primaryHead =
+        primaryLink?.departments?.users?.[0] ||
+        equalLinks[0]?.departments?.users?.[0] ||
+        getPrimaryDepartment(g)?.departments?.users?.[0];
 
-      const normalSupporting = supportingLinks.map((s) => ({
-        department_id: s.department_id.toString(),
-        department_name: s.departments.department_name,
-      }));
+      const otherEqualDepts = equalLinks.slice(1).map((s) => {
+        const head = s.departments.users?.[0];
+        return {
+          department_id: s.department_id.toString(),
+          department_name: `${s.departments.department_name} (Joint Co-Lead)`,
+          head_name: head
+            ? `${head.first_name} ${head.last_name || ""}`.trim()
+            : null,
+          head_email: head?.email || null,
+        };
+      });
+
+      const normalSupporting = supportingLinks.map((s) => {
+        const head = s.departments.users?.[0];
+        return {
+          department_id: s.department_id.toString(),
+          department_name: s.departments.department_name,
+          head_name: head
+            ? `${head.first_name} ${head.last_name || ""}`.trim()
+            : null,
+          head_email: head?.email || null,
+        };
+      });
 
       return {
         grievance_id: g.grievance_id.toString(),
@@ -248,6 +305,10 @@ export async function GET(request: Request) {
           `${g.users.first_name} ${g.users.last_name || ""}`.trim(),
         submitted_by_email: g.users.email,
         department_name: primaryDeptName,
+        department_head_name: primaryHead
+          ? `${primaryHead.first_name} ${primaryHead.last_name || ""}`.trim()
+          : null,
+        department_head_email: primaryHead?.email || null,
         involvement_type: isEqualInvolvement
           ? "EQUAL"
           : primaryLink

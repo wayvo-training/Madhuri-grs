@@ -1,6 +1,13 @@
 "use client";
 
-import { CornerDownRight, MessageSquare, Reply, Send, X } from "lucide-react";
+import {
+  CornerDownRight,
+  Lock,
+  MessageSquare,
+  Reply,
+  Send,
+  X,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { GrievanceItem, InternalNoteItem } from "@/types/department-head";
@@ -123,6 +130,7 @@ export function CaseNotesTab({
   };
 
   const notes = currentGrievance.internalNotes || [];
+  const isClosed = currentGrievance.status === "CLOSED";
 
   // Group notes into top-level threads and nested replies
   const { topLevelNotes, replyMap } = useMemo(() => {
@@ -216,16 +224,18 @@ export function CaseNotesTab({
           {noteItem.note}
         </p>
 
-        <div className="flex items-center justify-end pt-1">
-          <button
-            type="button"
-            onClick={() => handleReplyClick(noteItem)}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F766E] hover:text-[#115E59] dark:text-teal-400 dark:hover:text-teal-300 transition cursor-pointer"
-          >
-            <Reply className="h-3 w-3" />
-            <span>Reply</span>
-          </button>
-        </div>
+        {!isClosed && (
+          <div className="flex items-center justify-end pt-1">
+            <button
+              type="button"
+              onClick={() => handleReplyClick(noteItem)}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#0F766E] hover:text-[#115E59] dark:text-teal-400 dark:hover:text-teal-300 transition cursor-pointer"
+            >
+              <Reply className="h-3 w-3" />
+              <span>Reply</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -287,84 +297,99 @@ export function CaseNotesTab({
         )}
       </div>
 
-      {/* 3. Composer at Bottom */}
-      <form
-        onSubmit={handleNoteSubmit}
-        className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:bg-slate-900/60 dark:border-slate-700 p-3.5 space-y-2.5 shadow-2xs"
-      >
-        {replyingTo && (
-          <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-teal-100/70 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/60 rounded-lg text-teal-900 dark:text-teal-200">
-            <span className="flex items-center gap-1.5 font-medium truncate">
-              <CornerDownRight className="h-3.5 w-3.5 text-[#0F766E] shrink-0" />
-              Replying to{" "}
-              <strong className="font-semibold truncate max-w-[200px]">
-                {replyingTo.author}
-              </strong>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
-                ({replyingTo.noteSnippet})
-              </span>
+      {/* 3. Composer or Read-Only Banner for Closed Grievances */}
+      {isClosed ? (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 dark:bg-slate-900/60 dark:border-slate-800 p-3.5 flex items-center justify-between text-xs text-slate-500 shadow-2xs">
+          <span className="flex items-center gap-2">
+            <Lock className="h-4 w-4 text-slate-400 shrink-0" />
+            <span>
+              This grievance is <strong>Closed</strong>. Internal discussion
+              &amp; notes are archived in read-only mode.
             </span>
+          </span>
+          <span className="rounded-full bg-slate-200 dark:bg-slate-800 px-2.5 py-0.5 text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">
+            Case Closed
+          </span>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleNoteSubmit}
+          className="rounded-xl border border-teal-200 bg-[#F0FDFA] dark:bg-slate-900/60 dark:border-slate-700 p-3.5 space-y-2.5 shadow-2xs"
+        >
+          {replyingTo && (
+            <div className="flex items-center justify-between text-xs px-2.5 py-1.5 bg-teal-100/70 dark:bg-teal-900/40 border border-teal-200 dark:border-teal-800/60 rounded-lg text-teal-900 dark:text-teal-200">
+              <span className="flex items-center gap-1.5 font-medium truncate">
+                <CornerDownRight className="h-3.5 w-3.5 text-[#0F766E] shrink-0" />
+                Replying to{" "}
+                <strong className="font-semibold truncate max-w-[200px]">
+                  {replyingTo.author}
+                </strong>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate hidden sm:inline">
+                  ({replyingTo.noteSnippet})
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={handleCancelReply}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer ml-2 shrink-0 inline-flex items-center gap-0.5"
+              >
+                <X className="h-3.5 w-3.5" />
+                <span>Cancel</span>
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#115E59] dark:text-teal-400 flex items-center gap-1.5">
+              <MessageSquare className="h-3.5 w-3.5 text-[#0F766E]" />
+              {replyingTo ? "Post Reply to Discussion" : "Internal Discussion"}
+            </span>
+            <span className="text-[11px] text-[#0F766E] dark:text-teal-400">
+              Visible only to authorized grievance participants
+            </span>
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            rows={3}
+            required
+            value={newInternalNote}
+            onChange={(e) => setNewInternalNote(e.target.value)}
+            placeholder="Add an internal note or reply..."
+            className="w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E]"
+          />
+
+          <div className="flex items-center justify-between">
+            {replyingTo ? (
+              <button
+                type="button"
+                onClick={handleCancelReply}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                Cancel Reply
+              </button>
+            ) : (
+              <div />
+            )}
             <button
-              type="button"
-              onClick={handleCancelReply}
-              className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer ml-2 shrink-0 inline-flex items-center gap-0.5"
+              type="submit"
+              disabled={!newInternalNote.trim() || isSubmitting}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer"
             >
-              <X className="h-3.5 w-3.5" />
-              <span>Cancel</span>
+              <Send className="h-3 w-3" />
+              <span>
+                {isSubmitting
+                  ? replyingTo
+                    ? "Posting Reply..."
+                    : "Adding Note..."
+                  : replyingTo
+                    ? "Post Reply"
+                    : "Add Internal Note"}
+              </span>
             </button>
           </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-[#115E59] dark:text-teal-400 flex items-center gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5 text-[#0F766E]" />
-            {replyingTo ? "Post Reply to Discussion" : "Internal Discussion"}
-          </span>
-          <span className="text-[11px] text-[#0F766E] dark:text-teal-400">
-            Visible only to authorized grievance participants
-          </span>
-        </div>
-
-        <textarea
-          ref={textareaRef}
-          rows={3}
-          required
-          value={newInternalNote}
-          onChange={(e) => setNewInternalNote(e.target.value)}
-          placeholder="Add an internal note or reply..."
-          className="w-full rounded-lg border border-teal-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:border-[#0F766E]"
-        />
-
-        <div className="flex items-center justify-between">
-          {replyingTo ? (
-            <button
-              type="button"
-              onClick={handleCancelReply}
-              className="text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition cursor-pointer"
-            >
-              Cancel Reply
-            </button>
-          ) : (
-            <div />
-          )}
-          <button
-            type="submit"
-            disabled={!newInternalNote.trim() || isSubmitting}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 transition cursor-pointer"
-          >
-            <Send className="h-3 w-3" />
-            <span>
-              {isSubmitting
-                ? replyingTo
-                  ? "Posting Reply..."
-                  : "Adding Note..."
-                : replyingTo
-                  ? "Post Reply"
-                  : "Add Internal Note"}
-            </span>
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
     </div>
   );
 }

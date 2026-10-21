@@ -100,8 +100,8 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
   }, [advancedSearch, filterMode, sortState, pagination.resetPage]);
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden flex flex-col">
-      <div className="p-5 shrink-0">
+    <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden flex flex-col">
+      <div className="p-3.5 sm:p-4 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1 min-w-0 w-full lg:w-1/2">
             <AdvancedTableSearch
@@ -135,7 +135,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left table-fixed border-collapse shrink-0 bg-slate-50/95 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700">
             <colgroup>
@@ -153,7 +153,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="grievanceNumber"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-5"
+                  className="py-3 px-5"
                 >
                   Grievance ID
                 </SortableTh>
@@ -161,7 +161,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="title"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-4"
+                  className="py-3 px-4"
                 >
                   Title
                 </SortableTh>
@@ -169,7 +169,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="category"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-4"
+                  className="py-3 px-4"
                 >
                   Category
                 </SortableTh>
@@ -177,7 +177,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="priority"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-4"
+                  className="py-3 px-4"
                 >
                   Priority
                 </SortableTh>
@@ -185,7 +185,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="status"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-4"
+                  className="py-3 px-4"
                 >
                   Status
                 </SortableTh>
@@ -193,11 +193,11 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                   field="createdAt"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3.5 px-4 whitespace-nowrap"
+                  className="py-3 px-4 whitespace-nowrap"
                 >
                   Submitted
                 </SortableTh>
-                <th className="py-3.5 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">
+                <th className="py-3 px-5 text-right font-semibold text-slate-600 dark:text-slate-400 text-[13px]">
                   Actions
                 </th>
               </tr>
@@ -205,7 +205,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
           </table>
 
           {/* Scrollable Rows Container (Vertical scroll within rows only) */}
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left table-fixed border-collapse">
               <colgroup>
                 <col className="w-[14%]" />
@@ -223,21 +223,26 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                   >
                     <td className="py-2.5 px-5 whitespace-nowrap align-middle">
-                      <span className="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">
+                      <Link
+                        href={`/end-user/grievances/${item.id}?tab=overview`}
+                        className="font-mono text-xs font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors"
+                      >
                         {item.grievanceNumber}
-                      </span>
+                      </Link>
                     </td>
                     <td className="py-2.5 px-4 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={item.title}
-                        maxChars={30}
+                        maxChars={25}
+                        alwaysShowTooltip={true}
                         className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px]"
                       />
                     </td>
                     <td className="py-2.5 px-4 whitespace-nowrap align-middle max-w-[180px]">
                       <TruncatedText
                         text={item.category}
-                        maxChars={22}
+                        maxChars={20}
+                        alwaysShowTooltip={true}
                         className="text-slate-600 dark:text-slate-400 text-sm border-none truncate whitespace-nowrap block max-w-[160px]"
                       />
                     </td>
@@ -261,7 +266,9 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
                             onClick: () =>
-                              router.push(`/end-user/grievances/${item.id}`),
+                              router.push(
+                                `/end-user/grievances/${item.id}?tab=overview`,
+                              ),
                           },
                           {
                             label: "Track",
@@ -282,7 +289,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
 
           {/* Pagination Controls */}
           {pagination.totalCount > 0 && (
-            <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2">
               <Pagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}

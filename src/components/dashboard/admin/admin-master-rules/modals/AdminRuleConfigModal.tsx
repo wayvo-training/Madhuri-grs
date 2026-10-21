@@ -31,8 +31,8 @@ export const SLA_RECIPIENT_OPTIONS = [
   },
   {
     id: "SUPPORTING_DEPT_HEAD",
-    label: "Supporting Dept Head",
-    description: "Heads of participating supporting departments",
+    label: "Supportive Dept Head",
+    description: "Heads of participating supportive departments",
   },
   {
     id: "ALL_DEPT_HEADS",
@@ -1411,7 +1411,7 @@ export function AdminRuleConfigModal({
                                     EQUAL (Equal Co-owner)
                                   </option>
                                   <option value="SUPPORT">
-                                    SUPPORT (Supporting)
+                                    SUPPORT (Supportive)
                                   </option>
                                 </select>
                               </div>
@@ -1602,7 +1602,9 @@ export function AdminRuleConfigModal({
                                   : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
                             }`}
                           >
-                            {r.involvement_type}
+                            {r.involvement_type === "SUPPORT"
+                              ? "SUPPORTIVE"
+                              : r.involvement_type}
                           </span>
                         </span>
                       ))}
@@ -1691,7 +1693,11 @@ export function AdminRuleConfigModal({
                                             : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
                                       }`}
                                     >
-                                      {d.involvement_type || "SUPPORT"}
+                                      {d.involvement_type === "SUPPORT" ||
+                                      d.involvement_type === "SUPPORTING" ||
+                                      !d.involvement_type
+                                        ? "SUPPORTIVE"
+                                        : d.involvement_type}
                                     </span>
                                     {d.prerequisites &&
                                       d.prerequisites.length > 0 && (

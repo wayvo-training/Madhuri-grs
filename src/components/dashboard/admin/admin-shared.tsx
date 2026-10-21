@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "cn";
 import type { LucideIcon } from "lucide-react";
 import { Search } from "lucide-react";
@@ -41,6 +43,7 @@ export function AdminMetricCard({
   icon: Icon,
   accent = "emerald",
   active = false,
+  isLoading = false,
   onClick,
 }: {
   title: string;
@@ -49,6 +52,7 @@ export function AdminMetricCard({
   icon: LucideIcon;
   accent?: "emerald" | "rose" | "slate" | "amber";
   active?: boolean;
+  isLoading?: boolean;
   onClick?: () => void;
 }) {
   const accentStyles = {
@@ -97,35 +101,41 @@ export function AdminMetricCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-xl border p-4 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between h-[115px] sm:h-[120px]",
+        "relative overflow-hidden rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between min-h-[84px] sm:min-h-[88px]",
         styles.ring,
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
+        <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
           {title}
         </span>
         <div
           className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            "flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg",
             styles.icon,
           )}
         >
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span
-          className={cn(
-            "text-xl font-bold tracking-tight leading-none",
-            styles.value,
-          )}
-        >
-          {value}
-        </span>
-        <span className="text-[11px] font-medium text-slate-400 truncate">
-          {helper}
-        </span>
+      <div className="mt-1 flex items-baseline gap-2 min-w-0">
+        {isLoading ? (
+          <div className="h-6 w-16 bg-slate-200 rounded animate-pulse" />
+        ) : (
+          <>
+            <span
+              className={cn(
+                "text-lg sm:text-xl font-bold tracking-tight leading-none shrink-0",
+                styles.value,
+              )}
+            >
+              {value}
+            </span>
+            <span className="text-[11px] font-medium text-slate-400 truncate">
+              {helper}
+            </span>
+          </>
+        )}
       </div>
     </button>
   );

@@ -1,6 +1,5 @@
 import {
   Activity,
-  AlertTriangle,
   Bell,
   BookOpen,
   Building2,
@@ -81,6 +80,12 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       label: "Administration",
       items: [
         {
+          title: "User Management",
+          href: "/admin/users",
+          icon: Users,
+          requiredPermission: "MANAGE_USERS",
+        },
+        {
           title: "Roles & Permissions",
           href: "/admin/roles",
           icon: ShieldCheck,
@@ -136,11 +141,6 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           icon: Users,
         },
         {
-          title: "SLA & Escalations",
-          href: "/department-head/dashboard#sla",
-          icon: AlertTriangle,
-        },
-        {
           title: "Activity",
           href: "/department-head/dashboard#activity",
           icon: Activity,
@@ -160,7 +160,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
         },
         {
           title: "My Grievances",
-          href: "/staff/dashboard#queue",
+          href: "/staff/grievances",
           icon: FileText,
         },
         {
@@ -180,7 +180,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Activity",
-          href: "/staff/dashboard#activity",
+          href: "/staff/activity",
           icon: Activity,
         },
       ],
@@ -190,7 +190,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       items: [
         {
           title: "Profile",
-          href: "/staff/dashboard#profile",
+          href: "/staff/profile",
           icon: User,
         },
       ],

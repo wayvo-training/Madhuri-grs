@@ -328,6 +328,17 @@ export async function POST(
       select: { grievance_number: true, status: true },
     });
 
+    if (grievance?.status === "CLOSED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "This grievance is closed. Internal notes and collaboration messages cannot be added to closed cases.",
+        },
+        { status: 400 },
+      );
+    }
+
     const authorRawName = `${user.first_name} ${user.last_name || ""}`.trim();
     const roleDisplay =
       userRole === "DEPARTMENT_HEAD"

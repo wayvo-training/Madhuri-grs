@@ -65,6 +65,15 @@ export interface StaffAuditItem {
   grievanceNumber?: string;
 }
 
+export interface FindingAttachment {
+  id: string;
+  name: string;
+  size?: string;
+  type?: string;
+  path: string;
+  downloadUrl?: string;
+}
+
 export interface SupportingDepartmentFinding {
   id: string;
   departmentName: string;
@@ -74,6 +83,7 @@ export interface SupportingDepartmentFinding {
   notes?: string;
   createdAt: string;
   timestamp: string;
+  attachments?: FindingAttachment[];
 }
 
 export interface StaffResolutionData {
@@ -132,6 +142,8 @@ export interface StaffGrievanceItem {
   supportingFindings?: SupportingDepartmentFinding[];
   auditTrail?: StaffAuditItem[];
   departmentsInvolved?: StaffInvolvedDepartment[];
+  isCrossDepartment?: boolean;
+  collaboratingDepartments?: string[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   isPrimaryOwner?: boolean;
   myDepartmentStatus?: string;
@@ -163,6 +175,16 @@ export interface StaffDashboardData {
   categories?: string[];
 }
 
+export type StaffQueueTab =
+  | "all"
+  | "in_progress"
+  | "under_review"
+  | "at_risk"
+  | "breached"
+  | "reopened"
+  | "completed"
+  | "on_track";
+
 export interface StaffQueueFilterState {
   searchQuery: string;
   status: string;
@@ -170,11 +192,5 @@ export interface StaffQueueFilterState {
   slaStatus: string;
   category: string;
   isReopenedOnly?: boolean;
-  tab?:
-    | "all"
-    | "in_progress"
-    | "at_risk"
-    | "breached"
-    | "reopened"
-    | "completed";
+  tab?: StaffQueueTab;
 }

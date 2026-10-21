@@ -281,6 +281,7 @@ export async function GET(request: Request) {
               knowledge_articles: {
                 select: { article_id: true },
               },
+              attachments: true,
             },
           },
           attachments: true,
@@ -329,22 +330,18 @@ export async function GET(request: Request) {
         (d) => d.grievance_id === g.grievance_id,
       );
       const myDeptRecord = departmentId
-        ? relatedDepts.find((d) => d.department_id === departmentId)
+        ? relatedDepts.find(
+            (d) => BigInt(d.department_id) === BigInt(departmentId),
+          )
         : null;
 
       // Find assignment in this head's department
       const myDeptAssignment = departmentId
         ? grievanceAssignments.find(
-            (a) => a.grievance_departments?.department_id === departmentId,
-          )
-        : null;
-
-      // Find partner co-lead assignment (for EQUAL involvement)
-      const otherCoLeadAssignment = departmentId
-        ? grievanceAssignments.find(
             (a) =>
-              a.grievance_departments?.department_id !== departmentId &&
-              a.grievance_departments?.involvement_type === "EQUAL",
+              a.grievance_departments?.department_id &&
+              BigInt(a.grievance_departments.department_id) ===
+                BigInt(departmentId),
           )
         : null;
 
@@ -357,44 +354,29 @@ export async function GET(request: Request) {
 
       // Compute display name for Assigned To column
       let resolvedAssignedStaffName: string | null = null;
-      if (myDeptAssignment) {
-        const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
-        const myStaffName =
-          `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
-        if (otherCoLeadAssignment) {
-          const partnerStaff =
-            otherCoLeadAssignment.users_assignments_staff_idTousers;
-          const partnerDept =
-            otherCoLeadAssignment.grievance_departments?.departments
-              ?.department_name || "Partner";
+      if (departmentId) {
+        if (myDeptAssignment) {
+          const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
           resolvedAssignedStaffName =
-            `${myStaffName} (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
-            ")";
+            `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
+        } else if (myDeptRecord?.status === "BLOCKED") {
+          resolvedAssignedStaffName = "Blocked";
         } else {
-          resolvedAssignedStaffName = myStaffName;
+          resolvedAssignedStaffName = "Unassigned";
         }
-      } else if (otherCoLeadAssignment) {
-        const partnerStaff =
-          otherCoLeadAssignment.users_assignments_staff_idTousers;
-        const partnerDept =
-          otherCoLeadAssignment.grievance_departments?.departments
-            ?.department_name || "Partner";
-        resolvedAssignedStaffName =
-          `Unassigned (${partnerDept}: ${partnerStaff.first_name} ${partnerStaff.last_name || ""}`.trim() +
-          ")";
-      } else if (!departmentId && grievanceAssignments.length > 0) {
-        resolvedAssignedStaffName = grievanceAssignments
-          .map((a) =>
-            `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
-          )
-          .join(", ");
-      } else if (assignedStaff) {
-        resolvedAssignedStaffName =
-          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
-      } else if (myDeptRecord?.status === "BLOCKED") {
-        resolvedAssignedStaffName = "Blocked";
       } else {
-        resolvedAssignedStaffName = "Unassigned";
+        if (grievanceAssignments.length > 0) {
+          resolvedAssignedStaffName = grievanceAssignments
+            .map((a) =>
+              `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
+            )
+            .join(", ");
+        } else if (assignedStaff) {
+          resolvedAssignedStaffName =
+            `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+        } else {
+          resolvedAssignedStaffName = "Unassigned";
+        }
       }
 
       const latestEscalation = g.escalations[0];
@@ -548,6 +530,17 @@ export async function GET(request: Request) {
             if (!findings) findings = noteStr;
           }
 
+          const attList = Array.isArray(val.attachments)
+            ? (val.attachments as Array<{
+                id: string;
+                name: string;
+                size?: string;
+                type?: string;
+                path: string;
+                downloadUrl?: string;
+              }>)
+            : undefined;
+
           return {
             id: l.audit_log_id.toString(),
             departmentName: deptName,
@@ -555,53 +548,88 @@ export async function GET(request: Request) {
             findings,
             actionTaken: actionTaken || undefined,
             notes: notes || undefined,
+            attachments: attList,
             createdAt: l.created_at.toISOString(),
             timestamp: formatRelativeTime(l.created_at),
           };
         });
 
-      const auditTrail = g.audit_logs.map((l) => {
-        const user = l.users;
-        const userRole = user?.roles?.role_name;
-        let actor = "System";
-        if (user) {
-          const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
-          if (userRole === "DEPARTMENT_HEAD") {
-            actor = `Department Head — ${rawName}`;
-          } else if (userRole === "STAFF") {
-            actor = `Staff — ${rawName}`;
-          } else {
-            actor = `${rawName} (${userRole || "User"})`;
+      const auditTrail = g.audit_logs
+        .filter((l) => {
+          const val = parseLogVal(l);
+          const isInternalAction =
+            l.action === "HOD_DIRECTIVE_NOTE" ||
+            l.action === "INVESTIGATION_NOTE_ADDED" ||
+            l.action === "INTERNAL_NOTE_ADDED" ||
+            l.action === "HEAD_DIRECTIVE_ISSUED" ||
+            val.scope === "INTERNAL";
+
+          const isCollab =
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            val.scope === "COLLABORATION";
+
+          if (isCollab) {
+            return true;
           }
-        }
 
-        const val = l.new_value as {
-          details?: string;
-          note?: string;
-          bottleneck?: string;
-          stage?: string;
-        } | null;
+          if (isInternalAction && !isAdmin && departmentId) {
+            const authorDeptId =
+              l.users?.department_id?.toString() ||
+              (val.department_id ? String(val.department_id) : null);
+            if (authorDeptId && authorDeptId !== departmentId.toString()) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .map((l) => {
+          const user = l.users;
+          const userRole = user?.roles?.role_name;
+          let actor = "System";
+          if (user) {
+            const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+            if (userRole === "DEPARTMENT_HEAD") {
+              actor = `Department Head — ${rawName}`;
+            } else if (userRole === "STAFF") {
+              actor = `Staff — ${rawName}`;
+            } else {
+              actor = `${rawName} (${userRole || "User"})`;
+            }
+          }
 
-        let actionTitle = l.action.replace(/_/g, " ");
-        if (l.action === "HOD_DIRECTIVE_NOTE") {
-          actionTitle = "Internal Note";
-        } else if (
-          l.action === "INVESTIGATION_NOTE_ADDED" ||
-          l.action === "INTERNAL_NOTE_ADDED"
-        ) {
-          actionTitle = "Investigation Note";
-        }
+          const val = l.new_value as {
+            details?: string;
+            note?: string;
+            bottleneck?: string;
+            stage?: string;
+            scope?: string;
+          } | null;
 
-        return {
-          id: l.audit_log_id.toString(),
-          timestamp: formatRelativeTime(l.created_at),
-          actor,
-          action: actionTitle,
-          bottleneck: val?.bottleneck,
-          details: formatAuditEntryDetails(l.action, l.new_value),
-          stage: val?.stage || g.status,
-        };
-      });
+          let actionTitle = l.action.replace(/_/g, " ");
+          if (l.action === "HOD_DIRECTIVE_NOTE") {
+            actionTitle = "Internal Note";
+          } else if (
+            l.action === "INVESTIGATION_NOTE_ADDED" ||
+            l.action === "INTERNAL_NOTE_ADDED"
+          ) {
+            actionTitle = "Investigation Note";
+          } else if (
+            l.action === "COLLABORATION_NOTE_ADDED" ||
+            val?.scope === "COLLABORATION"
+          ) {
+            actionTitle = "Collaboration Note Added";
+          }
+
+          return {
+            id: l.audit_log_id.toString(),
+            timestamp: formatRelativeTime(l.created_at),
+            actor,
+            action: actionTitle,
+            bottleneck: val?.bottleneck,
+            details: formatAuditEntryDetails(l.action, l.new_value),
+            stage: val?.stage || g.status,
+          };
+        });
 
       // Find any HOD intervention record from audit logs strictly scoped to this department in multi-dept cases
       const isMultiDeptCase = relatedDepts.length > 1;
@@ -733,6 +761,41 @@ export async function GET(request: Request) {
       }
       const isCrossDepartment = deptList.length > 1;
 
+      const departmentsInvolved = relatedDepts.map((d) => {
+        const deptAssignment = grievanceAssignments.find(
+          (a) => a.grievance_department_id === d.grievance_department_id,
+        );
+        let deptStatus = d.status;
+        if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
+          if (deptStatus === "PENDING_ASSIGNMENT") {
+            deptStatus = "ASSIGNED";
+          }
+        } else if (!deptAssignment && deptStatus === "ASSIGNED") {
+          deptStatus = "PENDING_ASSIGNMENT";
+        }
+
+        const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+        const assignedStaff =
+          deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+            ? null
+            : staffUser &&
+                (deptAssignment?.assignment_status === "ASSIGNED" ||
+                  deptAssignment?.assignment_status === "COMPLETED")
+              ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+              : null;
+
+        return {
+          id: d.grievance_department_id.toString(),
+          departmentName:
+            d.departments?.department_name || "Unknown Department",
+          involvementType:
+            (d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+            "PRIMARY",
+          status: deptStatus,
+          assignedStaff,
+        };
+      });
+
       const myInvolvementType =
         (myDeptRecord?.involvement_type as
           | "PRIMARY"
@@ -788,30 +851,44 @@ export async function GET(request: Request) {
         priority: g.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW",
         status: resolvedStatus,
         slaStatus:
-          myDeptRecord?.status === "COMPLETED"
+          myDeptRecord?.status === "COMPLETED" ||
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED"
             ? "ON_TRACK"
-            : ((g.sla_status || "ON_TRACK") as
-                | "ON_TRACK"
-                | "AT_RISK"
-                | "BREACHED"),
-        slaDeadline: formatFriendlyDate(g.due_at),
+            : myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+              ? "ON_TRACK"
+              : ((g.sla_status || "ON_TRACK") as
+                  | "ON_TRACK"
+                  | "AT_RISK"
+                  | "BREACHED"),
+        slaDeadline:
+          myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+            ? "Paused (Blocked)"
+            : formatFriendlyDate(g.due_at),
         slaTimeLeft:
-          myDeptRecord?.status === "COMPLETED"
+          myDeptRecord?.status === "COMPLETED" ||
+          g.status === "CLOSED" ||
+          g.status === "RESOLVED"
             ? "Completed"
-            : formatSlaTimeLeft(
-                g.due_at,
-                g.sla_status,
-                g.priority,
-                g.created_at,
-              ),
+            : myDeptRecord?.status === "BLOCKED" || resolvedStatus === "BLOCKED"
+              ? "Paused (Blocked)"
+              : formatSlaTimeLeft(
+                  g.due_at,
+                  g.sla_status,
+                  g.priority,
+                  g.created_at,
+                ),
         slaConsumptionPercent: calculateSlaConsumption(
           g.created_at,
           g.due_at,
           g.priority,
         ).consumptionPercent,
-        assignedStaffId: assignedStaff
-          ? assignedStaff.user_id.toString()
-          : null,
+        assignedStaffId: departmentId
+          ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
+            null
+          : assignedStaff
+            ? assignedStaff.user_id.toString()
+            : null,
         assignedStaffName: resolvedAssignedStaffName,
         createdAt: formatFriendlyDate(g.created_at),
         isReopened: g.reopen_count > 0 || g.status === "REOPENED",
@@ -819,6 +896,7 @@ export async function GET(request: Request) {
         hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
         isCrossDepartment,
         collaboratingDepartments: deptList,
+        departmentsInvolved,
         isPrimaryDepartment,
         myDepartmentStatus:
           myDeptRecord?.status ||
@@ -850,12 +928,28 @@ export async function GET(request: Request) {
                 latestResolution.action_taken ||
                 latestResolution.problem_summary,
               submittedAt: formatRelativeTime(latestResolution.submitted_at),
+              attachments: (latestResolution.attachments || []).map((att) => ({
+                id: att.attachment_id.toString(),
+                name: att.file_name,
+                size: att.file_size
+                  ? `${Math.round(Number(att.file_size) / 1024)} KB`
+                  : undefined,
+                type: att.file_type || undefined,
+                path: att.file_path,
+                downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+                uploadedAt: formatFriendlyDate(att.uploaded_at),
+              })),
             }
           : null,
         auditTrail,
         attachments: filterAuthorizedAttachments(
           user,
-          g.attachments,
+          (g.attachments || []).filter(
+            (att) =>
+              !att.resolution_id &&
+              !att.grievance_department_id &&
+              BigInt(att.uploaded_by) === BigInt(g.submitted_by),
+          ),
           {
             grievance_id: g.grievance_id,
             submitted_by: g.submitted_by,

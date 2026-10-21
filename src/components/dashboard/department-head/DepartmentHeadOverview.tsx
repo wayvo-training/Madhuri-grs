@@ -37,7 +37,6 @@ import {
   KnowledgeView,
   OverviewView,
   QueueView,
-  SlaGovernanceView,
   StaffView,
 } from "./views";
 
@@ -56,6 +55,7 @@ export function DepartmentHeadOverviewInner({
     setStaffList,
     governanceAuditFeed,
     setGovernanceAuditFeed,
+    isLoading,
     selectedDeptId,
     setSelectedDeptId,
     availableDepartments,
@@ -226,6 +226,16 @@ export function DepartmentHeadOverviewInner({
         );
         return;
       }
+      if (
+        item.isBlocked ||
+        item.myDepartmentStatus === "BLOCKED" ||
+        item.status === "BLOCKED"
+      ) {
+        toast.error(
+          "Cannot intervene: This department is currently BLOCKED waiting for prerequisite departments to complete.",
+        );
+        return;
+      }
       setEscalationModalGrievance(item);
       setEscalationBottleneck("STAFF_CAPACITY");
       setEscalationBottleneckExplanation("");
@@ -320,7 +330,7 @@ export function DepartmentHeadOverviewInner({
   };
 
   return (
-    <div className="space-y-3.5 sm:space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
       {/* Top View Navigation & Global Controls */}
       <DepartmentHeadViewSwitcher
         activeView={activeView}
@@ -352,10 +362,20 @@ export function DepartmentHeadOverviewInner({
           grievances={grievances}
           staffList={staffList}
           governanceAuditFeed={governanceAuditFeed}
+          isLoading={isLoading}
           onViewQueue={() => switchView("queue")}
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
           onInspectGrievance={handleInspectCase}
+          onFilterQueue={(filterType, value) => {
+            resetFilters();
+            if (filterType === "status") {
+              setStatusFilter(value);
+            } else if (filterType === "priority") {
+              setPriorityFilter(value);
+            }
+            switchView("queue");
+          }}
         />
       )}
 
@@ -378,6 +398,7 @@ export function DepartmentHeadOverviewInner({
           setDepartmentFilter={setDepartmentFilter}
           availableDepartments={availableDepartments}
           selectedDeptId={selectedDeptId}
+          isLoading={isLoading}
           onDepartmentChange={(deptId) => {
             setSelectedDeptId(deptId);
             loadData(deptId);
@@ -398,6 +419,7 @@ export function DepartmentHeadOverviewInner({
           grievances={grievances}
           currentDepartmentName={currentDepartmentName}
           metrics={metrics}
+          isLoading={isLoading}
           onToggleAvailability={handleToggleStaffAvailability}
           onInspect={handleInspectCase}
           onReassign={(item, staffId) => handleOpenAssignModal(item, staffId)}
@@ -409,17 +431,42 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "activity" && (
-        <ActivityView governanceAuditFeed={governanceAuditFeed} />
+        <ActivityView
+          governanceAuditFeed={governanceAuditFeed}
+          isLoading={isLoading}
+        />
       )}
 
       {activeView === "sla" && (
-        <SlaGovernanceView
+        <QueueView
           grievances={grievances}
+          filteredGrievances={filteredGrievances}
+          staffList={staffList}
+          selectedTab="ESCALATED"
+          setSelectedTab={setSelectedTab}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          priorityFilter={priorityFilter}
+          setPriorityFilter={setPriorityFilter}
+          staffFilter={staffFilter}
+          setStaffFilter={setStaffFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          departmentFilter={departmentFilter}
+          setDepartmentFilter={setDepartmentFilter}
+          availableDepartments={availableDepartments}
+          selectedDeptId={selectedDeptId}
+          isLoading={isLoading}
+          onDepartmentChange={(deptId) => {
+            setSelectedDeptId(deptId);
+            loadData(deptId);
+          }}
+          resetFilters={resetFilters}
           metrics={metrics}
           onInspect={handleInspectCase}
+          onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
           onReviewResolution={handleOpenResolutionModal}
-          onAssign={handleOpenAssignModal}
           onProposeKb={handleOpenProposeKbModal}
         />
       )}

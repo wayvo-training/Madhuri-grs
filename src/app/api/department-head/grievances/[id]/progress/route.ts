@@ -664,8 +664,45 @@ export async function GET(
               },
             ];
 
-    const timeline = (grievance.audit_logs || []).map(
-      (log: (typeof grievance.audit_logs)[0]) => {
+    const timeline = (grievance.audit_logs || [])
+      .filter((log) => {
+        let val: Record<string, unknown> = {};
+        if (typeof log.new_value === "string") {
+          try {
+            val = JSON.parse(log.new_value);
+          } catch {
+            val = { details: log.new_value };
+          }
+        } else if (log.new_value && typeof log.new_value === "object") {
+          val = log.new_value as Record<string, unknown>;
+        }
+
+        const isInternalAction =
+          log.action === "HOD_DIRECTIVE_NOTE" ||
+          log.action === "INVESTIGATION_NOTE_ADDED" ||
+          log.action === "INTERNAL_NOTE_ADDED" ||
+          log.action === "HEAD_DIRECTIVE_ISSUED" ||
+          val.scope === "INTERNAL";
+
+        const isCollab =
+          log.action === "COLLABORATION_NOTE_ADDED" ||
+          val.scope === "COLLABORATION";
+
+        if (isCollab) {
+          return true;
+        }
+
+        if (isInternalAction && !isAdmin && departmentId) {
+          const authorDeptId =
+            log.users?.department_id?.toString() ||
+            (val.department_id ? String(val.department_id) : null);
+          if (authorDeptId && authorDeptId !== departmentId.toString()) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .map((log: (typeof grievance.audit_logs)[0]) => {
         const user = log.users;
         const actorRole = user?.roles?.role_name || "System";
 
@@ -720,6 +757,15 @@ export async function GET(
             (val.note as string) ||
             (val.details as string) ||
             "Staff investigation note.";
+        } else if (
+          act === "COLLABORATION_NOTE_ADDED" ||
+          val.scope === "COLLABORATION"
+        ) {
+          title = "Collaboration Note Added";
+          description =
+            (val.note as string) ||
+            (val.details as string) ||
+            "Cross-department collaboration note.";
         } else if (
           act.includes("ACCEPT_RESOLUTION") ||
           act.includes("APPROVE")
@@ -815,8 +861,7 @@ export async function GET(
             description || "Action recorded in grievance governance trail.",
           actor,
         };
-      },
-    );
+      });
 
     // Helper to parse audit log new_value
     const parseLogVal = (
@@ -993,7 +1038,12 @@ export async function GET(
           submitterRole: grievance.users?.roles?.role_name || "END_USER",
           attachments: filterAuthorizedAttachments(
             user,
-            grievance.attachments || [],
+            (grievance.attachments || []).filter(
+              (att) =>
+                !att.resolution_id &&
+                !att.grievance_department_id &&
+                BigInt(att.uploaded_by) === BigInt(grievance.submitted_by),
+            ),
             {
               grievance_id: grievance.grievance_id,
               submitted_by: grievance.submitted_by,

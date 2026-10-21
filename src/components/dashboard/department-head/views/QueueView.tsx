@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   Eye,
   GitBranch,
+  ShieldAlert,
+  ShieldCheck,
   User,
   UserCheck,
   UserPlus,
@@ -71,6 +73,7 @@ export interface QueueViewProps {
   onDepartmentChange?: (deptId: string) => void;
   resetFilters: () => void;
   metrics: DepartmentMetricsSummary;
+  isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: CaseDrawerTab) => void;
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
   onIntervene: (item: GrievanceItem) => void;
@@ -80,18 +83,18 @@ export interface QueueViewProps {
 
 export function QueueView({
   grievances,
-  filteredGrievances,
+  filteredGrievances: _filteredGrievances,
   staffList,
-  selectedTab: _selectedTab,
-  setSelectedTab: _setSelectedTab,
+  selectedTab,
+  setSelectedTab,
   searchQuery: _searchQuery,
   setSearchQuery: _setSearchQuery,
-  priorityFilter: _priorityFilter,
+  priorityFilter = "ALL",
   setPriorityFilter: _setPriorityFilter,
-  staffFilter: _staffFilter,
+  staffFilter = "ALL",
   setStaffFilter: _setStaffFilter,
-  statusFilter: _statusFilter = "ALL",
-  setStatusFilter: _setStatusFilter,
+  statusFilter = "ALL",
+  setStatusFilter,
   departmentFilter: _departmentFilter = "ALL",
   setDepartmentFilter: _setDepartmentFilter,
   slaFilter: _slaFilter = "ALL",
@@ -104,7 +107,8 @@ export function QueueView({
   selectedDeptId: _selectedDeptId,
   onDepartmentChange: _onDepartmentChange,
   resetFilters,
-  metrics: _metrics,
+  metrics,
+  isLoading = false,
   onInspect,
   onAssign,
   onIntervene,
@@ -137,10 +141,99 @@ export function QueueView({
   }, []);
 
   const localFilteredGrievances = useMemo(() => {
-    return grievances.filter((g) =>
-      evaluateSearchConditions(g, advancedConditions, advancedMode),
-    );
-  }, [grievances, advancedConditions, advancedMode]);
+    return grievances.filter((g) => {
+      // 0. Preset Quick Filter Tab
+      if (selectedTab === "ESCALATED") {
+        const isEscalated =
+          g.status === "ESCALATED" ||
+          g.slaStatus === "BREACHED" ||
+          Boolean(g.hodIntervention);
+        if (!isEscalated) return false;
+      } else if (selectedTab === "UNASSIGNED") {
+        const isUnassigned =
+          !g.assignedStaffId ||
+          !g.assignedStaffName ||
+          g.assignedStaffName === "Unassigned" ||
+          g.status === "SUBMITTED" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+        if (!isUnassigned) return false;
+      } else if (selectedTab === "IN_PROGRESS") {
+        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
+        const isInProgress =
+          g.status === "IN_PROGRESS" ||
+          g.status === "ASSIGNED" ||
+          g.myDepartmentStatus === "IN_PROGRESS" ||
+          g.myDepartmentStatus === "ASSIGNED";
+        if (!isInProgress) return false;
+      } else if (selectedTab === "RESOLUTION_REVIEW") {
+        if (g.status !== "UNDER_REVIEW" && !canHeadSubmitResolution(g)) {
+          return false;
+        }
+      } else if (selectedTab === "CLOSED") {
+        if (!["CLOSED", "RESOLVED"].includes(g.status)) return false;
+      }
+
+      // 1. Status Filter from parent (e.g. from clicking Status chart or tab)
+      if (statusFilter && statusFilter !== "ALL") {
+        if (statusFilter === "UNASSIGNED") {
+          const isUnassigned =
+            !g.assignedStaffId ||
+            !g.assignedStaffName ||
+            g.assignedStaffName === "Unassigned" ||
+            g.status === "SUBMITTED" ||
+            g.status === "ROUTED" ||
+            g.status === "PENDING_ASSIGNMENT" ||
+            g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+          if (!isUnassigned) return false;
+        } else if (statusFilter === "IN_PROGRESS") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
+          const isInProgress =
+            g.status === "IN_PROGRESS" ||
+            g.status === "ASSIGNED" ||
+            g.myDepartmentStatus === "IN_PROGRESS" ||
+            g.myDepartmentStatus === "ASSIGNED";
+          if (!isInProgress) return false;
+        } else if (statusFilter === "UNDER_REVIEW") {
+          if (g.status !== "UNDER_REVIEW") return false;
+        } else if (statusFilter === "ASSIGNED") {
+          if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
+            return false;
+        } else if (statusFilter === "REOPENED") {
+          if (!g.isReopened && g.status !== "REOPENED") return false;
+        } else if (statusFilter === "RESOLVED") {
+          if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
+        } else if (g.status !== statusFilter) {
+          return false;
+        }
+      }
+
+      // 2. Priority Filter from parent
+      if (priorityFilter && priorityFilter !== "ALL") {
+        if (g.priority !== priorityFilter) return false;
+      }
+
+      // 3. Staff Filter from parent
+      if (staffFilter && staffFilter !== "ALL") {
+        if (staffFilter === "UNASSIGNED") {
+          if (g.assignedStaffId) return false;
+        } else if (g.assignedStaffId !== staffFilter) {
+          return false;
+        }
+      }
+
+      return evaluateSearchConditions(g, advancedConditions, advancedMode);
+    });
+  }, [
+    grievances,
+    selectedTab,
+    advancedConditions,
+    advancedMode,
+    statusFilter,
+    priorityFilter,
+    staffFilter,
+  ]);
 
   const sortedGrievances = useMemo(() => {
     const list = [...localFilteredGrievances];
@@ -294,42 +387,68 @@ export function QueueView({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
-      <div className="p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center gap-4 bg-white border-b border-slate-200/80">
-        {/* Title Header */}
-        <div className="shrink-0">
-          <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-            Live Grievance Oversight Queue
-          </h2>
-        </div>
+      <div className="p-3 sm:p-3.5 bg-white border-b border-slate-200/80 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 sm:gap-4">
+          {/* Title Header */}
+          <div className="shrink-0 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              Live Grievance Oversight Queue
+            </h2>
+            {(statusFilter !== "ALL" ||
+              priorityFilter !== "ALL" ||
+              (selectedTab && selectedTab !== "ALL")) && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                Filtered:{" "}
+                {selectedTab && selectedTab !== "ALL"
+                  ? selectedTab.replace(/_/g, " ")
+                  : statusFilter !== "ALL"
+                    ? statusFilter.replace(/_/g, " ")
+                    : priorityFilter}
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetFilters();
+                    if (setSelectedTab) setSelectedTab("ALL");
+                  }}
+                  className="hover:text-teal-950 font-bold ml-1 cursor-pointer"
+                  title="Clear filter"
+                >
+                  &times;
+                </button>
+              </span>
+            )}
+          </div>
 
-        {/* Controls Bar: View & Filter */}
-        <div className="flex-1 min-w-0">
-          <AdvancedTableSearch
-            fields={filterFields}
-            onSearch={handleSearchChange}
-            className="w-full"
-          />
+          {/* Controls Bar: View & Filter */}
+          <div className="flex-1 min-w-0 w-full">
+            <AdvancedTableSearch
+              fields={filterFields}
+              onSearch={handleSearchChange}
+              className="w-full"
+            />
+          </div>
         </div>
       </div>
 
       {/* Grievances Data Table */}
-      <div className="overflow-x-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-        <div className="min-w-[1340px]">
+      <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
+        <div className="min-w-[1650px] flex-1 min-h-0 flex flex-col">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
             <colgroup>
-              <col className="w-[110px]" />
-              <col className="w-[240px]" />
+              <col className="w-[115px]" />
+              <col className="w-[245px]" />
               <col className="w-[140px]" />
-              <col className="w-[130px]" />
+              <col className="w-[135px]" />
               <col className="w-[100px]" />
-              <col className="w-[110px]" />
-              <col className="w-[140px]" />
-              <col className="w-[150px]" />
-              <col className="w-[130px]" />
-              <col className="w-[90px]" />
+              <col className="w-[125px]" />
+              <col className="w-[155px]" />
+              <col className="w-[215px]" />
+              <col className="w-[170px]" />
+              <col className="w-[155px]" />
+              <col className="w-[95px]" />
             </colgroup>
             <thead>
               <tr>
@@ -385,15 +504,16 @@ export function QueueView({
                   field="slaStatus"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   SLA Status
                 </SortableTableHead>
+                <TableHead className="py-3 px-4">Head Intervention</TableHead>
                 <SortableTableHead
                   field="assignedStaffName"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   Assigned Staff
                 </SortableTableHead>
@@ -401,7 +521,7 @@ export function QueueView({
                   field="createdAt"
                   currentSort={sortState}
                   onSort={handleSort}
-                  className="py-3 px-3"
+                  className="py-3 px-4"
                 >
                   Submitted
                 </SortableTableHead>
@@ -413,25 +533,73 @@ export function QueueView({
           </table>
 
           {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left text-sm table-fixed border-collapse">
               <colgroup>
-                <col className="w-[110px]" />
-                <col className="w-[240px]" />
+                <col className="w-[115px]" />
+                <col className="w-[245px]" />
                 <col className="w-[140px]" />
-                <col className="w-[130px]" />
+                <col className="w-[135px]" />
                 <col className="w-[100px]" />
-                <col className="w-[110px]" />
-                <col className="w-[140px]" />
-                <col className="w-[150px]" />
-                <col className="w-[130px]" />
-                <col className="w-[90px]" />
+                <col className="w-[125px]" />
+                <col className="w-[155px]" />
+                <col className="w-[215px]" />
+                <col className="w-[170px]" />
+                <col className="w-[155px]" />
+                <col className="w-[95px]" />
               </colgroup>
               <TableBody>
-                {filteredGrievances.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <TableRow
+                      key={`queue-skel-${
+                        // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                        i
+                      }`}
+                      className="animate-pulse"
+                    >
+                      <TableCell className="py-3.5 pl-4 pr-3">
+                        <div className="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="space-y-1">
+                          <div className="h-3.5 w-40 bg-slate-200 dark:bg-slate-700 rounded" />
+                          <div className="h-2.5 w-24 bg-slate-100 dark:bg-slate-800 rounded" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-3">
+                        <div className="h-3.5 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 px-4">
+                        <div className="h-3.5 w-20 bg-slate-200 dark:bg-slate-700 rounded" />
+                      </TableCell>
+                      <TableCell className="py-3.5 pl-3 pr-4 text-right">
+                        <div className="h-7 w-8 bg-slate-200 dark:bg-slate-700 rounded-md ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : sortedGrievances.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={10}
+                      colSpan={11}
                       className="py-12 text-center text-slate-400 font-normal"
                     >
                       <CheckCircle2 className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -452,8 +620,21 @@ export function QueueView({
                   </TableRow>
                 ) : (
                   paginatedGrievances.map((item) => {
+                    const isItemBlocked = Boolean(
+                      item.isBlocked ||
+                        item.status === "BLOCKED" ||
+                        item.myDepartmentStatus === "BLOCKED",
+                    );
+                    const isItemClosed = Boolean(
+                      item.status === "CLOSED" ||
+                        item.status === "RESOLVED" ||
+                        item.myDepartmentStatus === "COMPLETED",
+                    );
                     const isEscalated = item.status === "ESCALATED";
-                    const isBreached = item.slaStatus === "BREACHED";
+                    const isBreached =
+                      !isItemBlocked &&
+                      !isItemClosed &&
+                      item.slaStatus === "BREACHED";
                     const highlightSla = !isEscalated && isBreached;
                     const hasAssignedStaff = Boolean(
                       item.assignedStaffId ||
@@ -469,9 +650,13 @@ export function QueueView({
                       >
                         {/* 1. Ticket Code */}
                         <TableCell className="py-3 pl-4 pr-3 align-top">
-                          <span className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 inline-block">
+                          <button
+                            type="button"
+                            onClick={() => onInspect(item, "statement")}
+                            className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline inline-block cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
+                          >
                             {item.ticketCode}
-                          </span>
+                          </button>
                         </TableCell>
 
                         {/* 2. Title & Badges */}
@@ -480,8 +665,7 @@ export function QueueView({
                             <TruncatedText
                               text={item.title}
                               maxChars={24}
-                              onClick={() => onInspect(item, "statement")}
-                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 hover:text-emerald-700 dark:hover:text-teal-300 transition text-left group-hover:text-emerald-900 dark:group-hover:text-teal-200 block cursor-pointer max-w-[215px] truncate border-none"
+                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 block max-w-[215px] truncate border-none"
                             />
 
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -495,7 +679,6 @@ export function QueueView({
                                   Multi Department
                                 </span>
                               )}
-                              {/* Removed Resolution Submitted badge per requirement */}
                             </div>
                           </div>
                         </TableCell>
@@ -524,74 +707,98 @@ export function QueueView({
                         {/* 4. Status */}
                         <TableCell className="py-3 px-3 whitespace-nowrap align-top">
                           <StatusBadge status={item.status} />
-                          {item.status === "BLOCKED" && (
+                          {isItemBlocked && (
                             <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                               Waiting for Prerequisite
-                            </span>
-                          )}
-                          {hasHeadResolutionAuthority(item) && (
-                            <span className="block mt-1 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
-                              Head Intervention Active
                             </span>
                           )}
                         </TableCell>
 
                         {/* 5. SLA Status */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top max-w-[140px] overflow-hidden">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top max-w-[155px] overflow-hidden">
                           <div className="flex flex-col items-start gap-1 min-w-0">
-                            <span
-                              className={`text-sm font-medium whitespace-nowrap ${
-                                highlightSla
-                                  ? "text-rose-600 font-bold dark:text-rose-400"
-                                  : item.slaStatus === "AT_RISK"
-                                    ? "text-amber-800 font-semibold dark:text-amber-400"
-                                    : "text-slate-600 dark:text-slate-300"
-                              }`}
-                            >
-                              {item.slaTimeLeft}
-                            </span>
-                            {item.slaStatus === "AT_RISK" && (
-                              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                                SLA At Risk
+                            {isItemBlocked ? (
+                              <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                                Paused (Blocked)
                               </span>
-                            )}
-                            {item.slaStatus === "BREACHED" && (
-                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
-                                Breached
+                            ) : isItemClosed ? (
+                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                Completed
                               </span>
+                            ) : (
+                              <>
+                                <span
+                                  className={`text-sm font-medium whitespace-nowrap ${
+                                    highlightSla
+                                      ? "text-rose-600 font-bold dark:text-rose-400"
+                                      : item.slaStatus === "AT_RISK"
+                                        ? "text-amber-800 font-semibold dark:text-amber-400"
+                                        : "text-slate-600 dark:text-slate-300"
+                                  }`}
+                                >
+                                  {item.slaTimeLeft}
+                                </span>
+                                {item.slaStatus === "AT_RISK" && (
+                                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                    SLA At Risk
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>
 
-                        {/* 6. Assigned Officer */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                          {item.status !== "CLOSED" &&
-                          item.status !== "RESOLVED" &&
-                          item.hodIntervention?.isResolutionAuthority ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-                                <UserCheck className="h-3 w-3 text-amber-600" />
-                                <span>
-                                  {item.hodIntervention
-                                    .resolutionAuthorityName ||
-                                    "Department Head"}{" "}
-                                  (Authority)
-                                </span>
+                        {/* 6. Head Intervention (New Column) */}
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                          {isItemBlocked ? (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          ) : isItemClosed ? (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          ) : hasHeadResolutionAuthority(item) ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                              <ShieldAlert className="h-3 w-3 text-amber-600 shrink-0" />
+                              <span>Intervention Active</span>
+                            </span>
+                          ) : item.hodIntervention ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-300 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800">
+                              <ShieldCheck className="h-3 w-3 text-teal-600 shrink-0" />
+                              <span>
+                                {item.hodIntervention.actionLabel ||
+                                  "Intervention Taken"}
                               </span>
-                              {hasAssignedStaff && (
-                                <span className="text-[11px] text-slate-500">
-                                  Staff: {item.assignedStaffName}
-                                </span>
-                              )}
-                            </div>
-                          ) : item.isBlocked || item.status === "BLOCKED" ? (
+                            </span>
+                          ) : item.status === "ESCALATED" ||
+                            item.slaStatus === "BREACHED" ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-800 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-800">
+                              <AlertCircle className="h-3 w-3 text-rose-600 shrink-0" />
+                              <span>Intervention Required</span>
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-normal">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* 7. Assigned Officer */}
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top overflow-hidden">
+                          {isItemBlocked ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 dark:bg-amber-500/10 dark:text-amber-400 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-500/20">
                               Blocked
                             </span>
                           ) : hasAssignedStaff ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
-                              <User className="h-3 w-3 text-slate-400" />
-                              <span>{item.assignedStaffName}</span>
+                            <span
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 max-w-full truncate"
+                              title={item.assignedStaffName || undefined}
+                            >
+                              <User className="h-3 w-3 text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {item.assignedStaffName}
+                              </span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-sm font-normal text-slate-500">
@@ -601,7 +808,7 @@ export function QueueView({
                         </TableCell>
 
                         {/* 7. Submitter & Date */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
                           <div className="text-sm">
                             <p className="font-medium text-slate-800">
                               {item.submitterName}
@@ -640,6 +847,9 @@ export function QueueView({
                               ...(!hasHeadResolutionAuthority(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
+                              !item.isBlocked &&
+                              item.status !== "BLOCKED" &&
+                              item.myDepartmentStatus !== "BLOCKED" &&
                               (item.status === "ESCALATED" ||
                                 item.slaStatus === "BREACHED")
                                 ? [
@@ -723,11 +933,11 @@ export function QueueView({
         </div>
       </div>
 
-      <div className="border-t border-slate-200 bg-white dark:bg-slate-900">
+      <div className="sticky bottom-0 z-10 shrink-0 mt-auto border-t border-slate-200 bg-white dark:bg-slate-900">
         <Pagination
           currentPage={currentPage}
-          totalPages={Math.ceil(filteredGrievances.length / pageSize)}
-          totalCount={filteredGrievances.length}
+          totalPages={Math.ceil(localFilteredGrievances.length / pageSize)}
+          totalCount={localFilteredGrievances.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}

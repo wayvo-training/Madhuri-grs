@@ -47,7 +47,7 @@ export default function RootLayout({
       className={`${inter.variable} font-sans h-full antialiased`}
     >
       <head>
-        <Script id="theme-script" strategy="beforeInteractive">
+        <Script id="theme-init" strategy="beforeInteractive">
           {themeScript}
         </Script>
       </head>

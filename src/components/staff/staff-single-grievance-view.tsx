@@ -10,6 +10,7 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import { StaffGrievanceDetailSkeleton } from "@/components/staff/skeletons";
 import { triggerFileDownload } from "@/lib/utils/download";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
@@ -153,14 +154,7 @@ export function StaffSingleGrievanceView({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3">
-        <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
-        <p className="text-xs font-medium text-slate-500">
-          Loading assigned grievance details...
-        </p>
-      </div>
-    );
+    return <StaffGrievanceDetailSkeleton />;
   }
 
   if (error || !grievance) {

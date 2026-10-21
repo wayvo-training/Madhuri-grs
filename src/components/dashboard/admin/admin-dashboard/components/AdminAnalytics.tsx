@@ -9,14 +9,10 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import type { ChartConfig } from "@/components/ui/chart";
-import { DashboardPieChartCard } from "@/components/ui/dashboard-pie-chart";
-import {
-  PRIORITY_COLORS,
-  SLA_COLORS,
-  STATUS_COLORS,
-} from "@/lib/constants/chart-colors";
 import type { DashboardDepartmentSummary } from "@/types/admin/dashboard";
+import { GrievanceStatusCard } from "./GrievanceStatusCard";
+import { PriorityDistributionCard } from "./PriorityDistributionCard";
+import { SlaPerformanceCard } from "./SlaPerformanceCard";
 
 export function DepartmentWorkloadCard({
   departments,
@@ -48,31 +44,31 @@ export function DepartmentWorkloadCard({
   const icons = [Users, Landmark, Building2, ClipboardList, ShieldCheck];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white flex flex-col h-full overflow-hidden shadow-2xs">
-      <div className="p-5 sm:p-6 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <ClipboardList className="h-4 w-4" />
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden shadow-2xs">
+      <div className="p-3 sm:p-3.5 pb-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+            <ClipboardList className="h-3 w-3" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-800 leading-tight">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Department Workload
             </h3>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
               Active grievances by department
             </p>
           </div>
         </div>
         <Link
           href="/admin/departments"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 transition"
         >
           <span>View All</span>
-          <ArrowRight className="h-3.5 w-3.5" />
+          <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
 
-      <div className="px-5 sm:px-6 py-6 flex flex-col gap-5 flex-1 justify-start">
+      <div className="p-3 sm:p-3.5 flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-y-auto custom-scrollbar">
         {sortedDepts.map((dept, index) => {
           const percentage =
             totalGrievances > 0
@@ -83,18 +79,26 @@ export function DepartmentWorkloadCard({
           const textClass = textColors[index % textColors.length];
 
           return (
-            <div
-              key={dept.department_id}
-              className="flex items-center gap-4 text-sm font-semibold"
-            >
-              <div className="flex items-center gap-3 w-40 shrink-0">
-                <Icon className={`h-4.5 w-4.5 ${textClass}`} />
-                <span className="text-slate-700 truncate">
-                  {dept.department_name}
-                </span>
+            <div key={dept.department_id} className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Icon className={`h-3.5 w-3.5 ${textClass} shrink-0`} />
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate text-xs">
+                    {dept.department_name}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
+                  <span className="font-bold text-xs">
+                    {dept.grievance_count}
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-400 text-[11px] font-medium">
+                    ({percentage}%)
+                  </span>
+                </div>
               </div>
 
-              <div className="flex-1 bg-slate-100 h-3 rounded-full overflow-hidden flex">
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden flex">
                 {percentage > 0 && (
                   <div
                     className={`h-full ${colorClass} rounded-full transition-all duration-500`}
@@ -102,14 +106,27 @@ export function DepartmentWorkloadCard({
                   />
                 )}
               </div>
-
-              <div className="flex items-center gap-1.5 w-16 justify-end tabular-nums shrink-0">
-                <span className="text-slate-800">{dept.grievance_count}</span>
-                <span className="text-slate-400 text-xs">({percentage}%)</span>
-              </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Solid Summary Footer matching table pagination height */}
+      <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3.5 py-2 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <span className="font-medium text-[11px] sm:text-xs">
+            {departments.length}{" "}
+            {departments.length === 1 ? "Department" : "Departments"} Monitored
+          </span>
+        </div>
+        <div className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
+          Total:{" "}
+          <span className="font-bold text-slate-900 dark:text-white tabular-nums">
+            {totalGrievances}
+          </span>{" "}
+          active
+        </div>
       </div>
     </div>
   );
@@ -142,48 +159,19 @@ export function AdminAnalyticsGrid({
     totalSla: number;
   };
 }) {
-  const statusConfig = {
-    inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
-    assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED },
-    unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
-    reopened: { label: "Reopened", color: STATUS_COLORS.REOPENED },
-  } satisfies ChartConfig;
-
-  const priorityConfig = {
-    critical: { label: "Critical", color: PRIORITY_COLORS.CRITICAL },
-    high: { label: "High", color: PRIORITY_COLORS.HIGH },
-    medium: { label: "Medium", color: PRIORITY_COLORS.MEDIUM },
-    low: { label: "Low", color: PRIORITY_COLORS.LOW },
-  } satisfies ChartConfig;
-
-  const slaConfig = {
-    onTrack: { label: "On Track", color: SLA_COLORS.ON_TRACK },
-    atRisk: { label: "At Risk", color: SLA_COLORS.AT_RISK },
-    breached: { label: "Breached", color: SLA_COLORS.BREACHED },
-  } satisfies ChartConfig;
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <DashboardPieChartCard
-        title="Grievance Status Breakdown"
-        description="Active grievances by current status"
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-2.5 items-stretch">
+      <GrievanceStatusCard
         data={pieCharts.statusData}
-        config={statusConfig}
-        centerValue={pieCharts.totalActive}
+        totalActive={pieCharts.totalActive}
       />
-      <DashboardPieChartCard
-        title="Priority Distribution"
-        description="Active grievances by priority level"
+      <PriorityDistributionCard
         data={pieCharts.priorityData}
-        config={priorityConfig}
-        centerValue={pieCharts.totalPriority}
+        totalPriority={pieCharts.totalPriority}
       />
-      <DashboardPieChartCard
-        title="SLA Status"
-        description="Active grievances by SLA compliance"
+      <SlaPerformanceCard
         data={pieCharts.slaData}
-        config={slaConfig}
-        centerValue={pieCharts.totalSla}
+        totalSla={pieCharts.totalSla}
       />
     </div>
   );

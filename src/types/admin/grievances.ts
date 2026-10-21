@@ -1,6 +1,8 @@
 export interface SupportingDepartment {
   department_id: string;
   department_name: string;
+  head_name?: string | null;
+  head_email?: string | null;
 }
 
 export interface SerializedGrievance {
@@ -18,6 +20,8 @@ export interface SerializedGrievance {
   submitted_by_name: string;
   submitted_by_email: string;
   department_name: string | null;
+  department_head_name?: string | null;
+  department_head_email?: string | null;
   involvement_type?: string | null;
   supporting_departments?: SupportingDepartment[];
   reopen_count: number;
@@ -51,6 +55,8 @@ export interface DepartmentOption {
   department_id: string;
   department_name: string;
   grievance_count?: number;
+  head_name?: string | null;
+  head_email?: string | null;
 }
 
 export interface AdminGrievanceTableProps {
@@ -59,4 +65,10 @@ export interface AdminGrievanceTableProps {
   initialCounts?: TabCounts;
   departments: DepartmentOption[];
   categories?: string[];
+  initialTab?: TableTab;
+  initialPriority?: string[];
+  initialStatus?: string[];
+  initialSla?: string[];
+  initialSearch?: string;
+  initialDept?: string[];
 }

@@ -138,7 +138,7 @@ const ConditionPill = ({
 
       return (
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center h-full px-3 text-xs outline-none hover:bg-slate-50 min-w-[120px] max-w-[200px]">
+          <DropdownMenuTrigger className="flex items-center h-full px-3 text-xs outline-none hover:bg-slate-50 min-w-30 max-w-30">
             <span className="truncate flex-1 text-left font-medium">
               {selectedArray.length > 0
                 ? selectedArray

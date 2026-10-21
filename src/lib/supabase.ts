@@ -68,11 +68,20 @@ export async function getAttachmentUrl(
   path: string,
   expiresInSeconds = 3600,
   isPrivate = false,
+  downloadName?: string | boolean,
 ): Promise<string> {
   if (isPrivate) {
     const { data, error } = await supabaseAdmin.storage
       .from(SUPABASE_BUCKET)
-      .createSignedUrl(path, expiresInSeconds);
+      .createSignedUrl(
+        path,
+        expiresInSeconds,
+        downloadName
+          ? {
+              download: typeof downloadName === "string" ? downloadName : true,
+            }
+          : undefined,
+      );
 
     if (error) {
       throw new Error(`Failed to generate signed URL: ${error.message}`);

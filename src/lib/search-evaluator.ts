@@ -62,6 +62,24 @@ export function evaluateSearchConditions<T>(
     if (field === "subCategory") return record.subcategory;
     if (field === "sla") return record.slaStatus;
     if (field === "staff") return record.assignedStaffId;
+    if (field === "name" || field === "user") {
+      const fn = record.first_name || record.name || "";
+      const ln = record.last_name || "";
+      return `${fn} ${ln}`.trim();
+    }
+    if (field === "role" || field === "role_name") {
+      return record.role_name || record.role;
+    }
+    if (field === "department" || field === "department_name") {
+      return record.department_name || record.department;
+    }
+    if (
+      field === "employee_code" ||
+      field === "employeeCode" ||
+      field === "code"
+    ) {
+      return record.employee_code;
+    }
     return record[field];
   };
 
@@ -74,7 +92,16 @@ export function evaluateSearchConditions<T>(
       "submitterName",
       "category",
       "subcategory",
+      "employee_code",
+      "email",
+      "role_name",
+      "department_name",
     ];
+
+    const fullName =
+      `${record.first_name || ""} ${record.last_name || ""}`.trim();
+    if (fullName && fullName.toLowerCase().includes(q)) return true;
+
     return genericFields.some((f) => {
       const val = record[f];
       return (

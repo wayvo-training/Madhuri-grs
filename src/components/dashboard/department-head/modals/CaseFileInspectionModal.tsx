@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  CaseNotesSkeleton,
+  CaseProgressSlaSkeleton,
+  CaseTimelineSkeleton,
+} from "@/components/common/skeletons";
 import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import type {
   CaseDrawerTab,
@@ -90,6 +95,9 @@ export function CaseFileInspectionModal({
           setCaseProgressData(json.data);
           setCurrentGrievance((prev) => ({
             ...prev,
+            ...(json.data.departmentsInvolved
+              ? { departmentsInvolved: json.data.departmentsInvolved }
+              : {}),
             ...(json.data.grievance?.attachments
               ? { attachments: json.data.grievance.attachments }
               : {}),
@@ -167,8 +175,14 @@ export function CaseFileInspectionModal({
         : "ON_TRACK");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-      <div className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+      {/* Dark Backdrop Overlay */}
+      <div
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div className="relative z-10 flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <CaseInspectionHeader
           ticketCode={currentGrievance.ticketCode}
@@ -245,7 +259,10 @@ export function CaseFileInspectionModal({
           {((currentGrievance.departmentsInvolved &&
             currentGrievance.departmentsInvolved.length > 1) ||
             (caseProgressData?.departmentsInvolved &&
-              caseProgressData.departmentsInvolved.length > 1)) && (
+              caseProgressData.departmentsInvolved.length > 1) ||
+            currentGrievance.isCrossDepartment ||
+            (currentGrievance.collaboratingDepartments &&
+              currentGrievance.collaboratingDepartments.length > 1)) && (
             <button
               type="button"
               onClick={() => setActiveTab("collaboration")}
@@ -257,7 +274,9 @@ export function CaseFileInspectionModal({
             >
               <span>Collaboration</span>
               <span className="rounded-full bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
-                {currentGrievance.collaborationNotes?.length || 0}
+                {currentGrievance.collaborationNotes?.length ??
+                  caseProgressData?.collaborationNotes?.length ??
+                  0}
               </span>
             </button>
           )}
@@ -265,6 +284,9 @@ export function CaseFileInspectionModal({
             currentGrievance.departmentsInvolved.length > 1) ||
             (caseProgressData?.departmentsInvolved &&
               (caseProgressData.departmentsInvolved as unknown[]).length > 1) ||
+            currentGrievance.isCrossDepartment ||
+            (currentGrievance.collaboratingDepartments &&
+              currentGrievance.collaboratingDepartments.length > 1) ||
             (currentGrievance.supportingFindings &&
               currentGrievance.supportingFindings.length > 0)) && (
             <button
@@ -286,16 +308,19 @@ export function CaseFileInspectionModal({
 
         {/* Drawer Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
-          {activeTab === "progress" && (
-            <CaseProgressTab
-              currentGrievance={currentGrievance}
-              caseProgressData={caseProgressData}
-              staffList={staffList}
-              currentHodEmail={currentHodEmail}
-              hodEmail={hodEmail}
-              onAssignClick={onAssignClick}
-            />
-          )}
+          {activeTab === "progress" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseProgressSlaSkeleton />
+            ) : (
+              <CaseProgressTab
+                currentGrievance={currentGrievance}
+                caseProgressData={caseProgressData}
+                staffList={staffList}
+                currentHodEmail={currentHodEmail}
+                hodEmail={hodEmail}
+                onAssignClick={onAssignClick}
+              />
+            ))}
 
           {activeTab === "statement" && (
             <CaseStatementTab
@@ -308,35 +333,44 @@ export function CaseFileInspectionModal({
             />
           )}
 
-          {activeTab === "notes" && (
-            <CaseNotesTab
-              currentGrievance={currentGrievance}
-              onAddInternalNote={onAddInternalNote}
-              onGrievanceUpdated={setCurrentGrievance}
-            />
-          )}
+          {activeTab === "notes" &&
+            (caseProgressLoading && !currentGrievance.internalNotes?.length ? (
+              <CaseNotesSkeleton count={3} />
+            ) : (
+              <CaseNotesTab
+                currentGrievance={currentGrievance}
+                onAddInternalNote={onAddInternalNote}
+                onGrievanceUpdated={setCurrentGrievance}
+              />
+            ))}
 
-          {activeTab === "activity" && (
-            <CaseActivityTab
-              currentGrievance={currentGrievance}
-              caseProgressData={caseProgressData}
-            />
-          )}
+          {activeTab === "activity" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseTimelineSkeleton stepsCount={4} />
+            ) : (
+              <CaseActivityTab
+                currentGrievance={currentGrievance}
+                caseProgressData={caseProgressData}
+              />
+            ))}
 
-          {activeTab === "collaboration" && (
-            <CaseCollaborationTab
-              currentGrievance={{
-                ...currentGrievance,
-                departmentsInvolved:
-                  currentGrievance.departmentsInvolved ||
-                  caseProgressData?.departmentsInvolved,
-              }}
-              onAddCollaborationNote={
-                onAddCollaborationNote || onAddInternalNote
-              }
-              onGrievanceUpdated={setCurrentGrievance}
-            />
-          )}
+          {activeTab === "collaboration" &&
+            (caseProgressLoading && !caseProgressData ? (
+              <CaseNotesSkeleton count={2} />
+            ) : (
+              <CaseCollaborationTab
+                currentGrievance={{
+                  ...currentGrievance,
+                  departmentsInvolved:
+                    currentGrievance.departmentsInvolved ||
+                    caseProgressData?.departmentsInvolved,
+                }}
+                onAddCollaborationNote={
+                  onAddCollaborationNote || onAddInternalNote
+                }
+                onGrievanceUpdated={setCurrentGrievance}
+              />
+            ))}
 
           {activeTab === "findings" && (
             <DepartmentFindingsTab

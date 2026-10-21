@@ -28,7 +28,7 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-[#F0FDFA] hover:text-[#0F766E] hover:border-teal-200 transition shadow-2xs cursor-pointer focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-teal-400 dark:hover:border-slate-700"
+        className="inline-flex p-1.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-teal-600 hover:text-white hover:border-teal-600 data-[state=open]:bg-teal-600 data-[state=open]:text-white data-[state=open]:border-teal-600 transition-colors shadow-2xs cursor-pointer focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-teal-600 dark:hover:text-white dark:hover:border-teal-600 dark:data-[state=open]:bg-teal-600 dark:data-[state=open]:text-white dark:data-[state=open]:border-teal-600"
         title="More actions"
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -72,7 +72,7 @@ export function ActionMenu({ items, widthClass = "w-36" }: ActionMenuProps) {
               }}
               className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium cursor-pointer ${variantClass} ${alignmentClass}`}
             >
-              {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+              {item.icon && <span className="shrink-0">{item.icon}</span>}
               {item.label}
             </DropdownMenuItem>
           );

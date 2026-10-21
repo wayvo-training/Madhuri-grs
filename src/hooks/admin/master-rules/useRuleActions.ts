@@ -468,7 +468,7 @@ export function useRuleActions({
           if (!hasOwner) {
             showNotice(
               "error",
-              "Cannot have only supporting departments. At least one department must be PRIMARY or EQUAL.",
+              "Cannot have only supportive departments. At least one department must be PRIMARY or EQUAL.",
             );
             setIsSubmitting(false);
             return;

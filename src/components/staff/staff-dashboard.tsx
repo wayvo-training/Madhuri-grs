@@ -2,6 +2,7 @@
 
 import { AlertOctagon, LogIn, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,11 @@ import {
 } from "@/components/dashboard/department-head/document-viewer-modal";
 import { GrievanceDetails } from "@/components/staff/grievance-details";
 import { ResolutionForm } from "@/components/staff/resolution-form";
+import {
+  StaffActivitySkeleton,
+  StaffDashboardSkeleton,
+  StaffQueueSkeleton,
+} from "@/components/staff/skeletons";
 import { StaffActivityView as FullActivityView } from "@/components/staff/staff-activity-view";
 import { OverviewView, ProfileView, QueueView } from "@/components/staff/views";
 import { useStaffNavigation } from "@/hooks/staff/useStaffNavigation";
@@ -22,7 +28,9 @@ import type {
   StaffAuditItem,
   StaffDashboardData,
   StaffGrievanceItem,
+  StaffQueueTab,
   StaffResolutionData,
+  StaffView,
 } from "@/types/staff";
 
 interface StaffDashboardProps {
@@ -31,6 +39,7 @@ interface StaffDashboardProps {
   staffEmail: string;
   departmentName?: string;
   employeeCode?: string;
+  defaultView?: StaffView;
 }
 
 export function StaffDashboard({
@@ -39,16 +48,51 @@ export function StaffDashboard({
   staffEmail,
   departmentName = "Operations",
   employeeCode = "STF-01",
+  defaultView = "overview",
 }: StaffDashboardProps) {
+  const router = useRouter();
   const [data, setData] = useState<StaffDashboardData | null>(
     initialData || null,
   );
   const [isLoading, setIsLoading] = useState(!initialData);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Synchronized Hash Navigation
-  const { activeView, switchView } = useStaffNavigation("overview");
+  const { activeView: internalActiveView, switchView: rawSwitchView } =
+    useStaffNavigation(defaultView);
+  const activeView: StaffView = internalActiveView;
+
+  const switchView = useCallback(
+    (view: StaffView) => {
+      if (view === "profile") {
+        router.push("/staff/profile");
+        return;
+      }
+      rawSwitchView(view);
+    },
+    [rawSwitchView, router],
+  );
+
+  useEffect(() => {
+    if (internalActiveView === "profile") {
+      router.replace("/staff/profile");
+    }
+  }, [internalActiveView, router]);
+
+  const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>("all");
+
+  const handleFilterQueue = (tab: StaffQueueTab) => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname === "/staff/dashboard"
+    ) {
+      router.push(`/staff/grievances?tab=${tab}`);
+      return;
+    }
+    setQueueInitialTab(tab);
+    switchView("queue");
+  };
 
   // Modal states
   const [selectedGrievance, setSelectedGrievance] =
@@ -318,14 +362,28 @@ export function StaffDashboard({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="w-8 h-8 animate-spin text-slate-400" />
-        <p className="text-sm font-medium text-slate-500">
-          Loading assigned grievances & workload...
-        </p>
-      </div>
-    );
+    if (activeView === "queue") {
+      return <StaffQueueSkeleton />;
+    }
+    if (activeView === "activity") {
+      return <StaffActivitySkeleton />;
+    }
+    if (activeView === "profile") {
+      return (
+        <div className="space-y-6 animate-pulse">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-slate-200" />
+              <div className="space-y-2 flex-1">
+                <div className="h-5 w-44 bg-slate-200 rounded" />
+                <div className="h-3.5 w-60 bg-slate-100 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return <StaffDashboardSkeleton />;
   }
 
   if (error) {
@@ -406,26 +464,39 @@ export function StaffDashboard({
 
   const assignedItems = data?.assignedGrievances || [];
   const activeCases = assignedItems.filter((g) => g.status !== "CLOSED");
-  const investigationCount = activeCases.filter(
+  const _investigationCount = activeCases.filter(
     (g) =>
       g.status === "IN_PROGRESS" ||
       g.status === "ASSIGNED" ||
       g.status === "WAITING_ON_USER",
   ).length;
-  const resolutionCount = assignedItems.filter(
+  const _resolutionCount = assignedItems.filter(
     (g) => g.hasResolution || g.status === "UNDER_REVIEW",
   ).length;
 
   return (
-    <div className="flex-1 flex flex-col space-y-4">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4">
       {/* Render Active View */}
       {activeView === "overview" && (
         <OverviewView
           data={data}
           profile={profile}
           onExamine={handleExamineGrievance}
-          onSwitchView={switchView}
+          onSwitchView={(view) => {
+            if (view === "queue") {
+              if (
+                typeof window !== "undefined" &&
+                window.location.pathname === "/staff/dashboard"
+              ) {
+                router.push("/staff/grievances");
+                return;
+              }
+              setQueueInitialTab("all");
+            }
+            switchView(view);
+          }}
           onRefresh={() => fetchDashboardData(true)}
+          onFilterQueue={handleFilterQueue}
         />
       )}
 
@@ -437,7 +508,7 @@ export function StaffDashboard({
           staffEmail={staffEmail}
           onExamine={handleExamineGrievance}
           onResolve={handleResolveGrievance}
-          initialTab="all"
+          initialTab={queueInitialTab}
         />
       )}
 

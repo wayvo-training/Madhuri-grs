@@ -72,16 +72,19 @@ export function OverviewMetricsSection({
 
 export function AttentionRequiredPanel({
   attentionRequiredList,
+  isLoading = false,
   onInspect,
   onViewFullQueue,
 }: {
   attentionRequiredList: GrievanceItem[];
+  isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: "progress" | "statement") => void;
   onViewFullQueue: () => void;
 }) {
   type SortKey =
     | "ticketCode"
     | "title"
+    | "category"
     | "priority"
     | "status"
     | "slaStatus"
@@ -136,6 +139,9 @@ export function AttentionRequiredPanel({
       case "title":
         comp = a.title.localeCompare(b.title);
         break;
+      case "category":
+        comp = (a.category || "").localeCompare(b.category || "");
+        break;
       case "priority":
         comp =
           (priorityWeight[a.priority] || 0) - (priorityWeight[b.priority] || 0);
@@ -180,8 +186,8 @@ export function AttentionRequiredPanel({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-3 h-auto">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
+    <div className="flex-1 flex flex-col min-h-[200px] rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm sm:text-sm font-semibold text-slate-900">
             Attention Required
@@ -207,8 +213,90 @@ export function AttentionRequiredPanel({
         </button>
       </div>
 
-      {attentionRequiredList.length === 0 ? (
-        <div className="py-6 text-center text-sm font-normal text-slate-400">
+      {isLoading ? (
+        <div className="flex-1 min-h-[120px] rounded-lg border border-slate-200/80 bg-white overflow-hidden flex flex-col my-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Grievance ID
+              </span>
+            </div>
+            <div className="flex-[1.4] min-w-0 pr-2">
+              <span className="text-xs font-semibold text-slate-700">
+                Grievance
+              </span>
+            </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <span className="text-xs font-semibold text-slate-700">
+                Category
+              </span>
+            </div>
+            <div className="w-16 sm:w-20 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Priority
+              </span>
+            </div>
+            <div className="w-24 sm:w-28 shrink-0">
+              <span className="text-xs font-semibold text-slate-700">
+                Status
+              </span>
+            </div>
+            <div className="w-26 sm:w-30 shrink-0 text-center">
+              <span className="text-xs font-semibold text-slate-700">
+                SLA Status
+              </span>
+            </div>
+            <div className="flex-[0.9] min-w-0 hidden sm:block">
+              <span className="text-xs font-semibold text-slate-700">
+                Assigned To
+              </span>
+            </div>
+            <div className="w-18 sm:w-20 shrink-0 text-center">
+              <span className="text-xs font-semibold text-slate-700">
+                Action
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={`att-skel-${
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
+                  i
+                }`}
+                className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2.5 animate-pulse"
+              >
+                <div className="w-24 sm:w-28 shrink-0">
+                  <div className="h-3.5 w-16 bg-slate-200 rounded" />
+                </div>
+                <div className="flex-[1.4] min-w-0 pr-2 space-y-1">
+                  <div className="h-3.5 w-3/4 bg-slate-200 rounded" />
+                  <div className="h-2 w-1/2 bg-slate-100 rounded" />
+                </div>
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="h-3 w-16 bg-slate-200 rounded" />
+                </div>
+                <div className="w-16 sm:w-20 shrink-0">
+                  <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                </div>
+                <div className="w-24 sm:w-28 shrink-0">
+                  <div className="h-5 w-16 bg-slate-200 rounded-full" />
+                </div>
+                <div className="w-26 sm:w-30 shrink-0 flex justify-center">
+                  <div className="h-5 w-16 bg-slate-200 rounded-full" />
+                </div>
+                <div className="flex-[0.9] min-w-0 hidden sm:block">
+                  <div className="h-3.5 w-20 bg-slate-200 rounded" />
+                </div>
+                <div className="w-18 sm:w-20 shrink-0 flex justify-center">
+                  <div className="h-6 w-14 bg-slate-200 rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : attentionRequiredList.length === 0 ? (
+        <div className="py-6 flex-1 flex flex-col items-center justify-center text-center text-sm font-normal text-slate-400">
           <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1.5" />
           <p className="font-semibold text-slate-700 text-sm">
             No grievances require intervention
@@ -219,34 +307,36 @@ export function AttentionRequiredPanel({
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200/80 bg-white overflow-hidden flex flex-col">
-          <div className="flex items-center gap-3 w-full px-3.5 py-2.5 bg-slate-50 border-b border-slate-200/80">
-            <div className="w-28 shrink-0">
+        <div className="flex-1 min-h-[120px] rounded-lg border border-slate-200/80 bg-white overflow-hidden flex flex-col my-2.5">
+          <div className="flex items-center gap-2 sm:gap-3 w-full px-3 py-2 bg-slate-50 border-b border-slate-200/80 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
               {renderSortHeader("Grievance ID", "ticketCode")}
             </div>
-            <div className="w-80 shrink-0 pr-4">
+            <div className="flex-[1.4] min-w-0 pr-2">
               {renderSortHeader("Grievance", "title")}
             </div>
-            <div className="w-20 shrink-0">
+            <div className="flex-1 min-w-0 pr-2">
+              {renderSortHeader("Category", "category")}
+            </div>
+            <div className="w-16 sm:w-20 shrink-0">
               {renderSortHeader("Priority", "priority")}
             </div>
-            <div className="w-24 shrink-0">
+            <div className="w-24 sm:w-28 shrink-0">
               {renderSortHeader("Status", "status")}
             </div>
-            <div className="w-34 shrink-0 flex justify-center">
+            <div className="w-26 sm:w-30 shrink-0 flex justify-center">
               {renderSortHeader("SLA Status", "slaStatus")}
             </div>
-            <div className="w-36 shrink-0 hidden sm:block text-left">
+            <div className="flex-[0.9] min-w-0 hidden sm:block text-left">
               {renderSortHeader("Assigned To", "assignedStaffName")}
             </div>
-            <div className="flex-1"></div>
-            <div className="w-[88px] shrink-0 text-center">
-              <span className="text-[13px] font-semibold text-slate-700">
+            <div className="w-18 sm:w-20 shrink-0 text-center">
+              <span className="text-xs font-semibold text-slate-700">
                 Action
               </span>
             </div>
           </div>
-          <div className="max-h-75 overflow-y-auto custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedList
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((item) => {
@@ -257,31 +347,42 @@ export function AttentionRequiredPanel({
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-11 w-full"
+                    className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 hover:bg-slate-50/80 dark:hover:bg-[#162338] transition group min-h-9 w-full"
                   >
-                    <div className="w-28 shrink-0">
-                      <span className="font-mono text-sm font-medium text-slate-900 dark:text-slate-200">
+                    <div className="w-24 sm:w-28 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onInspect(item, "statement")}
+                        className="font-mono text-xs font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs truncate block"
+                      >
                         {item.ticketCode}
-                      </span>
+                      </button>
                     </div>
-                    <div className="w-80 shrink-0 pr-4">
+                    <div className="flex-[1.4] min-w-0 pr-2">
                       <TruncatedText
                         text={item.title}
-                        maxChars={38}
-                        onClick={() => onInspect(item, "statement")}
-                        className="text-sm font-medium text-slate-800 hover:text-emerald-900 transition text-left block w-full border-none cursor-pointer"
+                        maxChars={48}
+                        alwaysShowTooltip={true}
+                        className="text-xs font-medium text-slate-800 dark:text-slate-200 block w-full border-none truncate"
                       />
                     </div>
-
-                    <div className="w-20 shrink-0">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <TruncatedText
+                        text={item.category}
+                        maxChars={32}
+                        alwaysShowTooltip={true}
+                        className="text-xs text-slate-600 dark:text-slate-300 font-medium border-none block w-full truncate"
+                      />
+                    </div>
+                    <div className="w-16 sm:w-20 shrink-0">
                       <PriorityBadge priority={item.priority} />
                     </div>
-                    <div className="w-24 shrink-0">
+                    <div className="w-24 sm:w-28 shrink-0">
                       <StatusBadge status={item.status} />
                     </div>
-                    <div className="w-34 shrink-0 text-center">
+                    <div className="w-26 sm:w-30 shrink-0 text-center">
                       <span
-                        className={`text-[13px] font-medium w-full whitespace-nowrap ${
+                        className={`text-xs font-medium w-full whitespace-nowrap ${
                           highlightSla
                             ? "text-slate-900 font-semibold"
                             : "text-slate-600"
@@ -290,30 +391,29 @@ export function AttentionRequiredPanel({
                         {item.slaTimeLeft}
                       </span>
                     </div>
-                    <div className="w-36 shrink-0 text-left truncate hidden sm:block">
-                      <span className="text-[13px] font-normal text-slate-400">
+                    <div className="flex-[0.9] min-w-0 text-left truncate hidden sm:block">
+                      <span className="text-[11px] font-normal text-slate-400">
                         To:{" "}
                       </span>
-                      <span className="text-[13px] font-medium text-slate-700">
+                      <span className="text-xs font-medium text-slate-700 truncate">
                         {item.isBlocked || item.status === "BLOCKED" ? (
-                          <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+                          <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
                             Blocked
                           </span>
                         ) : item.assignedStaffName ? (
                           item.assignedStaffName
                         ) : (
-                          <span className="italic text-[13px] text-slate-400 font-normal">
+                          <span className="italic text-xs text-slate-400 font-normal">
                             Unassigned
                           </span>
                         )}
                       </span>
                     </div>
-                    <div className="flex-1"></div>
-                    <div className="w-[88px] shrink-0 flex justify-center">
+                    <div className="w-18 sm:w-20 shrink-0 flex justify-center">
                       <button
                         type="button"
                         onClick={() => onInspect(item, "progress")}
-                        className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[13px] font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs"
+                        className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs cursor-pointer"
                       >
                         <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
                         <span>Inspect</span>
@@ -327,7 +427,7 @@ export function AttentionRequiredPanel({
       )}
 
       {attentionRequiredList.length > 0 && (
-        <div className="pt-2">
+        <div className="mt-auto pt-2 shrink-0 border-t border-slate-100">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

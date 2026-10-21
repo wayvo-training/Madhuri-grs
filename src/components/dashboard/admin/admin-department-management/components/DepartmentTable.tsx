@@ -146,31 +146,31 @@ export function DepartmentTable({
   return (
     <div
       id="departments"
-      className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs"
+      className="flex flex-col flex-1 min-h-0 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs"
     >
-      <div>
-        <AdminPanelHeader
-          title="Department Workload & Governance"
-          action={
-            <div className="flex flex-wrap items-center gap-3 ml-4 sm:ml-8 lg:ml-12 w-full justify-end sm:w-auto flex-1">
-              <div className="w-full sm:w-[600px] max-w-[50vw]">
-                <AdvancedTableSearch
-                  fields={filterFields}
-                  onSearch={handleSearchChange}
-                  className="w-full"
-                />
-              </div>
-              <AdminToolbarAction onClick={onOpenCreateModal}>
-                <Plus className="h-3.5 w-3.5" />
-                <span>New Department</span>
-              </AdminToolbarAction>
+      <div className="shrink-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap">
+            Department Workload & Governance
+          </h2>
+          <div className="flex items-center gap-3 flex-1 min-w-0 ml-0 lg:ml-6">
+            <div className="flex-1 min-w-0">
+              <AdvancedTableSearch
+                fields={filterFields}
+                onSearch={handleSearchChange}
+                className="w-full"
+              />
             </div>
-          }
-        />
+            <AdminToolbarAction onClick={onOpenCreateModal}>
+              <Plus className="h-3.5 w-3.5" />
+              <span>New Department</span>
+            </AdminToolbarAction>
+          </div>
+        </div>
       </div>
 
       {/* Departments Table */}
-      <div className="mt-5 overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
+      <div className="flex-1 min-h-0 mt-3 overflow-x-auto overflow-y-auto custom-scrollbar border border-slate-200 dark:border-slate-800 rounded-xl">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 z-10 shadow-2xs backdrop-blur-xs">
             <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
@@ -189,6 +189,22 @@ export function DepartmentTable({
                 className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
               >
                 Department
+              </SortableTh>
+              <SortableTh
+                field="head_name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Department Head
+              </SortableTh>
+              <SortableTh
+                field="head_email"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Head Email
               </SortableTh>
               <SortableTh
                 field="description"
@@ -230,7 +246,7 @@ export function DepartmentTable({
           <tbody>
             {filteredDepartments.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-14 text-center">
+                <td colSpan={9} className="py-14 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-8 ring-emerald-50/50">
                       <Building2 className="h-6 w-6" />
@@ -274,7 +290,7 @@ export function DepartmentTable({
                     </td>
 
                     {/* Department Name */}
-                    <td className="px-4 py-3.5 max-w-[200px] overflow-hidden">
+                    <td className="px-4 py-3.5 max-w-[180px] overflow-hidden">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <TruncatedText
                           text={dept.department_name}
@@ -284,11 +300,41 @@ export function DepartmentTable({
                       </div>
                     </td>
 
+                    {/* Department Head */}
+                    <td className="px-4 py-3.5 max-w-[160px] overflow-hidden whitespace-nowrap">
+                      {dept.head_name ? (
+                        <span
+                          className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate block"
+                          title={dept.head_name}
+                        >
+                          {dept.head_name}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                          Unassigned
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Head Email */}
+                    <td className="px-4 py-3.5 max-w-[200px] overflow-hidden whitespace-nowrap">
+                      {dept.head_email ? (
+                        <span
+                          className="text-xs text-slate-600 dark:text-slate-400 font-mono truncate block"
+                          title={dept.head_email}
+                        >
+                          {dept.head_email}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">—</span>
+                      )}
+                    </td>
+
                     {/* Description */}
-                    <td className="max-w-[220px] px-4 py-3.5">
+                    <td className="max-w-[200px] px-4 py-3.5">
                       <TruncatedText
                         text={dept.description}
-                        maxChars={30}
+                        maxChars={28}
                         className="text-sm font-normal text-slate-500 border-none block"
                       />
                     </td>

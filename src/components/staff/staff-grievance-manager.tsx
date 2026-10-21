@@ -79,11 +79,23 @@ export function StaffGrievanceManager({
     fetchData();
   }, [fetchData]);
 
-  const handleAddNote = async (grievanceId: string, noteText: string) => {
+  const handleAddNote = async (
+    grievanceId: string,
+    noteText: string,
+    parentId?: string,
+    replyToAuthor?: string,
+    scope: "INTERNAL" | "COLLABORATION" = "INTERNAL",
+  ) => {
     const res = await fetch(`/api/staff/grievances/${grievanceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "ADD_NOTE", note: noteText }),
+      body: JSON.stringify({
+        action: "ADD_NOTE",
+        note: noteText,
+        parentId,
+        replyToAuthor,
+        scope,
+      }),
     });
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
@@ -173,7 +185,7 @@ export function StaffGrievanceManager({
     );
     if (g.isPrimaryOwner !== false && pendingSupporting.length > 0) {
       toast.error(
-        `Cannot submit final resolution: Awaiting findings from supporting department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
+        `Cannot submit final resolution: Awaiting findings from supportive department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
       );
       handleExamine(g);
       return;

@@ -169,7 +169,7 @@ export function GrievanceDetails({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-3 sm:p-4 overflow-hidden animate-in fade-in duration-150">
-      <div className="relative flex flex-col w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="relative flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="flex flex-col border-b border-slate-200/90 bg-slate-50/70 px-6 py-4 shrink-0 gap-3">
           <div className="flex items-center justify-between">
@@ -196,7 +196,7 @@ export function GrievanceDetails({
           </div>
 
           <div className="flex flex-wrap items-start justify-between gap-3 pt-0.5">
-            <div className="space-y-1 max-w-[70%]">
+            <div className="space-y-1 max-w-[80%]">
               <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight tracking-[-0.02em] line-clamp-1">
                 {grievance.title}
               </h3>
@@ -260,7 +260,7 @@ export function GrievanceDetails({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0">
+        <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0 overflow-x-auto custom-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("statement")}
@@ -300,22 +300,31 @@ export function GrievanceDetails({
               {grievance.auditTrail?.length || 0}
             </span>
           </button>
-          {grievance.departmentsInvolved &&
-            grievance.departmentsInvolved.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("collaboration")}
-                className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === "collaboration"
-                    ? "border-[#0F766E] text-[#0F766E]"
-                    : "border-transparent text-slate-500 hover:text-slate-900"
-                }`}
-              >
-                <span>Collaboration</span>
-              </button>
-            )}
           {((grievance.departmentsInvolved &&
             grievance.departmentsInvolved.length > 1) ||
+            grievance.isCrossDepartment ||
+            (grievance.collaboratingDepartments &&
+              grievance.collaboratingDepartments.length > 1)) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("collaboration")}
+              className={`py-3 border-b-2 transition inline-flex items-center gap-1.5 cursor-pointer ${
+                activeTab === "collaboration"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span>Collaboration</span>
+              <span className="rounded-full bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.2 text-[10px] font-bold">
+                {grievance.collaborationNotes?.length || 0}
+              </span>
+            </button>
+          )}
+          {((grievance.departmentsInvolved &&
+            grievance.departmentsInvolved.length > 1) ||
+            grievance.isCrossDepartment ||
+            (grievance.collaboratingDepartments &&
+              grievance.collaboratingDepartments.length > 1) ||
             (grievance.supportingFindings &&
               grievance.supportingFindings.length > 0)) && (
             <button
@@ -350,7 +359,7 @@ export function GrievanceDetails({
         </div>
 
         {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
           {activeTab === "statement" && (
             <StatementTab
               grievance={grievance}
@@ -454,7 +463,7 @@ export function GrievanceDetails({
                         >
                           <Clock className="h-3.5 w-3.5 text-amber-600" />
                           <span>
-                            Awaiting Supporting Findings (
+                            Awaiting Supportive Findings (
                             {pendingSupporting
                               .map((d) => d.departmentName)
                               .join(", ")}

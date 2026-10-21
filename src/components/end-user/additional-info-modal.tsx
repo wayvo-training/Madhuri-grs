@@ -192,7 +192,7 @@ export function AdditionalInfoModal({
                     htmlFor="additional-info-files"
                     className="text-xs font-bold text-slate-700 dark:text-slate-300"
                   >
-                    Supporting Documents (Optional)
+                    Supportive Documents (Optional)
                   </label>
                   <div className="relative rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-600 bg-slate-50/50 dark:bg-slate-900/50 p-4 transition">
                     <input

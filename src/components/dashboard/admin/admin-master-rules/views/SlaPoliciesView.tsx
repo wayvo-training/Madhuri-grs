@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 
@@ -68,205 +69,234 @@ export function SlaPoliciesView({
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
-        {/* Static Header Table: no scrollbar next to header */}
-        <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-          <colgroup>
-            <col className="w-[22%]" />
-            <col className="w-[11%]" />
-            <col className="w-[13%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-            <col className="w-[9%]" />
-          </colgroup>
-          <TableHeader className="bg-transparent">
-            <TableRow className="hover:bg-transparent whitespace-nowrap">
-              <SortableTableHead
-                field="policy_name"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="py-2.5 pl-4 pr-2 font-semibold uppercase tracking-wider text-slate-500"
-              >
-                Policy Name
-              </SortableTableHead>
-              <SortableTableHead
-                field="priority_level"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-              >
-                Priority Scope
-              </SortableTableHead>
-              <SortableTableHead
-                field="target_duration_minutes"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap"
-              >
-                Target
-              </SortableTableHead>
-              <SortableTableHead
-                field="warning_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-1 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-center whitespace-nowrap"
-              >
-                Warning (50%)
-              </SortableTableHead>
-              <SortableTableHead
-                field="at_risk_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-1 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-center whitespace-nowrap"
-              >
-                At Risk (75%)
-              </SortableTableHead>
-              <SortableTableHead
-                field="critical_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-1 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-center whitespace-nowrap"
-              >
-                Critical (90%)
-              </SortableTableHead>
-              <SortableTableHead
-                field="escalation_threshold_percent"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-1 py-2.5 font-semibold uppercase tracking-wider text-slate-500 text-center whitespace-nowrap"
-              >
-                Breach (100%)
-              </SortableTableHead>
-              <SortableTableHead
-                field="status"
-                currentSort={sortState}
-                onSort={handleSort}
-                className="px-2 py-2.5 font-semibold uppercase tracking-wider text-slate-500"
-              >
-                Status
-              </SortableTableHead>
-              <TableHead className="py-2.5 pl-2 pr-4 text-right font-semibold uppercase tracking-wider text-slate-500">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-        </table>
+    <TooltipProvider delay={150}>
+      <div className="flex flex-col gap-4">
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <div className="min-w-[1160px]">
+              {(() => {
+                const colGroup = (
+                  <colgroup>
+                    <col className="w-[240px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[110px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[110px]" />
+                    <col className="w-[90px]" />
+                  </colgroup>
+                );
 
-        {/* Scrollable Rows Container (Vertical scroll within rows only) */}
-        <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
-          <table className="w-full text-left text-sm table-fixed border-collapse">
-            <colgroup>
-              <col className="w-[22%]" />
-              <col className="w-[11%]" />
-              <col className="w-[13%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-              <col className="w-[9%]" />
-            </colgroup>
-            <TableBody className="font-medium text-slate-700">
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    className="py-12 text-center text-slate-400 font-normal"
-                  >
-                    <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                    No SLA Policies found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((p) => {
-                  return (
-                    <TableRow
-                      key={p.sla_policy_id}
-                      className="transition-colors hover:bg-slate-50/80 whitespace-nowrap"
-                    >
-                      <TableCell className="py-2.5 pl-4 pr-2 overflow-hidden max-w-full">
-                        <TruncatedText
-                          text={p.policy_name}
-                          maxChars={24}
-                          className="font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block"
-                        />
-                      </TableCell>
-                      <TableCell className="px-2 py-2.5">
-                        {p.priority_level ? (
-                          p.priority_level
-                        ) : (
-                          <span className="text-slate-500">All Priorities</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-2 py-2.5 text-slate-600">
-                        {formatDuration(p.target_duration_minutes)}
-                      </TableCell>
-                      <TableCell className="px-1 py-2.5 text-center">
-                        <span className="text-amber-600 font-semibold">
-                          {p.warning_threshold_percent}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-1 py-2.5 text-center">
-                        <span className="text-orange-600 font-semibold">
-                          {p.at_risk_threshold_percent || "75"}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-1 py-2.5 text-center">
-                        <span className="text-red-500 font-semibold">
-                          {p.critical_threshold_percent || "90"}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-1 py-2.5 text-center">
-                        <span className="text-rose-700 font-semibold">
-                          {p.escalation_threshold_percent}%
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-2.5 whitespace-nowrap">
-                        <span
-                          className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
-                        >
-                          {p.status === "ACTIVE" ? "Active" : "Inactive"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-2.5 pl-2 pr-4 text-right">
-                        <ActionMenu
-                          widthClass="w-36"
-                          items={[
-                            {
-                              label: "Delete Policy",
-                              variant: "danger" as const,
-                              icon: <AlertTriangle className="h-3.5 w-3.5" />,
-                              onClick: () => onDelete(p),
-                            },
-                          ]}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </table>
-        </div>
-        {policies.length > 0 && (
-          <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPageSize}
-              pageSizeOptions={[5, 10, 20, 50]}
-              itemLabel="SLA Policies"
-            />
+                return (
+                  <>
+                    {/* Static Header Table: no scrollbar next to header */}
+                    <table className="w-full text-left text-[12px] table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                      {colGroup}
+                      <TableHeader className="bg-transparent">
+                        <TableRow className="hover:bg-transparent whitespace-nowrap">
+                          <SortableTableHead
+                            field="policy_name"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[240px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Policy Name
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="priority_level"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[130px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Priority
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="target_duration_minutes"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[110px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Target
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="warning_threshold_percent"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[120px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Warning
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="at_risk_threshold_percent"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[120px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            At Risk
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="critical_threshold_percent"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[120px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Critical
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="escalation_threshold_percent"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[120px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Breach
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="status"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[110px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                          >
+                            Status
+                          </SortableTableHead>
+                          <TableHead className="w-[90px] py-3 pl-2 pr-4 text-right text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap overflow-hidden align-middle">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                    </table>
+
+                    {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+                    <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                      <table className="w-full text-left text-[13px] table-fixed border-collapse">
+                        {colGroup}
+                        <TableBody className="font-normal text-slate-700">
+                          {filtered.length === 0 ? (
+                            <TableRow className="h-[52px]">
+                              <TableCell
+                                colSpan={9}
+                                className="py-12 text-center text-slate-400 font-normal text-[13px]"
+                              >
+                                <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                                No SLA Policies found.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            paginated.map((p) => {
+                              return (
+                                <TableRow
+                                  key={p.sla_policy_id}
+                                  className="h-[52px] transition-colors hover:bg-slate-50/80 whitespace-nowrap border-b border-slate-100 dark:border-slate-800/60"
+                                >
+                                  <TableCell className="w-[240px] py-3 pl-4 pr-3 overflow-hidden text-ellipsis whitespace-nowrap align-middle">
+                                    <TruncatedText
+                                      text={p.policy_name}
+                                      maxChars={28}
+                                      className="font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block text-[13px]"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="w-[130px] px-3 py-3 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                    {p.priority_level ? (
+                                      p.priority_level
+                                    ) : (
+                                      <span className="text-slate-500">
+                                        All Priorities
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="w-[110px] px-3 py-3 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-slate-600 align-middle">
+                                    {formatDuration(p.target_duration_minutes)}
+                                  </TableCell>
+                                  <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
+                                    <span className="text-amber-600 font-semibold">
+                                      {p.warning_threshold_percent}%
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
+                                    <span className="text-orange-600 font-semibold">
+                                      {p.at_risk_threshold_percent || "75"}%
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
+                                    <span className="text-red-500 font-semibold">
+                                      {p.critical_threshold_percent || "90"}%
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
+                                    <span className="text-rose-700 font-semibold">
+                                      {(() => {
+                                        try {
+                                          if (
+                                            p.trigger_condition &&
+                                            typeof p.trigger_condition ===
+                                              "object"
+                                          ) {
+                                            const tc = p.trigger_condition as {
+                                              breach_at_percent?:
+                                                | number
+                                                | string;
+                                            };
+                                            if (tc.breach_at_percent)
+                                              return `${tc.breach_at_percent}%`;
+                                          }
+                                        } catch (_e) {}
+                                        return "100%";
+                                      })()}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[110px] px-3 py-3 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                    <span
+                                      className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                                    >
+                                      {p.status === "ACTIVE"
+                                        ? "Active"
+                                        : "Inactive"}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[90px] py-3 pl-2 pr-4 text-right whitespace-nowrap overflow-hidden align-middle">
+                                    <ActionMenu
+                                      widthClass="w-36"
+                                      items={[
+                                        {
+                                          label: "Delete Policy",
+                                          variant: "danger" as const,
+                                          icon: (
+                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                          ),
+                                          onClick: () => onDelete(p),
+                                        },
+                                      ]}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
-        )}
+          {policies.length > 0 && (
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[5, 10, 20, 50]}
+                itemLabel="SLA Policies"
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

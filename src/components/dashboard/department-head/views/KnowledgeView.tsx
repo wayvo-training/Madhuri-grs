@@ -159,10 +159,10 @@ export function KnowledgeView() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* Success Notification */}
       {actionSuccessMsg && (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in">
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in shrink-0">
           <div className="flex items-center gap-2 font-semibold">
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>{actionSuccessMsg}</span>
@@ -178,7 +178,7 @@ export function KnowledgeView() {
       )}
 
       {/* Header & Filter Controls */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 text-[#0F766E]">
@@ -222,7 +222,7 @@ export function KnowledgeView() {
           </div>
 
           {/* Search */}
-          <div className="flex-1 min-w-[250px] max-w-sm">
+          <div className="flex-1 min-w-0">
             <AdvancedTableSearch
               fields={filterFields}
               onSearch={handleSearchChange}
@@ -233,9 +233,9 @@ export function KnowledgeView() {
       </div>
 
       {/* Articles Container with Internal Scrolling */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden flex flex-col">
         {/* Container Header / Article Counter */}
-        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
+        <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">
           <span>
             Showing{" "}
             <strong className="text-slate-800 dark:text-slate-200">
@@ -250,11 +250,40 @@ export function KnowledgeView() {
 
         {/* Scrollable Container */}
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-400">
-            Loading knowledge articles...
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 space-y-3">
+            {["kb-skel-1", "kb-skel-2", "kb-skel-3", "kb-skel-4"].map(
+              (skelId) => (
+                <div
+                  key={skelId}
+                  className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4 shadow-2xs space-y-3 animate-pulse"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-full" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
+                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 py-1">
+                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-700/60 rounded" />
+                    <div className="h-3.5 w-3/4 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                  </div>
+                  <div className="flex items-center gap-4 pt-1">
+                    <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700/60 rounded-md" />
+                    <div className="h-3.5 w-32 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                    <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700/60 rounded" />
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-12 text-center space-y-2">
             <BookOpen className="h-8 w-8 text-slate-300 mx-auto" />
             <h4 className="text-xs font-bold text-slate-700 dark:text-slate-200">
               No Knowledge Articles Found
@@ -266,7 +295,7 @@ export function KnowledgeView() {
             </p>
           </div>
         ) : (
-          <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-hidden custom-scrollbar p-4 space-y-3">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 space-y-3">
             {filtered.map((art) => (
               <KnowledgeArticleCard
                 key={art.id}
