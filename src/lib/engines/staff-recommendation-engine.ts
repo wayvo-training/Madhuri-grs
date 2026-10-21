@@ -1,3 +1,7 @@
+import {
+  DEFAULT_ASSIGNMENT_CONFIG,
+  normalizeCategoryName,
+} from "@/lib/constants/assignment";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
@@ -30,67 +34,6 @@ export interface StaffRecommendationResult {
   };
   factorBreakdown: RecommendationFactorBreakdown;
 }
-
-// Category-to-skill affinity keywords
-const CATEGORY_SKILL_AFFINITY: Record<string, string[]> = {
-  "compensation & benefits": [
-    "payroll management",
-    "policy interpretation",
-    "employee relations",
-  ],
-  "leave & attendance": [
-    "policy interpretation",
-    "employee relations",
-    "compliance management",
-  ],
-  "workplace conduct": [
-    "conflict resolution",
-    "employee relations",
-    "compliance management",
-  ],
-  "hr & employment": [
-    "performance management",
-    "employee relations",
-    "policy interpretation",
-  ],
-  "management & leadership": [
-    "conflict resolution",
-    "policy interpretation",
-    "employee relations",
-  ],
-  "policy & process": [
-    "policy interpretation",
-    "compliance management",
-    "employee relations",
-  ],
-  "work environment": [
-    "workplace safety",
-    "facilities management",
-    "compliance management",
-  ],
-  "ethics & compliance": [
-    "compliance management",
-    "policy interpretation",
-    "conflict resolution",
-  ],
-  "career & development": [
-    "performance management",
-    "employee relations",
-    "policy interpretation",
-  ],
-  "workplace services": [
-    "facilities management",
-    "workplace safety",
-    "employee relations",
-  ],
-};
-
-const PROFICIENCY_MULTIPLIERS: Record<string, number> = {
-  EXPERT: 1.0,
-  ADVANCED: 0.85,
-  INTERMEDIATE: 0.7,
-  BEGINNER: 0.5,
-};
 
 export async function calculateStaffRecommendations(
   grievanceId: bigint,
@@ -135,12 +78,8 @@ export async function calculateStaffRecommendations(
     throw new Error(`Grievance ${grievanceId} not found`);
   }
 
-  const categoryName = (
-    grievance.categories?.category_name || ""
-  ).toLowerCase();
-  const subcategoryName = (
-    grievance.subcategories?.subcategory_name || ""
-  ).toLowerCase();
+  const categoryName = grievance.categories?.category_name || "";
+  const subcategoryName = grievance.subcategories?.subcategory_name || "";
   const priority = (grievance.priority || "MEDIUM").toUpperCase();
   const targetDeptRecord = departmentId
     ? grievance.grievance_departments.find(
@@ -175,13 +114,13 @@ export async function calculateStaffRecommendations(
     resolvedDeptName = dept?.department_name;
   }
 
-  // 2. Fetch eligible staff in this department
+  // 2. Fetch eligible staff in this department (includes STAFF and fallback to DEPARTMENT_HEAD)
   const eligibleStaff = await prisma.users.findMany({
     where: {
       department_id: targetDeptId,
       status: "ACTIVE",
       roles: {
-        role_name: "STAFF",
+        role_name: { in: ["STAFF", "DEPARTMENT_HEAD"] },
       },
     },
     include: {
@@ -226,21 +165,29 @@ export async function calculateStaffRecommendations(
     ? eligibleStaff.filter((u) => u.roles.role_name === "STAFF")
     : eligibleStaff;
 
-  const affinityKeywords = CATEGORY_SKILL_AFFINITY[categoryName] || [];
+  const normalizedCategory = normalizeCategoryName(categoryName);
+  const affinityKeywords =
+    DEFAULT_ASSIGNMENT_CONFIG.CATEGORY_SKILL_AFFINITY[normalizedCategory] || [];
 
-  const maxCapacity = 10;
+  const maxCapacity = DEFAULT_ASSIGNMENT_CONFIG.MAX_STAFF_CAPACITY;
 
   // 3. Score each candidate
   const scoredList: StaffRecommendationResult[] = candidates.map((staff) => {
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
-    // Workload calculation (only active assigned cases, excluding closed)
+    // Workload calculation:
+    // Only active assigned cases, strictly excluding:
+    // 1. The current grievance being viewed/assigned
+    // 2. Resolved, under-review, or closed cases
     const activeAssignments =
-      staff.assignments_assignments_staff_idTousers.filter(
-        (a) =>
-          a.assignment_status === "ASSIGNED" &&
-          a.grievances?.status !== "CLOSED",
-      );
+      staff.assignments_assignments_staff_idTousers.filter((a) => {
+        if (a.grievance_id === grievanceId) return false;
+        if (a.assignment_status !== "ASSIGNED") return false;
+        const gStatus = a.grievances?.status || "";
+        return !DEFAULT_ASSIGNMENT_CONFIG.INACTIVE_WORKLOAD_STATUSES.includes(
+          gStatus as (typeof DEFAULT_ASSIGNMENT_CONFIG.INACTIVE_WORKLOAD_STATUSES)[number],
+        );
+      });
     const activeWorkload = activeAssignments.length;
 
     // Availability status
@@ -254,35 +201,70 @@ export async function calculateStaffRecommendations(
     // --- Factor 1: Skill / Category Match (35%) ---
     let skillScore = 0;
     const matchedSkills: string[] = [];
+    const catLower = categoryName.toLowerCase().trim();
+    const subcatLower = subcategoryName.toLowerCase().trim();
 
     for (const us of staff.user_skills) {
-      const skillName = us.skills.skill_name.toLowerCase();
+      const skillName = us.skills.skill_name.toLowerCase().trim();
       const mult =
-        PROFICIENCY_MULTIPLIERS[us.proficiency_level || "INTERMEDIATE"] || 0.7;
+        DEFAULT_ASSIGNMENT_CONFIG.PROFICIENCY_MULTIPLIERS[
+          us.proficiency_level || "INTERMEDIATE"
+        ] || 0.7;
 
       let matchWeight = 0;
       if (affinityKeywords.includes(skillName)) {
         matchWeight = 25 * mult;
-        matchedSkills.push(us.skills.skill_name);
-      } else if (
-        categoryName.includes(skillName) ||
-        skillName.includes(categoryName) ||
-        subcategoryName.includes(skillName)
-      ) {
-        matchWeight = 20 * mult;
-        matchedSkills.push(us.skills.skill_name);
+        if (!matchedSkills.includes(us.skills.skill_name)) {
+          matchedSkills.push(us.skills.skill_name);
+        }
       } else {
-        // Partial relevance
-        matchWeight = 8 * mult;
+        const skillTokens = skillName
+          .split(/[\s/&,-]+/)
+          .filter((w) => w.length > 1);
+        const targetTokens = `${catLower} ${subcatLower}`
+          .split(/[\s/&,-]+/)
+          .filter((w) => w.length > 1);
+
+        const isDirectMatch =
+          catLower === skillName ||
+          subcatLower === skillName ||
+          (skillName.length >= 4 &&
+            (catLower.includes(skillName) || subcatLower.includes(skillName)));
+
+        const hasTokenOverlap = skillTokens.some((st) =>
+          targetTokens.some(
+            (tt) =>
+              tt === st ||
+              (st.length >= 4 &&
+                tt.length >= 4 &&
+                (tt.startsWith(st) || st.startsWith(tt))),
+          ),
+        );
+
+        if (isDirectMatch || hasTokenOverlap) {
+          matchWeight = 20 * mult;
+          if (!matchedSkills.includes(us.skills.skill_name)) {
+            matchedSkills.push(us.skills.skill_name);
+          }
+        } else {
+          // General departmental competency fallback
+          matchWeight = 8 * mult;
+        }
       }
       skillScore = Math.max(skillScore, matchWeight);
     }
 
     // Boost if multiple relevant skills matched
     if (matchedSkills.length > 1) {
-      skillScore = Math.min(35, skillScore + 5 * (matchedSkills.length - 1));
+      skillScore = Math.min(
+        DEFAULT_ASSIGNMENT_CONFIG.WEIGHTS.SKILL,
+        skillScore + 5 * (matchedSkills.length - 1),
+      );
     }
-    skillScore = Math.min(35, Math.round(skillScore));
+    skillScore = Math.min(
+      DEFAULT_ASSIGNMENT_CONFIG.WEIGHTS.SKILL,
+      Math.round(skillScore),
+    );
 
     // --- Factor 2: Relevant Previous Experience (25%) ---
     // Count previous resolved/closed assignments or resolutions in this category or subcategory
@@ -293,9 +275,16 @@ export async function calculateStaffRecommendations(
     for (const r of staff.resolutions) {
       if (r.grievance_id !== grievanceId) {
         resolvedGrievanceIds.add(r.grievance_id.toString());
-        if (r.grievances?.subcategory_id === grievance.subcategory_id) {
+        if (
+          r.grievances?.subcategory_id &&
+          String(r.grievances.subcategory_id) ===
+            String(grievance.subcategory_id)
+        ) {
           pastSubcategoryCases++;
-        } else if (r.grievances?.category_id === grievance.category_id) {
+        } else if (
+          r.grievances?.category_id &&
+          String(r.grievances.category_id) === String(grievance.category_id)
+        ) {
           pastCategoryCases++;
         }
       }
@@ -312,20 +301,30 @@ export async function calculateStaffRecommendations(
           a.grievances?.status === "CLOSED")
       ) {
         resolvedGrievanceIds.add(gidStr);
-        if (a.grievances?.subcategory_id === grievance.subcategory_id) {
+        if (
+          a.grievances?.subcategory_id &&
+          String(a.grievances.subcategory_id) ===
+            String(grievance.subcategory_id)
+        ) {
           pastSubcategoryCases++;
-        } else if (a.grievances?.category_id === grievance.category_id) {
+        } else if (
+          a.grievances?.category_id &&
+          String(a.grievances.category_id) === String(grievance.category_id)
+        ) {
           pastCategoryCases++;
         }
       }
     }
 
     let experienceScore = 0;
-    if (pastSubcategoryCases >= 2) {
+    if (
+      pastSubcategoryCases >= 2 ||
+      (pastSubcategoryCases >= 1 && pastCategoryCases >= 2)
+    ) {
       experienceScore = 25;
-    } else if (pastSubcategoryCases === 1) {
+    } else if (pastSubcategoryCases === 1 || pastCategoryCases >= 4) {
       experienceScore = 22;
-    } else if (pastCategoryCases >= 3) {
+    } else if (pastCategoryCases >= 2) {
       experienceScore = 20;
     } else if (pastCategoryCases >= 1) {
       experienceScore = 15;
@@ -354,13 +353,13 @@ export async function calculateStaffRecommendations(
 
     // --- Factor 4: Availability (10%) ---
     let availabilityScore = 0;
-    if (availabilityStatus === "AVAILABLE" && activeWorkload < 10) {
+    if (availabilityStatus === "AVAILABLE" && activeWorkload < maxCapacity) {
       if (activeWorkload <= 2) availabilityScore = 10;
       else if (activeWorkload <= 4) availabilityScore = 8;
       else if (activeWorkload <= 6) availabilityScore = 6;
       else if (activeWorkload <= 8) availabilityScore = 4;
       else availabilityScore = 2;
-    } else if (availabilityStatus === "BUSY" || activeWorkload >= 10) {
+    } else if (availabilityStatus === "BUSY" || activeWorkload >= maxCapacity) {
       availabilityScore = 1;
     } else {
       availabilityScore = 0;
@@ -395,18 +394,14 @@ export async function calculateStaffRecommendations(
       else slaScore = 2;
     }
 
-    // Total Score (0 - 100)
-    const totalScore = Math.min(
-      99,
-      Math.max(
-        35,
-        skillScore +
-          experienceScore +
-          workloadScore +
-          availabilityScore +
-          slaScore,
-      ),
-    );
+    // Total Score (0 - 100): natural range without artificial floor, capped at 100
+    const rawScore =
+      skillScore +
+      experienceScore +
+      workloadScore +
+      availabilityScore +
+      slaScore;
+    const totalScore = Math.min(100, Math.max(0, rawScore));
 
     // Build human-friendly explainable bullet points
     const bulletReasons: string[] = [];
@@ -430,11 +425,11 @@ export async function calculateStaffRecommendations(
       bulletReasons.push("Qualified for category procedures");
     }
 
-    if (availabilityStatus === "AVAILABLE" && activeWorkload < 10) {
+    if (availabilityStatus === "AVAILABLE" && activeWorkload < maxCapacity) {
       bulletReasons.push("Available on active duty");
-    } else if (activeWorkload >= 10) {
+    } else if (activeWorkload >= maxCapacity) {
       bulletReasons.push(
-        "Maximum active capacity reached (10 / 10 assigned) - Ineligible for new assignments",
+        `Maximum active capacity reached (${activeWorkload} / ${maxCapacity} assigned) - Ineligible for new assignments`,
       );
     } else if (availabilityStatus === "BUSY") {
       bulletReasons.push("Currently near maximum assignment capacity");
@@ -442,21 +437,21 @@ export async function calculateStaffRecommendations(
       bulletReasons.push("On approved leave");
     }
 
-    if (activeWorkload >= 10) {
+    if (activeWorkload >= maxCapacity) {
       bulletReasons.push("Available Capacity: 0");
     } else {
-      const availCap = 10 - activeWorkload;
+      const availCap = maxCapacity - activeWorkload;
       if (activeWorkload <= 2) {
         bulletReasons.push(
-          `Low current workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+          `Low current workload (${activeWorkload} / ${maxCapacity} assigned, Available Capacity: ${availCap})`,
         );
       } else if (activeWorkload <= 6) {
         bulletReasons.push(
-          `Moderate workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+          `Moderate workload (${activeWorkload} / ${maxCapacity} assigned, Available Capacity: ${availCap})`,
         );
       } else {
         bulletReasons.push(
-          `High active workload (${activeWorkload} / 10 assigned, Available Capacity: ${availCap})`,
+          `High active workload (${activeWorkload} / ${maxCapacity} assigned, Available Capacity: ${availCap})`,
         );
       }
     }
@@ -510,14 +505,14 @@ export async function calculateStaffRecommendations(
   });
 
   // Sort candidates:
-  // 1. Prefer eligible Staff whose active workload is below 10 (ranked ahead of 10/10 candidates)
+  // 1. Prefer eligible Staff whose active workload is below max capacity (ranked ahead of max capacity candidates)
   // 2. Score descending
   // 3. Lower active workload secondary
   scoredList.sort((a, b) => {
     const aEligible =
-      a.activeWorkload < 10 && a.availabilityStatus !== "ON_LEAVE";
+      a.activeWorkload < maxCapacity && a.availabilityStatus !== "ON_LEAVE";
     const bEligible =
-      b.activeWorkload < 10 && b.availabilityStatus !== "ON_LEAVE";
+      b.activeWorkload < maxCapacity && b.availabilityStatus !== "ON_LEAVE";
     if (aEligible !== bEligible) {
       return aEligible ? -1 : 1;
     }
@@ -527,9 +522,10 @@ export async function calculateStaffRecommendations(
     return a.activeWorkload - b.activeWorkload;
   });
 
-  // Flag the top recommendation (ONLY eligible staff with activeWorkload < 10 can be top recommendation)
+  // Flag the top recommendation (ONLY eligible staff with activeWorkload < maxCapacity can be top recommendation)
   const topEligible = scoredList.find(
-    (c) => c.availabilityStatus === "AVAILABLE" && c.activeWorkload < 10,
+    (c) =>
+      c.availabilityStatus === "AVAILABLE" && c.activeWorkload < maxCapacity,
   );
   if (topEligible) {
     topEligible.isTopRecommendation = true;

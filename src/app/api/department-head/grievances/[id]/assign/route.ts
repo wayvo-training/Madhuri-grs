@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { DEFAULT_ASSIGNMENT_CONFIG } from "@/lib/constants/assignment";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
 
@@ -44,24 +45,27 @@ export async function POST(
       );
     }
 
-    // 2. Enforce maximum active workload capacity of 10 grievances
+    // 2. Enforce maximum active workload capacity
     const activeAssignedCount = await prisma.assignments.count({
       where: {
         staff_id: targetStaffId,
         assignment_status: "ASSIGNED",
         grievance_id: { not: grievanceId },
         grievances: {
-          status: { notIn: ["CLOSED"] },
+          status: {
+            notIn: Array.from(
+              DEFAULT_ASSIGNMENT_CONFIG.INACTIVE_WORKLOAD_STATUSES,
+            ),
+          },
         },
       },
     });
 
-    if (activeAssignedCount >= 10) {
+    if (activeAssignedCount >= DEFAULT_ASSIGNMENT_CONFIG.MAX_STAFF_CAPACITY) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "This Staff member has reached the maximum active workload of 10 grievances.",
+          message: `This staff member has reached the maximum active workload of ${DEFAULT_ASSIGNMENT_CONFIG.MAX_STAFF_CAPACITY} grievances.`,
         },
         { status: 400 },
       );
