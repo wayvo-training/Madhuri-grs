@@ -3,7 +3,6 @@ import {
   AdminGrievanceTable,
   type SerializedGrievance,
 } from "@/components/dashboard/admin/admin-grievance-management";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
@@ -12,8 +11,7 @@ import type { TableTab } from "@/types/admin/grievances";
 export default async function AdminGrievancesPage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const searchParams = props.searchParams ? await props.searchParams : {};
   const rawTab = (
@@ -369,42 +367,28 @@ export default async function AdminGrievancesPage(props: {
     : "ALL";
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Grievance Central & Routing Exceptions"
-      subtitle="Complete organizational ticket log, SLA tracking & manual assignment exceptions"
-      mainClassName="flex-1 min-h-0 flex flex-col overflow-hidden pb-1"
-    >
-      <AdminGrievanceTable
-        initialGrievances={serializedGrievances}
-        initialTotalCount={initialTotalCount}
-        initialCounts={{
-          all: countsRow.all_count,
-          exceptions: countsRow.exception_count,
-          active: countsRow.active_count,
-          inProgress: countsRow.active_count,
-          slaRisk: countsRow.sla_risk_count,
-          slaCritical: countsRow.sla_critical_count,
-          reopened: countsRow.reopened_count,
-          escalated: countsRow.escalated_count,
-          closed: countsRow.closed_count,
-        }}
-        departments={serializedDepartments}
-        categories={categoriesData.map((c) => c.category_name)}
-        initialTab={initialTabValue}
-        initialPriority={parsedPriorities}
-        initialStatus={parsedStatuses}
-        initialSla={parsedSlas}
-        initialSearch={rawSearch}
-        initialDept={parsedDepts}
-      />
-    </DashboardShell>
+    <AdminGrievanceTable
+      initialGrievances={serializedGrievances}
+      initialTotalCount={initialTotalCount}
+      initialCounts={{
+        all: countsRow.all_count,
+        exceptions: countsRow.exception_count,
+        active: countsRow.active_count,
+        inProgress: countsRow.active_count,
+        slaRisk: countsRow.sla_risk_count,
+        slaCritical: countsRow.sla_critical_count,
+        reopened: countsRow.reopened_count,
+        escalated: countsRow.escalated_count,
+        closed: countsRow.closed_count,
+      }}
+      departments={serializedDepartments}
+      categories={categoriesData.map((c) => c.category_name)}
+      initialTab={initialTabValue}
+      initialPriority={parsedPriorities}
+      initialStatus={parsedStatuses}
+      initialSla={parsedSlas}
+      initialSearch={rawSearch}
+      initialDept={parsedDepts}
+    />
   );
 }

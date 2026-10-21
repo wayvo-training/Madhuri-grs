@@ -15,7 +15,7 @@ interface DashboardShellProps {
   permissions?: string[];
   designation?: string;
   departmentName?: string;
-  title: string;
+  title?: string;
   subtitle?: string;
   children: ReactNode;
   searchValue?: string;

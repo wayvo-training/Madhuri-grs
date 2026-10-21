@@ -5,7 +5,6 @@ import {
   type SerializedRoutingRule,
   type SerializedSlaPolicy,
 } from "@/components/dashboard/admin/admin-master-rules";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -85,8 +84,7 @@ async function fetchRulesPageData(maxAttempts = 3) {
 }
 
 export default async function AdminRulesPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const {
     departments,
@@ -186,26 +184,13 @@ export default async function AdminRulesPage() {
   }));
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Master Governance & Rules Engine"
-      subtitle="Automated priority calculation, department routing, SLA compliance & simulation"
-    >
-      <AdminMasterRules
-        priorityRules={serializedPriorityRules}
-        routingRules={serializedRoutingRules}
-        slaPolicies={serializedSlaPolicies}
-        reopenPolicies={serializedReopenPolicies}
-        departments={serializedDepartments}
-        categories={serializedCategories}
-      />
-    </DashboardShell>
+    <AdminMasterRules
+      priorityRules={serializedPriorityRules}
+      routingRules={serializedRoutingRules}
+      slaPolicies={serializedSlaPolicies}
+      reopenPolicies={serializedReopenPolicies}
+      departments={serializedDepartments}
+      categories={serializedCategories}
+    />
   );
 }

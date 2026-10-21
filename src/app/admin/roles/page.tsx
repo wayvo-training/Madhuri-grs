@@ -3,13 +3,11 @@ import {
   type SerializedPermission,
   type SerializedRole,
 } from "@/components/dashboard/admin/admin-role-manager";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminRolesPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const [rawRoles, rawPermissions] = await Promise.all([
     prisma.roles.findMany({
@@ -55,22 +53,9 @@ export default async function AdminRolesPage() {
   );
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Roles & Security Permissions"
-      subtitle="Role-based access matrix, security authorization levels & custom roles"
-    >
-      <AdminRolesManager
-        initialRoles={serializedRoles}
-        availablePermissions={serializedPermissions}
-      />
-    </DashboardShell>
+    <AdminRolesManager
+      initialRoles={serializedRoles}
+      availablePermissions={serializedPermissions}
+    />
   );
 }

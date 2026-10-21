@@ -1,5 +1,4 @@
 import { AdminUsers } from "@/components/dashboard/admin/admin-users";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -10,8 +9,7 @@ import type {
 } from "@/types/admin/users";
 
 export default async function AdminUsersPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const [rawUsers, rawRoles, rawDepartments] = await Promise.all([
     prisma.users.findMany({
@@ -82,25 +80,11 @@ export default async function AdminUsersPage() {
   };
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="User Directory & Access Control"
-      subtitle="Manage administrative accounts, grievance officers, department staff, and platform members"
-      mainClassName="overflow-y-auto lg:overflow-hidden flex flex-col"
-    >
-      <AdminUsers
-        initialUsers={serializedUsers}
-        availableRoles={availableRoles}
-        availableDepartments={availableDepartments}
-        stats={stats}
-      />
-    </DashboardShell>
+    <AdminUsers
+      initialUsers={serializedUsers}
+      availableRoles={availableRoles}
+      availableDepartments={availableDepartments}
+      stats={stats}
+    />
   );
 }

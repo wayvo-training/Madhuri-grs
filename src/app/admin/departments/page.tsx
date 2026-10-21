@@ -2,13 +2,11 @@ import {
   AdminDepartments,
   type SerializedDepartment,
 } from "@/components/dashboard/admin/admin-department-management";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminDepartmentsPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const [totalGrievances, departments, activeCount, inactiveCount, deptHeads] =
     await Promise.all([
@@ -87,32 +85,18 @@ export default async function AdminDepartmentsPage() {
   }));
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Department & Organization Management"
-      subtitle="Enterprise divisions, workload distribution, and resolution mandates"
-      mainClassName="overflow-y-auto lg:overflow-hidden flex flex-col"
-    >
-      <div className="flex flex-col flex-1 min-h-0">
-        <AdminDepartments
-          initialDepartments={serializedDepartments}
-          departmentHeads={serializedHeads}
-          totalGrievances={totalGrievances}
-          stats={{
-            total: departments.length,
-            active: activeCount,
-            inactive: inactiveCount,
-            totalGrievances,
-          }}
-        />
-      </div>
-    </DashboardShell>
+    <div className="flex flex-col flex-1 min-h-0">
+      <AdminDepartments
+        initialDepartments={serializedDepartments}
+        departmentHeads={serializedHeads}
+        totalGrievances={totalGrievances}
+        stats={{
+          total: departments.length,
+          active: activeCount,
+          inactive: inactiveCount,
+          totalGrievances,
+        }}
+      />
+    </div>
   );
 }

@@ -2,13 +2,26 @@
 
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { UserRole } from "@/components/dashboard/navigation";
 import { NotificationDrawer } from "@/components/notifications/NotificationDrawer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
+const ROUTE_TITLES: Record<string, string> = {
+  "/admin/dashboard": "Admin Control Center",
+  "/admin/users": "User Directory & Access Control",
+  "/admin/roles": "Roles & Security Permissions",
+  "/admin/departments": "Department & Organization Management",
+  "/admin/rules": "Master Governance & Rules Engine",
+  "/admin/grievances": "Grievance Central & Routing Exceptions",
+  "/admin/audit-logs": "Enterprise Audit Trail & Observability Logs",
+  "/admin/messages": "Grievance Communication",
+  "/admin/notifications": "Notifications",
+};
+
 interface DashboardHeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   userRole?: UserRole;
   userName?: string;
@@ -18,10 +31,23 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({
-  title,
-  subtitle,
+  title: propTitle,
+  subtitle: _subtitle,
   userRole,
 }: DashboardHeaderProps) {
+  const pathname = usePathname();
+
+  const getAutoTitle = () => {
+    if (propTitle) return propTitle;
+    for (const [route, t] of Object.entries(ROUTE_TITLES)) {
+      if (pathname === route || pathname.startsWith(`${route}/`)) {
+        return t;
+      }
+    }
+    return "Dashboard";
+  };
+
+  const title = getAutoTitle();
   const getParentLabel = () => {
     switch (userRole) {
       case "END_USER":

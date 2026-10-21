@@ -1,5 +1,4 @@
 import { AdminDashboard } from "@/components/dashboard/admin/admin-dashboard";
-import { DashboardShell } from "@/components/dashboard/shell";
 import {
   PRIORITY_COLORS,
   SLA_COLORS,
@@ -14,8 +13,7 @@ import type {
 } from "@/types/admin/dashboard";
 
 export default async function AdminDashboardPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   // 1. Fetch real database metrics and overview records
   const [routingExceptionsCount, departments, recentGrievances, allGrievances] =
@@ -206,25 +204,11 @@ export default async function AdminDashboardPage() {
     }));
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Admin Control Center"
-      subtitle="Executive system oversight, operational health & enterprise governance"
-      mainClassName="overflow-y-auto lg:overflow-hidden"
-    >
-      <AdminDashboard
-        routingExceptionsCount={routingExceptionsCount}
-        departments={serializedDepartments}
-        recentGrievances={serializedRecentGrievances}
-        pieCharts={pieCharts}
-      />
-    </DashboardShell>
+    <AdminDashboard
+      routingExceptionsCount={routingExceptionsCount}
+      departments={serializedDepartments}
+      recentGrievances={serializedRecentGrievances}
+      pieCharts={pieCharts}
+    />
   );
 }

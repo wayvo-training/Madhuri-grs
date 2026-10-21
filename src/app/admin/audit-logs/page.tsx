@@ -2,13 +2,11 @@ import {
   AdminAuditTrail,
   type SerializedAuditLog,
 } from "@/components/dashboard/admin/admin-audit";
-import { DashboardShell } from "@/components/dashboard/shell";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminAuditLogsPage() {
-  const user = await requirePageRole("ADMIN");
-  const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
+  await requirePageRole("ADMIN");
 
   const [totalCount, sessionCount, apiCount, errorCount, rawAuditLogs] =
     await Promise.all([
@@ -114,28 +112,15 @@ export default async function AdminAuditLogsPage() {
   });
 
   return (
-    <DashboardShell
-      userRole="ADMIN"
-      userName={fullName}
-      userEmail={user.email}
-      permissions={user.permissions}
-      designation="System Administrator"
-      departmentName={
-        user.departments?.department_name || "Central Administration"
-      }
-      title="Enterprise Audit Trail & Observability Logs"
-      subtitle="Comprehensive ledger of user sessions, API calls, errors, navigation, and administrative governance"
-    >
-      <AdminAuditTrail
-        initialLogs={serializedAuditLogs}
-        initialTotalCount={totalCount}
-        stats={{
-          total: totalCount,
-          sessions: sessionCount,
-          apis: apiCount,
-          errors: errorCount,
-        }}
-      />
-    </DashboardShell>
+    <AdminAuditTrail
+      initialLogs={serializedAuditLogs}
+      initialTotalCount={totalCount}
+      stats={{
+        total: totalCount,
+        sessions: sessionCount,
+        apis: apiCount,
+        errors: errorCount,
+      }}
+    />
   );
 }
