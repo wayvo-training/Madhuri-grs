@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AdminDepartmentsLoading() {
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-2.5 sm:gap-3">
-      {/* Compact Metric Cards Skeleton */}
+      {/* Compact Metric Cards Skeleton (4 cards matching DepartmentMetricCards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
         {[1, 2, 3, 4].map((i) => (
           <div
@@ -22,29 +22,22 @@ export default function AdminDepartmentsLoading() {
         ))}
       </div>
 
-      {/* Department Table Container Skeleton */}
-      <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
-        {/* Header & Action Button */}
-        <div className="p-4 sm:p-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <Skeleton className="h-5 w-56" />
-            <Skeleton className="h-3 w-72 mt-1" />
-          </div>
-          <Skeleton className="h-9 w-38 rounded-xl shrink-0" />
-        </div>
-
-        {/* Search & Filter Bar */}
-        <div className="p-4 sm:p-5 py-3 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <Skeleton className="h-9 w-72 rounded-xl" />
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-9 w-28 rounded-xl" />
-            <Skeleton className="h-9 w-24 rounded-xl" />
+      {/* Main Department Table Container */}
+      <div className="flex flex-col flex-1 min-h-0 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs">
+        {/* Single Row Header: Title on Left, AdvancedTableSearch + New Dept on Right */}
+        <div className="shrink-0">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <Skeleton className="h-6 w-64 shrink-0" />
+            <div className="flex items-center gap-3 flex-1 min-w-0 ml-0 lg:ml-6">
+              <Skeleton className="h-10 flex-1 rounded-xl" />
+              <Skeleton className="h-9 w-36 rounded-xl shrink-0" />
+            </div>
           </div>
         </div>
 
-        {/* Table Header & Rows Skeleton */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <div className="h-10 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shrink-0">
+        {/* Departments Table (9 Columns matching DepartmentTable) */}
+        <div className="flex-1 min-h-0 mt-3 overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col">
+          <div className="h-10 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shrink-0">
             <Skeleton className="h-3.5 w-8" />
             <Skeleton className="h-3.5 w-28" />
             <Skeleton className="h-3.5 w-32" />
@@ -60,13 +53,13 @@ export default function AdminDepartmentsLoading() {
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
                 key={i}
-                className="h-13 px-4 flex items-center justify-between animate-pulse"
+                className="h-[52px] px-4 flex items-center justify-between animate-pulse"
               >
                 <Skeleton className="h-4 w-6" />
-                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-4 w-28" />
                 <Skeleton className="h-3.5 w-36" />
-                <Skeleton className="h-3.5 w-36" />
+                <Skeleton className="h-3.5 w-44" />
                 <Skeleton className="h-5 w-16 rounded-full" />
                 <Skeleton className="h-4 w-8" />
                 <Skeleton className="h-4 w-8" />
@@ -76,14 +69,14 @@ export default function AdminDepartmentsLoading() {
           </div>
         </div>
 
-        {/* Pagination Footer Skeleton */}
-        <div className="h-12 border-t border-slate-100 dark:border-slate-800 px-4 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
-          <Skeleton className="h-3 w-40" />
+        {/* Pagination Footer */}
+        <div className="mt-4 pt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <Skeleton className="h-4 w-40" />
           <div className="flex items-center gap-1.5">
-            <Skeleton className="h-7 w-16 rounded-lg" />
-            <Skeleton className="h-7 w-7 rounded-lg" />
-            <Skeleton className="h-7 w-7 rounded-lg" />
-            <Skeleton className="h-7 w-16 rounded-lg" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <Skeleton className="h-8 w-16 rounded-lg" />
           </div>
         </div>
       </div>
