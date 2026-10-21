@@ -68,9 +68,10 @@ export async function POST(
       );
     }
 
-    if (windowHours && grievance.closed_at) {
+    const referenceClosedTime = grievance.closed_at || grievance.updated_at;
+    if (windowHours && referenceClosedTime) {
       const hoursSinceClosed =
-        (Date.now() - grievance.closed_at.getTime()) / (1000 * 60 * 60);
+        (Date.now() - referenceClosedTime.getTime()) / (1000 * 60 * 60);
       if (hoursSinceClosed > windowHours) {
         return NextResponse.json(
           {
@@ -178,12 +179,47 @@ export async function POST(
     await prisma.grievance_status_history.create({
       data: {
         grievance_id: grievanceId,
-        old_status: "RESOLVED",
+        old_status: grievance.status,
         new_status: newStatus,
         changed_by: user.user_id,
         remarks: reason,
       },
     });
+
+    // Create escalation record if reaching manual review threshold
+    if (isEscalated) {
+      const primaryDeptRecord = getPrimaryDepartment(grievance);
+      const targetDeptId = primaryDeptRecord?.department_id;
+
+      const primaryDeptHead = targetDeptId
+        ? await prisma.users.findFirst({
+            where: {
+              department_id: targetDeptId,
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+            select: { user_id: true },
+          })
+        : null;
+
+      if (primaryDeptHead) {
+        const existingEscalation = await prisma.escalations.findFirst({
+          where: { grievance_id: grievanceId, status: "OPEN" },
+        });
+
+        if (!existingEscalation) {
+          await prisma.escalations.create({
+            data: {
+              grievance_id: grievanceId,
+              escalated_to: primaryDeptHead.user_id,
+              escalation_level: 1,
+              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (reached review threshold of ${reopenPolicy.maxManualReviewCount}). Reason: ${reason}`,
+              status: "OPEN",
+            },
+          });
+        }
+      }
+    }
 
     // Notifications
     // 1. Notify End User
