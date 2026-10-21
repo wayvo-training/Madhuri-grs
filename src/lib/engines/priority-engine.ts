@@ -65,6 +65,19 @@ export interface PriorityCalculationResult {
 }
 
 /**
+ * Helper to match a word or phrase with word boundaries to prevent false positives
+ * (e.g., 'icu' matching 'particular', or 'trapped' matching 'strapped').
+ */
+export function matchesWordOrPhrase(text: string, term: string): boolean {
+  if (!text || !term) return false;
+  const trimmed = term.trim();
+  if (!trimmed) return false;
+  const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`\\b${escaped}\\b`, "i");
+  return regex.test(text);
+}
+
+/**
  * Determines baseline Impact based on Category, Subcategory, and Blast-Radius / Scope keywords.
  */
 export function determineBaselineImpact(
@@ -113,7 +126,7 @@ export function determineBaselineImpact(
     impact = "LOW";
   }
 
-  // 2. Severe real-world hazard overrides
+  // 2. Severe real-world hazard overrides (enforcing word boundaries)
   const criticalHazards = [
     "hospitalized",
     "icu",
@@ -125,7 +138,7 @@ export function determineBaselineImpact(
     "poisoning",
     "police",
   ];
-  if (criticalHazards.some((h) => text.includes(h))) {
+  if (criticalHazards.some((h) => matchesWordOrPhrase(text, h))) {
     return "CRITICAL";
   }
 
@@ -140,7 +153,7 @@ export function determineBaselineImpact(
     "company wide",
     "all passengers",
   ];
-  if (wideScopePhrases.some((p) => text.includes(p))) {
+  if (wideScopePhrases.some((p) => matchesWordOrPhrase(text, p))) {
     if (impact === "LOW") impact = "MEDIUM";
     else if (impact === "MEDIUM") impact = "HIGH";
     else if (impact === "HIGH") impact = "CRITICAL";
@@ -168,7 +181,7 @@ export function determineBaselineUrgency(
     "ambulance",
     "threatened",
   ];
-  if (criticalUrgencyWords.some((w) => text.includes(w))) {
+  if (criticalUrgencyWords.some((w) => matchesWordOrPhrase(text, w))) {
     return "CRITICAL";
   }
 
@@ -182,7 +195,7 @@ export function determineBaselineUrgency(
     "today deadline",
     "blocked completely",
   ];
-  if (highUrgencyWords.some((w) => text.includes(w))) {
+  if (highUrgencyWords.some((w) => matchesWordOrPhrase(text, w))) {
     return "HIGH";
   }
 
@@ -196,7 +209,7 @@ export function determineBaselineUrgency(
     "minor clarification",
     "feedback only",
   ];
-  if (lowUrgencyWords.some((w) => text.includes(w))) {
+  if (lowUrgencyWords.some((w) => matchesWordOrPhrase(text, w))) {
     return "LOW";
   }
 
@@ -264,18 +277,28 @@ export function evaluateRuleMatch(
     .trim()
     .toLowerCase();
 
-  const matchesSubcategory = Boolean(
-    (subcatIdStr && ruleSubcatId && ruleSubcatId === subcatIdStr) ||
-      (subcatName && ruleSubcatName && ruleSubcatName === subcatName),
-  );
-
-  const matchesCategory = Boolean(
-    (catIdStr && ruleCatId && ruleCatId === catIdStr) ||
-      (catName && ruleCatName && ruleCatName === catName),
-  );
-
   const hasSubcatScope = Boolean(ruleSubcatId || ruleSubcatName);
   const hasCatScope = Boolean(ruleCatId || ruleCatName);
+
+  // Subcategory matching: ID takes precedence if both rule and input provide IDs
+  let matchesSubcategory = false;
+  if (hasSubcatScope) {
+    if (ruleSubcatId && subcatIdStr) {
+      matchesSubcategory = ruleSubcatId === subcatIdStr;
+    } else if (ruleSubcatName && subcatName) {
+      matchesSubcategory = ruleSubcatName === subcatName;
+    }
+  }
+
+  // Category matching: ID takes precedence if both rule and input provide IDs
+  let matchesCategory = false;
+  if (hasCatScope) {
+    if (ruleCatId && catIdStr) {
+      matchesCategory = ruleCatId === catIdStr;
+    } else if (ruleCatName && catName) {
+      matchesCategory = ruleCatName === catName;
+    }
+  }
 
   // 1. Category Scope: Category-specific rules must strictly match their configured category
   if (hasCatScope && !matchesCategory) {
@@ -287,18 +310,26 @@ export function evaluateRuleMatch(
     return false;
   }
 
-  // 3. Keyword matching against Title and Description (case-insensitively)
+  // 3. Keyword matching against Title and Description (case-insensitively with word boundaries)
   const rawKeywords = cond.contains || cond.keywords;
-  const hasKeywords = Array.isArray(rawKeywords) && rawKeywords.length > 0;
+  let normalizedKeywords: string[] = [];
+  if (Array.isArray(rawKeywords)) {
+    normalizedKeywords = rawKeywords.filter(
+      (k): k is string => typeof k === "string" && k.trim().length > 0,
+    );
+  } else if (typeof rawKeywords === "string" && rawKeywords.trim()) {
+    normalizedKeywords = rawKeywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean);
+  }
 
-  if (hasKeywords) {
+  if (normalizedKeywords.length > 0) {
     const fullText =
       `${input.title || ""} ${input.description || ""}`.toLowerCase();
-    const hasKeyword = rawKeywords.some((kw) => {
-      if (typeof kw !== "string") return false;
-      const trimmed = kw.trim().toLowerCase();
-      return trimmed.length > 0 && fullText.includes(trimmed);
-    });
+    const hasKeyword = normalizedKeywords.some((kw) =>
+      matchesWordOrPhrase(fullText, kw.toLowerCase()),
+    );
     if (!hasKeyword) {
       return false;
     }
@@ -314,7 +345,7 @@ export function evaluateRuleMatch(
  *
  * Matching precedence:
  * 1. Active non-default rule matching Category and/or Subcategory, or verified domain keywords.
- * 2. ITIL Impact x Urgency Matrix calculation (tamper-proof against fake user adjectives).
+ * 2. ITIL Impact x Urgency Matrix calculation when severe/elevated conditions exist.
  * 3. Active configured default fallback priority rule (is_default = true).
  * 4. Safe system fallback priority ("MEDIUM").
  */
@@ -391,23 +422,37 @@ export async function determinePriority(
     }
   }
 
-  // 3. Fallback to calculated ITIL Matrix priority
-  if (matrixPriority) {
+  // 3. Dynamic ITIL Matrix Priority (takes precedence if matrix determined elevated priority)
+  if (matrixPriority && (!defaultRule || matrixPriority !== "MEDIUM")) {
+    const isRuleMatch = Boolean(
+      defaultRule && matrixPriority === defaultRule.priority_level,
+    );
     return {
       priority: matrixPriority,
-      priorityRuleId: defaultRule?.priority_rule_id || null,
-      matchedRuleName: defaultRule
-        ? `${defaultRule.rule_name} (ITIL Matrix: ${derivedImpact} x ${derivedUrgency})`
-        : `ITIL Matrix (${derivedImpact} x ${derivedUrgency})`,
-      isDefault: Boolean(defaultRule),
+      priorityRuleId:
+        isRuleMatch && defaultRule ? defaultRule.priority_rule_id : null,
+      matchedRuleName: `ITIL Matrix (${derivedImpact} x ${derivedUrgency})`,
+      isDefault: false,
       impact: derivedImpact,
       urgency: derivedUrgency,
     };
   }
 
-  // 4. Absolute fallback if no rule or matrix match exists
+  // 4. Configured active default fallback rule
+  if (defaultRule) {
+    return {
+      priority: defaultRule.priority_level || matrixPriority || "MEDIUM",
+      priorityRuleId: defaultRule.priority_rule_id,
+      matchedRuleName: defaultRule.rule_name,
+      isDefault: true,
+      impact: derivedImpact,
+      urgency: derivedUrgency,
+    };
+  }
+
+  // 5. Absolute system fallback
   return {
-    priority: "MEDIUM",
+    priority: matrixPriority || "MEDIUM",
     priorityRuleId: null,
     matchedRuleName: "System Fallback Default",
     isDefault: true,
