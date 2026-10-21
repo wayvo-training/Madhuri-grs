@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { CACHE_TAGS, serverCache } from "@/lib/cache";
+import { ALLOWED_PRIORITY_LEVELS } from "@/lib/constants/priority";
 import { logger } from "@/lib/logger";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +14,6 @@ import {
   validateStatus,
 } from "@/lib/validations/rules";
 
-const ALLOWED_PRIORITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 export async function POST(request: Request) {
   const startTime = Date.now();
   const auth = await authorizeApi({ role: "ADMIN" });

@@ -24,6 +24,8 @@ export async function POST(request: Request) {
     const titleFromForm = (formData.get("title") as string)?.trim();
     const descriptionFromForm = (formData.get("description") as string)?.trim();
     const _userPriority = (formData.get("priority") as string)?.trim();
+    const impactFromForm = (formData.get("impact") as string)?.trim();
+    const urgencyFromForm = (formData.get("urgency") as string)?.trim();
     const problemStatement =
       descriptionFromForm || (formData.get("problemStatement") as string) || "";
     const title =
@@ -151,9 +153,11 @@ export async function POST(request: Request) {
       subcategoryName: subcategoryRecord?.subcategory_name,
       title: title,
       description: problemStatement,
+      impact: impactFromForm,
+      urgency: urgencyFromForm,
     });
 
-    const priorityLevel = priorityResult.priority || "MEDIUM";
+    const priorityLevel = priorityResult.priority;
 
     // Lookup active SLA Policy based on priority
     const slaPolicy = await prisma.sla_policies.findFirst({
