@@ -93,7 +93,7 @@ export function ResetPasswordModal({
               placeholder="Enter new password (min 6 characters)"
               value={newPassword}
               onChange={(e) => onSetNewPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-amber-600 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-amber-600 outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E] outline-none"
             />
           </div>
 
@@ -110,7 +110,7 @@ export function ResetPasswordModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-medium text-white hover:bg-[#115E59] active:bg-[#0D655E] transition-colors cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

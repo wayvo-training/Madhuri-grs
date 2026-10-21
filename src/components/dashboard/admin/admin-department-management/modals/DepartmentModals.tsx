@@ -132,11 +132,13 @@ export function DepartmentModals({
                   htmlFor="new-dept-head"
                   className="block text-xs font-semibold text-slate-700"
                 >
-                  Department Head <span className="text-amber-800">*</span>
+                  Department Head{" "}
+                  <span className="text-slate-400 font-normal">
+                    (Optional — can assign later)
+                  </span>
                 </label>
                 <select
                   id="new-dept-head"
-                  required
                   value={selectedHeadId}
                   onChange={(e) => {
                     const id = e.target.value;
@@ -148,13 +150,20 @@ export function DepartmentModals({
                   }}
                   className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
                 >
-                  <option value="">Select Department Head</option>
+                  <option value="">— Assign Later / None —</option>
                   {departmentHeads.map((head) => (
                     <option key={head.user_id} value={head.user_id}>
                       {head.first_name} {head.last_name} ({head.email})
                     </option>
                   ))}
                 </select>
+                {departmentHeads.length === 0 && (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    No users currently have the Department Head role. You can
+                    create this department now and assign a Department Head
+                    later via User Management.
+                  </p>
+                )}
               </div>
 
               <div>

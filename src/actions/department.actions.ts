@@ -1,7 +1,7 @@
 export interface CreateDepartmentPayload {
   department_name: string;
   department_code: string;
-  head_user_id: string;
+  head_user_id?: string;
   description?: string;
   contact_email?: string;
   status?: "ACTIVE" | "INACTIVE";

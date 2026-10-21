@@ -5,6 +5,10 @@ import {
   resetUserPasswordAction,
   updateUserAction,
 } from "@/actions/user.actions";
+import {
+  validateCreateUserFields,
+  validateEditUserFields,
+} from "@/lib/validations/user-validations";
 import type {
   SerializedUser,
   UserDepartmentOption,
@@ -13,7 +17,7 @@ import type {
 
 export function useUserActions(
   setUsers: React.Dispatch<React.SetStateAction<SerializedUser[]>>,
-  availableRoles: UserRoleOption[],
+  _availableRoles: UserRoleOption[],
   _availableDepartments: UserDepartmentOption[],
 ) {
   // Action menu dropdown state
@@ -67,22 +71,17 @@ export function useUserActions(
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !employeeCode.trim() ||
-      !firstName.trim() ||
-      !email.trim() ||
-      !password ||
-      !roleId.trim() ||
-      !departmentId.trim()
-    ) {
-      toast.error(
-        "Please fill in all required fields including role and department.",
-      );
-      return;
-    }
+    const validation = validateCreateUserFields({
+      employee_code: employeeCode,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      password,
+    });
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0];
+      toast.error(firstError || "Please check the form for invalid inputs.");
       return;
     }
 
@@ -94,8 +93,6 @@ export function useUserActions(
         last_name: lastName.trim() || undefined,
         email: email.trim(),
         password,
-        role_id: roleId,
-        department_id: departmentId,
         status: "ACTIVE",
       });
 
@@ -145,9 +142,16 @@ export function useUserActions(
   const handleSaveEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    const validation = validateEditUserFields({
+      employee_code: editEmployeeCode,
+      first_name: editFirstName,
+      last_name: editLastName,
+      email: editEmail,
+    });
 
-    if (!editFirstName.trim() || !editEmail.trim()) {
-      toast.error("First name and email are required.");
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0];
+      toast.error(firstError || "Please check the form for invalid inputs.");
       return;
     }
 
@@ -230,11 +234,72 @@ export function useUserActions(
     }
   };
 
+  // --- Assign Role Modal State ---
+  const [isAssignRoleModalOpen, setIsAssignRoleModalOpen] = useState(false);
+  const [assignRoleUser, setAssignRoleUser] = useState<SerializedUser | null>(
+    null,
+  );
+  const [isAssignRoleSubmitting, setIsAssignRoleSubmitting] = useState(false);
+
+  const openAssignRoleModal = (user: SerializedUser) => {
+    setAssignRoleUser(user);
+    setIsAssignRoleModalOpen(true);
+    closeActionMenu();
+  };
+
+  const closeAssignRoleModal = () => {
+    setIsAssignRoleModalOpen(false);
+    setAssignRoleUser(null);
+  };
+
+  const handleSaveAssignRole = async (
+    userId: string,
+    targetRoleId: string,
+    targetDepartmentId: string | null,
+  ) => {
+    try {
+      setIsAssignRoleSubmitting(true);
+      const res = await updateUserAction({
+        user_id: userId,
+        role_id: targetRoleId,
+        department_id: targetDepartmentId,
+      });
+
+      const updatedUser = res.user;
+      if (res.success && updatedUser) {
+        setUsers((prev) =>
+          prev.map((u) => (u.user_id === userId ? updatedUser : u)),
+        );
+        toast.success(
+          res.message || "User role & department updated successfully.",
+        );
+        closeAssignRoleModal();
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Failed to assign role & department.",
+      );
+    } finally {
+      setIsAssignRoleSubmitting(false);
+    }
+  };
+
   return {
     openActionMenuId,
     setOpenActionMenuId,
     closeActionMenu,
     actionMenuRef,
+
+    // Assign Role
+    isAssignRoleModalOpen,
+    setIsAssignRoleModalOpen,
+    assignRoleUser,
+    isAssignRoleSubmitting,
+    openAssignRoleModal,
+    closeAssignRoleModal,
+    handleSaveAssignRole,
 
     // Create
     isCreateModalOpen,

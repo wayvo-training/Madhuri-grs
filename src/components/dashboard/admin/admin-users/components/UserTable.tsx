@@ -7,6 +7,7 @@ import {
   Plus,
   Power,
   Shield,
+  ShieldCheck,
   User,
 } from "lucide-react";
 import {
@@ -61,6 +62,7 @@ interface UserTableProps {
   onCloseActionMenu: () => void;
 
   onOpenCreateModal: () => void;
+  onOpenAssignRole: (user: SerializedUser) => void;
   onOpenEditModal?: (user: SerializedUser) => void;
   onOpenResetModal?: (user: SerializedUser) => void;
   onToggleStatus: (user: SerializedUser) => void;
@@ -72,7 +74,7 @@ export function UserTable({
   paginatedUsers,
   availableRoles,
   availableDepartments,
-  searchQuery,
+  searchQuery: _searchQuery,
   onSearchQueryChange,
   roleFilter: _roleFilter,
   onRoleFilterChange: _onRoleFilterChange,
@@ -92,6 +94,7 @@ export function UserTable({
   actionMenuRef,
   onCloseActionMenu,
   onOpenCreateModal,
+  onOpenAssignRole,
   onOpenEditModal: _onOpenEditModal,
   onOpenResetModal: _onOpenResetModal,
   onToggleStatus,
@@ -131,6 +134,18 @@ export function UserTable({
     const f = firstName?.[0] || "";
     const l = lastName?.[0] || "";
     return `${f}${l}`.toUpperCase() || "U";
+  };
+
+  const isUserWithoutRole = (user: SerializedUser) => {
+    const role = (user.role_name || "").trim().toUpperCase();
+    if (!role || role === "NO_ROLE" || role === "UNASSIGNED") {
+      return true;
+    }
+    // Only newly created accounts awaiting department/role placement
+    if (role === "END_USER" && !user.department_id) {
+      return true;
+    }
+    return false;
   };
 
   // Smart Search Fields Configuration
@@ -359,14 +374,26 @@ export function UserTable({
 
                     {/* Role */}
                     <td className="px-4 py-2 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getRoleBadgeStyle(
-                          user.role_name,
-                        )}`}
-                      >
-                        <Shield className="h-3 w-3" />
-                        {user.role_name}
-                      </span>
+                      {isUserWithoutRole(user) ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpenAssignRole(user)}
+                          title="Assign role and department"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 text-[#0F766E] hover:bg-teal-100 dark:bg-teal-950/60 dark:text-teal-300 dark:hover:bg-teal-900/80 border border-teal-200 dark:border-teal-800 shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5 text-[#0F766E] dark:text-teal-400" />
+                          <span>Assign Role</span>
+                        </button>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${getRoleBadgeStyle(
+                            user.role_name,
+                          )}`}
+                        >
+                          <Shield className="h-3 w-3" />
+                          {user.role_name}
+                        </span>
+                      )}
                     </td>
 
                     {/* Department */}
@@ -374,7 +401,10 @@ export function UserTable({
                       <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
                         <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         <span>
-                          {user.department_name || "— Central Admin —"}
+                          {user.department_name ||
+                            (user.role_name === "ADMIN"
+                              ? "— Central Admin —"
+                              : "— Unassigned —")}
                         </span>
                       </div>
                     </td>
@@ -420,7 +450,7 @@ export function UserTable({
                       </div>
                     </td>
 
-                    {/* Actions Menu - Only Toggle Status (Edit & Reset Password Removed) */}
+                    {/* Actions Menu */}
                     <td className="px-4 py-2 whitespace-nowrap text-right">
                       <div className="relative inline-block text-left">
                         <button
@@ -434,8 +464,24 @@ export function UserTable({
                         {isMenuOpen && (
                           <div
                             ref={actionMenuRef}
-                            className="absolute right-0 top-full z-30 mt-1 w-38 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-lg backdrop-blur-xs"
+                            className="absolute right-0 top-full z-30 mt-1 w-40 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-lg backdrop-blur-xs"
                           >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onOpenAssignRole(user);
+                                onCloseActionMenu();
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 text-[#0F766E] dark:text-teal-400" />
+                              <span>
+                                {isUserWithoutRole(user)
+                                  ? "Assign Role"
+                                  : "Change Role"}
+                              </span>
+                            </button>
+                            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                             <button
                               type="button"
                               onClick={() => {

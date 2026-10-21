@@ -2,6 +2,10 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import {
+  validateCreateUserFields,
+  validateEditUserFields,
+} from "@/lib/validations/user-validations";
 import type { SerializedUser } from "@/types/admin/users";
 
 export async function GET() {
@@ -109,47 +113,63 @@ export async function POST(request: Request) {
       status,
     } = body;
 
-    // Basic Validations
-    if (
-      !employee_code ||
-      typeof employee_code !== "string" ||
-      !employee_code.trim()
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Employee code is required." },
-        { status: 400 },
-      );
-    }
+    // Common User Validations
+    const validation = validateCreateUserFields({
+      employee_code,
+      first_name,
+      last_name,
+      email,
+      password,
+    });
 
-    if (!first_name || typeof first_name !== "string" || !first_name.trim()) {
-      return NextResponse.json(
-        { success: false, message: "First name is required." },
-        { status: 400 },
-      );
-    }
-
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json(
-        { success: false, message: "A valid email address is required." },
-        { status: 400 },
-      );
-    }
-
-    if (!password || typeof password !== "string" || password.length < 6) {
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0];
       return NextResponse.json(
         {
           success: false,
-          message: "Password must be at least 6 characters long.",
+          message: firstError || "Invalid user inputs provided.",
         },
         { status: 400 },
       );
     }
 
-    if (!role_id) {
-      return NextResponse.json(
-        { success: false, message: "Role is required." },
-        { status: 400 },
-      );
+    let targetRoleId: bigint;
+    if (role_id) {
+      const chosenRole = await prisma.roles.findUnique({
+        where: { role_id: BigInt(role_id) },
+      });
+      if (!chosenRole) {
+        return NextResponse.json(
+          { success: false, message: "Invalid role specified." },
+          { status: 400 },
+        );
+      }
+      if (
+        (chosenRole.role_name === "STAFF" ||
+          chosenRole.role_name === "DEPARTMENT_HEAD") &&
+        !department_id
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Department is required for ${chosenRole.role_name === "DEPARTMENT_HEAD" ? "Department Head" : "Staff"} role.`,
+          },
+          { status: 400 },
+        );
+      }
+      targetRoleId = chosenRole.role_id;
+    } else {
+      const endUserRole = await prisma.roles.findFirst({
+        where: { role_name: "END_USER" },
+        select: { role_id: true },
+      });
+      if (!endUserRole) {
+        return NextResponse.json(
+          { success: false, message: "Default role 'END_USER' not found." },
+          { status: 500 },
+        );
+      }
+      targetRoleId = endUserRole.role_id;
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -190,7 +210,7 @@ export async function POST(request: Request) {
           last_name: last_name ? last_name.trim() : null,
           email: normalizedEmail,
           password_hash: passwordHash,
-          role_id: BigInt(role_id),
+          role_id: targetRoleId,
           department_id: department_id ? BigInt(department_id) : null,
           status: userStatus,
         },
@@ -284,6 +304,25 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Common User Validations on patch
+    const patchValidation = validateEditUserFields({
+      employee_code,
+      first_name,
+      last_name,
+      email,
+    });
+
+    if (!patchValidation.isValid) {
+      const firstError = Object.values(patchValidation.errors)[0];
+      return NextResponse.json(
+        {
+          success: false,
+          message: firstError || "Invalid user inputs provided.",
+        },
+        { status: 400 },
+      );
+    }
+
     const targetUserId = BigInt(user_id);
     const existing = await prisma.users.findUnique({
       where: { user_id: targetUserId },
@@ -347,6 +386,57 @@ export async function PATCH(request: Request) {
       }
     }
 
+    let roleUpdateId: bigint | undefined;
+    if (role_id !== undefined || department_id !== undefined) {
+      let activeRole = existing.roles;
+      if (role_id) {
+        const fetchedRole = await prisma.roles.findUnique({
+          where: { role_id: BigInt(role_id) },
+        });
+        if (!fetchedRole) {
+          return NextResponse.json(
+            { success: false, message: "Invalid role specified." },
+            { status: 400 },
+          );
+        }
+        activeRole = fetchedRole;
+        roleUpdateId = fetchedRole.role_id;
+      }
+
+      const effectiveDeptId =
+        department_id !== undefined
+          ? department_id
+            ? BigInt(department_id)
+            : null
+          : existing.department_id;
+
+      if (
+        (activeRole.role_name === "STAFF" ||
+          activeRole.role_name === "DEPARTMENT_HEAD") &&
+        !effectiveDeptId
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Department is required for ${activeRole.role_name === "DEPARTMENT_HEAD" ? "Department Head" : "Staff"} role.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (effectiveDeptId) {
+        const deptExists = await prisma.departments.findUnique({
+          where: { department_id: effectiveDeptId },
+        });
+        if (!deptExists) {
+          return NextResponse.json(
+            { success: false, message: "Selected department does not exist." },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
     const updatedUser = await prisma.$transaction(async (tx) => {
       const updated = await tx.users.update({
         where: { user_id: targetUserId },
@@ -357,7 +447,11 @@ export async function PATCH(request: Request) {
             ? { last_name: last_name ? last_name.trim() : null }
             : {}),
           ...(normalizedEmail ? { email: normalizedEmail } : {}),
-          ...(role_id ? { role_id: BigInt(role_id) } : {}),
+          ...(roleUpdateId
+            ? { role_id: roleUpdateId }
+            : role_id
+              ? { role_id: BigInt(role_id) }
+              : {}),
           ...(department_id !== undefined
             ? { department_id: department_id ? BigInt(department_id) : null }
             : {}),

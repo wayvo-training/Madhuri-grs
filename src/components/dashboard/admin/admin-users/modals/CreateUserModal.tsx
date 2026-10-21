@@ -1,14 +1,14 @@
 "use client";
 
-import { Loader2, Plus, UserPlus, X } from "lucide-react";
+import { AlertCircle, Loader2, Plus, UserPlus, X } from "lucide-react";
+import { useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { UserDepartmentOption, UserRoleOption } from "@/types/admin/users";
+  validateEmail,
+  validateEmployeeCode,
+  validateFirstName,
+  validateLastName,
+  validatePassword,
+} from "@/lib/validations/user-validations";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -26,15 +26,8 @@ interface CreateUserModalProps {
   onSetEmail: (val: string) => void;
   password: string;
   onSetPassword: (val: string) => void;
-  roleId: string;
-  onSetRoleId: (val: string) => void;
-  departmentId: string;
-  onSetDepartmentId: (val: string) => void;
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   onSetStatus?: (val: "ACTIVE" | "INACTIVE" | "SUSPENDED") => void;
-
-  availableRoles: UserRoleOption[];
-  availableDepartments: UserDepartmentOption[];
 }
 
 export function CreateUserModal({
@@ -52,42 +45,41 @@ export function CreateUserModal({
   onSetEmail,
   password,
   onSetPassword,
-  roleId,
-  onSetRoleId,
-  departmentId,
-  onSetDepartmentId,
-  availableRoles,
-  availableDepartments,
 }: CreateUserModalProps) {
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   if (!isOpen) return null;
 
-  // Filter only active roles and remove ADMIN
-  const selectableRoles = availableRoles.filter(
-    (r) =>
-      r.role_name.trim().toUpperCase() !== "ADMIN" &&
-      (!r.status || r.status === "ACTIVE"),
-  );
+  // Validation using common rules
+  const fnValidation = validateFirstName(firstName);
+  const lnValidation = validateLastName(lastName);
+  const empValidation = validateEmployeeCode(employeeCode);
+  const emailValidation = validateEmail(email);
+  const pwValidation = validatePassword(password);
 
-  // Filter only active departments
-  const selectableDepartments = availableDepartments.filter(
-    (d) => !d.status || d.status === "ACTIVE",
-  );
+  const isFormValid =
+    fnValidation.isValid &&
+    lnValidation.isValid &&
+    empValidation.isValid &&
+    emailValidation.isValid &&
+    pwValidation.isValid;
 
-  // Enable Create Account only after filling all required details
-  const isFormValid = Boolean(
-    employeeCode.trim() &&
-      firstName.trim() &&
-      email.trim() &&
-      email.includes("@") &&
-      password.length >= 6 &&
-      roleId.trim() &&
-      departmentId.trim(),
-  );
+  const markTouched = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
 
-  const selectedRole = selectableRoles.find((r) => r.role_id === roleId);
-  const selectedDept = selectableDepartments.find(
-    (d) => d.department_id === departmentId,
-  );
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched({
+      firstName: true,
+      lastName: true,
+      employeeCode: true,
+      email: true,
+      password: true,
+    });
+    if (!isFormValid) return;
+    onSubmit(e);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
@@ -95,7 +87,7 @@ export function CreateUserModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-400">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
@@ -103,21 +95,26 @@ export function CreateUserModal({
                 Create New User
               </h3>
               <p className="text-xs text-slate-500">
-                Register a new employee, grievance staff, or officer
+                Register a new account with basic credentials
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            disabled={isSubmitting}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Form - do not fill with initial values & disable browser autofill */}
-        <form onSubmit={onSubmit} autoComplete="off" className="mt-5 space-y-4">
+        {/* Form */}
+        <form
+          onSubmit={handleSubmit}
+          autoComplete="off"
+          className="mt-5 space-y-4"
+        >
           {/* First & Last Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
@@ -131,27 +128,56 @@ export function CreateUserModal({
                 id="create-first-name"
                 type="text"
                 required
-                placeholder="First name"
+                placeholder="e.g. John"
                 value={firstName}
-                onChange={(e) => onSetFirstName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-emerald-600 outline-none"
+                onChange={(e) => {
+                  onSetFirstName(e.target.value);
+                  markTouched("firstName");
+                }}
+                onBlur={() => markTouched("firstName")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                  touched.firstName && !fnValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.firstName && !fnValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{fnValidation.error}</span>
+                </p>
+              )}
             </div>
             <div>
               <label
                 htmlFor="create-last-name"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                Last Name
+                Last Name{" "}
+                <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <input
                 id="create-last-name"
                 type="text"
-                placeholder="Last name"
+                placeholder="e.g. Doe"
                 value={lastName}
-                onChange={(e) => onSetLastName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+                onChange={(e) => {
+                  onSetLastName(e.target.value);
+                  markTouched("lastName");
+                }}
+                onBlur={() => markTouched("lastName")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                  touched.lastName && !lnValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.lastName && !lnValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{lnValidation.error}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -170,9 +196,27 @@ export function CreateUserModal({
                 required
                 placeholder="e.g. EMP102"
                 value={employeeCode}
-                onChange={(e) => onSetEmployeeCode(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-emerald-600 outline-none uppercase font-mono"
+                onChange={(e) => {
+                  onSetEmployeeCode(e.target.value);
+                  markTouched("employeeCode");
+                }}
+                onBlur={() => markTouched("employeeCode")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none uppercase font-mono transition-colors ${
+                  touched.employeeCode && !empValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.employeeCode && !empValidation.isValid ? (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{empValidation.error}</span>
+                </p>
+              ) : (
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Must combine letters & numbers (min 6 characters, e.g. EMP001)
+                </p>
+              )}
             </div>
             <div>
               <label
@@ -188,91 +232,23 @@ export function CreateUserModal({
                 required
                 placeholder="user@company.com"
                 value={email}
-                onChange={(e) => onSetEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+                onChange={(e) => {
+                  onSetEmail(e.target.value);
+                  markTouched("email");
+                }}
+                onBlur={() => markTouched("email")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                  touched.email && !emailValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
-            </div>
-          </div>
-
-          {/* Role & Department (Mandatory - Using shadcn Select components) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label
-                htmlFor="create-role"
-                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Role Assignment <span className="text-rose-500">*</span>
-              </label>
-              <Select
-                value={roleId}
-                onValueChange={(val) => {
-                  if (val) onSetRoleId(val);
-                }}
-              >
-                <SelectTrigger
-                  id="create-role"
-                  className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900"
-                >
-                  <SelectValue placeholder="— Select Role —">
-                    {selectedRole ? (
-                      selectedRole.role_name
-                    ) : (
-                      <span className="text-slate-400">— Select Role —</span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
-                  {selectableRoles.map((r) => (
-                    <SelectItem
-                      key={r.role_id}
-                      value={r.role_id}
-                      className="text-xs cursor-pointer"
-                    >
-                      {r.role_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label
-                htmlFor="create-department"
-                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-              >
-                Department <span className="text-rose-500">*</span>
-              </label>
-              <Select
-                value={departmentId}
-                onValueChange={(val) => {
-                  if (val) onSetDepartmentId(val);
-                }}
-              >
-                <SelectTrigger
-                  id="create-department"
-                  className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900"
-                >
-                  <SelectValue placeholder="— Select Department —">
-                    {selectedDept ? (
-                      selectedDept.department_name
-                    ) : (
-                      <span className="text-slate-400">
-                        — Select Department —
-                      </span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg max-h-56">
-                  {selectableDepartments.map((d) => (
-                    <SelectItem
-                      key={d.department_id}
-                      value={d.department_id}
-                      className="text-xs cursor-pointer"
-                    >
-                      {d.department_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {touched.email && !emailValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{emailValidation.error}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -292,9 +268,23 @@ export function CreateUserModal({
               minLength={6}
               placeholder="Minimum 6 characters"
               value={password}
-              onChange={(e) => onSetPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+              onChange={(e) => {
+                onSetPassword(e.target.value);
+                markTouched("password");
+              }}
+              onBlur={() => markTouched("password")}
+              className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                touched.password && !pwValidation.isValid
+                  ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                  : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+              }`}
             />
+            {touched.password && !pwValidation.isValid && (
+              <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>{pwValidation.error}</span>
+              </p>
+            )}
           </div>
 
           {/* Actions */}
@@ -312,7 +302,7 @@ export function CreateUserModal({
               disabled={!isFormValid || isSubmitting}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
                 isFormValid && !isSubmitting
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-xs"
+                  ? "bg-[#0F766E] text-white hover:bg-[#115E59] active:bg-[#0D655E] cursor-pointer shadow-xs"
                   : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
               }`}
             >
@@ -324,7 +314,7 @@ export function CreateUserModal({
               ) : (
                 <>
                   <Plus className="h-3.5 w-3.5" />
-                  <span>Create Account</span>
+                  <span>Create User</span>
                 </>
               )}
             </button>

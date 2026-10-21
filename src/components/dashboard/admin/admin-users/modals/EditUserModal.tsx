@@ -1,6 +1,20 @@
 "use client";
 
-import { Loader2, Pencil, X } from "lucide-react";
+import { AlertCircle, Loader2, Pencil, X } from "lucide-react";
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  validateEmail,
+  validateEmployeeCode,
+  validateFirstName,
+  validateLastName,
+} from "@/lib/validations/user-validations";
 import type {
   SerializedUser,
   UserDepartmentOption,
@@ -56,7 +70,50 @@ export function EditUserModal({
   availableRoles,
   availableDepartments,
 }: EditUserModalProps) {
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
   if (!isOpen || !editingUser) return null;
+
+  // Validation using common rules
+  const fnValidation = validateFirstName(firstName);
+  const lnValidation = validateLastName(lastName);
+  const empValidation = validateEmployeeCode(employeeCode);
+  const emailValidation = validateEmail(email);
+
+  const isFormValid =
+    fnValidation.isValid &&
+    lnValidation.isValid &&
+    empValidation.isValid &&
+    emailValidation.isValid &&
+    Boolean(roleId);
+
+  const markTouched = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched({
+      firstName: true,
+      lastName: true,
+      employeeCode: true,
+      email: true,
+    });
+    if (!isFormValid) return;
+    onSubmit(e);
+  };
+
+  const activeRoles = availableRoles.filter(
+    (r) => !r.status || r.status === "ACTIVE",
+  );
+  const activeDepartments = availableDepartments.filter(
+    (d) => !d.status || d.status === "ACTIVE",
+  );
+
+  const selectedRoleObj = activeRoles.find((r) => r.role_id === roleId);
+  const selectedDeptObj = activeDepartments.find(
+    (d) => d.department_id === departmentId,
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
@@ -64,7 +121,7 @@ export function EditUserModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950/60 text-[#0F766E] dark:text-teal-400">
               <Pencil className="h-4 w-4" />
             </div>
             <div>
@@ -87,7 +144,7 @@ export function EditUserModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={onSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {/* Employee Code & Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
@@ -102,9 +159,23 @@ export function EditUserModal({
                 type="text"
                 required
                 value={employeeCode}
-                onChange={(e) => onSetEmployeeCode(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-blue-600 outline-none uppercase font-mono"
+                onChange={(e) => {
+                  onSetEmployeeCode(e.target.value);
+                  markTouched("employeeCode");
+                }}
+                onBlur={() => markTouched("employeeCode")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 uppercase font-mono outline-none transition-colors ${
+                  touched.employeeCode && !empValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.employeeCode && !empValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{empValidation.error}</span>
+                </p>
+              )}
             </div>
             <div>
               <label
@@ -113,20 +184,42 @@ export function EditUserModal({
               >
                 Account Status
               </label>
-              <select
-                id="edit-status"
+              <Select
                 value={status}
-                onChange={(e) =>
-                  onSetStatus(
-                    e.target.value as "ACTIVE" | "INACTIVE" | "SUSPENDED",
-                  )
-                }
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+                onValueChange={(val) => {
+                  if (
+                    val === "ACTIVE" ||
+                    val === "INACTIVE" ||
+                    val === "SUSPENDED"
+                  ) {
+                    onSetStatus(val);
+                  }
+                }}
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
-                <option value="SUSPENDED">SUSPENDED</option>
-              </select>
+                <SelectTrigger
+                  id="edit-status"
+                  className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900"
+                >
+                  <SelectValue>{status}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+                  <SelectItem value="ACTIVE" className="text-xs cursor-pointer">
+                    ACTIVE
+                  </SelectItem>
+                  <SelectItem
+                    value="INACTIVE"
+                    className="text-xs cursor-pointer"
+                  >
+                    INACTIVE
+                  </SelectItem>
+                  <SelectItem
+                    value="SUSPENDED"
+                    className="text-xs cursor-pointer text-rose-600 dark:text-rose-400"
+                  >
+                    SUSPENDED
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -144,24 +237,53 @@ export function EditUserModal({
                 type="text"
                 required
                 value={firstName}
-                onChange={(e) => onSetFirstName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-blue-600 outline-none"
+                onChange={(e) => {
+                  onSetFirstName(e.target.value);
+                  markTouched("firstName");
+                }}
+                onBlur={() => markTouched("firstName")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                  touched.firstName && !fnValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.firstName && !fnValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{fnValidation.error}</span>
+                </p>
+              )}
             </div>
             <div>
               <label
                 htmlFor="edit-last-name"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
-                Last Name
+                Last Name{" "}
+                <span className="text-slate-400 font-normal">(Optional)</span>
               </label>
               <input
                 id="edit-last-name"
                 type="text"
                 value={lastName}
-                onChange={(e) => onSetLastName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+                onChange={(e) => {
+                  onSetLastName(e.target.value);
+                  markTouched("lastName");
+                }}
+                onBlur={() => markTouched("lastName")}
+                className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                  touched.lastName && !lnValidation.isValid
+                    ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                    : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+                }`}
               />
+              {touched.lastName && !lnValidation.isValid && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{lnValidation.error}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -178,54 +300,99 @@ export function EditUserModal({
               type="email"
               required
               value={email}
-              onChange={(e) => onSetEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+              onChange={(e) => {
+                onSetEmail(e.target.value);
+                markTouched("email");
+              }}
+              onBlur={() => markTouched("email")}
+              className={`w-full rounded-xl border bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 outline-none transition-colors ${
+                touched.email && !emailValidation.isValid
+                  ? "border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20"
+                  : "border-slate-200 dark:border-slate-700 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-[#0F766E]"
+              }`}
             />
+            {touched.email && !emailValidation.isValid && (
+              <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-500">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span>{emailValidation.error}</span>
+              </p>
+            )}
           </div>
 
-          {/* Role & Department */}
+          {/* Role & Department (Using shadcn Select Component) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label
-                htmlFor="edit-role"
+                htmlFor="edit-role-select"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Role Assignment <span className="text-rose-500">*</span>
               </label>
-              <select
-                id="edit-role"
-                required
+              <Select
                 value={roleId}
-                onChange={(e) => onSetRoleId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+                onValueChange={(val) => val && onSetRoleId(val)}
               >
-                {availableRoles.map((r) => (
-                  <option key={r.role_id} value={r.role_id}>
-                    {r.role_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="edit-role-select"
+                  className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900"
+                >
+                  <SelectValue placeholder="— Select Role —">
+                    {selectedRoleObj?.role_name || "— Select Role —"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+                  {activeRoles.map((r) => (
+                    <SelectItem
+                      key={r.role_id}
+                      value={r.role_id}
+                      className="text-xs cursor-pointer"
+                    >
+                      {r.role_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label
-                htmlFor="edit-department"
+                htmlFor="edit-department-select"
                 className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
               >
                 Department
               </label>
-              <select
-                id="edit-department"
-                value={departmentId}
-                onChange={(e) => onSetDepartmentId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 outline-none"
+              <Select
+                value={departmentId || "NONE"}
+                onValueChange={(val) => {
+                  onSetDepartmentId(!val || val === "NONE" ? "" : val);
+                }}
               >
-                <option value="">— Central / No Department —</option>
-                {availableDepartments.map((d) => (
-                  <option key={d.department_id} value={d.department_id}>
-                    {d.department_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="edit-department-select"
+                  className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900"
+                >
+                  <SelectValue placeholder="— Central / No Department —">
+                    {selectedDeptObj?.department_name ||
+                      "— Central / No Department —"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg max-h-56">
+                  <SelectItem
+                    value="NONE"
+                    className="text-xs cursor-pointer text-slate-500 italic"
+                  >
+                    — Central / No Department —
+                  </SelectItem>
+                  {activeDepartments.map((d) => (
+                    <SelectItem
+                      key={d.department_id}
+                      value={d.department_id}
+                      className="text-xs cursor-pointer"
+                    >
+                      {d.department_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -241,8 +408,12 @@ export function EditUserModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
+              disabled={!isFormValid || isSubmitting}
+              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-medium transition-colors ${
+                isFormValid && !isSubmitting
+                  ? "bg-[#0F766E] text-white hover:bg-[#115E59] active:bg-[#0D655E] cursor-pointer shadow-xs"
+                  : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
+              }`}
             >
               {isSubmitting ? (
                 <>

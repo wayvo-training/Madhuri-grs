@@ -56,14 +56,18 @@ export function AdminUsers({
     setEmail,
     password,
     setPassword,
-    roleId,
-    setRoleId,
-    departmentId,
-    setDepartmentId,
     status,
     setStatus,
     isSubmitting,
     handleCreateUser,
+
+    // Assign Role
+    isAssignRoleModalOpen,
+    assignRoleUser,
+    isAssignRoleSubmitting,
+    openAssignRoleModal,
+    closeAssignRoleModal,
+    handleSaveAssignRole,
 
     // Edit
     isEditModalOpen,
@@ -134,12 +138,13 @@ export function AdminUsers({
         actionMenuRef={actionMenuRef}
         onCloseActionMenu={closeActionMenu}
         onOpenCreateModal={openCreateModal}
+        onOpenAssignRole={openAssignRoleModal}
         onOpenEditModal={openEditModal}
         onOpenResetModal={openResetModal}
         onToggleStatus={handleToggleStatus}
       />
 
-      {/* Modals for Create, Edit, and Password Reset */}
+      {/* Modals for Create, Assign Role, Edit, and Password Reset */}
       <UserModals
         isCreateModalOpen={isCreateModalOpen}
         onCloseCreate={() => setIsCreateModalOpen(false)}
@@ -155,12 +160,13 @@ export function AdminUsers({
         onSetEmail={setEmail}
         password={password}
         onSetPassword={setPassword}
-        roleId={roleId}
-        onSetRoleId={setRoleId}
-        departmentId={departmentId}
-        onSetDepartmentId={setDepartmentId}
         status={status}
         onSetStatus={setStatus}
+        isAssignRoleModalOpen={isAssignRoleModalOpen}
+        onCloseAssignRole={closeAssignRoleModal}
+        assignRoleUser={assignRoleUser}
+        onSaveAssignRole={handleSaveAssignRole}
+        isAssignRoleSubmitting={isAssignRoleSubmitting}
         isEditModalOpen={isEditModalOpen}
         onCloseEdit={() => setIsEditModalOpen(false)}
         onSubmitEdit={handleSaveEditUser}

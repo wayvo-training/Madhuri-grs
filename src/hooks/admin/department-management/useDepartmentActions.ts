@@ -76,14 +76,15 @@ export function useDepartmentActions(
       });
 
       if (data.department) {
+        const dept = data.department;
         setDepartments((prev) =>
           prev.map((d) =>
             d.department_id === editingDeptId
               ? {
                   ...d,
-                  department_name: data.department!.department_name,
-                  description: data.department!.description,
-                  status: data.department!.status,
+                  department_name: dept.department_name,
+                  description: dept.description,
+                  status: dept.status,
                 }
               : d,
           ),
@@ -119,12 +120,6 @@ export function useDepartmentActions(
       toast.error("Department code is required (e.g. HR, FIN, IT, FAC).");
       return;
     }
-    if (!selectedHeadId) {
-      toast.error(
-        "Department Head is required. Please select a Department Head.",
-      );
-      return;
-    }
     if (!contactEmail.trim()) {
       toast.error("Department contact email is required.");
       return;
@@ -142,21 +137,22 @@ export function useDepartmentActions(
       const data = await createDepartmentAction({
         department_name: deptName.trim(),
         department_code: deptCode.trim().toUpperCase(),
-        head_user_id: selectedHeadId,
+        head_user_id: selectedHeadId ? selectedHeadId : undefined,
         description: description.trim(),
         contact_email: contactEmail.trim(),
         status: "ACTIVE",
       });
 
       if (data.department) {
+        const dept = data.department;
         setDepartments((prev) => [
           ...prev,
           {
-            department_id: data.department!.department_id,
-            department_name: data.department!.department_name,
-            description: data.department!.description,
-            status: data.department!.status,
-            user_count: 1,
+            department_id: dept.department_id,
+            department_name: dept.department_name,
+            description: dept.description,
+            status: dept.status,
+            user_count: selectedHeadId ? 1 : 0,
             grievance_count: 0,
           },
         ]);

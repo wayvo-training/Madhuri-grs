@@ -5,6 +5,7 @@ import type {
   UserDepartmentOption,
   UserRoleOption,
 } from "@/types/admin/users";
+import { AssignRoleModal } from "./AssignRoleModal";
 import { CreateUserModal } from "./CreateUserModal";
 import { EditUserModal } from "./EditUserModal";
 import { ResetPasswordModal } from "./ResetPasswordModal";
@@ -25,12 +26,19 @@ export interface UserModalsProps {
   onSetEmail: (val: string) => void;
   password: string;
   onSetPassword: (val: string) => void;
-  roleId: string;
-  onSetRoleId: (val: string) => void;
-  departmentId: string;
-  onSetDepartmentId: (val: string) => void;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
   onSetStatus: (val: "ACTIVE" | "INACTIVE" | "SUSPENDED") => void;
+
+  // Assign Role & Department
+  isAssignRoleModalOpen: boolean;
+  onCloseAssignRole: () => void;
+  assignRoleUser: SerializedUser | null;
+  onSaveAssignRole: (
+    userId: string,
+    roleId: string,
+    departmentId: string | null,
+  ) => Promise<void>;
+  isAssignRoleSubmitting: boolean;
 
   // Edit
   isEditModalOpen: boolean;
@@ -85,14 +93,18 @@ export function UserModals(props: UserModalsProps) {
         onSetEmail={props.onSetEmail}
         password={props.password}
         onSetPassword={props.onSetPassword}
-        roleId={props.roleId}
-        onSetRoleId={props.onSetRoleId}
-        departmentId={props.departmentId}
-        onSetDepartmentId={props.onSetDepartmentId}
         status={props.status}
         onSetStatus={props.onSetStatus}
+      />
+
+      <AssignRoleModal
+        isOpen={props.isAssignRoleModalOpen}
+        onClose={props.onCloseAssignRole}
+        user={props.assignRoleUser}
         availableRoles={props.availableRoles}
         availableDepartments={props.availableDepartments}
+        onSave={props.onSaveAssignRole}
+        isSubmitting={props.isAssignRoleSubmitting}
       />
 
       <EditUserModal

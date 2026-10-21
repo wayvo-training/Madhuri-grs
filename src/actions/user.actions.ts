@@ -6,7 +6,7 @@ export interface CreateUserPayload {
   last_name?: string;
   email: string;
   password: string;
-  role_id: string;
+  role_id?: string;
   department_id?: string | null;
   status?: "ACTIVE" | "INACTIVE" | "SUSPENDED";
 }
