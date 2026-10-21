@@ -91,161 +91,28 @@ export async function POST(
     const isEscalated = requiresHeadManualReview(newReopenCount, reopenPolicy);
     const newStatus = isEscalated ? "ESCALATED" : "REOPENED";
 
-    // Update grievance
-    await prisma.grievances.update({
-      where: { grievance_id: grievanceId },
-      data: {
-        status: newStatus,
-        reopen_count: { increment: 1 },
-      },
-    });
-
-    // Route reopened grievance to Primary Department first
+    // Resolve target Department Head or fallback Admin
     const primaryDeptRecord = getPrimaryDepartment(grievance);
-    if (primaryDeptRecord) {
-      const pRecord = primaryDeptRecord as {
-        grievance_department_id: bigint;
-        department_id: bigint;
-      };
-      await prisma.grievance_departments.update({
-        where: {
-          grievance_department_id: pRecord.grievance_department_id,
-        },
-        data: {
-          status: "PENDING_ASSIGNMENT",
-        },
-      });
-
-      // Ensure dependent sequential departments are reset to BLOCKED while Primary re-investigates
-      const otherDepts = await prisma.grievance_departments.findMany({
-        where: {
-          grievance_id: grievanceId,
-          grievance_department_id: { not: pRecord.grievance_department_id },
-          dependency_type: "SEQUENTIAL",
-        },
-      });
-
-      for (const d of otherDepts) {
-        const rawPrereqs = d.prerequisite_department_ids;
-        const prereqIds = Array.isArray(rawPrereqs)
-          ? (rawPrereqs as (number | string | bigint)[]).map((id) => String(id))
-          : [];
-
-        if (prereqIds.includes(pRecord.department_id.toString())) {
-          await prisma.grievance_departments.update({
-            where: { grievance_department_id: d.grievance_department_id },
-            data: {
-              status: "BLOCKED",
-              activated_at: null,
-              due_at: null,
-            },
-          });
+    const pRecord = primaryDeptRecord as
+      | {
+          grievance_department_id: bigint;
+          department_id: bigint;
         }
-      }
-    }
+      | undefined;
 
-    // Fetch assigned staff before revoking so we can notify them
-    const activeAssignments = await prisma.assignments.findMany({
-      where: { grievance_id: grievanceId, assignment_status: "ASSIGNED" },
-    });
-
-    // Revoke active assignments so the grievance returns to the unassigned queue
-    await prisma.assignments.updateMany({
-      where: {
-        grievance_id: grievanceId,
-        assignment_status: "ASSIGNED",
-      },
-      data: {
-        assignment_status: "REVOKED",
-        completed_at: new Date(),
-      },
-    });
-
-    // Log the event
-    await prisma.audit_logs.create({
-      data: {
-        grievance_id: grievanceId,
-        user_id: user.user_id,
-        action: "REOPENED",
-        entity_type: "GRIEVANCE",
-        entity_id: grievanceId,
-        new_value: {
-          details: `Grievance reopened by the end user: ${reason}${isEscalated ? ". Automatically escalated to Department Head." : ""}`,
-        },
-      },
-    });
-
-    // Log status history
-    await prisma.grievance_status_history.create({
-      data: {
-        grievance_id: grievanceId,
-        old_status: grievance.status,
-        new_status: newStatus,
-        changed_by: user.user_id,
-        remarks: reason,
-      },
-    });
-
-    // Create escalation record if reaching manual review threshold
-    if (isEscalated) {
-      const primaryDeptRecord = getPrimaryDepartment(grievance);
-      const targetDeptId = primaryDeptRecord?.department_id;
-
-      const primaryDeptHead = targetDeptId
-        ? await prisma.users.findFirst({
-            where: {
-              department_id: targetDeptId,
-              roles: { role_name: "DEPARTMENT_HEAD" },
-              status: "ACTIVE",
-            },
-            select: { user_id: true },
-          })
-        : null;
-
-      if (primaryDeptHead) {
-        const existingEscalation = await prisma.escalations.findFirst({
-          where: { grievance_id: grievanceId, status: "OPEN" },
-        });
-
-        if (!existingEscalation) {
-          await prisma.escalations.create({
-            data: {
-              grievance_id: grievanceId,
-              escalated_to: primaryDeptHead.user_id,
-              escalation_level: 1,
-              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (reached review threshold of ${reopenPolicy.maxManualReviewCount}). Reason: ${reason}`,
-              status: "OPEN",
-            },
-          });
-        }
-      }
-    }
-
-    // Notifications
-    // 1. Notify End User
-    await NotificationService.send({
-      userId: user.user_id,
-      grievanceId: grievanceId,
-      type: "GRIEVANCE_REOPENED",
-      title: "Grievance Reopened",
-      message: `Your grievance ${grievance.grievance_number} has been successfully reopened and placed back into the investigation queue.`,
-    });
-
-    // 2. Notify Department Head
-    const primaryGDept = getPrimaryDepartment(grievance);
-    let deptId = primaryGDept?.department_id;
-    if (!deptId) {
+    let targetDeptId = pRecord?.department_id;
+    if (!targetDeptId) {
       const gDept = await prisma.grievance_departments.findFirst({
         where: { grievance_id: grievanceId },
       });
-      deptId = gDept?.department_id;
+      targetDeptId = gDept?.department_id;
     }
 
-    let hod = deptId
+    let hod = targetDeptId
       ? await prisma.users.findFirst({
           where: {
-            department_id: deptId,
-            roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+            department_id: targetDeptId,
+            roles: { role_name: "DEPARTMENT_HEAD" },
             status: "ACTIVE",
           },
           select: { user_id: true },
@@ -262,26 +129,141 @@ export async function POST(
       });
     }
 
-    if (hod) {
-      if (isEscalated) {
-        // Explicitly create an escalation record
-        await prisma.escalations.create({
+    // Fetch staff who previously worked on or resolved this grievance
+    const previousStaffAssignments = await prisma.assignments.findMany({
+      where: {
+        grievance_id: grievanceId,
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+      },
+    });
+
+    // Execute all database updates atomically in a transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Update grievance status and reopen count
+      await tx.grievances.update({
+        where: { grievance_id: grievanceId },
+        data: {
+          status: newStatus,
+          reopen_count: { increment: 1 },
+        },
+      });
+
+      // 2. Route reopened grievance to Primary Department first
+      if (pRecord) {
+        await tx.grievance_departments.update({
+          where: {
+            grievance_department_id: pRecord.grievance_department_id,
+          },
           data: {
-            grievance_id: grievanceId,
-            escalated_to: hod.user_id,
-            reason: `Automatically escalated due to reaching max reopen limit (${newReopenCount} reopens). Employee reason: ${reason}`,
-            status: "OPEN",
-            escalation_level: 1,
+            status: "PENDING_ASSIGNMENT",
           },
         });
+
+        // Ensure dependent sequential departments are reset to BLOCKED while Primary re-investigates
+        const otherDepts = await tx.grievance_departments.findMany({
+          where: {
+            grievance_id: grievanceId,
+            grievance_department_id: { not: pRecord.grievance_department_id },
+            dependency_type: "SEQUENTIAL",
+          },
+        });
+
+        for (const d of otherDepts) {
+          const rawPrereqs = d.prerequisite_department_ids;
+          const prereqIds = Array.isArray(rawPrereqs)
+            ? (rawPrereqs as (number | string | bigint)[]).map((pid) =>
+                String(pid),
+              )
+            : [];
+
+          if (prereqIds.includes(pRecord.department_id.toString())) {
+            await tx.grievance_departments.update({
+              where: { grievance_department_id: d.grievance_department_id },
+              data: {
+                status: "BLOCKED",
+                activated_at: null,
+                due_at: null,
+              },
+            });
+          }
+        }
       }
 
+      // 3. Revoke active assignments so the grievance returns to the unassigned queue
+      await tx.assignments.updateMany({
+        where: {
+          grievance_id: grievanceId,
+          assignment_status: "ASSIGNED",
+        },
+        data: {
+          assignment_status: "REVOKED",
+          completed_at: new Date(),
+        },
+      });
+
+      // 4. Log the event
+      await tx.audit_logs.create({
+        data: {
+          grievance_id: grievanceId,
+          user_id: user.user_id,
+          action: "REOPENED",
+          entity_type: "GRIEVANCE",
+          entity_id: grievanceId,
+          new_value: {
+            details: `Grievance reopened by the end user: ${reason}${isEscalated ? ". Automatically escalated to Department Head." : ""}`,
+          },
+        },
+      });
+
+      // 5. Log status history
+      await tx.grievance_status_history.create({
+        data: {
+          grievance_id: grievanceId,
+          old_status: grievance.status,
+          new_status: newStatus,
+          changed_by: user.user_id,
+          remarks: reason,
+        },
+      });
+
+      // 6. Create escalation record if reaching manual review threshold (idempotent, single record)
+      if (isEscalated && hod) {
+        const existingEscalation = await tx.escalations.findFirst({
+          where: { grievance_id: grievanceId, status: "OPEN" },
+        });
+
+        if (!existingEscalation) {
+          await tx.escalations.create({
+            data: {
+              grievance_id: grievanceId,
+              escalated_to: hod.user_id,
+              escalation_level: 1,
+              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (reached review threshold of ${reopenPolicy.maxManualReviewCount}). Reason: ${reason}`,
+              status: "OPEN",
+            },
+          });
+        }
+      }
+    });
+
+    // Notifications
+    // 1. Notify End User
+    await NotificationService.send({
+      userId: user.user_id,
+      grievanceId: grievanceId,
+      type: "GRIEVANCE_REOPENED",
+      title: "Grievance Reopened",
+      message: `Your grievance ${grievance.grievance_number} has been successfully reopened and placed back into the investigation queue.`,
+    });
+
+    // 2. Notify Department Head / Admin
+    if (hod) {
       await NotificationService.send({
         userId: hod.user_id,
         grievanceId: grievanceId,
         type: isEscalated ? "GRIEVANCE_ESCALATED" : "GRIEVANCE_REOPENED",
         title: isEscalated
-          ? `Max Reopen Limit Reached — Head Manual Review Required`
+          ? "Max Reopen Limit Reached — Head Manual Review Required"
           : "Grievance Reopened by Employee",
         message: isEscalated
           ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Employee reason: ${reason}. As Department Head, you can solve this grievance directly or assign it to another person.`
@@ -289,14 +271,14 @@ export async function POST(
       });
     }
 
-    // 3. Notify Staff Who Solved It
-    for (const assignment of activeAssignments) {
+    // 3. Notify Staff Who Solved/Worked On It
+    for (const assignment of previousStaffAssignments) {
       await NotificationService.send({
         userId: assignment.staff_id,
         grievanceId: grievanceId,
         type: "GRIEVANCE_REOPENED",
         title: "Grievance Reopened",
-        message: `Grievance ${grievance.grievance_number} which you recently resolved has been reopened by the employee. Reason: ${reason}. It has been returned to the department queue.`,
+        message: `Grievance ${grievance.grievance_number} which you recently worked on has been reopened by the employee. Reason: ${reason}. It has been returned to the department queue.`,
       });
     }
 

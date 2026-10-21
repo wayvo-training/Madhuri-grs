@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
+import {
+  evaluateReopenPolicy,
+  requiresHeadManualReview,
+} from "@/lib/engines/reopen-engine";
 import { activateNextSequentialDepartments } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 
@@ -121,9 +125,20 @@ export async function POST(
     const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
     const latestResolution = grievance.resolutions[0];
 
+    // Evaluate active reopen policies dynamically
+    const reopenPolicy = await evaluateReopenPolicy({
+      categoryId: grievance.category_id,
+      subcategoryId: grievance.subcategory_id,
+      priority: grievance.priority,
+    });
+    const requiresHeadReview = requiresHeadManualReview(
+      grievance.reopen_count,
+      reopenPolicy,
+    );
+
     // Determine if this is a direct Head resolution or a review of a staff resolution
     const isDirectResolution =
-      grievance.reopen_count >= 2 ||
+      requiresHeadReview ||
       grievance.status === "ESCALATED" ||
       grievance.status !== "UNDER_REVIEW" ||
       !latestResolution;
@@ -159,9 +174,9 @@ export async function POST(
         );
       }
 
-      // Explicit intervention authority assumed, reopen count >= 2, or admin
+      // Explicit intervention authority assumed, requires head review per reopen policy, or admin
       const isAuthorizedHead =
-        hasInterventionAuthority || grievance.reopen_count >= 2 || isAdmin;
+        hasInterventionAuthority || requiresHeadReview || isAdmin;
 
       if (!isAuthorizedHead) {
         return NextResponse.json(

@@ -105,7 +105,7 @@ export async function POST(request: Request) {
           max_reopen_count: maxReopen,
           max_manual_review_count: maxReviews,
           applicable_condition: finalCondition
-            ? (finalCondition as any)
+            ? (finalCondition as Prisma.InputJsonValue)
             : Prisma.JsonNull,
           status: requestedStatus,
           created_by: user.user_id,
