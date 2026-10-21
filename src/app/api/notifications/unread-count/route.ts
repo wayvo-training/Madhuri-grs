@@ -9,10 +9,35 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = user.user_id;
+    const userRole = user.roles?.role_name || "END_USER";
+
+    // Prohibited internal notification types for END_USER
+    const prohibitedForEndUser = [
+      "HEAD_INTERNAL_NOTE",
+      "ROUTING_EXCEPTION",
+      "KNOWLEDGE_ARTICLE_SUBMITTED",
+      "SLA_75_HOD_WARNING",
+      "SLA_100_BREACH_ESCALATED",
+      "SLA_50_STAFF_WARNING",
+      "SLA_75_STAFF_WARNING",
+      "SLA_90_STAFF_WARNING",
+      "SLA_100_BREACH_STAFF",
+    ];
+
     const count = await prisma.notifications.count({
       where: {
-        user_id: user.user_id,
+        user_id: userId,
         status: { not: "READ" },
+        ...(userRole === "END_USER"
+          ? {
+              notification_type: { notIn: prohibitedForEndUser },
+              OR: [
+                { grievance_id: null },
+                { grievances: { submitted_by: userId } },
+              ],
+            }
+          : {}),
       },
     });
 

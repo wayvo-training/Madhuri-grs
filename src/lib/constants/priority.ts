@@ -2,6 +2,7 @@ export const PRIORITY_LEVELS = {
   CRITICAL: "CRITICAL",
   HIGH: "HIGH",
   MEDIUM: "MEDIUM",
+  LOW: "LOW",
 } as const;
 
 export const ALLOWED_PRIORITY_LEVELS = [

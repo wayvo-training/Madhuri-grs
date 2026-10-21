@@ -38,6 +38,9 @@ export async function POST(
       },
       include: {
         departments: true,
+        assignments: {
+          include: { users_assignments_staff_idTousers: true },
+        },
         grievances: {
           include: {
             assignments: {
@@ -101,25 +104,41 @@ export async function POST(
     if (targetStaffId) {
       try {
         parsedTargetStaffId = BigInt(targetStaffId);
-        const st = await prisma.users.findUnique({
-          where: { user_id: parsedTargetStaffId },
-          select: { first_name: true, last_name: true },
-        });
-        if (st) {
-          targetStaffName = `${st.first_name} ${st.last_name || ""}`.trim();
-        }
       } catch {
-        // ignore
+        parsedTargetStaffId = null;
       }
 
       if (parsedTargetStaffId && interventionType === "REASSIGN") {
+        const targetStaff = await prisma.users.findUnique({
+          where: { user_id: parsedTargetStaffId },
+          include: { roles: true },
+        });
+
+        if (
+          targetStaff?.status !== "ACTIVE" ||
+          targetStaff?.roles?.role_name !== "STAFF" ||
+          targetStaff?.department_id !== grievanceDept.department_id
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Target staff member must be an active staff member in your department.",
+            },
+            { status: 400 },
+          );
+        }
+
+        targetStaffName =
+          `${targetStaff.first_name} ${targetStaff.last_name || ""}`.trim();
+
         const activeCount = await prisma.assignments.count({
           where: {
             staff_id: parsedTargetStaffId,
             assignment_status: "ASSIGNED",
             grievance_id: { not: grievanceId },
             grievances: {
-              status: { notIn: ["CLOSED"] },
+              status: { notIn: ["CLOSED", "RESOLVED"] },
             },
           },
         });
@@ -137,8 +156,14 @@ export async function POST(
       }
     }
 
+    // Target the assigned staff of THIS specific department first, falling back to grievance-level active assignment
     const currentAssignedStaff =
-      grievance.assignments[0]?.users_assignments_staff_idTousers;
+      (grievanceDept.assignments?.assignment_status === "ASSIGNED"
+        ? grievanceDept.assignments.users_assignments_staff_idTousers
+        : null) ||
+      grievance.assignments[0]?.users_assignments_staff_idTousers ||
+      null;
+
     const currentStaffName = currentAssignedStaff
       ? `${currentAssignedStaff.first_name} ${currentAssignedStaff.last_name || ""}`.trim()
       : "Assigned Officer";
@@ -159,9 +184,7 @@ export async function POST(
     const chosenAction = actionLabels[interventionType] || interventionType;
     let newExtendedDueAt: Date | null = null;
     if (interventionType === "EXTEND_SLA") {
-      const currentDue = grievance.due_at
-        ? new Date(grievance.due_at)
-        : new Date();
+      const currentDue = grievanceDept.due_at || grievance.due_at || new Date();
       const baseTime =
         currentDue.getTime() > Date.now() ? currentDue.getTime() : Date.now();
       newExtendedDueAt = new Date(baseTime + hours * 3600 * 1000);
@@ -170,6 +193,34 @@ export async function POST(
     const isAssumingAuthority =
       interventionType === "ASSUME_RESOLUTION_AUTHORITY" ||
       interventionType === "DIRECT_OVERSIGHT";
+
+    // Check if resolution authority was previously assumed by this head and remains active
+    let hasResolutionAuthority = isAssumingAuthority;
+    if (!hasResolutionAuthority && interventionType !== "REASSIGN") {
+      const priorAuthorityLog = await prisma.audit_logs.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          action: "HOD_INTERVENTION_TAKEN",
+          user_id: user.user_id,
+        },
+        orderBy: { created_at: "desc" },
+      });
+      if (priorAuthorityLog?.new_value) {
+        let val: Record<string, unknown> = {};
+        if (typeof priorAuthorityLog.new_value === "string") {
+          try {
+            val = JSON.parse(priorAuthorityLog.new_value);
+          } catch {
+            val = {};
+          }
+        } else if (typeof priorAuthorityLog.new_value === "object") {
+          val = priorAuthorityLog.new_value as Record<string, unknown>;
+        }
+        if (val.isResolutionAuthority) {
+          hasResolutionAuthority = true;
+        }
+      }
+    }
 
     // Execute state changes and audit logging in transaction
     await prisma.$transaction(async (tx) => {
@@ -256,7 +307,7 @@ export async function POST(
             data: {
               user_id: grievance.submitted_by,
               grievance_id: grievanceId,
-              notification_type: "INFO_REQUESTED",
+              notification_type: "ADDITIONAL_INFO_REQUESTED",
               channel: "IN_APP",
               title: `Additional Information Requested: ${grievance.grievance_number}`,
               message: note
@@ -272,7 +323,7 @@ export async function POST(
             data: {
               user_id: currentAssignedStaff.user_id,
               grievance_id: grievanceId,
-              notification_type: "INFO_REQUESTED",
+              notification_type: "ADDITIONAL_INFO_REQUESTED",
               channel: "IN_APP",
               title: `Info Request Dispatched: ${grievance.grievance_number}`,
               message: `Department Head requested additional documentation for Grievance ${grievance.grievance_number}. Directive: ${note || "Follow up on missing documentation."}`,
@@ -281,6 +332,27 @@ export async function POST(
             },
           });
         }
+
+        // Also add ADDITIONAL_INFO_REQUESTED audit log so citizen's UI displays the interactive response banner
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: user.user_id,
+            action: "ADDITIONAL_INFO_REQUESTED",
+            entity_type: "GRIEVANCE",
+            entity_id: grievanceId,
+            new_value: {
+              subject: "Information Requested by Department Head",
+              message: note || "Additional documentation required.",
+              channels: ["IN_APP"],
+              requestedDocs: [],
+              author: hodFullName,
+              role: "Department Head",
+              details: `Department Head requested additional information: ${note || "Additional documentation required."}`,
+              note: `[Information Requested from Complainant]\nDetails: ${note || "Please provide additional information/documentation."}`,
+            },
+          },
+        });
       }
 
       // 4. Handle REASSIGN intervention
@@ -307,6 +379,17 @@ export async function POST(
             recommendation_reasons: {
               reason: "Department Head SLA Intervention",
             },
+          },
+        });
+
+        // Synchronize grievance_departments status and timestamp
+        await tx.grievance_departments.update({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+          },
+          data: {
+            status: "ASSIGNED",
+            assigned_at: new Date(),
           },
         });
 
@@ -442,6 +525,17 @@ export async function POST(
           });
         }
 
+        // Synchronize department-level SLA due_at and status
+        await tx.grievance_departments.update({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+          },
+          data: {
+            due_at: newExtendedDueAt,
+            sla_status: "ON_TRACK",
+          },
+        });
+
         if (currentAssignedStaff) {
           await tx.notifications.create({
             data: {
@@ -461,7 +555,7 @@ export async function POST(
           data: {
             user_id: user.user_id,
             grievance_id: grievanceId,
-            notification_type: "SLA_AT_RISK",
+            notification_type: "SLA_EXTENDED",
             channel: "IN_APP",
             title: `SLA Extension Granted: ${grievance.grievance_number}`,
             message: `You extended the resolution SLA for Grievance ${grievance.grievance_number} by +${hours}h until ${newExtendedDueAt.toLocaleString()}.`,
@@ -503,11 +597,11 @@ export async function POST(
             note: note || undefined,
             intervenedBy: hodFullName,
             intervenedByUserId: user.user_id.toString(),
-            isResolutionAuthority: isAssumingAuthority,
-            resolutionAuthorityName: isAssumingAuthority
+            isResolutionAuthority: hasResolutionAuthority,
+            resolutionAuthorityName: hasResolutionAuthority
               ? hodFullName
               : undefined,
-            resolutionAuthorityUserId: isAssumingAuthority
+            resolutionAuthorityUserId: hasResolutionAuthority
               ? user.user_id.toString()
               : undefined,
             targetStaffName: targetStaffName || undefined,
@@ -551,9 +645,11 @@ export async function POST(
         note,
         targetStaffName,
         targetDepartment: targetDeptName,
-        isResolutionAuthority: isAssumingAuthority,
-        resolutionAuthorityName: isAssumingAuthority ? hodFullName : undefined,
-        resolutionAuthorityUserId: isAssumingAuthority
+        isResolutionAuthority: hasResolutionAuthority,
+        resolutionAuthorityName: hasResolutionAuthority
+          ? hodFullName
+          : undefined,
+        resolutionAuthorityUserId: hasResolutionAuthority
           ? user.user_id.toString()
           : undefined,
         extensionHours: interventionType === "EXTEND_SLA" ? hours : undefined,

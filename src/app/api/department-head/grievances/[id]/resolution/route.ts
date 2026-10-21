@@ -146,32 +146,42 @@ export async function POST(
     // Server-side authorization check for Direct Resolution by Department Head:
     // Verify SLA intervention has actually been executed and user is the active resolution authority
     if (isDirectResolution) {
-      const interventionLog = await prisma.audit_logs.findFirst({
+      const interventionLogs = await prisma.audit_logs.findMany({
         where: {
           grievance_id: grievanceId,
           action: "HOD_INTERVENTION_TAKEN",
         },
         orderBy: { created_at: "desc" },
+        take: 10,
       });
 
       let hasInterventionAuthority = false;
-      if (interventionLog?.new_value) {
+      for (const log of interventionLogs) {
+        if (!log.new_value) continue;
         let val: Record<string, unknown> = {};
-        if (typeof interventionLog.new_value === "string") {
+        if (typeof log.new_value === "string") {
           try {
-            val = JSON.parse(interventionLog.new_value);
+            val = JSON.parse(log.new_value);
           } catch {
             val = {};
           }
-        } else if (typeof interventionLog.new_value === "object") {
-          val = interventionLog.new_value as Record<string, unknown>;
+        } else if (typeof log.new_value === "object") {
+          val = log.new_value as Record<string, unknown>;
         }
 
-        hasInterventionAuthority = Boolean(
+        // If reassigned to a staff member after assuming authority, authority was relinquished
+        if (val.actionType === "REASSIGN") {
+          break;
+        }
+
+        if (
           val.isResolutionAuthority ||
-            val.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
-            val.actionType === "DIRECT_OVERSIGHT",
-        );
+          val.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+          val.actionType === "DIRECT_OVERSIGHT"
+        ) {
+          hasInterventionAuthority = true;
+          break;
+        }
       }
 
       // Explicit intervention authority assumed, requires head review per reopen policy, or admin
@@ -547,7 +557,7 @@ export async function POST(
     await NotificationService.send({
       userId: user.user_id,
       grievanceId: grievanceId,
-      type: "REWORK_REQUIRED",
+      type: "SYSTEM",
       title: `Resolution Returned: ${grievance.grievance_number}`,
       message: `You returned the resolution for Grievance ${grievance.grievance_number} to staff for clarification.`,
     });

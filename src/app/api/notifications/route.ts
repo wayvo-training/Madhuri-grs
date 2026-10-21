@@ -29,12 +29,19 @@ export async function GET() {
     const whereClause: {
       user_id: bigint;
       notification_type?: { notIn: string[] };
+      OR?: Array<
+        { grievance_id: null } | { grievances: { submitted_by: bigint } }
+      >;
     } = {
       user_id: userId,
     };
 
     if (userRole === "END_USER") {
       whereClause.notification_type = { notIn: prohibitedForEndUser };
+      whereClause.OR = [
+        { grievance_id: null },
+        { grievances: { submitted_by: userId } },
+      ];
     }
 
     const notifications = await prisma.notifications.findMany({
@@ -127,7 +134,6 @@ export async function GET() {
             case "STAFF":
               actionUrl = `/staff/dashboard?grievance=${gId}`;
               break;
-            case "END_USER":
             default:
               actionUrl = `/end-user/grievances/${gId}`;
               break;
@@ -155,7 +161,9 @@ export async function GET() {
             n.notification_type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||
             (userRole === "STAFF" &&
               (n.notification_type === "ASSIGNMENT" ||
-                n.notification_type === "NEW_ASSIGNMENT")) ||
+                n.notification_type === "NEW_ASSIGNMENT" ||
+                n.notification_type === "REASSIGNMENT" ||
+                n.notification_type === "HOD_DIRECTIVE_REMINDER")) ||
             (userRole === "END_USER" &&
               n.notification_type === "RESOLUTION_SUBMITTED") ||
             (userRole === "DEPARTMENT_HEAD" &&
