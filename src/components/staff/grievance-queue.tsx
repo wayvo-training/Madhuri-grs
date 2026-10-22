@@ -99,9 +99,14 @@ export function GrievanceQueue({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("search");
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get("search");
       if (q) {
         setFilters((prev) => ({ ...prev, searchQuery: q }));
+      }
+      const t = sp.get("tab") as StaffQueueTab | null;
+      if (t) {
+        setActiveTab(t);
       }
     }
   }, []);

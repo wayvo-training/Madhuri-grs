@@ -40,6 +40,7 @@ interface StaffDashboardProps {
   departmentName?: string;
   employeeCode?: string;
   defaultView?: StaffView;
+  initialTab?: StaffQueueTab;
 }
 
 export function StaffDashboard({
@@ -49,6 +50,7 @@ export function StaffDashboard({
   departmentName = "Operations",
   employeeCode = "STF-01",
   defaultView = "overview",
+  initialTab = "all",
 }: StaffDashboardProps) {
   const router = useRouter();
   const [data, setData] = useState<StaffDashboardData | null>(
@@ -80,9 +82,18 @@ export function StaffDashboard({
     }
   }, [internalActiveView, router]);
 
-  const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>("all");
+  const [queueInitialTab, setQueueInitialTab] = useState<StaffQueueTab>(
+    initialTab || "all",
+  );
+
+  useEffect(() => {
+    if (initialTab) {
+      setQueueInitialTab(initialTab);
+    }
+  }, [initialTab]);
 
   const handleFilterQueue = (tab: StaffQueueTab) => {
+    setQueueInitialTab(tab);
     if (
       typeof window !== "undefined" &&
       window.location.pathname === "/staff/dashboard"
@@ -90,7 +101,6 @@ export function StaffDashboard({
       router.push(`/staff/grievances?tab=${tab}`);
       return;
     }
-    setQueueInitialTab(tab);
     switchView("queue");
   };
 
