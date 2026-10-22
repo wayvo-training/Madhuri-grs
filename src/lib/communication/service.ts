@@ -893,25 +893,8 @@ export async function getGrievanceCommunicationThread(
     closureNote =
       "You have governance read-only visibility for this grievance communication.";
   } else if (userRole === "END_USER") {
-    // End user can send messages when case is active (WAITING_ON_USER, IN_PROGRESS, REOPENED) or staff has reached out
-    const hasStaffOrHeadInteraction =
-      grievance.resolutions.length > 0 ||
-      timeline.some((t) => t.isStaffOrHead && t.type !== "SUBMISSION");
-
-    if (
-      grievance.status === "WAITING_ON_USER" ||
-      grievance.status === "WAITING_ON_EMPLOYEE" ||
-      grievance.status === "IN_PROGRESS" ||
-      grievance.status === "REOPENED"
-    ) {
-      canSend = true;
-    } else if (hasStaffOrHeadInteraction) {
-      canSend = true;
-    } else {
-      canSend = false;
-      closureNote =
-        "You will be able to submit additional documents or messages once an assigned staff member contacts you.";
-    }
+    // End user can communicate and attach additional documents right from grievance submission, as long as the grievance is not closed
+    canSend = true;
   } else if (userRole === "STAFF" && grievance.status === "ASSIGNED") {
     canSend = false;
     closureNote =
@@ -976,36 +959,6 @@ export async function canEndUserSubmitCommunication(
     where: { grievance_id: gId },
     select: {
       status: true,
-      audit_logs: {
-        where: {
-          action: {
-            in: [
-              "ADDITIONAL_INFO_REQUESTED",
-              "USER_INFO_SUBMITTED",
-              "USER_ADDITIONAL_INFO_PROVIDED",
-              "COMMUNICATION_MESSAGE",
-              "RESOLUTION_ACCEPTED",
-              "GRIEVANCE_REOPENED",
-            ],
-          },
-        },
-        orderBy: { created_at: "desc" },
-        take: 1,
-        include: {
-          users: {
-            select: {
-              roles: { select: { role_name: true } },
-            },
-          },
-        },
-      },
-      resolutions: {
-        orderBy: { submitted_at: "desc" },
-        take: 1,
-        select: {
-          submitted_at: true,
-        },
-      },
     },
   });
 
@@ -1021,33 +974,5 @@ export async function canEndUserSubmitCommunication(
     };
   }
 
-  if (
-    grievance.status === "WAITING_ON_USER" ||
-    grievance.status === "WAITING_ON_EMPLOYEE" ||
-    grievance.status === "IN_PROGRESS" ||
-    grievance.status === "REOPENED"
-  ) {
-    return { allowed: true };
-  }
-
-  const hasStaffOrHeadInteraction =
-    grievance.resolutions.length > 0 ||
-    grievance.audit_logs.some((l) => {
-      const role = l.users?.roles?.role_name;
-      return (
-        l.action === "ADDITIONAL_INFO_REQUESTED" ||
-        role === "STAFF" ||
-        role === "DEPARTMENT_HEAD"
-      );
-    });
-
-  if (hasStaffOrHeadInteraction) {
-    return { allowed: true };
-  }
-
-  return {
-    allowed: false,
-    reason:
-      "You can submit additional documents or messages once an assigned staff member or department head contacts you.",
-  };
+  return { allowed: true };
 }

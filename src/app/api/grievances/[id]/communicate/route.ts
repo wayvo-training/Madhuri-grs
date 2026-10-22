@@ -32,10 +32,20 @@ export async function POST(
       attachments?: IncomingAttachment[];
     };
 
-    const messageText = body.message?.trim();
-    if (!messageText) {
+    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
+      ? body.attachments
+      : [];
+    const rawMessageText = body.message?.trim();
+    const messageText =
+      rawMessageText ||
+      (incomingFiles.length > 0 ? "Attached document(s) for review." : "");
+
+    if (!messageText && incomingFiles.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Message content cannot be empty." },
+        {
+          success: false,
+          message: "Please enter a message or attach a document.",
+        },
         { status: 400 },
       );
     }
@@ -145,9 +155,6 @@ export async function POST(
     }
 
     const senderFullName = `${user.first_name} ${user.last_name || ""}`.trim();
-    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
-      ? body.attachments
-      : [];
 
     if (userRole === "END_USER") {
       const check = await canEndUserSubmitCommunication(grievanceId);
