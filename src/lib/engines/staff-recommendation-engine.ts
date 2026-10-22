@@ -1,7 +1,4 @@
-import {
-  DEFAULT_ASSIGNMENT_CONFIG,
-  normalizeCategoryName,
-} from "@/lib/constants/assignment";
+import { DEFAULT_ASSIGNMENT_CONFIG } from "@/lib/constants/assignment";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
@@ -165,10 +162,6 @@ export async function calculateStaffRecommendations(
     ? eligibleStaff.filter((u) => u.roles.role_name === "STAFF")
     : eligibleStaff;
 
-  const normalizedCategory = normalizeCategoryName(categoryName);
-  const affinityKeywords =
-    DEFAULT_ASSIGNMENT_CONFIG.CATEGORY_SKILL_AFFINITY[normalizedCategory] || [];
-
   const maxCapacity = DEFAULT_ASSIGNMENT_CONFIG.MAX_STAFF_CAPACITY;
 
   // 3. Score each candidate
@@ -198,63 +191,77 @@ export async function calculateStaffRecommendations(
       availabilityStatus = "BUSY";
     }
 
-    // --- Factor 1: Skill / Category Match (35%) ---
+    // --- Factor 1: Dynamic Skill / Grievance Text Match (35%) ---
     let skillScore = 0;
     const matchedSkills: string[] = [];
     const catLower = categoryName.toLowerCase().trim();
     const subcatLower = subcategoryName.toLowerCase().trim();
+    const grievanceTitleLower = (grievance.title || "").toLowerCase().trim();
+    const grievanceDescLower = (grievance.description || "")
+      .toLowerCase()
+      .trim();
+
+    // Combined context tokens from category, subcategory, and grievance content
+    const grievanceTokens =
+      `${catLower} ${subcatLower} ${grievanceTitleLower} ${grievanceDescLower}`
+        .split(/[\s/&,-]+/)
+        .filter((w) => w.length > 2);
+    const tokenSet = new Set(grievanceTokens);
 
     for (const us of staff.user_skills) {
-      const skillName = us.skills.skill_name.toLowerCase().trim();
+      const rawSkillName = us.skills.skill_name;
+      const skillNameLower = rawSkillName.toLowerCase().trim();
       const mult =
         DEFAULT_ASSIGNMENT_CONFIG.PROFICIENCY_MULTIPLIERS[
           us.proficiency_level || "INTERMEDIATE"
         ] || 0.7;
 
       let matchWeight = 0;
-      if (affinityKeywords.includes(skillName)) {
+
+      // 1. Exact or direct match with Category or Subcategory
+      const isDirectTaxonomyMatch =
+        (catLower &&
+          (catLower === skillNameLower ||
+            catLower.includes(skillNameLower) ||
+            skillNameLower.includes(catLower))) ||
+        (subcatLower &&
+          (subcatLower === skillNameLower ||
+            subcatLower.includes(skillNameLower) ||
+            skillNameLower.includes(subcatLower)));
+
+      // 2. Token overlap with grievance content
+      const skillWords = skillNameLower
+        .split(/[\s/&,-]+/)
+        .filter((w) => w.length > 2);
+      const matchedTokensCount = skillWords.filter((w) =>
+        tokenSet.has(w),
+      ).length;
+      const hasSignificantTokenOverlap =
+        skillWords.length > 0 &&
+        matchedTokensCount >= Math.ceil(skillWords.length / 2);
+
+      if (isDirectTaxonomyMatch) {
         matchWeight = 25 * mult;
-        if (!matchedSkills.includes(us.skills.skill_name)) {
-          matchedSkills.push(us.skills.skill_name);
+        if (!matchedSkills.includes(rawSkillName)) {
+          matchedSkills.push(rawSkillName);
+        }
+      } else if (
+        hasSignificantTokenOverlap ||
+        grievanceTitleLower.includes(skillNameLower)
+      ) {
+        matchWeight = 20 * mult;
+        if (!matchedSkills.includes(rawSkillName)) {
+          matchedSkills.push(rawSkillName);
         }
       } else {
-        const skillTokens = skillName
-          .split(/[\s/&,-]+/)
-          .filter((w) => w.length > 1);
-        const targetTokens = `${catLower} ${subcatLower}`
-          .split(/[\s/&,-]+/)
-          .filter((w) => w.length > 1);
-
-        const isDirectMatch =
-          catLower === skillName ||
-          subcatLower === skillName ||
-          (skillName.length >= 4 &&
-            (catLower.includes(skillName) || subcatLower.includes(skillName)));
-
-        const hasTokenOverlap = skillTokens.some((st) =>
-          targetTokens.some(
-            (tt) =>
-              tt === st ||
-              (st.length >= 4 &&
-                tt.length >= 4 &&
-                (tt.startsWith(st) || st.startsWith(tt))),
-          ),
-        );
-
-        if (isDirectMatch || hasTokenOverlap) {
-          matchWeight = 20 * mult;
-          if (!matchedSkills.includes(us.skills.skill_name)) {
-            matchedSkills.push(us.skills.skill_name);
-          }
-        } else {
-          // General departmental competency fallback
-          matchWeight = 8 * mult;
-        }
+        // Baseline competency for department member having any registered skill
+        matchWeight = 8 * mult;
       }
+
       skillScore = Math.max(skillScore, matchWeight);
     }
 
-    // Boost if multiple relevant skills matched
+    // Boost if multiple relevant skills matched the actual grievance
     if (matchedSkills.length > 1) {
       skillScore = Math.min(
         DEFAULT_ASSIGNMENT_CONFIG.WEIGHTS.SKILL,
