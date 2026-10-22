@@ -205,19 +205,42 @@ export async function POST(
       // 2. Save any uploaded supportive findings attachments
       const savedAttachments = [];
       if (Array.isArray(attachments) && attachments.length > 0) {
-        for (const att of attachments) {
-          if (att.fileName) {
-            const raw = att.filePath || `findings/${att.fileName}`;
+        for (const rawAtt of attachments) {
+          const att = rawAtt as {
+            fileName?: string;
+            name?: string;
+            filePath?: string;
+            path?: string;
+            fileType?: string;
+            type?: string;
+            fileSize?: number;
+            size?: string | number;
+          };
+          const resolvedFileName = att.fileName || att.name;
+          if (resolvedFileName) {
+            const raw =
+              att.filePath || att.path || `findings/${resolvedFileName}`;
             const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
             const relativeStoragePath = norm.valid ? norm.storagePath : raw;
+            let calculatedSize = BigInt(1024);
+            if (typeof att.fileSize === "number") {
+              calculatedSize = BigInt(Math.round(att.fileSize));
+            } else if (typeof att.size === "string") {
+              const parsed = Number.parseFloat(att.size);
+              if (!Number.isNaN(parsed)) {
+                calculatedSize = BigInt(Math.round(parsed * 1024));
+              }
+            }
+
             const newAtt = await tx.attachments.create({
               data: {
                 grievance_id: grievanceId,
                 grievance_department_id: myDeptRecord?.grievance_department_id,
-                file_name: att.fileName,
+                file_name: resolvedFileName,
                 file_path: relativeStoragePath,
-                file_type: att.fileType || "application/octet-stream",
-                file_size: att.fileSize ? BigInt(att.fileSize) : BigInt(1024),
+                file_type:
+                  att.fileType || att.type || "application/octet-stream",
+                file_size: calculatedSize,
                 uploaded_by: staffId,
               },
             });

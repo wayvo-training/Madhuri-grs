@@ -173,18 +173,48 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
   const supportingFindings = (grievance.audit_logs || [])
     .filter((l) => l.action === "SUPPORTING_FINDINGS_SUBMITTED")
     .map((l) => {
-      const val = l.new_value as {
-        department?: string;
-        submittedBy?: string;
-        findings?: string;
-        notes?: string;
-      } | null;
+      const rawVal = l.new_value;
+      const val =
+        typeof rawVal === "string"
+          ? (JSON.parse(rawVal) as Record<string, unknown>)
+          : (rawVal as Record<string, unknown> | null);
+
+      const rawAttachments = Array.isArray(val?.attachments)
+        ? (val.attachments as Array<{
+            id?: string;
+            name?: string;
+            fileName?: string;
+            size?: string;
+            type?: string;
+            path?: string;
+            filePath?: string;
+            downloadUrl?: string;
+          }>)
+        : [];
+
+      const attachments = rawAttachments.map((att, idx) => {
+        const id = att.id || `${l.audit_log_id}-att-${idx}`;
+        const name = att.name || att.fileName || "Finding-Attachment";
+        const downloadUrl =
+          att.downloadUrl ||
+          (att.id ? `/api/attachments/${att.id}/download` : undefined);
+        return {
+          id,
+          name,
+          size: att.size,
+          type: att.type,
+          path: att.path || att.filePath || "",
+          downloadUrl,
+        };
+      });
+
       return {
         id: l.audit_log_id.toString(),
-        department: val?.department || "Supporting Department",
-        submittedBy: val?.submittedBy,
-        findings: val?.findings,
-        notes: val?.notes,
+        department: (val?.department as string) || "Supporting Department",
+        submittedBy: val?.submittedBy as string | undefined,
+        findings: val?.findings as string | undefined,
+        notes: val?.notes as string | undefined,
+        attachments,
         submittedAt: l.created_at.toISOString(),
       };
     });

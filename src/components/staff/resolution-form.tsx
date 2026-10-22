@@ -171,12 +171,17 @@ export function ResolutionForm({
       const attachmentPayloads = await Promise.all(
         supportingFiles.map(async (f) => {
           const uploadRes = await uploadFileToSupabase(f, "resolutions");
+          const safePath = uploadRes.filePath || uploadRes.fileUrl;
           return {
             id: String(Date.now() + Math.random()),
             name: f.name,
+            fileName: f.name,
             size: `${(f.size / 1024).toFixed(1)} KB`,
+            fileSize: f.size,
             type: f.type || "Document",
-            path: uploadRes.filePath || uploadRes.fileUrl,
+            fileType: f.type || "Document",
+            path: safePath,
+            filePath: safePath,
             uploadedAt: new Date().toISOString(),
           };
         }),
@@ -193,10 +198,13 @@ export function ResolutionForm({
               actionTaken: actionTaken.trim(),
               notes: `${problemSummary.trim()}\n\nOutcome / Recommendations:\n${outcome.trim()}`,
               attachments: attachmentPayloads.map((att) => ({
-                fileName: att.name,
-                fileType: att.type,
-                fileSize: Number.parseFloat(att.size) * 1024,
-                filePath: att.path,
+                fileName: att.fileName || att.name,
+                fileType: att.fileType || att.type,
+                fileSize:
+                  typeof att.fileSize === "number"
+                    ? att.fileSize
+                    : Number.parseFloat(att.size) * 1024,
+                filePath: att.filePath || att.path,
               })),
             }),
           },
@@ -218,7 +226,16 @@ export function ResolutionForm({
           actionTaken: actionTaken.trim(),
           outcome: outcome.trim(),
           evidence: evidence.trim() || null,
-          attachments: attachmentPayloads,
+          attachments: attachmentPayloads.map((att) => ({
+            ...att,
+            fileName: att.fileName || att.name,
+            filePath: att.filePath || att.path,
+            fileType: att.fileType || att.type,
+            fileSize:
+              typeof att.fileSize === "number"
+                ? att.fileSize
+                : Number.parseFloat(att.size) * 1024,
+          })),
           isDraft,
         });
         toast.success(
@@ -238,10 +255,13 @@ export function ResolutionForm({
             outcome: outcome.trim(),
             evidence: evidence.trim() || undefined,
             attachments: attachmentPayloads.map((att) => ({
-              fileName: att.name,
-              fileType: att.type,
-              fileSize: Number.parseFloat(att.size) * 1024,
-              filePath: att.path,
+              fileName: att.fileName || att.name,
+              fileType: att.fileType || att.type,
+              fileSize:
+                typeof att.fileSize === "number"
+                  ? att.fileSize
+                  : Number.parseFloat(att.size) * 1024,
+              filePath: att.filePath || att.path,
             })),
             isDraft,
           }),
