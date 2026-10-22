@@ -231,7 +231,7 @@ export function formatAuditActionTitle(action: string): string {
  * Checks whether the current staff member is authorized to propose a knowledge article.
  * Rules:
  * - Grievance must be CLOSED (accepted by end user).
- * - All involved staff (assigned to the case) can propose knowledge once closed.
+ * - Resolution must NOT have been submitted by the Department Head (if Head took authority, Head proposes KB).
  */
 export function canStaffProposeKnowledge(
   grievance: StaffGrievanceItem,
@@ -240,6 +240,12 @@ export function canStaffProposeKnowledge(
   const isGrievanceClosed =
     grievance.status === "CLOSED" || grievance.overallStatus === "CLOSED";
   if (!isGrievanceClosed) return false;
+
+  // If Department Head assumed authority and submitted the resolution, Staff cannot propose KB
+  const submittedByRole = grievance.submittedResolution?.submittedByRole;
+  if (submittedByRole === "DEPARTMENT_HEAD" || submittedByRole === "ADMIN") {
+    return false;
+  }
 
   return true;
 }

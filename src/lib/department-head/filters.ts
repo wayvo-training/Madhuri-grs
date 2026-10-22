@@ -80,20 +80,11 @@ export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
 export function canHeadProposeKnowledge(item: GrievanceItem): boolean {
   if (item.hasProposedKb) return false;
 
-  const isClosedOrResolved =
-    item.status === "CLOSED" || item.status === "RESOLVED";
-  if (!isClosedOrResolved) return false;
+  // Must strictly be CLOSED (accepted by citizen, not RESOLVED / review)
+  if (item.status !== "CLOSED") return false;
 
-  const role = item.submittedResolution?.submittedByRole;
-  if (role) {
-    return role === "DEPARTMENT_HEAD";
-  }
-
-  // Fallback: If reopen count reached max threshold (>= 2) or was escalated with direct head resolution
-  const isHeadDirectResolution =
-    (item.reopenCount ?? 0) >= 2 ||
-    item.escalationStage === "RESOLUTION_SUBMITTED";
-  return isHeadDirectResolution;
+  // Only authorized if Department Head submitted/assumed the resolution
+  return isResolutionSubmittedByHead(item);
 }
 
 export function computeDepartmentMetrics(

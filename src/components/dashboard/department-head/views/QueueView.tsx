@@ -166,6 +166,7 @@ export function QueueView({
           Boolean(g.hodIntervention);
         if (!isEscalated) return false;
       } else if (selectedTab === "UNASSIGNED") {
+        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
         const isUnassigned =
           !g.assignedStaffId ||
           !g.assignedStaffName ||
@@ -194,6 +195,7 @@ export function QueueView({
       // 1. Status Filter from parent (e.g. from clicking Status chart or tab)
       if (statusFilter && statusFilter !== "ALL") {
         if (statusFilter === "UNASSIGNED") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
           const isUnassigned =
             !g.assignedStaffId ||
             !g.assignedStaffName ||
@@ -238,6 +240,7 @@ export function QueueView({
       // 3. Staff Filter from parent
       if (staffFilter && staffFilter !== "ALL") {
         if (staffFilter === "UNASSIGNED") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
           if (g.assignedStaffId) return false;
         } else if (g.assignedStaffId !== staffFilter) {
           return false;
@@ -259,20 +262,22 @@ export function QueueView({
   const sortedGrievances = useMemo(() => {
     const list = [...localFilteredGrievances];
     if (!sortState.field || !sortState.direction) {
-      // Default Sort: Unassigned grievances first, then sorted by newest first
+      // Default Sort: Unassigned grievances first (excluding closed/resolved), then sorted by newest first
       return list.sort((a, b) => {
         const isUnassignedA =
-          !a.assignedStaffId ||
-          !a.assignedStaffName ||
-          a.assignedStaffName === "Unassigned" ||
-          a.status === "SUBMITTED" ||
-          a.status === "ROUTED";
+          !["CLOSED", "RESOLVED"].includes(a.status) &&
+          (!a.assignedStaffId ||
+            !a.assignedStaffName ||
+            a.assignedStaffName === "Unassigned" ||
+            a.status === "SUBMITTED" ||
+            a.status === "ROUTED");
         const isUnassignedB =
-          !b.assignedStaffId ||
-          !b.assignedStaffName ||
-          b.assignedStaffName === "Unassigned" ||
-          b.status === "SUBMITTED" ||
-          b.status === "ROUTED";
+          !["CLOSED", "RESOLVED"].includes(b.status) &&
+          (!b.assignedStaffId ||
+            !b.assignedStaffName ||
+            b.assignedStaffName === "Unassigned" ||
+            b.status === "SUBMITTED" ||
+            b.status === "ROUTED");
 
         if (isUnassignedA && !isUnassignedB) return -1;
         if (!isUnassignedA && isUnassignedB) return 1;
@@ -826,6 +831,10 @@ export function QueueView({
                               <span className="truncate">
                                 {item.assignedStaffName}
                               </span>
+                            </span>
+                          ) : isItemClosed ? (
+                            <span className="inline-flex items-center text-sm font-normal text-slate-400">
+                              —
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-sm font-normal text-slate-500">

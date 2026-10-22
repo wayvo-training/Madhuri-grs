@@ -352,6 +352,9 @@ export async function GET(request: Request) {
       const assignedStaff =
         activeAssignment?.users_assignments_staff_idTousers || null;
 
+      const latestEscalation = g.escalations[0];
+      const latestResolution = g.resolutions[0];
+
       // Compute display name for Assigned To column
       let resolvedAssignedStaffName: string | null = null;
       if (departmentId) {
@@ -361,6 +364,25 @@ export async function GET(request: Request) {
             `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
         } else if (myDeptRecord?.status === "BLOCKED") {
           resolvedAssignedStaffName = "Blocked";
+        } else if (
+          ["CLOSED", "RESOLVED"].includes(g.status) &&
+          (latestResolution?.users ||
+            grievanceAssignments[0]?.users_assignments_staff_idTousers)
+        ) {
+          if (latestResolution?.users) {
+            const resolver = latestResolution.users;
+            const role = resolver.roles?.role_name;
+            resolvedAssignedStaffName =
+              role === "DEPARTMENT_HEAD"
+                ? `${resolver.first_name} ${resolver.last_name || ""}`.trim() +
+                  " (Head)"
+                : `${resolver.first_name} ${resolver.last_name || ""}`.trim();
+          } else {
+            const otherStaff =
+              grievanceAssignments[0].users_assignments_staff_idTousers;
+            resolvedAssignedStaffName =
+              `${otherStaff.first_name} ${otherStaff.last_name || ""}`.trim();
+          }
         } else {
           resolvedAssignedStaffName = "Unassigned";
         }
@@ -378,9 +400,6 @@ export async function GET(request: Request) {
           resolvedAssignedStaffName = "Unassigned";
         }
       }
-
-      const latestEscalation = g.escalations[0];
-      const latestResolution = g.resolutions[0];
 
       // Extract two-way internal notes (department-private, strictly for viewing department)
       const parseLogVal = (
@@ -885,7 +904,11 @@ export async function GET(request: Request) {
         ).consumptionPercent,
         assignedStaffId: departmentId
           ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
-            null
+            (["CLOSED", "RESOLVED"].includes(g.status)
+              ? latestResolution?.users?.user_id?.toString() ||
+                grievanceAssignments[0]?.users_assignments_staff_idTousers?.user_id?.toString() ||
+                null
+              : null)
           : assignedStaff
             ? assignedStaff.user_id.toString()
             : null,
