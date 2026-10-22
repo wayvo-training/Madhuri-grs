@@ -167,6 +167,35 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
     "nda",
     "complaint",
   ],
+  ELECTRICAL: [
+    "electric",
+    "electricity",
+    "power",
+    "voltage",
+    "meter",
+    "transformer",
+    "blackout",
+    "wire",
+    "short_circuit",
+    "outage",
+    "substation",
+    "cable",
+  ],
+
+  HEALTH_SAFETY: [
+    "hospital",
+    "medical",
+    "clinic",
+    "injury",
+    "health",
+    "hazard",
+    "chemical",
+    "contamination",
+    "doctor",
+    "prescription",
+    "patient",
+    "safety",
+  ],
 };
 
 function normalizeText(text: string): string {
@@ -179,7 +208,9 @@ function resolveDepartmentDomain(deptName: string): string | null {
     normalized.includes("finan") ||
     normalized.includes("account") ||
     normalized.includes("payroll") ||
-    normalized.includes("billing")
+    normalized.includes("billing") ||
+    normalized.includes("tax") ||
+    normalized.includes("treasur")
   ) {
     return "FINANCE";
   }
@@ -188,7 +219,8 @@ function resolveDepartmentDomain(deptName: string): string | null {
     normalized.includes("human resource") ||
     normalized.includes("people") ||
     normalized.includes("talent") ||
-    normalized.includes("personnel")
+    normalized.includes("personnel") ||
+    normalized.includes("staff")
   ) {
     return "HR";
   }
@@ -215,6 +247,22 @@ function resolveDepartmentDomain(deptName: string): string | null {
     normalized.includes("vigilan")
   ) {
     return "LEGAL";
+  }
+  if (
+    normalized.includes("electr") ||
+    normalized.includes("power") ||
+    normalized.includes("energy")
+  ) {
+    return "ELECTRICAL";
+  }
+
+  if (
+    normalized.includes("health") ||
+    normalized.includes("medic") ||
+    normalized.includes("hospit") ||
+    normalized.includes("safety")
+  ) {
+    return "HEALTH_SAFETY";
   }
   return null;
 }

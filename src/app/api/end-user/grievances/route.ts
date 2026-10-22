@@ -364,18 +364,18 @@ export async function POST(request: Request) {
         include: { departments: true },
       });
 
-      const _participatingDeptProfiles = participatingDepts.map((gd) => ({
+      const participatingDeptProfiles = participatingDepts.map((gd) => ({
         department_id: gd.department_id,
         department_name: gd.departments.department_name,
         involvement_type: gd.involvement_type,
       }));
 
-      const _categoryRec = categoryId
+      const categoryRec = categoryId
         ? await prisma.categories.findUnique({
             where: { category_id: BigInt(categoryId) },
           })
         : null;
-      const _subcategoryRec = subcategoryId
+      const subcategoryRec = subcategoryId
         ? await prisma.subcategories.findUnique({
             where: { subcategory_id: BigInt(subcategoryId) },
           })
@@ -393,7 +393,22 @@ export async function POST(request: Request) {
           file.type,
         );
 
-        await prisma.attachments.create({
+        // 1. Extract real text from file buffer (PDF, text, CSV, etc.)
+        let extractedText = "";
+        try {
+          const { extractTextFromFileBuffer } = await import(
+            "@/lib/attachments/text-extractor"
+          );
+          extractedText = await extractTextFromFileBuffer(
+            buffer,
+            file.type,
+            file.name,
+          );
+        } catch {
+          extractedText = "";
+        }
+
+        const newAttachment = await prisma.attachments.create({
           data: {
             grievance_id: newGrievance.grievance_id,
             file_name: file.name,
@@ -403,6 +418,51 @@ export async function POST(request: Request) {
             uploaded_by: user.user_id,
           },
         });
+
+        // 2. Classify document using real extracted text and create department grants
+        if (participatingDeptProfiles.length > 1) {
+          try {
+            const { classifyAttachmentForDepartments } = await import(
+              "@/lib/attachments/document-classifier"
+            );
+            const classification = classifyAttachmentForDepartments({
+              fileName: file.name,
+              fileType: file.type,
+              fileSize: file.size,
+              textContent: extractedText,
+              categoryName: categoryRec?.category_name,
+              subcategoryName: subcategoryRec?.subcategory_name,
+              grievanceTitle: newGrievance.title,
+              grievanceDescription: newGrievance.description,
+              participatingDepartments: participatingDeptProfiles,
+            });
+
+            // Automatically grant access to target supporting departments
+            for (const deptId of classification.targetDepartmentIds) {
+              const matchedDept = participatingDepts.find(
+                (d) => BigInt(d.department_id) === BigInt(deptId),
+              );
+              // Only create explicit grant if department is SUPPORTING (Primary already has full default access)
+              if (
+                matchedDept &&
+                matchedDept.involvement_type === "SUPPORTING"
+              ) {
+                await prisma.attachment_department_grants.create({
+                  data: {
+                    attachment_id: newAttachment.attachment_id,
+                    department_id: BigInt(deptId),
+                    granted_by: user.user_id,
+                  },
+                });
+              }
+            }
+          } catch (classifyErr) {
+            console.warn(
+              "Intelligent document classification failed:",
+              classifyErr,
+            );
+          }
+        }
       }
     }
 

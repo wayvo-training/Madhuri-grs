@@ -15,6 +15,7 @@ export interface AttachmentRecord {
   uploaded_by: bigint | number;
   uploaded_at: Date;
   resolution_id?: bigint | number | null;
+  textContent?: string;
 }
 
 export interface GrievanceContext {
@@ -227,6 +228,7 @@ export function checkAttachmentAccess(
       fileName: attachment.file_name,
       fileType: attachment.file_type,
       fileSize: attachment.file_size ? Number(attachment.file_size) : undefined,
+      textContent: attachment.textContent,
       categoryName: grievance.categoryName,
       subcategoryName: grievance.subcategoryName,
       grievanceTitle: grievance.title,
