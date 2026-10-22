@@ -47,6 +47,10 @@ export function DepartmentHeadOverviewInner({
   employeeCode = "HOD-01",
   isAdminPreview: _isAdminPreview = false,
   initialView = "overview",
+  initialStatusFilter,
+  initialPriorityFilter,
+  initialStaffFilter,
+  initialTab,
 }: DepartmentHeadOverviewProps) {
   // Data management
   const {
@@ -93,7 +97,14 @@ export function DepartmentHeadOverviewInner({
     metrics,
     attentionRequiredList,
     filteredGrievances,
-  } = useQueueFilters({ grievances, staffList });
+  } = useQueueFilters({
+    grievances,
+    staffList,
+    initialStatusFilter,
+    initialPriorityFilter,
+    initialStaffFilter,
+    initialTab,
+  });
 
   // Operational Grievance Actions
   const {
@@ -372,10 +383,11 @@ export function DepartmentHeadOverviewInner({
             resetFilters();
             if (filterType === "status") {
               setStatusFilter(value);
+              switchView("queue", { status: value });
             } else if (filterType === "priority") {
               setPriorityFilter(value);
+              switchView("queue", { priority: value });
             }
-            switchView("queue");
           }}
         />
       )}
@@ -425,8 +437,9 @@ export function DepartmentHeadOverviewInner({
           onInspect={handleInspectCase}
           onReassign={(item, staffId) => handleOpenAssignModal(item, staffId)}
           onFilterStaffInQueue={(staffId) => {
+            resetFilters();
             setStaffFilter(staffId);
-            switchView("queue");
+            switchView("queue", { staff: staffId });
           }}
         />
       )}

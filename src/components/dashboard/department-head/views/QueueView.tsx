@@ -137,8 +137,24 @@ export function QueueView({
 
   // Reset to page 1 on filter changes
   useEffect(() => {
-    setCurrentPage(1);
-  }, []);
+    if (
+      statusFilter ||
+      priorityFilter ||
+      staffFilter ||
+      selectedTab ||
+      advancedConditions ||
+      advancedMode
+    ) {
+      setCurrentPage(1);
+    }
+  }, [
+    statusFilter,
+    priorityFilter,
+    staffFilter,
+    selectedTab,
+    advancedConditions,
+    advancedMode,
+  ]);
 
   const localFilteredGrievances = useMemo(() => {
     return grievances.filter((g) => {
@@ -188,13 +204,18 @@ export function QueueView({
             g.myDepartmentStatus === "PENDING_ASSIGNMENT";
           if (!isUnassigned) return false;
         } else if (statusFilter === "IN_PROGRESS") {
-          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
-          const isInProgress =
-            g.status === "IN_PROGRESS" ||
-            g.status === "ASSIGNED" ||
-            g.myDepartmentStatus === "IN_PROGRESS" ||
-            g.myDepartmentStatus === "ASSIGNED";
-          if (!isInProgress) return false;
+          if (["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(g.status))
+            return false;
+          if (g.isReopened || g.status === "REOPENED") return false;
+          const isUnassigned =
+            !g.assignedStaffId ||
+            !g.assignedStaffName ||
+            g.assignedStaffName === "Unassigned" ||
+            g.status === "SUBMITTED" ||
+            g.status === "ROUTED" ||
+            g.status === "PENDING_ASSIGNMENT" ||
+            g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+          if (isUnassigned) return false;
         } else if (statusFilter === "UNDER_REVIEW") {
           if (g.status !== "UNDER_REVIEW") return false;
         } else if (statusFilter === "ASSIGNED") {
@@ -401,6 +422,7 @@ export function QueueView({
             </h2>
             {(statusFilter !== "ALL" ||
               priorityFilter !== "ALL" ||
+              staffFilter !== "ALL" ||
               (selectedTab && selectedTab !== "ALL")) && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
                 Filtered:{" "}
@@ -408,7 +430,9 @@ export function QueueView({
                   ? selectedTab.replace(/_/g, " ")
                   : statusFilter !== "ALL"
                     ? statusFilter.replace(/_/g, " ")
-                    : priorityFilter}
+                    : priorityFilter !== "ALL"
+                      ? priorityFilter
+                      : "Staff"}
                 <button
                   type="button"
                   onClick={() => {
@@ -445,8 +469,8 @@ export function QueueView({
               <col className="w-[245px]" />
               <col className="w-[140px]" />
               <col className="w-[135px]" />
-              <col className="w-[100px]" />
-              <col className="w-[125px]" />
+              <col className="w-[90px]" />
+              <col className="w-[135px]" />
               <col className="w-[155px]" />
               <col className="w-[215px]" />
               <col className="w-[170px]" />

@@ -62,22 +62,29 @@ export function useDepartmentHeadNavigation(
     return () => window.removeEventListener("hashchange", handleHash);
   }, [pathname]);
 
-  const switchView = (view: DepartmentHeadView) => {
+  const switchView = (
+    view: DepartmentHeadView,
+    query?: Record<string, string>,
+  ) => {
     setActiveView(view);
+
+    const queryString = query
+      ? `?${new URLSearchParams(query).toString()}`
+      : "";
 
     // If navigating between dedicated sub-routes
     if (view === "overview") {
-      router.push("/department-head/dashboard");
+      router.push(`/department-head/dashboard${queryString}`);
     } else if (view === "staff") {
-      router.push("/department-head/workload");
+      router.push(`/department-head/workload${queryString}`);
     } else if (view === "queue") {
-      router.push("/department-head/queue");
+      router.push(`/department-head/queue${queryString}`);
     } else if (view === "activity") {
-      router.push("/department-head/activity");
+      router.push(`/department-head/activity${queryString}`);
     } else if (view === "knowledge") {
-      router.push("/department-head/knowledge");
+      router.push(`/department-head/knowledge${queryString}`);
     } else if (view === "sla") {
-      router.push("/department-head/queue");
+      router.push(`/department-head/queue${queryString}`);
     }
   };
 

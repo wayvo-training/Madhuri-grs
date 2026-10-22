@@ -331,13 +331,18 @@ export function filterDepartmentGrievances(
       if (statusFilter === "RESOLVED") {
         if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
       } else if (statusFilter === "IN_PROGRESS") {
-        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
-        const isInProgress =
-          g.status === "IN_PROGRESS" ||
-          g.status === "ASSIGNED" ||
-          g.myDepartmentStatus === "IN_PROGRESS" ||
-          g.myDepartmentStatus === "ASSIGNED";
-        if (!isInProgress) return false;
+        if (["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(g.status))
+          return false;
+        if (g.isReopened || g.status === "REOPENED") return false;
+        const isUnassigned =
+          !g.assignedStaffId ||
+          !g.assignedStaffName ||
+          g.assignedStaffName === "Unassigned" ||
+          g.status === "SUBMITTED" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+        if (isUnassigned) return false;
       } else if (statusFilter === "UNDER_REVIEW") {
         if (g.status !== "UNDER_REVIEW") return false;
       } else if (statusFilter === "ASSIGNED") {

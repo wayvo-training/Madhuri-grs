@@ -230,6 +230,10 @@ export interface DepartmentHeadOverviewProps {
   employeeCode?: string;
   isAdminPreview?: boolean;
   initialView?: DepartmentHeadView;
+  initialStatusFilter?: string;
+  initialPriorityFilter?: string;
+  initialStaffFilter?: string;
+  initialTab?: DepartmentHeadTab;
 }
 
 export interface DocumentPreviewData {
