@@ -115,23 +115,18 @@ export function GrievanceTableList({
     if (!sortState.field || !sortState.direction) return grievancesList;
 
     return [...grievancesList].sort((a, b) => {
-      let valA =
-        (a[sortState.field as keyof SerializedGrievance] as
-          | string
-          | number
-          | undefined) || "";
-      let valB =
-        (b[sortState.field as keyof SerializedGrievance] as
-          | string
-          | number
-          | undefined) || "";
+      const valA = a[sortState.field as keyof SerializedGrievance] ?? "";
+      const valB = b[sortState.field as keyof SerializedGrievance] ?? "";
 
-      if (typeof valA === "string") valA = valA.toLowerCase();
-      if (typeof valB === "string") valB = valB.toLowerCase();
+      const strA = typeof valA === "string" ? valA : String(valA);
+      const strB = typeof valB === "string" ? valB : String(valB);
 
-      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
-      return 0;
+      const comp = strA.localeCompare(strB, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+
+      return sortState.direction === "asc" ? comp : -comp;
     });
   }, [grievancesList, sortState]);
 

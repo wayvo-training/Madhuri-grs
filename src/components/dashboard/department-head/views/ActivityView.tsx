@@ -54,24 +54,23 @@ export function ActivityView({
   };
 
   const filteredFeed = useMemo(() => {
-    return governanceAuditFeed.filter((a) => {
-      const feedGrievanceRef = a.action.includes(":")
-        ? a.action.split(":")[0].trim()
-        : "N/A";
-      const computedRole = a.actor.includes("DEPARTMENT_HEAD")
-        ? "DEPARTMENT_HEAD"
-        : a.actor.includes("END_USER")
-          ? "END_USER"
-          : a.actor.includes("SLA") || a.actor.includes("SYSTEM")
-            ? "SYSTEM"
-            : "STAFF";
-
-      return evaluateSearchConditions(
-        { ...a, grievanceId: feedGrievanceRef, role: computedRole },
-        advancedConditions,
-        advancedMode,
+    return governanceAuditFeed
+      .map((a) => {
+        const feedGrievanceRef = a.action.includes(":")
+          ? a.action.split(":")[0].trim()
+          : "N/A";
+        const computedRole = a.actor.includes("DEPARTMENT_HEAD")
+          ? "DEPARTMENT_HEAD"
+          : a.actor.includes("END_USER")
+            ? "END_USER"
+            : a.actor.includes("SLA") || a.actor.includes("SYSTEM")
+              ? "SYSTEM"
+              : "STAFF";
+        return { ...a, grievanceId: feedGrievanceRef, role: computedRole };
+      })
+      .filter((item) =>
+        evaluateSearchConditions(item, advancedConditions, advancedMode),
       );
-    });
   }, [governanceAuditFeed, advancedConditions, advancedMode]);
 
   const {
@@ -148,7 +147,7 @@ export function ActivityView({
               {/* Header row without scrollbar */}
               <div className="flex items-center w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 text-[13px] font-semibold text-slate-600 dark:text-slate-400 shrink-0">
                 <div className="w-36 shrink-0 pr-3">
-                  {renderSortHeader("Grievance ID", "action")}
+                  {renderSortHeader("Grievance ID", "grievanceId")}
                 </div>
                 <div className="flex-1 min-w-[200px] px-3">
                   {renderSortHeader("Activity", "action")}

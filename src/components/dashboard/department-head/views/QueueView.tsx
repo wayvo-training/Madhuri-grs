@@ -271,12 +271,15 @@ export function QueueView({
       const rawA = a[field] ?? "";
       const rawB = b[field] ?? "";
 
-      const valA = typeof rawA === "string" ? rawA.toLowerCase() : rawA;
-      const valB = typeof rawB === "string" ? rawB.toLowerCase() : rawB;
+      const strA = typeof rawA === "string" ? rawA : String(rawA);
+      const strB = typeof rawB === "string" ? rawB : String(rawB);
 
-      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
-      return 0;
+      const comp = strA.localeCompare(strB, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+
+      return sortState.direction === "asc" ? comp : -comp;
     });
   }, [localFilteredGrievances, sortState]);
 
@@ -453,7 +456,7 @@ export function QueueView({
             <thead>
               <tr>
                 <SortableTableHead
-                  field="id"
+                  field="ticketCode"
                   currentSort={sortState}
                   onSort={handleSort}
                   className="py-3 pl-4 pr-3"
