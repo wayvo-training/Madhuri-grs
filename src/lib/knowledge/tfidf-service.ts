@@ -119,12 +119,22 @@ export function calculateFieldSimilarity(
   const containment = minLen > 0 ? sharedCount / minLen : 0;
   const jaccard = unionSize > 0 ? sharedCount / unionSize : 0;
 
-  // Composite signal: cosine (30%), containment (50%), jaccard (20%)
-  const composite = rawCosine * 0.3 + containment * 0.5 + jaccard * 0.2;
+  // Composite signal: cosine (60%), containment (20%), jaccard (20%)
+  const composite = rawCosine * 0.6 + containment * 0.2 + jaccard * 0.2;
   if (composite <= 0) return 0;
   if (composite >= 0.999) return 100;
 
-  // Domain calibration: 50%-70% term overlap represents 75%-88% similarity in knowledge articles
-  const calibrated = Math.min(100, composite ** 0.28 * 100);
-  return Math.round(calibrated * 100) / 100;
+  // Domain calibration:
+  // For weak incidental overlap (composite < 0.25): scale moderately so it remains well below 48% (NO_SIGNIFICANT_MATCH).
+  // For moderate to high overlap (composite >= 0.25): curve smoothly so genuine paraphrased duplicates reach 75%+ (SIMILAR/LIKELY_DUPLICATE).
+  let calibrated: number;
+  if (composite < 0.25) {
+    calibrated = (composite / 0.25) * 46;
+  } else {
+    // Maps [0.25 .. 1.0] to [46 .. 100]
+    const normalized = (composite - 0.25) / 0.75;
+    calibrated = 46 + normalized ** 0.45 * 54;
+  }
+
+  return Math.round(Math.min(100, Math.max(0, calibrated)) * 100) / 100;
 }
