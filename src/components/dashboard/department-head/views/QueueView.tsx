@@ -137,8 +137,24 @@ export function QueueView({
 
   // Reset to page 1 on filter changes
   useEffect(() => {
-    setCurrentPage(1);
-  }, []);
+    if (
+      statusFilter ||
+      priorityFilter ||
+      staffFilter ||
+      selectedTab ||
+      advancedConditions ||
+      advancedMode
+    ) {
+      setCurrentPage(1);
+    }
+  }, [
+    statusFilter,
+    priorityFilter,
+    staffFilter,
+    selectedTab,
+    advancedConditions,
+    advancedMode,
+  ]);
 
   const localFilteredGrievances = useMemo(() => {
     return grievances.filter((g) => {
@@ -150,6 +166,7 @@ export function QueueView({
           Boolean(g.hodIntervention);
         if (!isEscalated) return false;
       } else if (selectedTab === "UNASSIGNED") {
+        if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
         const isUnassigned =
           !g.assignedStaffId ||
           !g.assignedStaffName ||
@@ -178,6 +195,7 @@ export function QueueView({
       // 1. Status Filter from parent (e.g. from clicking Status chart or tab)
       if (statusFilter && statusFilter !== "ALL") {
         if (statusFilter === "UNASSIGNED") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
           const isUnassigned =
             !g.assignedStaffId ||
             !g.assignedStaffName ||
@@ -188,13 +206,18 @@ export function QueueView({
             g.myDepartmentStatus === "PENDING_ASSIGNMENT";
           if (!isUnassigned) return false;
         } else if (statusFilter === "IN_PROGRESS") {
-          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
-          const isInProgress =
-            g.status === "IN_PROGRESS" ||
-            g.status === "ASSIGNED" ||
-            g.myDepartmentStatus === "IN_PROGRESS" ||
-            g.myDepartmentStatus === "ASSIGNED";
-          if (!isInProgress) return false;
+          if (["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(g.status))
+            return false;
+          if (g.isReopened || g.status === "REOPENED") return false;
+          const isUnassigned =
+            !g.assignedStaffId ||
+            !g.assignedStaffName ||
+            g.assignedStaffName === "Unassigned" ||
+            g.status === "SUBMITTED" ||
+            g.status === "ROUTED" ||
+            g.status === "PENDING_ASSIGNMENT" ||
+            g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+          if (isUnassigned) return false;
         } else if (statusFilter === "UNDER_REVIEW") {
           if (g.status !== "UNDER_REVIEW") return false;
         } else if (statusFilter === "ASSIGNED") {
@@ -217,6 +240,7 @@ export function QueueView({
       // 3. Staff Filter from parent
       if (staffFilter && staffFilter !== "ALL") {
         if (staffFilter === "UNASSIGNED") {
+          if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
           if (g.assignedStaffId) return false;
         } else if (g.assignedStaffId !== staffFilter) {
           return false;
@@ -238,20 +262,22 @@ export function QueueView({
   const sortedGrievances = useMemo(() => {
     const list = [...localFilteredGrievances];
     if (!sortState.field || !sortState.direction) {
-      // Default Sort: Unassigned grievances first, then sorted by newest first
+      // Default Sort: Unassigned grievances first (excluding closed/resolved), then sorted by newest first
       return list.sort((a, b) => {
         const isUnassignedA =
-          !a.assignedStaffId ||
-          !a.assignedStaffName ||
-          a.assignedStaffName === "Unassigned" ||
-          a.status === "SUBMITTED" ||
-          a.status === "ROUTED";
+          !["CLOSED", "RESOLVED"].includes(a.status) &&
+          (!a.assignedStaffId ||
+            !a.assignedStaffName ||
+            a.assignedStaffName === "Unassigned" ||
+            a.status === "SUBMITTED" ||
+            a.status === "ROUTED");
         const isUnassignedB =
-          !b.assignedStaffId ||
-          !b.assignedStaffName ||
-          b.assignedStaffName === "Unassigned" ||
-          b.status === "SUBMITTED" ||
-          b.status === "ROUTED";
+          !["CLOSED", "RESOLVED"].includes(b.status) &&
+          (!b.assignedStaffId ||
+            !b.assignedStaffName ||
+            b.assignedStaffName === "Unassigned" ||
+            b.status === "SUBMITTED" ||
+            b.status === "ROUTED");
 
         if (isUnassignedA && !isUnassignedB) return -1;
         if (!isUnassignedA && isUnassignedB) return 1;
@@ -271,12 +297,15 @@ export function QueueView({
       const rawA = a[field] ?? "";
       const rawB = b[field] ?? "";
 
-      const valA = typeof rawA === "string" ? rawA.toLowerCase() : rawA;
-      const valB = typeof rawB === "string" ? rawB.toLowerCase() : rawB;
+      const strA = typeof rawA === "string" ? rawA : String(rawA);
+      const strB = typeof rawB === "string" ? rawB : String(rawB);
 
-      if (valA < valB) return sortState.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortState.direction === "asc" ? 1 : -1;
-      return 0;
+      const comp = strA.localeCompare(strB, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+
+      return sortState.direction === "asc" ? comp : -comp;
     });
   }, [localFilteredGrievances, sortState]);
 
@@ -398,6 +427,7 @@ export function QueueView({
             </h2>
             {(statusFilter !== "ALL" ||
               priorityFilter !== "ALL" ||
+              staffFilter !== "ALL" ||
               (selectedTab && selectedTab !== "ALL")) && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
                 Filtered:{" "}
@@ -405,7 +435,9 @@ export function QueueView({
                   ? selectedTab.replace(/_/g, " ")
                   : statusFilter !== "ALL"
                     ? statusFilter.replace(/_/g, " ")
-                    : priorityFilter}
+                    : priorityFilter !== "ALL"
+                      ? priorityFilter
+                      : "Staff"}
                 <button
                   type="button"
                   onClick={() => {
@@ -442,8 +474,8 @@ export function QueueView({
               <col className="w-[245px]" />
               <col className="w-[140px]" />
               <col className="w-[135px]" />
-              <col className="w-[100px]" />
-              <col className="w-[125px]" />
+              <col className="w-[90px]" />
+              <col className="w-[135px]" />
               <col className="w-[155px]" />
               <col className="w-[215px]" />
               <col className="w-[170px]" />
@@ -453,7 +485,7 @@ export function QueueView({
             <thead>
               <tr>
                 <SortableTableHead
-                  field="id"
+                  field="ticketCode"
                   currentSort={sortState}
                   onSort={handleSort}
                   className="py-3 pl-4 pr-3"
@@ -799,6 +831,10 @@ export function QueueView({
                               <span className="truncate">
                                 {item.assignedStaffName}
                               </span>
+                            </span>
+                          ) : isItemClosed ? (
+                            <span className="inline-flex items-center text-sm font-normal text-slate-400">
+                              —
                             </span>
                           ) : (
                             <span className="inline-flex items-center text-sm font-normal text-slate-500">

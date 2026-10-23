@@ -49,7 +49,10 @@ export function GrievanceCommunicationComposer({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!message.trim() || isSubmittingRef.current) return;
+    const trimmedMessage =
+      message.trim() ||
+      (selectedFiles.length > 0 ? "Attached document(s) for review." : "");
+    if (!trimmedMessage || isSubmittingRef.current) return;
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -71,7 +74,7 @@ export function GrievanceCommunicationComposer({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: message.trim(),
+          message: trimmedMessage,
           attachments: attachmentsPayload,
         }),
       });
@@ -139,7 +142,11 @@ export function GrievanceCommunicationComposer({
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type a message..."
+          placeholder={
+            selectedFiles.length > 0
+              ? "Add an optional note or press send..."
+              : "Type a message or attach documents..."
+          }
           rows={2}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -164,7 +171,9 @@ export function GrievanceCommunicationComposer({
           <button
             type="button"
             onClick={() => handleSubmit()}
-            disabled={!message.trim() || isSubmitting}
+            disabled={
+              (!message.trim() && selectedFiles.length === 0) || isSubmitting
+            }
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
           >
             {isSubmitting ? (

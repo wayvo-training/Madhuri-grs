@@ -4,6 +4,7 @@ export interface ClientUploadResult {
   fileName: string;
   fileType: string;
   fileSize: number;
+  textContent?: string;
 }
 
 /**
@@ -39,5 +40,6 @@ export async function uploadFileToSupabase(
     fileName: data.fileName,
     fileType: data.fileType,
     fileSize: data.fileSize,
+    textContent: data.textContent,
   };
 }

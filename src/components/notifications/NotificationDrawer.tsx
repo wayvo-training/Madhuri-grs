@@ -93,7 +93,25 @@ export function NotificationDrawer({
       }
     }, 30000);
 
-    return () => clearInterval(intervalId);
+    const handleNotificationsChanged = () => {
+      fetchNotifications();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        "notifications-changed",
+        handleNotificationsChanged,
+      );
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          "notifications-changed",
+          handleNotificationsChanged,
+        );
+      }
+    };
   }, [fetchNotifications, isOpen]);
 
   // Fetch immediately when opened to get latest
@@ -124,6 +142,9 @@ export function NotificationDrawer({
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
       await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
     } catch (error) {
       console.error("Failed to mark as read", error);
     }
@@ -164,6 +185,9 @@ export function NotificationDrawer({
     try {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       await fetch(`/api/notifications/read-all`, { method: "PATCH" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
     } catch (error) {
       console.error("Failed to mark all as read", error);
     }
@@ -259,8 +283,8 @@ export function NotificationDrawer({
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs animate-in zoom-in">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs animate-in zoom-in">
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -270,9 +294,16 @@ export function NotificationDrawer({
           className={`absolute right-0 top-full mt-2 w-80 sm:w-88 ${showAll ? "max-h-[80vh]" : "max-h-112"} overflow-hidden rounded-xl border border-border bg-background shadow-2xl z-9999 flex flex-col animate-in slide-in-from-top-2 fade-in duration-200`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-            <h2 className="text-sm font-semibold text-foreground">
-              Notifications
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-foreground">
+                Notifications
+              </h2>
+              {unreadCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                  {unreadCount} unread
+                </span>
+              )}
+            </div>
             {unreadCount > 0 && (
               <button
                 type="button"

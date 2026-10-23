@@ -14,6 +14,7 @@ import {
   FolderOpen,
   Lock,
   MessageSquare,
+  Paperclip,
   Search,
   Shield,
   ShieldCheck,
@@ -66,6 +67,14 @@ export interface SupportingFindingItem {
   submittedBy?: string;
   findings?: string;
   notes?: string;
+  attachments?: Array<{
+    id: string;
+    name: string;
+    size?: string;
+    type?: string;
+    path: string;
+    downloadUrl?: string;
+  }>;
   submittedAt: string;
 }
 
@@ -740,6 +749,66 @@ export function EndUserCaseHub({
                           <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                             {f.findings || f.notes}
                           </p>
+                          {f.attachments && f.attachments.length > 0 && (
+                            <div className="pt-2 border-t border-teal-100/70 dark:border-teal-900/30 space-y-1.5">
+                              <span className="text-[11px] font-semibold text-teal-800 dark:text-teal-300 flex items-center gap-1">
+                                <Paperclip className="h-3 w-3" />
+                                Supportive Documents ({f.attachments.length})
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {f.attachments.map((att, aIdx) => (
+                                  <div
+                                    key={att.id || `f-att-${aIdx}`}
+                                    className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-900/60 border border-teal-200/60 dark:border-teal-900/40 text-xs shadow-2xs"
+                                  >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <FileText className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                                      <div className="min-w-0">
+                                        <p
+                                          className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-35"
+                                          title={att.name}
+                                        >
+                                          {att.name}
+                                        </p>
+                                        {att.size && (
+                                          <p className="text-[10px] text-slate-400">
+                                            {att.size}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {att.downloadUrl ? (
+                                        <>
+                                          <a
+                                            href={att.downloadUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
+                                            title="View Document"
+                                          >
+                                            <Eye className="h-2.5 w-2.5" />
+                                            View
+                                          </a>
+                                          <a
+                                            href={att.downloadUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download={att.name}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                            title="Download Document"
+                                          >
+                                            <Download className="h-2.5 w-2.5" />
+                                            Save
+                                          </a>
+                                        </>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           {f.submittedBy && (
                             <div className="text-[11px] text-teal-700 dark:text-teal-400 font-medium">
                               Investigated by: {f.submittedBy}

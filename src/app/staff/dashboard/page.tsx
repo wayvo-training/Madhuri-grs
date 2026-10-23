@@ -31,6 +31,11 @@ export default async function StaffDashboardPage({
         ? "activity"
         : "overview";
 
+  const tabParam =
+    typeof resolvedParams?.tab === "string"
+      ? (resolvedParams.tab as import("@/types/staff").StaffQueueTab)
+      : undefined;
+
   return (
     <StaffDashboard
       staffName={fullName}
@@ -38,6 +43,7 @@ export default async function StaffDashboardPage({
       departmentName={deptName}
       employeeCode={employeeCode}
       defaultView={defaultView}
+      initialTab={tabParam}
     />
   );
 }

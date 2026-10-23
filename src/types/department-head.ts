@@ -223,13 +223,29 @@ export type CaseDrawerTab =
   | "collaboration"
   | "findings";
 
+export interface DepartmentHeadInitialData {
+  grievances: GrievanceItem[];
+  staffList: StaffMember[];
+  governanceAuditFeed: EscalationAuditRecord[];
+  availableDepartments: { id: string; name: string }[];
+  selectedDeptId: string;
+  totalCount?: number;
+  page?: number;
+  limit?: number;
+}
+
 export interface DepartmentHeadOverviewProps {
+  initialData?: DepartmentHeadInitialData;
   departmentName?: string;
   hodName?: string;
   hodEmail?: string;
   employeeCode?: string;
   isAdminPreview?: boolean;
   initialView?: DepartmentHeadView;
+  initialStatusFilter?: string;
+  initialPriorityFilter?: string;
+  initialStaffFilter?: string;
+  initialTab?: DepartmentHeadTab;
 }
 
 export interface DocumentPreviewData {

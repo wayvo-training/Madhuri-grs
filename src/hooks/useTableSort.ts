@@ -31,7 +31,7 @@ export function useTableSort<T>(
       if (sortState.field === "timestamp" || sortState.field === "createdAt") {
         const timeA = new Date(String(valA)).getTime();
         const timeB = new Date(String(valB)).getTime();
-        if (!isNaN(timeA) && !isNaN(timeB)) {
+        if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
           if (timeA < timeB) return sortState.direction === "asc" ? -1 : 1;
           if (timeA > timeB) return sortState.direction === "asc" ? 1 : -1;
           return 0;
@@ -51,18 +51,21 @@ export function useTableSort<T>(
           : typeof valB === "string" && valB.trim() !== ""
             ? Number(valB)
             : NaN;
-      if (!isNaN(numA) && !isNaN(numB)) {
+      if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
         if (numA < numB) return sortState.direction === "asc" ? -1 : 1;
         if (numA > numB) return sortState.direction === "asc" ? 1 : -1;
         return 0;
       }
 
-      const strA = typeof valA === "string" ? valA.toLowerCase() : String(valA);
-      const strB = typeof valB === "string" ? valB.toLowerCase() : String(valB);
+      const strA = typeof valA === "string" ? valA : String(valA);
+      const strB = typeof valB === "string" ? valB : String(valB);
 
-      if (strA < strB) return sortState.direction === "asc" ? -1 : 1;
-      if (strA > strB) return sortState.direction === "asc" ? 1 : -1;
-      return 0;
+      const comparison = strA.localeCompare(strB, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+
+      return sortState.direction === "asc" ? comparison : -comparison;
     });
   }, [items, sortState]);
 

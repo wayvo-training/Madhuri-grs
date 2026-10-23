@@ -83,13 +83,14 @@ export function StatusBadge({
     case "COMPLETED":
       return (
         <span
+          title="Department Findings Submitted"
           className={cn(
-            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400",
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 cursor-default",
             className,
           )}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
-          Findings Submitted
+          Findings Done
         </span>
       );
     case "IN_PROGRESS":

@@ -525,16 +525,41 @@ export async function POST(
           });
         }
 
-        // Synchronize department-level SLA due_at and status
-        await tx.grievance_departments.update({
-          where: {
-            grievance_department_id: grievanceDept.grievance_department_id,
-          },
-          data: {
-            due_at: newExtendedDueAt,
-            sla_status: "ON_TRACK",
-          },
-        });
+        // Synchronize department-level SLA due_at and status:
+        // In PARALLEL involvement: All active/pending parallel departments share the extended deadline so partners don't falsely breach.
+        // In SEQUENTIAL involvement: Only the active executing department is extended; downstream blocked departments remain waiting for their turn.
+        const isParallel =
+          (grievanceDept.dependency_type || "PARALLEL") === "PARALLEL";
+
+        if (isParallel) {
+          await tx.grievance_departments.updateMany({
+            where: {
+              grievance_id: grievanceId,
+              status: {
+                in: [
+                  "PENDING_ASSIGNMENT",
+                  "ASSIGNED",
+                  "IN_PROGRESS",
+                  "BLOCKED",
+                ],
+              },
+            },
+            data: {
+              due_at: newExtendedDueAt,
+              sla_status: "ON_TRACK",
+            },
+          });
+        } else {
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: grievanceDept.grievance_department_id,
+            },
+            data: {
+              due_at: newExtendedDueAt,
+              sla_status: "ON_TRACK",
+            },
+          });
+        }
 
         if (currentAssignedStaff) {
           await tx.notifications.create({

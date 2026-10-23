@@ -128,6 +128,9 @@ export function CaseFileInspectionModal({
             ...(json.data.grievance?.hasProposedKb !== undefined
               ? { hasProposedKb: json.data.grievance.hasProposedKb }
               : {}),
+            ...(json.data.supportingFindings
+              ? { supportingFindings: json.data.supportingFindings }
+              : {}),
           }));
         }
       })

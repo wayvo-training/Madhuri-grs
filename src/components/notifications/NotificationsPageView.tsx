@@ -277,7 +277,7 @@ export function NotificationsPageView({
 
   // Filter States
   const [activeTab, setActiveTab] = useState<
-    "ALL" | "ACTION_REQUIRED" | "SLA" | "UPDATES"
+    "ALL" | "UNREAD" | "ACTION_REQUIRED" | "SLA" | "UPDATES"
   >("ALL");
   const [selectedGrievanceNumber, setSelectedGrievanceNumber] =
     useState<string>(targetGrievanceParam);
@@ -306,6 +306,24 @@ export function NotificationsPageView({
 
   useEffect(() => {
     fetchNotifications();
+
+    const handleNotificationsChanged = () => {
+      fetchNotifications();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        "notifications-changed",
+        handleNotificationsChanged,
+      );
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          "notifications-changed",
+          handleNotificationsChanged,
+        );
+      }
+    };
   }, [fetchNotifications]);
 
   useEffect(() => {
@@ -318,21 +336,63 @@ export function NotificationsPageView({
     }
   }, [searchParams]);
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+        prev.map((n) =>
+          n.id === id
+            ? {
+                ...n,
+                isRead: true,
+                status: "READ",
+                readAt: new Date().toISOString(),
+              }
+            : n,
+        ),
       );
       await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
     } catch (err) {
       console.error("Failed to mark notification read:", err);
     }
   };
 
+  const markAsUnread = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === id
+            ? { ...n, isRead: false, status: "PENDING", readAt: null }
+            : n,
+        ),
+      );
+      await fetch(`/api/notifications/${id}/unread`, { method: "PATCH" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
+    } catch (err) {
+      console.error("Failed to mark notification unread:", err);
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          isRead: true,
+          status: "READ",
+          readAt: new Date().toISOString(),
+        })),
+      );
       await fetch("/api/notifications/read-all", { method: "PATCH" });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
     } catch (err) {
       console.error("Failed to mark all as read:", err);
     }
@@ -490,6 +550,7 @@ export function NotificationsPageView({
   const filteredNotifications = useMemo(() => {
     return classifiedNotifications.filter((n) => {
       // 1. Primary Tab filter
+      if (activeTab === "UNREAD" && n.isRead) return false;
       if (activeTab === "ACTION_REQUIRED" && !n.isActionRequiredComputed)
         return false;
       if (activeTab === "SLA" && !n.isSlaComputed) return false;
@@ -542,20 +603,36 @@ export function NotificationsPageView({
       {/* 1. COMPRESSED SUMMARY CARDS                                               */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 shrink-0">
-        {/* Card 1: Total */}
+        {/* Card 1: Unread */}
         <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 shadow-2xs flex items-center justify-between">
           <div className="min-w-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block truncate">
-              Total
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+              {summaryCounts.unread > 0 && (
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+              )}
+              Unread
             </span>
-            <div className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 leading-none mt-0.5">
-              {summaryCounts.total}
+            <div
+              className={`text-lg sm:text-xl font-bold leading-none mt-0.5 ${
+                summaryCounts.unread > 0
+                  ? "text-rose-600 dark:text-rose-400"
+                  : "text-slate-900 dark:text-slate-100"
+              }`}
+            >
+              {summaryCounts.unread}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate pt-0.5">
-              Across notifications
+              {summaryCounts.total} total notification
+              {summaryCounts.total !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="p-1 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 shrink-0 self-center">
+          <div
+            className={`p-1 rounded-md shrink-0 self-center ${
+              summaryCounts.unread > 0
+                ? "bg-rose-50 dark:bg-rose-950/40 text-rose-500 dark:text-rose-400"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+            }`}
+          >
             <Bell className="w-3.5 h-3.5" />
           </div>
         </div>
@@ -622,8 +699,33 @@ export function NotificationsPageView({
       {/* 2. TABS & ACTIONS ROW                                                     */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-200 dark:border-slate-800 pb-2 shrink-0">
-        {/* Four Primary Tabs */}
+        {/* Primary Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab("UNREAD")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === "UNREAD"
+                ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <span>Unread</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                activeTab === "UNREAD"
+                  ? summaryCounts.unread > 0
+                    ? "bg-rose-500 text-white"
+                    : "bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900"
+                  : summaryCounts.unread > 0
+                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+              }`}
+            >
+              {summaryCounts.unread}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab("ACTION_REQUIRED")}
@@ -853,7 +955,7 @@ export function NotificationsPageView({
 
                 {/* Center / Body: Compact Scannable Content */}
                 <div className="flex-1 min-w-0 space-y-0.5">
-                  {/* Row 1: Title + Timestamp */}
+                  {/* Row 1: Title + Timestamp + Action */}
                   <div className="flex items-center justify-between gap-2">
                     <h4
                       className={`text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate ${
@@ -862,9 +964,23 @@ export function NotificationsPageView({
                     >
                       {item.title}
                     </h4>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0 whitespace-nowrap">
-                      {formatRelativeTime(item.createdAt)}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                        {formatRelativeTime(item.createdAt)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          item.isRead
+                            ? markAsUnread(item.id, e)
+                            : markAsRead(item.id, e)
+                        }
+                        className="text-[10px] font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 px-1.5 py-0.5 rounded transition cursor-pointer"
+                        title={item.isRead ? "Mark as unread" : "Mark as read"}
+                      >
+                        {item.isRead ? "Mark unread" : "Mark read"}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Row 2: Grievance Case Badge · Category */}

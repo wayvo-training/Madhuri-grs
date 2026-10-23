@@ -91,8 +91,11 @@ export async function checkKnowledgeDuplicates(
   } = params;
 
   const trimmedTitle = (title || "").trim();
-  const trimmedDescription = (description || problem || "").trim();
-  const trimmedProblem = (problem || description || "").trim();
+  const rawProblem = (problem || "").trim();
+  const rawDescription = (description || "").trim();
+  // If only one of problem/description is provided, use it for both without pretending they are distinct inputs.
+  const trimmedProblem = rawProblem || rawDescription;
+  const trimmedDescription = rawDescription || rawProblem;
   const trimmedResolution = (resolution || "").trim();
 
   // If required fields are empty, return safe empty result
@@ -172,19 +175,6 @@ export async function checkKnowledgeDuplicates(
     }
   }
 
-  // TAXONOMY FILTERING (Section 4):
-  // Only compare articles within the exact Category + Subcategory.
-  // If category or subcategory is completely unknown/missing, we cannot taxonomy-filter safely,
-  // so return 0 candidates to prevent cross-taxonomy false positives.
-  if (!catId || !subCatId) {
-    return {
-      totalCandidatesCompared: 0,
-      highestMatch: null,
-      highestClassification: "NO_SIGNIFICANT_MATCH",
-      candidates: [],
-    };
-  }
-
   let excludeId: bigint | null = null;
   if (excludeArticleId) {
     try {
@@ -194,14 +184,27 @@ export async function checkKnowledgeDuplicates(
     }
   }
 
+  // TAXONOMY FILTERING:
+  // If category and subcategory are known, filter strictly by category to keep comparisons focused,
+  // while allowing both exact subcategory matches (full score 100) and sibling subcategory matches (score 50)
+  // to detect misclassified duplicate articles.
+  // If no category is known, compare across all published/pending articles with 0 metadata bonus.
+  const whereClause: {
+    status: { in: string[] };
+    article_id?: { not: bigint };
+    category_id?: bigint;
+  } = {
+    status: { in: ["PUBLISHED", "PENDING_REVIEW"] },
+    ...(excludeId ? { article_id: { not: excludeId } } : {}),
+  };
+
+  if (catId) {
+    whereClause.category_id = catId;
+  }
+
   // 2. Fetch candidate articles: Status IN ['PUBLISHED', 'PENDING_REVIEW']
   const candidatesFromDb = await prisma.knowledge_articles.findMany({
-    where: {
-      category_id: catId,
-      subcategory_id: subCatId,
-      status: { in: ["PUBLISHED", "PENDING_REVIEW"] },
-      ...(excludeId ? { article_id: { not: excludeId } } : {}),
-    },
+    where: whereClause,
     select: {
       article_id: true,
       title: true,
@@ -227,6 +230,7 @@ export async function checkKnowledgeDuplicates(
       },
     },
     orderBy: { created_at: "desc" },
+    take: 50,
   });
 
   if (candidatesFromDb.length === 0) {
@@ -248,13 +252,20 @@ export async function checkKnowledgeDuplicates(
 
     try {
       const parsed = JSON.parse(cand.content);
-      candDescription = parsed.description || parsed.problem || "";
-      candProblem = parsed.problem || parsed.description || "";
-      candResolution = parsed.resolution || parsed.solutionSteps || "";
+      if (parsed && typeof parsed === "object") {
+        candDescription = parsed.description || parsed.problem || "";
+        candProblem = parsed.problem || parsed.description || "";
+        candResolution = parsed.resolution || parsed.solutionSteps || "";
+      } else {
+        candDescription = String(cand.content || "");
+        candProblem = String(cand.content || "");
+        candResolution = "";
+      }
     } catch {
-      candDescription = cand.content;
-      candProblem = cand.content;
-      candResolution = cand.content;
+      // Raw plain text article content represents problem/description, NOT a resolution
+      candDescription = cand.content || "";
+      candProblem = cand.content || "";
+      candResolution = "";
     }
 
     // Fallback from resolution / grievance if problem/description is absent
@@ -277,25 +288,48 @@ export async function checkKnowledgeDuplicates(
       trimmedDescription || trimmedProblem,
       candDescription || candProblem,
     );
-    const problemSimilarity = descriptionSimilarity;
+    const problemSimilarity = calculateFieldSimilarity(
+      trimmedProblem || trimmedDescription,
+      candProblem || candDescription,
+    );
     const resolutionSimilarity = trimmedResolution
       ? calculateFieldSimilarity(trimmedResolution, candResolution)
       : 0;
 
-    // B. Metadata matching score: deterministic 100 since taxonomy filtered
-    const metadataScore = 100;
+    // B. Metadata matching score:
+    // Exact Category + Subcategory match: 100
+    // Same Category match (different/unspecified subcategory): 50
+    // Cross Category: 0
+    let metadataScore = 0;
+    if (
+      catId &&
+      cand.category_id &&
+      catId.toString() === cand.category_id.toString()
+    ) {
+      if (
+        subCatId &&
+        cand.subcategory_id &&
+        subCatId.toString() === cand.subcategory_id.toString()
+      ) {
+        metadataScore = 100;
+      } else {
+        metadataScore = 50;
+      }
+    }
 
     // C. Weighted final score:
-    // With resolution: Title (20%), Description/Problem (40%), Resolution (30%), Taxonomy (10%)
-    // Without resolution: Title (30%), Description/Problem (60%), Taxonomy (10%)
+    // With resolution: Title (20%), Problem (25%), Description (20%), Resolution (25%), Taxonomy (10%)
+    // Without resolution: Title (25%), Problem (35%), Description (30%), Taxonomy (10%)
     const hasResolution = trimmedResolution.length > 0;
-    const titleWeight = hasResolution ? 0.2 : 0.3;
-    const descriptionWeight = hasResolution ? 0.4 : 0.6;
-    const resolutionWeight = hasResolution ? 0.3 : 0.0;
+    const titleWeight = hasResolution ? 0.2 : 0.25;
+    const problemWeight = hasResolution ? 0.25 : 0.35;
+    const descriptionWeight = hasResolution ? 0.2 : 0.3;
+    const resolutionWeight = hasResolution ? 0.25 : 0.0;
     const metadataWeight = 0.1;
 
     const rawFinalScore =
       titleSimilarity * titleWeight +
+      problemSimilarity * problemWeight +
       descriptionSimilarity * descriptionWeight +
       resolutionSimilarity * resolutionWeight +
       metadataScore * metadataWeight;

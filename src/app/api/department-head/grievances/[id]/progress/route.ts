@@ -1018,6 +1018,88 @@ export async function GET(
       };
     }
 
+    const supportingFindings = (grievance.audit_logs || [])
+      .filter((l) => {
+        const val =
+          typeof l.new_value === "string"
+            ? (JSON.parse(l.new_value || "{}") as Record<string, unknown>)
+            : (l.new_value as Record<string, unknown> | null);
+        return (
+          l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
+          val?.isFindings === true ||
+          String(val?.note || "").includes("[Department Findings")
+        );
+      })
+      .map((l) => {
+        const val =
+          typeof l.new_value === "string"
+            ? (JSON.parse(l.new_value || "{}") as Record<string, unknown>)
+            : (l.new_value as Record<string, unknown> | null);
+        const u = l.users;
+        const authorName = u
+          ? `${u.first_name} ${u.last_name || ""}`.trim()
+          : (val?.submittedBy as string) || "Staff Member";
+        const deptName =
+          (val?.department as string) ||
+          (val?.departmentName as string) ||
+          "Supporting Department";
+
+        let findings = (val?.findings as string) || "";
+        let actionTaken = (val?.actionTaken as string) || "";
+        let notes = (val?.notes as string) || "";
+
+        if (!findings && typeof val?.note === "string") {
+          const noteStr = val.note;
+          const findingsMatch = noteStr.match(
+            /Findings:\s*([\s\S]*?)(?=\n\nAction Taken:|$)/,
+          );
+          const actionMatch = noteStr.match(
+            /Action Taken:\s*([\s\S]*?)(?=\n\nNotes:|$)/,
+          );
+          const notesMatch = noteStr.match(/Notes:\s*([\s\S]*?)$/);
+          if (findingsMatch) findings = findingsMatch[1].trim();
+          if (actionMatch) actionTaken = actionMatch[1].trim();
+          if (notesMatch) notes = notesMatch[1].trim();
+          if (!findings) findings = noteStr;
+        }
+
+        const rawAttList = Array.isArray(val?.attachments)
+          ? (val.attachments as Array<{
+              id?: string;
+              name?: string;
+              fileName?: string;
+              size?: string;
+              type?: string;
+              path?: string;
+              filePath?: string;
+              downloadUrl?: string;
+            }>)
+          : [];
+
+        const attList = rawAttList.map((att, idx) => ({
+          id: att.id || `${l.audit_log_id}-att-${idx}`,
+          name: att.name || att.fileName || "Finding-Attachment",
+          size: att.size,
+          type: att.type,
+          path: att.path || att.filePath || "",
+          downloadUrl:
+            att.downloadUrl ||
+            (att.id ? `/api/attachments/${att.id}/download` : undefined),
+        }));
+
+        return {
+          id: l.audit_log_id.toString(),
+          departmentName: deptName,
+          submittedBy: (val?.submittedBy as string) || authorName,
+          findings,
+          actionTaken: actionTaken || undefined,
+          notes: notes || undefined,
+          attachments: attList,
+          createdAt: l.created_at.toISOString(),
+          timestamp: formatRelativeTime(l.created_at),
+        };
+      });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -1134,6 +1216,7 @@ export async function GET(
         timeline,
         internalNotes,
         collaborationNotes,
+        supportingFindings,
         departmentsInvolved,
         hodIntervention,
       },

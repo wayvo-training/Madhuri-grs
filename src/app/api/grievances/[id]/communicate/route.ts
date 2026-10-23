@@ -11,6 +11,7 @@ interface IncomingAttachment {
   fileType: string;
   fileSize?: number;
   filePath?: string;
+  textContent?: string;
 }
 
 export async function POST(
@@ -32,10 +33,20 @@ export async function POST(
       attachments?: IncomingAttachment[];
     };
 
-    const messageText = body.message?.trim();
-    if (!messageText) {
+    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
+      ? body.attachments
+      : [];
+    const rawMessageText = body.message?.trim();
+    const messageText =
+      rawMessageText ||
+      (incomingFiles.length > 0 ? "Attached document(s) for review." : "");
+
+    if (!messageText && incomingFiles.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Message content cannot be empty." },
+        {
+          success: false,
+          message: "Please enter a message or attach a document.",
+        },
         { status: 400 },
       );
     }
@@ -61,6 +72,8 @@ export async function POST(
             email: true,
           },
         },
+        categories: true,
+        subcategories: true,
         assignments: {
           where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
           include: {
@@ -145,9 +158,6 @@ export async function POST(
     }
 
     const senderFullName = `${user.first_name} ${user.last_name || ""}`.trim();
-    const incomingFiles: IncomingAttachment[] = Array.isArray(body.attachments)
-      ? body.attachments
-      : [];
 
     if (userRole === "END_USER") {
       const check = await canEndUserSubmitCommunication(grievanceId);
@@ -197,13 +207,24 @@ export async function POST(
 
     const fileNames = incomingFiles.map((f) => f.fileName);
 
-    // Persist attachments
+    // Persist attachments with intelligent classification
     if (incomingFiles.length > 0) {
+      const participatingDepts = await prisma.grievance_departments.findMany({
+        where: { grievance_id: grievanceId },
+        include: { departments: true },
+      });
+
+      const participatingDeptProfiles = participatingDepts.map((gd) => ({
+        department_id: gd.department_id,
+        department_name: gd.departments.department_name,
+        involvement_type: gd.involvement_type,
+      }));
+
       for (const file of incomingFiles) {
         const raw = file.filePath || `grievances/${file.fileName}`;
         const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
         const relativeStoragePath = norm.valid ? norm.storagePath : raw;
-        await prisma.attachments.create({
+        const newAttachment = await prisma.attachments.create({
           data: {
             grievance_id: grievanceId,
             file_name: file.fileName,
@@ -213,6 +234,61 @@ export async function POST(
             uploaded_by: userId,
           },
         });
+
+        // If multiple departments are involved, extract text if missing and classify
+        if (participatingDeptProfiles.length > 1) {
+          try {
+            let extracted = file.textContent || "";
+            if (!extracted && relativeStoragePath) {
+              const { extractTextFromStorage } = await import(
+                "@/lib/attachments/text-extractor"
+              );
+              extracted = await extractTextFromStorage(
+                relativeStoragePath,
+                file.fileType || "",
+                file.fileName,
+              );
+            }
+
+            const { classifyAttachmentForDepartments } = await import(
+              "@/lib/attachments/document-classifier"
+            );
+            const classification = classifyAttachmentForDepartments({
+              fileName: file.fileName,
+              fileType: file.fileType,
+              fileSize: file.fileSize,
+              textContent: extracted,
+              categoryName: grievance.categories?.category_name,
+              subcategoryName: grievance.subcategories?.subcategory_name,
+              grievanceTitle: grievance.title,
+              grievanceDescription: grievance.description,
+              participatingDepartments: participatingDeptProfiles,
+            });
+
+            for (const deptId of classification.targetDepartmentIds) {
+              const matchedDept = participatingDepts.find(
+                (d) => BigInt(d.department_id) === BigInt(deptId),
+              );
+              if (
+                matchedDept &&
+                matchedDept.involvement_type === "SUPPORTING"
+              ) {
+                await prisma.attachment_department_grants.create({
+                  data: {
+                    attachment_id: newAttachment.attachment_id,
+                    department_id: BigInt(deptId),
+                    granted_by: userId,
+                  },
+                });
+              }
+            }
+          } catch (classifyErr) {
+            console.warn(
+              "Classification in communication failed:",
+              classifyErr,
+            );
+          }
+        }
       }
     }
 

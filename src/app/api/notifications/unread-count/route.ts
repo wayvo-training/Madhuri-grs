@@ -29,6 +29,7 @@ export async function GET() {
       where: {
         user_id: userId,
         status: { not: "READ" },
+        read_at: null,
         ...(userRole === "END_USER"
           ? {
               notification_type: { notIn: prohibitedForEndUser },

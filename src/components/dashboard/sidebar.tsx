@@ -243,9 +243,26 @@ export function DashboardSidebar({
 
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000);
+
+    const handleNotificationsChanged = () => {
+      fetchUnread();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        "notifications-changed",
+        handleNotificationsChanged,
+      );
+    }
+
     return () => {
       isMounted = false;
       clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          "notifications-changed",
+          handleNotificationsChanged,
+        );
+      }
     };
   }, []);
 

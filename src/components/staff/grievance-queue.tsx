@@ -99,9 +99,14 @@ export function GrievanceQueue({
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("search");
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get("search");
       if (q) {
         setFilters((prev) => ({ ...prev, searchQuery: q }));
+      }
+      const t = sp.get("tab") as StaffQueueTab | null;
+      if (t) {
+        setActiveTab(t);
       }
     }
   }, []);
@@ -474,8 +479,8 @@ export function GrievanceQueue({
       <col className="w-[260px]" />
       <col className="w-[175px]" />
       <col className="w-[170px]" />
-      <col className="w-[115px]" />
-      <col className="w-[130px]" />
+      <col className="w-[105px]" />
+      <col className="w-[140px]" />
       <col className="w-[140px]" />
       <col className="w-[130px]" />
       <col className="w-[115px]" />
@@ -720,13 +725,15 @@ export function GrievanceQueue({
                                 item.overallStatus !== "CLOSED" &&
                                 item.overallStatus !== "RESOLVED"
                                   ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
-                                  : undefined
+                                  : item.myInvolvementType === "SUPPORTING"
+                                    ? "Department Findings Submitted"
+                                    : "Work Completed"
                               }
-                              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap cursor-default"
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                               {item.myInvolvementType === "SUPPORTING"
-                                ? "Findings Submitted"
+                                ? "Findings Done"
                                 : "Work Completed"}
                             </span>
                           ) : item.status === "WAITING_ON_USER" ? (

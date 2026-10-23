@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     const result = await uploadToSupabase(storagePath, buffer, file.type);
+    let textContent = "";
+    try {
+      const { extractTextFromFileBuffer } = await import(
+        "@/lib/attachments/text-extractor"
+      );
+      textContent = await extractTextFromFileBuffer(
+        buffer,
+        file.type,
+        file.name,
+      );
+    } catch {
+      textContent = "";
+    }
 
     return NextResponse.json({
       success: true,
@@ -41,6 +54,7 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
+      textContent,
     });
   } catch (error: unknown) {
     console.error("Upload error:", error);

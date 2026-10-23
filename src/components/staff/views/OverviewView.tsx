@@ -319,13 +319,15 @@ export function OverviewView({
                               item.overallStatus !== "CLOSED" &&
                               item.overallStatus !== "RESOLVED"
                                 ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
-                                : undefined
+                                : item.myInvolvementType === "SUPPORTING"
+                                  ? "Department Findings Submitted"
+                                  : "Work Completed"
                             }
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap cursor-default"
                           >
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                             {item.myInvolvementType === "SUPPORTING"
-                              ? "Findings Submitted"
+                              ? "Findings Done"
                               : "Work Completed"}
                           </span>
                         ) : item.status === "WAITING_ON_USER" ? (

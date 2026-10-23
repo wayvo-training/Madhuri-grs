@@ -135,13 +135,10 @@ export function calculateDepartmentDeadline(
   const durationMs = allocatedDurationMinutes * 60 * 1000;
   const targetEnd = new Date(activatedAt.getTime() + durationMs);
 
-  // Department deadline must never exceed overall grievance deadline,
-  // unless the grievance deadline is already in the past relative to activation.
+  // Department deadline must never exceed overall grievance deadline.
+  // Only an authorized Department Head intervention (EXTEND_SLA) can formally extend the deadline.
   if (grievanceDueAt && targetEnd > grievanceDueAt) {
-    if (grievanceDueAt.getTime() > activatedAt.getTime()) {
-      return grievanceDueAt;
-    }
-    return targetEnd;
+    return grievanceDueAt;
   }
 
   return targetEnd;
@@ -410,16 +407,27 @@ export async function populateGrievanceDepartments(
   const configuredDeps = options?.dependencies || routing.dependencies || [];
 
   const executeInTx = async (client: Prisma.TransactionClient) => {
-    // 1. Fetch grievance details to calculate SLA durations
+    // 1. Fetch grievance details and dynamic SLA policy to calculate SLA durations
     const grievance = await client.grievances.findUnique({
       where: { grievance_id: gId },
       select: { created_at: true, due_at: true, priority: true },
     });
 
+    const activePriority = grievance?.priority?.toUpperCase() || "MEDIUM";
+
+    // Dynamically query active SLA policy configured by Admin in database
+    const dynamicSlaPolicy = await client.sla_policies.findFirst({
+      where: {
+        priority_level: activePriority,
+        status: "ACTIVE",
+      },
+      select: { target_duration_minutes: true },
+    });
+
     let totalDurationMinutes: number =
-      DEFAULT_SLA_DURATIONS_MINUTES[
-        grievance?.priority?.toUpperCase() || "MEDIUM"
-      ] || DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
+      dynamicSlaPolicy?.target_duration_minutes ||
+      DEFAULT_SLA_DURATIONS_MINUTES[activePriority] ||
+      DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
 
     if (grievance?.due_at && grievance?.created_at) {
       const diffMinutes = Math.round(
@@ -878,10 +886,22 @@ export async function activateNextSequentialDepartments(
 
     if (allPrereqsCompleted) {
       const now = new Date();
+      const activePriority =
+        blocked.grievances?.priority?.toUpperCase() || "MEDIUM";
+
+      // Dynamically query active SLA policy configured by Admin in database
+      const dynamicSlaPolicy = await client.sla_policies.findFirst({
+        where: {
+          priority_level: activePriority,
+          status: "ACTIVE",
+        },
+        select: { target_duration_minutes: true },
+      });
+
       let totalBudgetMinutes =
-        DEFAULT_SLA_DURATIONS_MINUTES[
-          blocked.grievances?.priority?.toUpperCase() || "MEDIUM"
-        ] || DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
+        dynamicSlaPolicy?.target_duration_minutes ||
+        DEFAULT_SLA_DURATIONS_MINUTES[activePriority] ||
+        DEFAULT_ROUTING_CONFIG.FALLBACK_DURATION_MINUTES;
 
       if (blocked.grievances?.due_at && blocked.grievances?.created_at) {
         const diff = Math.round(

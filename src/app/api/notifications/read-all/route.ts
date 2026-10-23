@@ -12,7 +12,7 @@ export async function PATCH() {
     const updated = await prisma.notifications.updateMany({
       where: {
         user_id: user.user_id,
-        status: { not: "READ" },
+        OR: [{ status: { not: "READ" } }, { read_at: null }],
       },
       data: {
         status: "READ",

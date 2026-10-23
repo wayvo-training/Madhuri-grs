@@ -134,7 +134,9 @@ export function AttentionRequiredPanel({
     let comp = 0;
     switch (sortKey) {
       case "ticketCode":
-        comp = a.ticketCode.localeCompare(b.ticketCode);
+        comp = a.ticketCode.localeCompare(b.ticketCode, undefined, {
+          numeric: true,
+        });
         break;
       case "title":
         comp = a.title.localeCompare(b.title);
