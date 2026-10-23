@@ -54,17 +54,27 @@ export async function POST(request: Request) {
     const finalCondition = body.applicable_condition || null;
     if (finalCondition) {
       if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
+        const trimmedCat = body.new_category_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedCat)) {
+          return NextResponse.json(
+            {
+              error:
+                "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         let cat = await prisma.categories.findFirst({
           where: {
             category_name: {
-              equals: body.new_category_name,
+              equals: trimmedCat,
               mode: "insensitive",
             },
           },
         });
         if (!cat) {
           cat = await prisma.categories.create({
-            data: { category_name: body.new_category_name },
+            data: { category_name: trimmedCat },
           });
         }
         finalCondition.category_id = cat.category_id.toString();
@@ -75,10 +85,20 @@ export async function POST(request: Request) {
         finalCondition.subcategory_id === "CUSTOM" &&
         finalCondition.category_id
       ) {
+        const trimmedSubcat = body.new_subcategory_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+          return NextResponse.json(
+            {
+              error:
+                "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         let subcat = await prisma.subcategories.findFirst({
           where: {
             subcategory_name: {
-              equals: body.new_subcategory_name,
+              equals: trimmedSubcat,
               mode: "insensitive",
             },
             category_id: BigInt(finalCondition.category_id),
@@ -87,7 +107,7 @@ export async function POST(request: Request) {
         if (!subcat) {
           subcat = await prisma.subcategories.create({
             data: {
-              subcategory_name: body.new_subcategory_name,
+              subcategory_name: trimmedSubcat,
               category_id: BigInt(finalCondition.category_id),
             },
           });

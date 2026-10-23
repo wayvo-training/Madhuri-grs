@@ -1,6 +1,32 @@
 "use client";
 
-import { Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Building,
+  Building2,
+  Check,
+  CheckCircle2,
+  Cpu,
+  DollarSign,
+  Eye,
+  GitMerge,
+  GripVertical,
+  Laptop,
+  Loader2,
+  Plus,
+  Scale,
+  Search,
+  Shield,
+  ShieldAlert,
+  Trash2,
+  Truck,
+  Users,
+  X,
+  Zap,
+} from "lucide-react";
 import {
   type Dispatch,
   type FormEvent,
@@ -10,12 +36,15 @@ import {
   useRef,
   useState,
 } from "react";
-import type { SlaNotificationRecipients } from "@/hooks/admin/master-rules/useRuleActions";
 import {
-  type DepartmentDependencyNode,
-  type DerivedOrderNode,
-  validateRoutingPolicy,
-} from "@/lib/validations/dependency-graph";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { SlaNotificationRecipients } from "@/hooks/admin/master-rules/useRuleActions";
+import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 import type { ModalRuleType } from "@/types/admin/master-rules";
 
 export const SLA_RECIPIENT_OPTIONS = [
@@ -139,7 +168,7 @@ export interface ParticipatingDepartmentRow {
   rowId: string;
   department_id: string;
   department_name: string;
-  involvement_type: "PRIMARY" | "EQUAL" | "SUPPORT";
+  involvement_type: "PRIMARY" | "SUPPORT";
   prerequisites: string[];
   sla_percent_allocation?: number | null;
   allocated_duration_minutes?: number | null;
@@ -212,13 +241,27 @@ export function AdminRuleConfigModal({
   categories,
   onSubmit,
 }: AdminRuleConfigModalProps) {
+  const [routingScope, setRoutingScope] = useState<"SINGLE" | "MULTI">(
+    "SINGLE",
+  );
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [participatingRows, setParticipatingRows] = useState<
     ParticipatingDepartmentRow[]
   >([]);
   const [activeSlaTier, setActiveSlaTier] = useState<
     "warning" | "at_risk" | "critical" | "escalation"
   >("warning");
+  const [deptSearchQuery, setDeptSearchQuery] = useState("");
+  const [showDeptSidebar, setShowDeptSidebar] = useState(true);
   const lastInitKey = useRef<string>("");
+
+  const filteredDepartments = useMemo(() => {
+    if (!deptSearchQuery.trim()) return departments;
+    const q = deptSearchQuery.toLowerCase();
+    return departments.filter((d) =>
+      d.department_name.toLowerCase().includes(q),
+    );
+  }, [departments, deptSearchQuery]);
 
   useEffect(() => {
     if (!open || modalRuleType !== "routing") {
@@ -231,9 +274,21 @@ export function AdminRuleConfigModal({
     }
     lastInitKey.current = currentKey;
 
+    const isMulti =
+      (selectedSupportingDepts && selectedSupportingDepts.length > 0) ||
+      (sequentialDependencies && sequentialDependencies.length > 1);
+
+    setRoutingScope(isMulti ? "MULTI" : "SINGLE");
+
+    let initialLeadDeptId = selectedDeptId;
+    if (!isMulti && !initialLeadDeptId && departments.length > 0) {
+      initialLeadDeptId = departments[0].department_id;
+      setSelectedDeptId(initialLeadDeptId);
+    }
+
     const rows: ParticipatingDepartmentRow[] = [];
     const leadDept = departments.find(
-      (d) => d.department_id === selectedDeptId,
+      (d) => d.department_id === initialLeadDeptId,
     );
     const leadDepNode = leadDept
       ? sequentialDependencies?.find(
@@ -241,14 +296,14 @@ export function AdminRuleConfigModal({
         )
       : undefined;
 
-    // 1. Only populate if selectedDeptId exists or there are supporting departments (e.g. Editing rule or openConfigureRow)
+    // 1. Only populate if initialLeadDeptId exists or there are supporting departments (e.g. Editing rule or openConfigureRow)
     if (
-      selectedDeptId ||
+      initialLeadDeptId ||
       (selectedSupportingDepts && selectedSupportingDepts.length > 0)
     ) {
       rows.push({
         rowId: `row-primary-${Date.now()}`,
-        department_id: selectedDeptId || "",
+        department_id: initialLeadDeptId || "",
         department_name: leadDept?.department_name || "",
         involvement_type: "PRIMARY",
         prerequisites: leadDepNode?.prerequisites || [],
@@ -259,53 +314,50 @@ export function AdminRuleConfigModal({
           leadDepNode?.allocated_duration_minutes ?? null,
       });
 
-      // 2. Supporting departments
-      selectedSupportingDepts.forEach((suppName, idx) => {
-        const suppDept = departments.find(
-          (d) => d.department_name === suppName,
-        );
-        const depNode = sequentialDependencies?.find(
-          (s) => s.department_name === suppName,
-        );
-        rows.push({
-          rowId: `row-supp-${idx}-${suppName}`,
-          department_id: suppDept?.department_id || "",
-          department_name: suppName,
-          involvement_type:
-            depNode?.involvement_type === "EQUAL" ? "EQUAL" : "SUPPORT",
-          prerequisites: depNode?.prerequisites || [],
-          sla_percent_allocation: depNode?.sla_percent_allocation,
-          allocated_duration_minutes:
-            depNode?.allocated_duration_minutes ?? null,
-        });
-      });
-
-      // 3. Extra nodes in sequentialDependencies if any
-      sequentialDependencies?.forEach((depNode, idx) => {
-        const already = rows.some(
-          (r) => r.department_name === depNode.department_name,
-        );
-        if (!already && depNode.department_name) {
-          const dObj = departments.find(
-            (d) => d.department_name === depNode.department_name,
+      // 2. Supporting departments (only for multi)
+      if (isMulti) {
+        selectedSupportingDepts.forEach((suppName, idx) => {
+          const suppDept = departments.find(
+            (d) => d.department_name === suppName,
+          );
+          const depNode = sequentialDependencies?.find(
+            (s) => s.department_name === suppName,
           );
           rows.push({
-            rowId: `row-extra-${idx}-${depNode.department_name}`,
-            department_id: dObj?.department_id || "",
-            department_name: depNode.department_name,
-            involvement_type:
-              depNode.involvement_type === "PRIMARY"
-                ? "PRIMARY"
-                : depNode.involvement_type === "EQUAL"
-                  ? "EQUAL"
-                  : "SUPPORT",
-            prerequisites: depNode.prerequisites || [],
-            sla_percent_allocation: depNode.sla_percent_allocation,
+            rowId: `row-supp-${idx}-${suppName}`,
+            department_id: suppDept?.department_id || "",
+            department_name: suppName,
+            involvement_type: "SUPPORT",
+            prerequisites: depNode?.prerequisites || [],
+            sla_percent_allocation: depNode?.sla_percent_allocation,
             allocated_duration_minutes:
-              depNode.allocated_duration_minutes ?? null,
+              depNode?.allocated_duration_minutes ?? null,
           });
-        }
-      });
+        });
+
+        // 3. Extra nodes in sequentialDependencies if any
+        sequentialDependencies?.forEach((depNode, idx) => {
+          const already = rows.some(
+            (r) => r.department_name === depNode.department_name,
+          );
+          if (!already && depNode.department_name) {
+            const dObj = departments.find(
+              (d) => d.department_name === depNode.department_name,
+            );
+            rows.push({
+              rowId: `row-extra-${idx}-${depNode.department_name}`,
+              department_id: dObj?.department_id || "",
+              department_name: depNode.department_name,
+              involvement_type:
+                depNode.involvement_type === "PRIMARY" ? "PRIMARY" : "SUPPORT",
+              prerequisites: depNode.prerequisites || [],
+              sla_percent_allocation: depNode.sla_percent_allocation,
+              allocated_duration_minutes:
+                depNode.allocated_duration_minutes ?? null,
+            });
+          }
+        });
+      }
 
       if (rows.length === 1 && rows[0].sla_percent_allocation == null) {
         rows[0].sla_percent_allocation = 100;
@@ -321,17 +373,137 @@ export function AdminRuleConfigModal({
     selectedSupportingDepts,
     sequentialDependencies,
     departments,
+    setSelectedDeptId,
   ]);
+
+  const handleSetRoutingScope = (scope: "SINGLE" | "MULTI") => {
+    setRoutingScope(scope);
+    if (scope === "SINGLE") {
+      const primary =
+        participatingRows.find((r) => r.involvement_type === "PRIMARY") ||
+        participatingRows[0];
+      const targetDeptId =
+        primary?.department_id || (departments[0]?.department_id ?? "");
+      const deptObj = departments.find((d) => d.department_id === targetDeptId);
+
+      setSelectedDeptId(targetDeptId);
+      setSelectedSupportingDepts([]);
+      const updated: ParticipatingDepartmentRow[] = targetDeptId
+        ? [
+            {
+              rowId: "row-single-primary",
+              department_id: targetDeptId,
+              department_name: deptObj?.department_name || "",
+              involvement_type: "PRIMARY",
+              prerequisites: [],
+              sla_percent_allocation: null,
+              allocated_duration_minutes: null,
+            },
+          ]
+        : [];
+      setParticipatingRows(updated);
+      if (setSequentialDependencies) {
+        setSequentialDependencies(
+          updated.map((r, idx) => ({
+            department_name: r.department_name,
+            execution_order: idx + 1,
+            stage: 1,
+            prerequisites: [],
+            involvement_type: "PRIMARY",
+            sla_percent_allocation: null,
+            allocated_duration_minutes: null,
+          })),
+        );
+      }
+    } else {
+      // MULTI scope:
+      // When user selects Multi-Department, do NOT auto-fill previous or fake departments.
+      // Clear out so user can choose their own departments cleanly from the right-side checklist!
+      syncRowsToParent([]);
+    }
+  };
+
+  const handleSingleDeptChange = (newDeptId: string) => {
+    setSelectedDeptId(newDeptId);
+    setSelectedSupportingDepts([]);
+    const deptObj = departments.find((d) => d.department_id === newDeptId);
+    const updated: ParticipatingDepartmentRow[] = newDeptId
+      ? [
+          {
+            rowId: "row-single-primary",
+            department_id: newDeptId,
+            department_name: deptObj?.department_name || "",
+            involvement_type: "PRIMARY",
+            prerequisites: [],
+            sla_percent_allocation: null,
+            allocated_duration_minutes: null,
+          },
+        ]
+      : [];
+    setParticipatingRows(updated);
+    if (setSequentialDependencies) {
+      setSequentialDependencies(
+        updated.map((r, idx) => ({
+          department_name: r.department_name,
+          execution_order: idx + 1,
+          stage: 1,
+          prerequisites: [],
+          involvement_type: "PRIMARY",
+          sla_percent_allocation: null,
+          allocated_duration_minutes: null,
+        })),
+      );
+    }
+  };
+
+  const handleMoveRow = (index: number, direction: "UP" | "DOWN") => {
+    const targetIndex = direction === "UP" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= participatingRows.length) return;
+    const updated = [...participatingRows];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    syncRowsToParent(updated);
+  };
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    index: number,
+  ) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    targetIndex: number,
+  ) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+    const updated = [...participatingRows];
+    const [removed] = updated.splice(draggedIndex, 1);
+    updated.splice(targetIndex, 0, removed);
+    setDraggedIndex(null);
+    syncRowsToParent(updated);
+  };
 
   const syncRowsToParent = (updatedRows: ParticipatingDepartmentRow[]) => {
     setParticipatingRows(updatedRows);
 
-    // Find the lead department (PRIMARY first, otherwise EQUAL, otherwise first row)
+    // Find the lead department (PRIMARY first, otherwise first row)
     const primaryRow = updatedRows.find(
       (r) => r.involvement_type === "PRIMARY",
     );
-    const equalRow = updatedRows.find((r) => r.involvement_type === "EQUAL");
-    const leadRow = primaryRow || equalRow || updatedRows[0];
+    const leadRow = primaryRow || updatedRows[0];
 
     if (leadRow) {
       setSelectedDeptId(leadRow.department_id);
@@ -360,44 +532,41 @@ export function AdminRuleConfigModal({
     }
   };
 
-  const handleDepartmentChange = (rowId: string, newDeptId: string) => {
-    const deptObj = departments.find((d) => d.department_id === newDeptId);
-    const oldRow = participatingRows.find((r) => r.rowId === rowId);
-    const oldDeptName = oldRow?.department_name;
-
-    const updated = participatingRows.map((r) => {
-      if (r.rowId === rowId) {
-        return {
+  const handleSelectDependencyType = (type: "PARALLEL" | "SEQUENTIAL") => {
+    setDependencyType?.(type);
+    if (type === "SEQUENTIAL") {
+      const currentSum = participatingRows.reduce(
+        (sum, r) => sum + (Number(r.sla_percent_allocation) || 0),
+        0,
+      );
+      if (Math.round(currentSum) !== 100 && participatingRows.length > 0) {
+        const count = participatingRows.length;
+        const baseShare = Math.floor(100 / count);
+        const remainder = 100 - baseShare * count;
+        const updated = participatingRows.map((r, idx) => ({
           ...r,
-          department_id: newDeptId,
-          department_name: deptObj?.department_name || "",
-          prerequisites: r.prerequisites.filter(
-            (p) => p !== deptObj?.department_name,
-          ),
-        };
+          sla_percent_allocation: idx === 0 ? baseShare + remainder : baseShare,
+        }));
+        syncRowsToParent(updated);
       }
-      if (oldDeptName && r.prerequisites.includes(oldDeptName)) {
-        return {
-          ...r,
-          prerequisites: r.prerequisites
-            .filter((p) => p !== oldDeptName)
-            .concat(deptObj ? [deptObj.department_name] : []),
-        };
-      }
-      return r;
-    });
-    syncRowsToParent(updated);
+    } else {
+      const updated = participatingRows.map((r) => ({
+        ...r,
+        sla_percent_allocation: null,
+      }));
+      syncRowsToParent(updated);
+    }
   };
 
   const handleInvolvementChange = (
     rowId: string,
-    newType: "PRIMARY" | "EQUAL" | "SUPPORT",
+    newType: "PRIMARY" | "SUPPORT",
   ) => {
     let updated = participatingRows.map((r) =>
       r.rowId === rowId ? { ...r, involvement_type: newType } : r,
     );
 
-    // If newType is PRIMARY, demote any other existing PRIMARY row to SUPPORT (only 1 lead allowed)
+    // If newType is PRIMARY, ensure no other row is PRIMARY (exactly 1 Primary Lead allowed)
     if (newType === "PRIMARY") {
       updated = updated.map((r) =>
         r.rowId !== rowId && r.involvement_type === "PRIMARY"
@@ -405,38 +574,9 @@ export function AdminRuleConfigModal({
           : r,
       );
     }
+    // If changed to SUPPORT, we do NOT automatically force any other department to become PRIMARY.
+    // The user has 100% manual control over selecting which department is Primary Lead.
 
-    syncRowsToParent(updated);
-  };
-
-  const handleAddDepartment = () => {
-    const availableDept = departments.find(
-      (d) =>
-        !participatingRows.some((r) => r.department_id === d.department_id),
-    );
-    const hasPrimary = participatingRows.some(
-      (r) => r.involvement_type === "PRIMARY",
-    );
-    const currentSum = participatingRows.reduce(
-      (sum, r) => sum + (Number(r.sla_percent_allocation) || 0),
-      0,
-    );
-    const remainingPct = Math.max(0, 100 - currentSum);
-
-    const newRow: ParticipatingDepartmentRow = {
-      rowId: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      department_id: availableDept?.department_id || "",
-      department_name: availableDept?.department_name || "",
-      involvement_type: hasPrimary ? "SUPPORT" : "PRIMARY",
-      prerequisites: [],
-      sla_percent_allocation: !hasPrimary
-        ? 100
-        : remainingPct > 0
-          ? remainingPct
-          : null,
-      allocated_duration_minutes: null,
-    };
-    const updated = [...participatingRows, newRow];
     syncRowsToParent(updated);
   };
 
@@ -446,11 +586,8 @@ export function AdminRuleConfigModal({
 
     let updated = participatingRows.filter((r) => r.rowId !== rowId);
 
-    if (removedRow?.involvement_type === "PRIMARY" && updated.length > 0) {
-      updated = updated.map((r, idx) =>
-        idx === 0 ? { ...r, involvement_type: "PRIMARY" as const } : r,
-      );
-    }
+    // If removed department was PRIMARY, do NOT force another row to become PRIMARY automatically.
+    // The user can freely choose which remaining department is Primary Lead.
 
     if (removedName) {
       updated = updated.map((r) => ({
@@ -459,45 +596,107 @@ export function AdminRuleConfigModal({
       }));
     }
 
-    if (updated.length === 1) {
+    if (updated.length === 1 && dependencyType === "SEQUENTIAL") {
       updated[0].sla_percent_allocation = 100;
     }
 
     syncRowsToParent(updated);
   };
 
-  const handleTogglePrerequisite = (rowId: string, prereqDeptName: string) => {
-    const updated = participatingRows.map((r) => {
-      if (r.rowId !== rowId) return r;
-      const exists = r.prerequisites.includes(prereqDeptName);
-      const newPrereqs = exists
-        ? r.prerequisites.filter((p) => p !== prereqDeptName)
-        : [...r.prerequisites, prereqDeptName];
-      return { ...r, prerequisites: newPrereqs };
-    });
-    syncRowsToParent(updated);
-  };
-
-  const handleLinearChain = () => {
-    const validRows = participatingRows.filter(
-      (r) => r.department_name.trim() !== "",
+  const handleToggleDeptInChecklist = (dept: {
+    department_id: string;
+    department_name: string;
+  }) => {
+    const existingIndex = participatingRows.findIndex(
+      (r) =>
+        r.department_id === dept.department_id ||
+        r.department_name.toLowerCase() === dept.department_name.toLowerCase(),
     );
-    const updated = participatingRows.map((r) => {
-      const idx = validRows.findIndex((vr) => vr.rowId === r.rowId);
-      if (idx <= 0) {
-        return { ...r, prerequisites: [] };
-      }
-      return { ...r, prerequisites: [validRows[idx - 1].department_name] };
-    });
-    syncRowsToParent(updated);
+
+    if (existingIndex !== -1) {
+      handleRemoveDepartment(participatingRows[existingIndex].rowId);
+    } else {
+      const hasPrimary = participatingRows.some(
+        (r) => r.involvement_type === "PRIMARY",
+      );
+      const currentSum = participatingRows.reduce(
+        (sum, r) => sum + (Number(r.sla_percent_allocation) || 0),
+        0,
+      );
+      const remainingPct = Math.max(0, 100 - currentSum);
+
+      const newRow: ParticipatingDepartmentRow = {
+        rowId: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        department_id: dept.department_id,
+        department_name: dept.department_name,
+        involvement_type: hasPrimary ? "SUPPORT" : "PRIMARY",
+        prerequisites: [],
+        sla_percent_allocation:
+          dependencyType === "PARALLEL"
+            ? null
+            : !hasPrimary
+              ? 100
+              : remainingPct > 0
+                ? remainingPct
+                : null,
+        allocated_duration_minutes: null,
+      };
+      const updated = [...participatingRows, newRow];
+      syncRowsToParent(updated);
+    }
   };
 
-  const handleMakeAllIndependent = () => {
-    const updated = participatingRows.map((r) => ({
-      ...r,
-      prerequisites: [],
-    }));
-    syncRowsToParent(updated);
+  const handleClearAll = () => {
+    syncRowsToParent([]);
+  };
+
+  const getDepartmentIcon = (name: string) => {
+    const lower = (name || "").toLowerCase();
+    if (lower.includes("complian"))
+      return <Shield className="h-4 w-4 text-sky-500" />;
+    if (
+      lower.includes("financ") ||
+      lower.includes("account") ||
+      lower.includes("bill")
+    )
+      return <DollarSign className="h-4 w-4 text-purple-500" />;
+    if (
+      lower.includes("hr") ||
+      lower.includes("human") ||
+      lower.includes("personnel")
+    )
+      return <Users className="h-4 w-4 text-indigo-500" />;
+    if (
+      lower.includes("it") ||
+      lower.includes("tech") ||
+      lower.includes("softwar")
+    )
+      return <Laptop className="h-4 w-4 text-cyan-500" />;
+    if (lower.includes("admin"))
+      return <Building2 className="h-4 w-4 text-purple-600" />;
+    if (
+      lower.includes("facilit") ||
+      lower.includes("estate") ||
+      lower.includes("maint")
+    )
+      return <Building className="h-4 w-4 text-blue-500" />;
+    if (
+      lower.includes("transport") ||
+      lower.includes("fleet") ||
+      lower.includes("vehic")
+    )
+      return <Truck className="h-4 w-4 text-teal-500" />;
+    if (lower.includes("legal") || lower.includes("law"))
+      return <Scale className="h-4 w-4 text-emerald-600" />;
+    if (
+      lower.includes("sec") ||
+      lower.includes("cyber") ||
+      lower.includes("crime")
+    )
+      return <ShieldAlert className="h-4 w-4 text-rose-500" />;
+    if (lower.includes("eng") || lower.includes("dev"))
+      return <Cpu className="h-4 w-4 text-blue-600" />;
+    return <Building className="h-4 w-4 text-slate-500" />;
   };
 
   const handleSlaPercentChange = (rowId: string, val: string) => {
@@ -506,90 +705,6 @@ export function AdminRuleConfigModal({
     const updated = participatingRows.map((r) =>
       r.rowId === rowId ? { ...r, sla_percent_allocation: parsed } : r,
     );
-    syncRowsToParent(updated);
-  };
-
-  const handleDurationMinutesChange = (rowId: string, val: string) => {
-    const trimmed = val.trim();
-    const parsed =
-      trimmed === "" ? null : Math.max(1, Number.parseInt(trimmed, 10));
-    const updated = participatingRows.map((r) =>
-      r.rowId === rowId
-        ? {
-            ...r,
-            allocated_duration_minutes:
-              parsed === null || Number.isNaN(parsed) ? null : parsed,
-          }
-        : r,
-    );
-    syncRowsToParent(updated);
-  };
-
-  const handleSplitEqually = () => {
-    if (participatingRows.length === 0) return;
-    const count = participatingRows.length;
-    const base = Math.floor(100 / count);
-    const remainder = 100 - base * count;
-    const updated = participatingRows.map((r, idx) => ({
-      ...r,
-      sla_percent_allocation: base + (idx < remainder ? 1 : 0),
-      allocated_duration_minutes: r.allocated_duration_minutes ?? null,
-    }));
-    syncRowsToParent(updated);
-  };
-
-  const handleAutoBalance = () => {
-    if (participatingRows.length === 0) return;
-    if (participatingRows.length === 1) {
-      syncRowsToParent([
-        {
-          ...participatingRows[0],
-          sla_percent_allocation: 100,
-          allocated_duration_minutes:
-            participatingRows[0].allocated_duration_minutes ?? null,
-        },
-      ]);
-      return;
-    }
-    const allExceptLast = participatingRows.slice(0, -1);
-    const sumExceptLast = allExceptLast.reduce(
-      (acc, r) => acc + (Number(r.sla_percent_allocation) || 0),
-      0,
-    );
-    const lastRowRemaining = Math.max(0, 100 - sumExceptLast);
-    const updated = [
-      ...allExceptLast,
-      {
-        ...participatingRows[participatingRows.length - 1],
-        sla_percent_allocation: lastRowRemaining,
-        allocated_duration_minutes:
-          participatingRows[participatingRows.length - 1]
-            .allocated_duration_minutes ?? null,
-      },
-    ];
-    syncRowsToParent(updated);
-  };
-
-  const handleStaggeredParallel = () => {
-    if (participatingRows.length === 0) return;
-    const updated = participatingRows.map((r) => ({
-      ...r,
-      sla_percent_allocation:
-        r.involvement_type === "PRIMARY" || r.involvement_type === "EQUAL"
-          ? 100
-          : 50,
-      allocated_duration_minutes: r.allocated_duration_minutes ?? null,
-    }));
-    syncRowsToParent(updated);
-  };
-
-  const handleFullConcurrent = () => {
-    if (participatingRows.length === 0) return;
-    const updated = participatingRows.map((r) => ({
-      ...r,
-      sla_percent_allocation: 100,
-      allocated_duration_minutes: r.allocated_duration_minutes ?? null,
-    }));
     syncRowsToParent(updated);
   };
 
@@ -616,67 +731,11 @@ export function AdminRuleConfigModal({
     });
   };
 
-  // Topological sorting derivation & validation
-  const activeNodesForTopologicalSort: DepartmentDependencyNode[] =
-    useMemo(() => {
-      return participatingRows
-        .filter((r) => r.department_name.trim() !== "")
-        .map((r, idx) => ({
-          department_name: r.department_name,
-          execution_order: idx + 1,
-          stage: 1,
-          prerequisites: r.prerequisites || [],
-          involvement_type: r.involvement_type,
-          sla_percent_allocation: r.sla_percent_allocation,
-          allocated_duration_minutes: r.allocated_duration_minutes ?? null,
-        }));
-    }, [participatingRows]);
-
-  const hasLeadOrEqualOwner = useMemo(() => {
-    if (participatingRows.length === 0) return true;
-    return participatingRows.some(
-      (r) => r.involvement_type === "PRIMARY" || r.involvement_type === "EQUAL",
-    );
-  }, [participatingRows]);
-
-  const topologicalResult = useMemo(() => {
-    const primaryRow = participatingRows.find(
-      (r) => r.involvement_type === "PRIMARY",
-    );
-    const equalRow = participatingRows.find(
-      (r) => r.involvement_type === "EQUAL",
-    );
-    const leadRow = primaryRow || equalRow;
-    const nonLeadRows = participatingRows.filter(
-      (r) => r !== leadRow && r.department_name.trim() !== "",
-    );
-
-    return validateRoutingPolicy({
-      primary_department_name: leadRow?.department_name || undefined,
-      primary_department_id: leadRow?.department_id || undefined,
-      supporting_departments: nonLeadRows.map((r) => r.department_name),
-      dependency_type: "SEQUENTIAL",
-      dependencies: activeNodesForTopologicalSort,
-    });
-  }, [participatingRows, activeNodesForTopologicalSort]);
-
-  // Group derived order by stage
-  const stagesGrouped = useMemo(() => {
-    const map = new Map<number, DerivedOrderNode[]>();
-    for (const item of topologicalResult.derivedOrder || []) {
-      const st = item.stage ?? 1;
-      const arr = map.get(st) || [];
-      arr.push(item);
-      map.set(st, arr);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a - b);
-  }, [topologicalResult]);
-
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl">
+      <div className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-2xl transition-all duration-200">
         <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -745,31 +804,31 @@ export function AdminRuleConfigModal({
         </div>
 
         <form onSubmit={onSubmit} className="mt-4 space-y-4 text-xs">
-          <div>
-            <label
-              htmlFor="rule-name-input"
-              className="block font-semibold text-slate-700"
-            >
-              Policy Rule Name *
-            </label>
-            <input
-              id="rule-name-input"
-              type="text"
-              required
-              placeholder={
-                modalRuleType === "priority"
-                  ? "e.g. Critical Safety Escalation"
-                  : modalRuleType === "routing"
-                    ? "e.g. Salary & Pay Primary Routing"
+          {modalRuleType !== "routing" && (
+            <div>
+              <label
+                htmlFor="rule-name-input"
+                className="block font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Policy Rule Name *
+              </label>
+              <input
+                id="rule-name-input"
+                type="text"
+                required
+                placeholder={
+                  modalRuleType === "priority"
+                    ? "e.g. Critical Safety Escalation"
                     : modalRuleType === "sla"
                       ? "e.g. High Priority Resolution SLA"
                       : "e.g. Standard 72hr Reopen Policy"
-              }
-              value={ruleName}
-              onChange={(e) => setRuleName(e.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-            />
-          </div>
+                }
+                value={ruleName}
+                onChange={(e) => setRuleName(e.target.value)}
+                className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-emerald-600"
+              />
+            </div>
+          )}
 
           {modalRuleType === "priority" && (
             <div className="space-y-4">
@@ -972,748 +1031,869 @@ export function AdminRuleConfigModal({
 
           {modalRuleType === "routing" && (
             <div className="space-y-4">
-              {/* Rule-Level Execution Mode Selector */}
-              <div className="space-y-1.5">
-                <span className="block font-semibold text-slate-700 dark:text-slate-200 text-xs">
-                  Rule Execution Mode *
-                </span>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setDependencyType?.("PARALLEL")}
-                    className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer ${
-                      dependencyType === "PARALLEL"
-                        ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
-                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
-                  >
-                    <span className="text-xs font-bold flex items-center gap-1.5">
-                      ⚡ Parallel (Concurrent)
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1 leading-snug">
-                      All participating departments activate simultaneously upon
-                      assignment.
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setDependencyType?.("SEQUENTIAL")}
-                    className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer ${
-                      dependencyType === "SEQUENTIAL"
-                        ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
-                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
-                  >
-                    <span className="text-xs font-bold flex items-center gap-1.5">
-                      ⛓️ Sequential (Dependency-Driven)
-                    </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1 leading-snug">
-                      Departments activate only after configured prerequisite
-                      departments resolve.
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 1: Policy Rule Name (Left) + Department Routing Scope (Right) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label
-                    htmlFor="routing-cat-select"
-                    className="block font-semibold text-slate-700"
+                    htmlFor="rule-name-input"
+                    className="block font-semibold text-slate-700 dark:text-slate-200 text-xs"
                   >
-                    Category Scope *
+                    Policy Rule Name *
                   </label>
-                  {selectedCatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom category name"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        required
-                        className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCatId("")}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <select
-                      id="routing-cat-select"
-                      value={selectedCatId}
-                      required
-                      onChange={(e) => {
-                        setSelectedCatId(e.target.value);
-                        setSelectedRoutingSubcatId("");
-                      }}
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                    >
-                      <option value="">-- Select Category --</option>
-                      {categories.map((c) => (
-                        <option key={c.category_id} value={c.category_id}>
-                          {c.category_name}
-                        </option>
-                      ))}
-                      <option value="CUSTOM">Custom (Add New)</option>
-                    </select>
-                  )}
+                  <input
+                    id="rule-name-input"
+                    type="text"
+                    required
+                    placeholder="e.g. Expense Reimbursement Routing"
+                    value={ruleName}
+                    onChange={(e) => setRuleName(e.target.value)}
+                    className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none transition focus:border-teal-600"
+                  />
                 </div>
 
-                <div>
+                <div className="space-y-1">
                   <label
-                    htmlFor="routing-subcat-select"
-                    className="block font-semibold text-slate-700"
+                    htmlFor="routing-scope-select"
+                    className="block font-semibold text-slate-700 dark:text-slate-200 text-xs"
                   >
-                    Subcategory Scope *
+                    Department Routing Scope *
                   </label>
-                  {selectedRoutingSubcatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom subcategory name"
-                        value={newSubcategoryName}
-                        onChange={(e) => setNewSubcategoryName(e.target.value)}
-                        required
-                        className="h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRoutingSubcatId("")}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <select
-                      id="routing-subcat-select"
-                      value={selectedRoutingSubcatId}
-                      disabled={!selectedCatId}
-                      required
-                      onChange={(e) =>
-                        setSelectedRoutingSubcatId(e.target.value)
+                  <Select
+                    value={routingScope}
+                    onValueChange={(val) => {
+                      if (val === "SINGLE" || val === "MULTI") {
+                        handleSetRoutingScope(val);
                       }
-                      className="mt-1 h-9 w-full rounded-xl border border-slate-200 px-3 text-xs text-slate-800 outline-none transition focus:border-emerald-600"
+                    }}
+                  >
+                    <SelectTrigger
+                      id="routing-scope-select"
+                      className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-100 focus:border-teal-600 font-medium"
                     >
-                      <option value="">-- Select Subcategory --</option>
-                      {categories
-                        .find((c) => c.category_id === selectedCatId)
-                        ?.subcategories?.map((s) => (
-                          <option
-                            key={s.subcategory_id}
-                            value={s.subcategory_id}
-                          >
-                            {s.subcategory_name}
-                          </option>
-                        ))}
-                      {selectedCatId && (
-                        <option value="CUSTOM">Custom (Add New)</option>
-                      )}
-                    </select>
-                  )}
+                      <SelectValue placeholder="Select Scope">
+                        {routingScope === "SINGLE"
+                          ? "Single Department (Handled end-to-end by 1 department)"
+                          : "Multi-Department (Sequential or Parallel Collaboration)"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
+                      <SelectItem
+                        value="SINGLE"
+                        className="text-xs cursor-pointer"
+                      >
+                        Single Department (Handled end-to-end by 1 department)
+                      </SelectItem>
+                      <SelectItem
+                        value="MULTI"
+                        className="text-xs cursor-pointer"
+                      >
+                        Multi-Department (Sequential or Parallel Collaboration)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {routingScope === "SINGLE"
+                      ? "Grievance is handled and resolved end-to-end by one designated department."
+                      : "Multiple departments collaborate sequentially or concurrently on resolution."}
+                  </p>
                 </div>
               </div>
 
-              {/* 3. Repeatable Participating Department Cards */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs">
-                      Participating Departments & Involvement Roles
+              {/* Row 2: Rule Execution Mode (Left, if MULTI) + Category/Subcategory Scope (Right) */}
+              <div
+                className={`grid grid-cols-1 ${
+                  routingScope === "MULTI" ? "md:grid-cols-2" : "grid-cols-1"
+                } gap-4 items-start`}
+              >
+                {routingScope === "MULTI" && (
+                  <div className="space-y-1.5">
+                    <span className="block font-semibold text-slate-700 dark:text-slate-200 text-xs">
+                      Rule Execution Mode *
                     </span>
-                    <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                      {participatingRows.length} department
-                      {participatingRows.length !== 1 ? "s" : ""}
-                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDependencyType("PARALLEL")}
+                        className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                          dependencyType === "PARALLEL"
+                            ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
+                            : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-bold flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                            <Zap className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                            <span className="text-slate-800 dark:text-slate-100">
+                              Parallel (Concurrent)
+                            </span>
+                          </span>
+                          <span
+                            className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                              dependencyType === "PARALLEL"
+                                ? "border-teal-600 bg-teal-600 text-white"
+                                : "border-slate-300 dark:border-slate-600"
+                            }`}
+                          >
+                            {dependencyType === "PARALLEL" && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                            )}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1.5 leading-snug">
+                          All participating departments activate simultaneously
+                          upon assignment.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDependencyType("SEQUENTIAL")}
+                        className={`flex flex-col p-3 rounded-xl border text-left transition cursor-pointer relative ${
+                          dependencyType === "SEQUENTIAL"
+                            ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-500 dark:border-teal-400 text-teal-900 dark:text-teal-200 font-semibold shadow-xs"
+                            : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-bold flex items-center gap-1.5 text-teal-600 dark:text-teal-400">
+                            <GitMerge className="h-3.5 w-3.5" />
+                            <span className="text-slate-800 dark:text-slate-100">
+                              Sequential (Dependency-Driven)
+                            </span>
+                          </span>
+                          <span
+                            className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                              dependencyType === "SEQUENTIAL"
+                                ? "border-teal-600 bg-teal-600 text-white"
+                                : "border-slate-300 dark:border-slate-600"
+                            }`}
+                          >
+                            {dependencyType === "SEQUENTIAL" && (
+                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                            )}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-1.5 leading-snug">
+                          Departments activate in mandatory sequence order with
+                          prerequisite dependencies.
+                        </span>
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <button
-                    type="button"
-                    onClick={handleAddDepartment}
-                    disabled={
-                      participatingRows.length >= departments.length &&
-                      departments.length > 0
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-300 dark:border-teal-700 px-2.5 py-1 text-xs font-semibold text-teal-800 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/60 transition disabled:opacity-50 cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Department</span>
-                  </button>
-                </div>
-
-                {participatingRows.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center space-y-3 bg-slate-50/50 dark:bg-slate-900/40">
-                    <div className="h-10 w-10 mx-auto rounded-full bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 flex items-center justify-center text-teal-700 dark:text-teal-300">
-                      <Plus className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        No Departments Added Yet
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                        Click &quot;Add Department&quot; above to select
-                        participating departments and configure sequential
-                        dependencies &amp; SLA allocations.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddDepartment}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 px-3.5 py-1.5 text-xs font-semibold text-white transition cursor-pointer shadow-xs"
+                {/* Category & Subcategory */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="routing-cat-select"
+                      className="block font-semibold text-slate-700 dark:text-slate-200 text-xs"
                     >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add Department</span>
-                    </button>
+                      Category Scope *
+                    </label>
+                    {selectedCatId === "CUSTOM" ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom category name"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          required
+                          className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCatId("")}
+                          className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={selectedCatId || ""}
+                        onValueChange={(val) => {
+                          if (val) {
+                            setSelectedCatId(val);
+                            setSelectedRoutingSubcatId("");
+                          }
+                        }}
+                      >
+                        <SelectTrigger
+                          id="routing-cat-select"
+                          className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
+                        >
+                          <SelectValue placeholder="-- Select Category --">
+                            {categories.find(
+                              (c) => c.category_id === selectedCatId,
+                            )?.category_name || (
+                              <span className="text-slate-400">
+                                -- Select Category --
+                              </span>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                          {categories.map((c) => (
+                            <SelectItem
+                              key={c.category_id}
+                              value={c.category_id}
+                              className="text-xs cursor-pointer"
+                            >
+                              {c.category_name}
+                            </SelectItem>
+                          ))}
+                          <SelectItem
+                            value="CUSTOM"
+                            className="text-xs font-semibold text-teal-600 dark:text-teal-400 cursor-pointer"
+                          >
+                            + Custom (Add New)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    {/* SLA Allocation Tracker */}
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 p-3 space-y-2.5">
+
+                  <div>
+                    <label
+                      htmlFor="routing-subcat-select"
+                      className="block font-semibold text-slate-700 dark:text-slate-200 text-xs"
+                    >
+                      Subcategory Scope *
+                    </label>
+                    {selectedRoutingSubcatId === "CUSTOM" ? (
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom subcategory name"
+                          value={newSubcategoryName}
+                          onChange={(e) =>
+                            setNewSubcategoryName(e.target.value)
+                          }
+                          required
+                          className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRoutingSubcatId("")}
+                          className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <Select
+                        value={selectedRoutingSubcatId || ""}
+                        disabled={!selectedCatId}
+                        onValueChange={(val) => {
+                          if (val) setSelectedRoutingSubcatId(val);
+                        }}
+                      >
+                        <SelectTrigger
+                          id="routing-subcat-select"
+                          className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium disabled:opacity-50"
+                        >
+                          <SelectValue placeholder="-- Select Subcategory --">
+                            {categories
+                              .find((c) => c.category_id === selectedCatId)
+                              ?.subcategories?.find(
+                                (s) =>
+                                  s.subcategory_id === selectedRoutingSubcatId,
+                              )?.subcategory_name || (
+                              <span className="text-slate-400">
+                                Select Subcategory
+                              </span>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                          {categories
+                            .find((c) => c.category_id === selectedCatId)
+                            ?.subcategories?.map((s) => (
+                              <SelectItem
+                                key={s.subcategory_id}
+                                value={s.subcategory_id}
+                                className="text-xs cursor-pointer"
+                              >
+                                {s.subcategory_name}
+                              </SelectItem>
+                            ))}
+                          {selectedCatId && (
+                            <SelectItem
+                              value="CUSTOM"
+                              className="text-xs font-semibold text-teal-600 dark:text-teal-400 cursor-pointer"
+                            >
+                              + Custom (Add New)
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Single Department Assignment */}
+              {routingScope === "SINGLE" ? (
+                <div className="space-y-2 p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
+                  <label
+                    htmlFor="single-dept-select"
+                    className="block text-xs font-semibold text-slate-700 dark:text-slate-300"
+                  >
+                    Assigned Department *
+                  </label>
+                  <Select
+                    value={selectedDeptId || ""}
+                    onValueChange={(val) => {
+                      if (val) handleSingleDeptChange(val);
+                    }}
+                  >
+                    <SelectTrigger
+                      id="single-dept-select"
+                      className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
+                    >
+                      <SelectValue placeholder="-- Select Department --">
+                        {departments.find(
+                          (d) => d.department_id === selectedDeptId,
+                        )?.department_name || (
+                          <span className="text-slate-400">
+                            -- Select Department --
+                          </span>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                      {departments.map((d) => (
+                        <SelectItem
+                          key={d.department_id}
+                          value={d.department_id}
+                          className="text-xs cursor-pointer"
+                        >
+                          {d.department_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    All grievances matching this category and subcategory route
+                    directly to this single department for full end-to-end
+                    resolution.
+                  </p>
+                </div>
+              ) : (
+                /* 4. Multi-Department Configuration (2-Column Board Layout matching Image 2) */
+                <div className="flex flex-col lg:flex-row gap-4 items-start">
+                  {/* Left Column: Department Workflow Board & Workflow Preview */}
+                  <div className="flex-1 min-w-0 space-y-4 w-full">
+                    {/* A. Department Workflow Board */}
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-4 space-y-4">
+                      {/* Header */}
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {dependencyType === "PARALLEL"
-                              ? "Parallel SLA Tracker (Concurrent Milestones per Department)"
-                              : "SLA Allocation Tracker (Total must be 100%)"}
-                          </span>
-                          {dependencyType === "PARALLEL" ? (
-                            participatingRows.every(
-                              (r) =>
-                                Number(r.sla_percent_allocation) > 0 &&
-                                Number(r.sla_percent_allocation) <= 100,
-                            ) ? (
-                              <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                                ✓ Concurrent Milestones Configured
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
-                                ⚠ Set 1–100% per department
-                              </span>
-                            )
-                          ) : Math.round(totalConfiguredPercent) === 100 ? (
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                              ✓ Total: 100% (Balanced)
-                            </span>
-                          ) : totalConfiguredPercent > 100 ? (
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 dark:text-rose-300">
-                              ✕ Total: {totalConfiguredPercent}% (
-                              {totalConfiguredPercent - 100}% over limit)
-                            </span>
+                          <div className="p-1.5 rounded-lg bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                            <GripVertical className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              Department Workflow
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              Select departments and arrange them in the
+                              execution order. Configure SLA and role for each
+                              department.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {!showDeptSidebar && (
+                            <button
+                              type="button"
+                              onClick={() => setShowDeptSidebar(true)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-teal-500 dark:border-teal-400 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition cursor-pointer"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Add Departments</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleClearAll}
+                            disabled={participatingRows.length === 0}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition disabled:opacity-40 cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Clear All</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Workflow Horizontal Pipeline Cards */}
+                      {participatingRows.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center space-y-2 bg-white dark:bg-slate-800/40">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            No departments added to workflow
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            Select departments from the right list to add them
+                            here.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-stretch gap-3 overflow-x-auto pb-3 pt-1 scrollbar-thin">
+                          {participatingRows.map((row, index) => {
+                            const isPrimary =
+                              row.involvement_type === "PRIMARY";
+                            const isFirst = index === 0;
+                            const isLast =
+                              index === participatingRows.length - 1;
+
+                            return (
+                              <div
+                                key={row.rowId}
+                                className="flex items-center shrink-0"
+                              >
+                                {/* Department Card */}
+                                {/* biome-ignore lint/a11y/noStaticElementInteractions: drag-and-drop container card */}
+                                <div
+                                  draggable={dependencyType === "SEQUENTIAL"}
+                                  onDragStart={(e) =>
+                                    dependencyType === "SEQUENTIAL" &&
+                                    handleDragStart(e, index)
+                                  }
+                                  onDragOver={
+                                    dependencyType === "SEQUENTIAL"
+                                      ? handleDragOver
+                                      : undefined
+                                  }
+                                  onDrop={(e) =>
+                                    dependencyType === "SEQUENTIAL" &&
+                                    handleDrop(e, index)
+                                  }
+                                  onDragEnd={() => setDraggedIndex(null)}
+                                  className={`w-64 rounded-xl border bg-white dark:bg-slate-800/95 p-3.5 shadow-2xs space-y-3 transition-all ${
+                                    draggedIndex === index
+                                      ? "opacity-40 border-teal-500 scale-[0.98]"
+                                      : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                                  }`}
+                                >
+                                  {/* Card Header */}
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {/* Sequential shows step number; Parallel shows Zap icon */}
+                                      {dependencyType === "SEQUENTIAL" ? (
+                                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-xs">
+                                          {index + 1}
+                                        </div>
+                                      ) : (
+                                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                                          <Zap className="h-3 w-3" />
+                                        </div>
+                                      )}
+
+                                      {/* shadcn UI Role Dropdown Selector */}
+                                      <Select
+                                        value={row.involvement_type}
+                                        onValueChange={(val) => {
+                                          if (
+                                            val === "PRIMARY" ||
+                                            val === "SUPPORT"
+                                          ) {
+                                            handleInvolvementChange(
+                                              row.rowId,
+                                              val,
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <SelectTrigger
+                                          size="sm"
+                                          aria-label="Department Role"
+                                          className={`h-6 rounded-full px-2.5 py-0 text-[10px] font-bold border transition cursor-pointer gap-1 [&_svg]:size-2.5 ${
+                                            isPrimary
+                                              ? "bg-emerald-50 dark:bg-emerald-950/70 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100"
+                                              : "bg-sky-50 dark:bg-sky-950/70 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 hover:bg-sky-100"
+                                          }`}
+                                        >
+                                          <SelectValue>
+                                            {isPrimary
+                                              ? "Primary Lead"
+                                              : "Supporting"}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent
+                                          align="start"
+                                          className="z-50 min-w-32 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-xl text-xs"
+                                        >
+                                          <SelectItem
+                                            value="PRIMARY"
+                                            className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 rounded-lg cursor-pointer"
+                                          >
+                                            Primary Lead
+                                          </SelectItem>
+                                          <SelectItem
+                                            value="SUPPORT"
+                                            className="text-xs font-semibold text-sky-700 dark:text-sky-300 rounded-lg cursor-pointer"
+                                          >
+                                            Supporting
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Controls: Reorder arrows (Sequential only) & Trash */}
+                                    <div className="flex items-center gap-0.5">
+                                      {dependencyType === "SEQUENTIAL" &&
+                                        participatingRows.length > 1 && (
+                                          <>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleMoveRow(index, "UP")
+                                              }
+                                              disabled={isFirst}
+                                              className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-20 cursor-pointer"
+                                              title="Move earlier in sequence"
+                                            >
+                                              <ArrowLeft className="h-3 w-3" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                handleMoveRow(index, "DOWN")
+                                              }
+                                              disabled={isLast}
+                                              className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-20 cursor-pointer"
+                                              title="Move later in sequence"
+                                            >
+                                              <ArrowRight className="h-3 w-3" />
+                                            </button>
+                                          </>
+                                        )}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleRemoveDepartment(row.rowId)
+                                        }
+                                        className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition cursor-pointer"
+                                        title="Remove from workflow"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Department Name & Icon */}
+                                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+                                    <div className="p-1 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700/50">
+                                      {getDepartmentIcon(row.department_name)}
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                                      {row.department_name ||
+                                        "Select Department"}
+                                    </span>
+                                  </div>
+
+                                  {/* SLA Share input (only for SEQUENTIAL) */}
+                                  {dependencyType === "SEQUENTIAL" && (
+                                    <div className="space-y-1 pt-1">
+                                      <label
+                                        htmlFor={`sla-share-${row.rowId}`}
+                                        className="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1"
+                                      >
+                                        SLA Share (%) *
+                                      </label>
+                                      <div className="relative">
+                                        <input
+                                          id={`sla-share-${row.rowId}`}
+                                          type="number"
+                                          min="1"
+                                          max="100"
+                                          step="any"
+                                          value={
+                                            row.sla_percent_allocation ?? ""
+                                          }
+                                          onChange={(e) =>
+                                            handleSlaPercentChange(
+                                              row.rowId,
+                                              e.target.value,
+                                            )
+                                          }
+                                          placeholder="e.g. 50"
+                                          className="h-8 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-2.5 pr-7 text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none transition focus:border-teal-600 focus:bg-white"
+                                        />
+                                        <span className="absolute right-2 top-2 text-[10px] text-slate-400 font-bold">
+                                          %
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Inter-card Arrow: SEQUENTIAL mode only */}
+                                {dependencyType === "SEQUENTIAL" && !isLast && (
+                                  <div className="flex items-center justify-center px-2 text-slate-400 dark:text-slate-500">
+                                    <ArrowRight className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* B. Workflow Preview Card */}
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3.5 shadow-xs">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400">
+                            <Eye className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              Workflow Preview
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                              {dependencyType === "SEQUENTIAL"
+                                ? "Visual representation of execution order and SLA allocation."
+                                : "Visual representation of simultaneous multi-department activation."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {dependencyType === "SEQUENTIAL" ? (
+                            <>
+                              {Math.abs(totalConfiguredPercent - 100) < 0.01 ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                  <span>
+                                    Total SLA Allocation: 100% (Balanced)
+                                  </span>
+                                </span>
+                              ) : totalConfiguredPercent > 100 ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-3 py-1 text-[11px] font-bold text-rose-700 dark:text-rose-300">
+                                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                                  <span>
+                                    ✕ SLA Exceeded: {totalConfiguredPercent}%
+                                    (Exceeds 100% by{" "}
+                                    {Number(
+                                      (totalConfiguredPercent - 100).toFixed(2),
+                                    )}
+                                    %)
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-3 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                                  <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                                  <span>
+                                    ⚠ Total SLA: {totalConfiguredPercent}% (
+                                    {Number(
+                                      (100 - totalConfiguredPercent).toFixed(2),
+                                    )}
+                                    % remaining)
+                                  </span>
+                                </span>
+                              )}
+                            </>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 dark:bg-amber-950/70 border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
-                              ⚠ Total: {totalConfiguredPercent}% (
-                              {100 - totalConfiguredPercent}% unallocated)
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-800 px-3 py-1 text-[11px] font-bold text-sky-700 dark:text-sky-300">
+                              <Zap className="h-3.5 w-3.5 text-sky-600" />
+                              <span>
+                                Parallel Execution (Simultaneous Activation)
+                              </span>
                             </span>
                           )}
                         </div>
+                      </div>
 
-                        {participatingRows.length > 1 && (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {dependencyType === "PARALLEL" ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={handleStaggeredParallel}
-                                  className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
-                                  title="Primary Lead gets 100% resolution window; Supporting depts get 50% investigation milestone"
-                                >
-                                  ⚡ Staggered (100% Lead · 50% Support)
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleFullConcurrent}
-                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
-                                  title="All departments get 100% concurrent window"
-                                >
-                                  100% Each
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSplitEqually}
-                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
-                                >
-                                  Split Equally
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={handleSplitEqually}
-                                  className="rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition cursor-pointer"
-                                >
-                                  Split Equally
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleAutoBalance}
-                                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600 transition cursor-pointer"
-                                >
-                                  Balance to 100%
-                                </button>
-                              </>
-                            )}
+                      {/* Visual Pipeline Nodes */}
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 p-3 overflow-x-auto">
+                        {participatingRows.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">
+                            No departments configured yet.
+                          </p>
+                        ) : dependencyType === "SEQUENTIAL" ? (
+                          /* Sequential Pipeline: Step-by-step with sequence arrows */
+                          <div className="flex items-center gap-3 min-w-max py-1">
+                            {participatingRows.map((r, i) => (
+                              <div
+                                key={r.rowId}
+                                className="flex items-center gap-3"
+                              >
+                                <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-2xs">
+                                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
+                                    {i + 1}
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
+                                      {r.department_name || "Unassigned"}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                      SLA: {r.sla_percent_allocation ?? 0}%
+                                    </span>
+                                  </div>
+                                </div>
+                                {i < participatingRows.length - 1 && (
+                                  <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          /* Parallel Pipeline: Concurrent group, NO sequence arrows */
+                          <div className="flex items-center gap-2 flex-wrap py-1">
+                            {participatingRows.map((r) => (
+                              <div
+                                key={r.rowId}
+                                className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-2xs"
+                              >
+                                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                  <Zap className="h-3 w-3" />
+                                </div>
+                                <div>
+                                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
+                                    {r.department_name || "Unassigned"}
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-teal-600 dark:text-teal-400">
+                                    {r.involvement_type === "PRIMARY"
+                                      ? "Primary Lead"
+                                      : "Supporting"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
-
-                      {dependencyType === "SEQUENTIAL" && (
-                        <div className="w-full bg-slate-100 dark:bg-slate-700/60 h-2 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-300 ${
-                              Math.round(totalConfiguredPercent) === 100
-                                ? "bg-emerald-500"
-                                : totalConfiguredPercent > 100
-                                  ? "bg-rose-500"
-                                  : "bg-amber-500"
-                            }`}
-                            style={{
-                              width: `${Math.min(100, Math.max(0, totalConfiguredPercent))}%`,
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {dependencyType === "PARALLEL"
-                          ? "In Parallel mode, all departments activate concurrently. Lead/Equal departments can have up to 100% resolution window while supporting departments have concurrent milestones (e.g. 50% for findings handover)."
-                          : "Each participating department receives a percentage share of the grievance's overall SLA window. Total allocation across all departments must equal strictly 100%. Resolution durations are calculated dynamically at runtime according to the grievance's Priority SLA Policy."}
-                      </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-3">
-                      {participatingRows.map((row, index) => {
-                        const candidateDepts = participatingRows.filter(
-                          (other) =>
-                            other.rowId !== row.rowId &&
-                            other.department_name.trim() !== "",
-                        );
+                  {/* Right Column: "Select Departments" Checklist Panel */}
+                  {showDeptSidebar && (
+                    <div className="w-full lg:w-72 xl:w-80 shrink-0 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col space-y-3 shadow-xs">
+                      {/* Top title & close */}
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            Select Departments
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Choose departments to include in this policy.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowDeptSidebar(false)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                          title="Close sidebar"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
 
-                        return (
-                          <div
-                            key={row.rowId}
-                            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-3.5 space-y-3"
-                          >
-                            {/* Header of Department Card */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
-                                  Department #{index + 1}
-                                </span>
-                                {row.involvement_type === "PRIMARY" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-700/60 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    PRIMARY LEAD
-                                  </span>
-                                ) : row.involvement_type === "EQUAL" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-950/70 border border-purple-300 dark:border-purple-700/60 px-2 py-0.5 text-[10px] font-bold text-purple-800 dark:text-purple-300">
-                                    ⚖ EQUAL CO-OWNER
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 dark:bg-sky-950/70 border border-sky-300 dark:border-sky-700/60 px-2 py-0.5 text-[10px] font-bold text-sky-800 dark:text-sky-300">
-                                    SUPPORTING
-                                  </span>
-                                )}
-                              </div>
+                      {/* Search Input */}
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search departments..."
+                          value={deptSearchQuery}
+                          onChange={(e) => setDeptSearchQuery(e.target.value)}
+                          className="h-8.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/70 pl-8 pr-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600 focus:bg-white dark:focus:bg-slate-800"
+                        />
+                      </div>
 
+                      {/* Department Checklist List */}
+                      <div className="max-h-95 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+                        {filteredDepartments.length === 0 ? (
+                          <p className="text-xs text-slate-400 text-center py-4">
+                            No matching departments found
+                          </p>
+                        ) : (
+                          filteredDepartments.map((d) => {
+                            const isSelected = participatingRows.some(
+                              (r) =>
+                                r.department_id === d.department_id ||
+                                r.department_name.toLowerCase() ===
+                                  d.department_name.toLowerCase(),
+                            );
+
+                            return (
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleRemoveDepartment(row.rowId)
-                                }
-                                disabled={participatingRows.length <= 1}
-                                className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 cursor-pointer"
-                                title={
-                                  participatingRows.length <= 1
-                                    ? "At least one department is required"
-                                    : "Remove department"
-                                }
+                                key={d.department_id}
+                                onClick={() => handleToggleDeptInChecklist(d)}
+                                className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition cursor-pointer ${
+                                  isSelected
+                                    ? "border-teal-200 dark:border-teal-800 bg-teal-50/40 dark:bg-teal-950/30"
+                                    : "border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                }`}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-
-                            {/* Fields: Department & Involvement Type */}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label
-                                  htmlFor={`dept-select-${row.rowId}`}
-                                  className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300"
-                                >
-                                  Department *
-                                </label>
-                                <select
-                                  id={`dept-select-${row.rowId}`}
-                                  value={row.department_id}
-                                  required
-                                  onChange={(e) =>
-                                    handleDepartmentChange(
-                                      row.rowId,
-                                      e.target.value,
-                                    )
-                                  }
-                                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                                >
-                                  <option value="">
-                                    -- Select Department --
-                                  </option>
-                                  {departments.map((d) => {
-                                    const isAlready = participatingRows.some(
-                                      (other) =>
-                                        other.rowId !== row.rowId &&
-                                        other.department_id === d.department_id,
-                                    );
-                                    return (
-                                      <option
-                                        key={d.department_id}
-                                        value={d.department_id}
-                                        disabled={isAlready}
-                                      >
-                                        {d.department_name}
-                                        {isAlready ? " (already selected)" : ""}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                              </div>
-
-                              <div>
-                                <label
-                                  htmlFor={`involvement-select-${row.rowId}`}
-                                  className="block text-[11px] font-semibold text-slate-700 dark:text-slate-300"
-                                >
-                                  Involvement Role *
-                                </label>
-                                <select
-                                  id={`involvement-select-${row.rowId}`}
-                                  value={row.involvement_type}
-                                  required
-                                  onChange={(e) =>
-                                    handleInvolvementChange(
-                                      row.rowId,
-                                      e.target.value as
-                                        | "PRIMARY"
-                                        | "EQUAL"
-                                        | "SUPPORT",
-                                    )
-                                  }
-                                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                                >
-                                  <option value="PRIMARY">
-                                    PRIMARY (Lead Owner)
-                                  </option>
-                                  <option value="EQUAL">
-                                    EQUAL (Equal Co-owner)
-                                  </option>
-                                  <option value="SUPPORT">
-                                    SUPPORT (Supportive)
-                                  </option>
-                                </select>
-                              </div>
-                            </div>
-
-                            {/* Dependent Select / Prerequisites */}
-                            <div className="space-y-1.5 pt-2 border-t border-slate-200/70 dark:border-slate-800">
-                              <div className="flex items-center justify-between flex-wrap gap-1">
-                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                                  Dependent Select (Prerequisites):
-                                </span>
-                                {row.prerequisites.length === 0 ? (
-                                  <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded">
-                                    ● Independent Starter (Stage 1)
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded">
-                                    Requires {row.prerequisites.length}{" "}
-                                    prerequisite
-                                    {row.prerequisites.length !== 1 ? "s" : ""}
-                                  </span>
-                                )}
-                              </div>
-
-                              {candidateDepts.length === 0 ? (
-                                <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-                                  Add another department using &quot;+ Add
-                                  Department&quot; above to configure
-                                  dependencies.
-                                </p>
-                              ) : (
-                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                  {candidateDepts.map((cand) => {
-                                    const isPrereq = row.prerequisites.includes(
-                                      cand.department_name,
-                                    );
-                                    return (
-                                      <button
-                                        key={cand.rowId}
-                                        type="button"
-                                        onClick={() => {
-                                          if (dependencyType !== "SEQUENTIAL") {
-                                            setDependencyType?.("SEQUENTIAL");
-                                          }
-                                          handleTogglePrerequisite(
-                                            row.rowId,
-                                            cand.department_name,
-                                          );
-                                        }}
-                                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs transition border cursor-pointer font-medium ${
-                                          isPrereq
-                                            ? "bg-amber-100 dark:bg-amber-950/70 border-amber-400 dark:border-amber-700 text-amber-900 dark:text-amber-200 font-bold shadow-2xs"
-                                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                                        }`}
-                                      >
-                                        <span
-                                          className={
-                                            isPrereq
-                                              ? "text-amber-700 dark:text-amber-300"
-                                              : "text-slate-400"
-                                          }
-                                        >
-                                          {isPrereq
-                                            ? "✓ Depends on"
-                                            : "+ Depends on"}
-                                        </span>
-                                        <span className="font-semibold">
-                                          {cand.department_name}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* SLA Allocation for this Department */}
-                            <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-800 space-y-2">
-                              <div className="flex items-center justify-between flex-wrap gap-1">
-                                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                                  Department SLA Allocation:
-                                </span>
-                                <span className="text-[10px] text-slate-400">
-                                  Percentage share &amp; optional fixed duration
-                                  override
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div>
-                                  <label
-                                    htmlFor={`sla-pct-${row.rowId}`}
-                                    className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 block mb-1"
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {/* Checkbox Icon */}
+                                  <div
+                                    className={`h-4 w-4 rounded flex items-center justify-center border transition ${
+                                      isSelected
+                                        ? "border-blue-600 bg-blue-600 text-white"
+                                        : "border-slate-300 dark:border-slate-600"
+                                    }`}
                                   >
-                                    SLA Window Share (%) *
-                                  </label>
-                                  <div className="relative">
-                                    <input
-                                      id={`sla-pct-${row.rowId}`}
-                                      type="number"
-                                      min="1"
-                                      max="100"
-                                      value={row.sla_percent_allocation ?? ""}
-                                      onChange={(e) =>
-                                        handleSlaPercentChange(
-                                          row.rowId,
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="e.g. 50"
-                                      className="h-8 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 pr-8 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                                    />
-                                    <span className="absolute right-2.5 top-2 text-[10px] text-slate-400 font-bold">
-                                      %
-                                    </span>
+                                    {isSelected && (
+                                      <Check className="h-3 w-3 stroke-[3]" />
+                                    )}
                                   </div>
-                                </div>
 
-                                <div>
-                                  <label
-                                    htmlFor={`sla-dur-${row.rowId}`}
-                                    className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 block mb-1"
-                                  >
-                                    Fixed Duration (minutes, optional)
-                                  </label>
-                                  <div className="relative">
-                                    <input
-                                      id={`sla-dur-${row.rowId}`}
-                                      type="number"
-                                      min="1"
-                                      value={
-                                        row.allocated_duration_minutes ?? ""
-                                      }
-                                      onChange={(e) =>
-                                        handleDurationMinutesChange(
-                                          row.rowId,
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="e.g. 120"
-                                      className="h-8 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 pr-10 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                                    />
-                                    <span className="absolute right-2.5 top-2 text-[10px] text-slate-400 font-medium">
-                                      min
-                                    </span>
+                                  {/* Department Icon */}
+                                  <div className="shrink-0">
+                                    {getDepartmentIcon(d.department_name)}
                                   </div>
+
+                                  {/* Department Name */}
+                                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                    {d.department_name}
+                                  </span>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
 
-              {/* 4. Execution Flow Visualization & Dependency Validation */}
-              {dependencyType === "PARALLEL" ? (
-                <div className="rounded-xl border border-teal-200 dark:border-teal-800/60 bg-teal-50/40 dark:bg-teal-950/30 p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-                    <span className="text-xs font-bold text-teal-900 dark:text-teal-200">
-                      Parallel Activation Summary
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
-                    All configured departments activate concurrently at Stage 1
-                    upon grievance assignment:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {participatingRows
-                      .filter((r) => r.department_name)
-                      .map((r) => (
-                        <span
-                          key={r.rowId}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 dark:border-teal-700 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-2xs"
-                        >
-                          <span className="font-semibold">
-                            {r.department_name}
-                          </span>
-                          <span
-                            className={`text-[9px] font-bold px-1 rounded ${
-                              r.involvement_type === "PRIMARY"
-                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                : r.involvement_type === "EQUAL"
-                                  ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
-                                  : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
-                            }`}
-                          >
-                            {r.involvement_type === "SUPPORT"
-                              ? "SUPPORTIVE"
-                              : r.involvement_type}
-                          </span>
-                        </span>
-                      ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {/* Presets and DAG Validation status */}
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={handleLinearChain}
-                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-                      >
-                        ⛓️ Linear Chain (1 → 2 → 3)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleMakeAllIndependent}
-                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-                      >
-                        ⚡ Make All Independent
-                      </button>
-                    </div>
-
-                    {!topologicalResult.valid ? (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-rose-100 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 dark:text-rose-300">
-                        ⚠ Dependency Issue Detected
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
-                        ✓ Valid DAG Workflow ({stagesGrouped.length} Stage
-                        {stagesGrouped.length !== 1 ? "s" : ""})
-                      </span>
-                    )}
-                  </div>
-
-                  {!topologicalResult.valid && (
-                    <div className="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-2.5 text-xs text-rose-700 dark:text-rose-300">
-                      {topologicalResult.errors[0] ||
-                        "A circular dependency exists between the configured departments. Prerequisites must not loop."}
-                    </div>
-                  )}
-
-                  {/* Derived Execution Flow Card */}
-                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        Derived Execution Flow
-                      </span>
-                    </div>
-
-                    {stagesGrouped.length === 0 ? (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                        Select departments to generate the execution flow.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {stagesGrouped.map(([stageNum, depts], sIdx) => (
-                          <div key={stageNum} className="space-y-1.5">
-                            {sIdx > 0 && (
-                              <div className="flex items-center justify-center py-0.5 text-slate-400 dark:text-slate-500 text-xs">
-                                <span>↓ then next stage activates</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs shadow-2xs">
-                              <span className="rounded-md bg-teal-100 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:text-teal-300 whitespace-nowrap">
-                                Stage {stageNum}
-                              </span>
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {depts.map((d) => (
-                                  <span
-                                    key={d.department_name}
-                                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/70 px-2 py-0.5 text-xs text-slate-800 dark:text-slate-200"
-                                  >
-                                    <span className="font-semibold">
-                                      {d.department_name}
-                                    </span>
+                                {/* Right Status Badge / Action */}
+                                <div className="shrink-0 ml-2">
+                                  {isSelected ? (
                                     <span
-                                      className={`text-[9px] font-bold px-1 rounded ${
-                                        d.involvement_type === "PRIMARY"
-                                          ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
-                                          : d.involvement_type === "EQUAL"
-                                            ? "bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300"
-                                            : "bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300"
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                        participatingRows.find(
+                                          (r) =>
+                                            r.department_id ===
+                                              d.department_id ||
+                                            r.department_name.toLowerCase() ===
+                                              d.department_name.toLowerCase(),
+                                        )?.involvement_type === "PRIMARY"
+                                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                          : "bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800"
                                       }`}
                                     >
-                                      {d.involvement_type === "SUPPORT" ||
-                                      d.involvement_type === "SUPPORTING" ||
-                                      !d.involvement_type
-                                        ? "SUPPORTIVE"
-                                        : d.involvement_type}
+                                      {participatingRows.find(
+                                        (r) =>
+                                          r.department_id === d.department_id ||
+                                          r.department_name.toLowerCase() ===
+                                            d.department_name.toLowerCase(),
+                                      )?.involvement_type === "PRIMARY"
+                                        ? "Primary"
+                                        : "Supporting"}
                                     </span>
-                                    {d.prerequisites &&
-                                      d.prerequisites.length > 0 && (
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                                          (after {d.prerequisites.join(" & ")})
-                                        </span>
-                                      )}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                                  ) : (
+                                    <span className="h-6 w-6 rounded-full flex items-center justify-center text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 transition">
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2363,33 +2543,33 @@ export function AdminRuleConfigModal({
 
             <div className="flex items-center gap-2 ml-auto">
               {modalRuleType === "routing" &&
-                participatingRows.length > 0 &&
-                !hasLeadOrEqualOwner && (
+                routingScope === "MULTI" &&
+                participatingRows.length < 2 && (
                   <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    Cannot have only supporting departments. At least one must
-                    be Primary or Equal.
+                    Multi-department rules require at least 2 participating
+                    departments.
                   </span>
                 )}
               {modalRuleType === "routing" &&
-                participatingRows.length > 0 &&
-                hasLeadOrEqualOwner &&
-                dependencyType === "SEQUENTIAL" &&
-                Math.round(totalConfiguredPercent) !== 100 && (
-                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    Sequential SLA total must equal 100% (currently{" "}
-                    {totalConfiguredPercent}%)
-                  </span>
-                )}
-              {modalRuleType === "routing" &&
-                participatingRows.length > 0 &&
-                dependencyType === "PARALLEL" &&
-                participatingRows.some(
-                  (r) =>
-                    (Number(r.sla_percent_allocation) || 0) <= 0 ||
-                    (Number(r.sla_percent_allocation) || 0) > 100,
+                routingScope === "MULTI" &&
+                participatingRows.length >= 2 &&
+                !participatingRows.some(
+                  (r) => r.involvement_type === "PRIMARY",
                 ) && (
                   <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    Each parallel department SLA must be between 1% and 100%
+                    A Primary Department is mandatory. Please select one
+                    department as Primary.
+                  </span>
+                )}
+              {modalRuleType === "routing" &&
+                routingScope === "MULTI" &&
+                dependencyType === "SEQUENTIAL" &&
+                participatingRows.length >= 2 &&
+                Math.abs(totalConfiguredPercent - 100) > 0.001 && (
+                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                    {totalConfiguredPercent > 100
+                      ? `Sequential SLA total cannot exceed 100% (currently ${totalConfiguredPercent}% - exceeds 100% by ${Number((totalConfiguredPercent - 100).toFixed(2))}%)`
+                      : `Sequential SLA total must equal 100% (currently ${totalConfiguredPercent}% - ${Number((100 - totalConfiguredPercent).toFixed(2))}% remaining)`}
                   </span>
                 )}
               <button
@@ -2408,19 +2588,22 @@ export function AdminRuleConfigModal({
                     !isDefault &&
                     !selectedPriorityCatId) ||
                   (modalRuleType === "routing" &&
-                    (!selectedDeptId ||
-                      !selectedCatId ||
+                    (!selectedCatId ||
                       !selectedRoutingSubcatId ||
-                      participatingRows.length === 0 ||
-                      !hasLeadOrEqualOwner ||
-                      (dependencyType === "SEQUENTIAL" &&
-                        Math.round(totalConfiguredPercent) !== 100) ||
-                      (dependencyType === "PARALLEL" &&
-                        participatingRows.some(
-                          (r) =>
-                            (Number(r.sla_percent_allocation) || 0) <= 0 ||
-                            (Number(r.sla_percent_allocation) || 0) > 100,
-                        ))))
+                      (routingScope === "SINGLE" &&
+                        (!selectedDeptId || participatingRows.length === 0)) ||
+                      (routingScope === "MULTI" &&
+                        (participatingRows.length < 2 ||
+                          participatingRows.some((r) => !r.department_id) ||
+                          !participatingRows.some(
+                            (r) => r.involvement_type === "PRIMARY",
+                          ) ||
+                          (dependencyType === "SEQUENTIAL" &&
+                            (Math.abs(totalConfiguredPercent - 100) > 0.001 ||
+                              participatingRows.some(
+                                (r) =>
+                                  (Number(r.sla_percent_allocation) || 0) <= 0,
+                              )))))))
                 }
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
               >

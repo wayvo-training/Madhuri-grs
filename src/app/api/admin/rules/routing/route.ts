@@ -149,8 +149,19 @@ export async function POST(request: Request) {
     let finalCatName = "";
 
     if (category_id === "CUSTOM" && new_category_name) {
+      const trimmedCat = new_category_name.trim();
+      if (!/[a-zA-Z]/.test(trimmedCat)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+          },
+          { status: 400 },
+        );
+      }
       const existingCat = await prisma.categories.findUnique({
-        where: { category_name: new_category_name.trim() },
+        where: { category_name: trimmedCat },
       });
       if (existingCat) {
         finalCatId = existingCat.category_id;
@@ -158,7 +169,7 @@ export async function POST(request: Request) {
       } else {
         const newCat = await prisma.categories.create({
           data: {
-            category_name: new_category_name.trim(),
+            category_name: trimmedCat,
             status: "ACTIVE",
           },
         });
@@ -208,11 +219,22 @@ export async function POST(request: Request) {
     let finalSubcatName = "";
 
     if (subcategory_id === "CUSTOM" && new_subcategory_name && finalCatId) {
+      const trimmedSubcat = new_subcategory_name.trim();
+      if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+          },
+          { status: 400 },
+        );
+      }
       const existingSub = await prisma.subcategories.findUnique({
         where: {
           category_id_subcategory_name: {
             category_id: finalCatId,
-            subcategory_name: new_subcategory_name.trim(),
+            subcategory_name: trimmedSubcat,
           },
         },
       });
@@ -223,7 +245,7 @@ export async function POST(request: Request) {
         const newSub = await prisma.subcategories.create({
           data: {
             category_id: finalCatId,
-            subcategory_name: new_subcategory_name.trim(),
+            subcategory_name: trimmedSubcat,
             status: "ACTIVE",
           },
         });
@@ -720,8 +742,19 @@ export async function PATCH(request: Request) {
 
     if (category_id !== undefined && category_id !== null) {
       if (category_id === "CUSTOM" && new_category_name) {
+        const trimmedCat = new_category_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedCat)) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         const existingCat = await prisma.categories.findUnique({
-          where: { category_name: new_category_name.trim() },
+          where: { category_name: trimmedCat },
         });
         if (existingCat) {
           finalCatId = existingCat.category_id;
@@ -729,7 +762,7 @@ export async function PATCH(request: Request) {
         } else {
           const newCat = await prisma.categories.create({
             data: {
-              category_name: new_category_name.trim(),
+              category_name: trimmedCat,
               status: "ACTIVE",
             },
           });
@@ -767,11 +800,22 @@ export async function PATCH(request: Request) {
 
     if (subcategory_id !== undefined && subcategory_id !== null) {
       if (subcategory_id === "CUSTOM" && new_subcategory_name && finalCatId) {
+        const trimmedSubcat = new_subcategory_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         const existingSub = await prisma.subcategories.findUnique({
           where: {
             category_id_subcategory_name: {
               category_id: finalCatId,
-              subcategory_name: new_subcategory_name.trim(),
+              subcategory_name: trimmedSubcat,
             },
           },
         });
@@ -782,7 +826,7 @@ export async function PATCH(request: Request) {
           const newSub = await prisma.subcategories.create({
             data: {
               category_id: finalCatId,
-              subcategory_name: new_subcategory_name.trim(),
+              subcategory_name: trimmedSubcat,
               status: "ACTIVE",
             },
           });

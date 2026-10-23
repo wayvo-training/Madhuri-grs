@@ -362,9 +362,45 @@ export function useRuleActions({
     setRuleModalOpen(true);
   };
 
+  const isPurelyNumbers = (val: string) => {
+    const trimmed = val.trim();
+    return trimmed.length > 0 && !/[a-zA-Z]/.test(trimmed);
+  };
+
   async function handleCreateRule(e: React.FormEvent) {
     e.preventDefault();
     if (!ruleName.trim()) return;
+
+    if (isPurelyNumbers(ruleName)) {
+      showNotice(
+        "error",
+        "Rule name cannot consist of only numbers. It must include letters or letters and numbers.",
+      );
+      return;
+    }
+
+    if (
+      (selectedCatId === "CUSTOM" || selectedPriorityCatId === "CUSTOM") &&
+      isPurelyNumbers(newCategoryName)
+    ) {
+      showNotice(
+        "error",
+        "Category name cannot consist of only numbers. It must include letters or letters and numbers.",
+      );
+      return;
+    }
+
+    if (
+      (selectedRoutingSubcatId === "CUSTOM" ||
+        selectedPrioritySubcatId === "CUSTOM") &&
+      isPurelyNumbers(newSubcategoryName)
+    ) {
+      showNotice(
+        "error",
+        "Subcategory name cannot consist of only numbers. It must include letters or letters and numbers.",
+      );
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -458,22 +494,34 @@ export function useRuleActions({
           return;
         }
 
-        // Validate percentage sum across all participating departments strictly equals 100%
-        if (sequentialDependencies && sequentialDependencies.length > 0) {
-          const hasOwner = sequentialDependencies.some(
-            (d) =>
-              d.involvement_type === "PRIMARY" ||
-              d.involvement_type === "EQUAL",
-          );
-          if (!hasOwner) {
+        // Validate SLA percentages strictly for Multi-Department SEQUENTIAL rules only
+        // Validate Multi-Department rules
+        const isMultiDepartment =
+          selectedSupportingDepts && selectedSupportingDepts.length > 0;
+
+        if (isMultiDepartment) {
+          const primaryCount = sequentialDependencies.filter(
+            (d) => d.involvement_type === "PRIMARY",
+          ).length;
+          if (primaryCount === 0) {
             showNotice(
               "error",
-              "Cannot have only supportive departments. At least one department must be PRIMARY or EQUAL.",
+              "Multi-department rules require a designated PRIMARY (Lead Owner) department.",
             );
             setIsSubmitting(false);
             return;
           }
+          if (primaryCount > 1) {
+            showNotice(
+              "error",
+              "Multi-department rules can only have exactly one PRIMARY (Lead Owner) department.",
+            );
+            setIsSubmitting(false);
+            return;
+          }
+        }
 
+        if (isMultiDepartment && dependencyType === "SEQUENTIAL") {
           const missingPct = sequentialDependencies.find(
             (d) =>
               d.department_name &&
@@ -489,37 +537,22 @@ export function useRuleActions({
             return;
           }
 
-          if (dependencyType === "SEQUENTIAL") {
-            const totalPct = sequentialDependencies.reduce(
-              (sum, d) => sum + (Number(d.sla_percent_allocation) || 0),
-              0,
+          const totalPct = sequentialDependencies.reduce(
+            (sum, d) => sum + (Number(d.sla_percent_allocation) || 0),
+            0,
+          );
+          if (Math.round(totalPct) !== 100) {
+            showNotice(
+              "error",
+              `Total SLA percentage allocation across sequential departments must equal exactly 100% (currently ${totalPct}%). Please adjust them to equal 100%.`,
             );
-            if (Math.round(totalPct) !== 100) {
-              showNotice(
-                "error",
-                `Total SLA percentage allocation across sequential departments must equal exactly 100% (currently ${totalPct}%). Please adjust them to equal 100%.`,
-              );
-              setIsSubmitting(false);
-              return;
-            }
-          } else {
-            const over100 = sequentialDependencies.find(
-              (d) => Number(d.sla_percent_allocation) > 100,
-            );
-            if (over100) {
-              showNotice(
-                "error",
-                `Individual department SLA percentage cannot exceed 100% (department "${over100.department_name}" is ${over100.sla_percent_allocation}%).`,
-              );
-              setIsSubmitting(false);
-              return;
-            }
+            setIsSubmitting(false);
+            return;
           }
         }
 
         const leadDeptNode = sequentialDependencies?.find(
-          (d) =>
-            d.involvement_type === "PRIMARY" || d.involvement_type === "EQUAL",
+          (d) => d.involvement_type === "PRIMARY",
         );
         const resolvedInvolvement = leadDeptNode?.involvement_type || "PRIMARY";
 
