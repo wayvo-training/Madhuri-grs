@@ -28,6 +28,8 @@ export default async function DepartmentHeadQueuePage({
     typeof resolvedParams.tab === "string"
       ? (resolvedParams.tab as DepartmentHeadTab)
       : undefined;
+  const page = resolvedParams.page ? Number(resolvedParams.page) : undefined;
+  const limit = resolvedParams.limit ? Number(resolvedParams.limit) : undefined;
 
   const {
     finalDeptName,
@@ -36,7 +38,14 @@ export default async function DepartmentHeadQueuePage({
     employeeCode,
     isAdmin,
     initialData,
-  } = await getDepartmentHeadPageData({ deptId });
+  } = await getDepartmentHeadPageData({
+    deptId,
+    page,
+    limit,
+    tab: tabParam,
+    priority: priorityParam,
+    staffId: staffParam,
+  });
 
   return (
     <DepartmentHeadOverview

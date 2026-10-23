@@ -229,6 +229,9 @@ export interface DepartmentHeadInitialData {
   governanceAuditFeed: EscalationAuditRecord[];
   availableDepartments: { id: string; name: string }[];
   selectedDeptId: string;
+  totalCount?: number;
+  page?: number;
+  limit?: number;
 }
 
 export interface DepartmentHeadOverviewProps {

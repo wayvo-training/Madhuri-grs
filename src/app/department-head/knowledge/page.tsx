@@ -13,6 +13,8 @@ export default async function DepartmentHeadKnowledgePage({
     typeof resolvedParams.deptId === "string"
       ? resolvedParams.deptId
       : undefined;
+  const page = resolvedParams.page ? Number(resolvedParams.page) : undefined;
+  const limit = resolvedParams.limit ? Number(resolvedParams.limit) : undefined;
 
   const {
     finalDeptName,
@@ -21,7 +23,7 @@ export default async function DepartmentHeadKnowledgePage({
     employeeCode,
     isAdmin,
     initialData,
-  } = await getDepartmentHeadPageData({ deptId });
+  } = await getDepartmentHeadPageData({ deptId, page, limit });
 
   return (
     <DepartmentHeadOverview

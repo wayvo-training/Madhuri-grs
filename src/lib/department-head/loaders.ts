@@ -1059,8 +1059,10 @@ export async function fetchDepartmentHeadStaff(departmentId: bigint) {
 }
 
 export async function fetchDepartmentHeadOverview(departmentId: bigint) {
-  // Proactively evaluate SLA threshold rules
-  await evaluateAllActiveGrievancesSla(departmentId);
+  // Run SLA threshold evaluations non-blocking in background so HTTP response is not delayed
+  evaluateAllActiveGrievancesSla(departmentId).catch((err) => {
+    console.error("Background SLA evaluation error:", err);
+  });
 
   const deptGrievances = await prisma.grievance_departments.findMany({
     where: { department_id: departmentId },
