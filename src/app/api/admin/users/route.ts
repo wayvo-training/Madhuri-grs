@@ -144,15 +144,11 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      if (
-        (chosenRole.role_name === "STAFF" ||
-          chosenRole.role_name === "DEPARTMENT_HEAD") &&
-        !department_id
-      ) {
+      if (chosenRole.role_name === "STAFF" && !department_id) {
         return NextResponse.json(
           {
             success: false,
-            message: `Department is required for ${chosenRole.role_name === "DEPARTMENT_HEAD" ? "Department Head" : "Staff"} role.`,
+            message: "Department is required for Staff role.",
           },
           { status: 400 },
         );
@@ -410,15 +406,11 @@ export async function PATCH(request: Request) {
             : null
           : existing.department_id;
 
-      if (
-        (activeRole.role_name === "STAFF" ||
-          activeRole.role_name === "DEPARTMENT_HEAD") &&
-        !effectiveDeptId
-      ) {
+      if (activeRole.role_name === "STAFF" && !effectiveDeptId) {
         return NextResponse.json(
           {
             success: false,
-            message: `Department is required for ${activeRole.role_name === "DEPARTMENT_HEAD" ? "Department Head" : "Staff"} role.`,
+            message: "Department is required for Staff role.",
           },
           { status: 400 },
         );

@@ -80,8 +80,7 @@ export function AssignRoleModal({
     ? selectedRoleObj.role_name.trim().toUpperCase()
     : "";
 
-  const isDepartmentRequired =
-    normalizedRoleName === "STAFF" || normalizedRoleName === "DEPARTMENT_HEAD";
+  const isDepartmentRequired = normalizedRoleName === "STAFF";
 
   // Check if form is valid
   const isFormValid = Boolean(
@@ -96,8 +95,12 @@ export function AssignRoleModal({
     const newRole = activeRoles.find((r) => r.role_id === newRoleId);
     const newRoleName = newRole?.role_name.trim().toUpperCase();
 
-    // If changing to END_USER or ADMIN, auto-clear department if desired or keep optional
-    if (newRoleName === "END_USER" || newRoleName === "ADMIN") {
+    // If changing to END_USER, ADMIN, or DEPARTMENT_HEAD, auto-clear department if desired or keep optional
+    if (
+      newRoleName === "END_USER" ||
+      newRoleName === "ADMIN" ||
+      newRoleName === "DEPARTMENT_HEAD"
+    ) {
       // Don't force department for these roles
     }
   };
@@ -111,11 +114,7 @@ export function AssignRoleModal({
     }
 
     if (isDepartmentRequired && !selectedDeptId.trim()) {
-      setValidationError(
-        `Department is required for the ${
-          normalizedRoleName === "DEPARTMENT_HEAD" ? "Department Head" : "Staff"
-        } role.`,
-      );
+      setValidationError("Department is required for the Staff role.");
       return;
     }
 
@@ -280,12 +279,10 @@ export function AssignRoleModal({
               >
                 Department{" "}
                 {isDepartmentRequired ? (
-                  <span className="text-rose-500">
-                    * (Required for {selectedRoleObj?.role_name})
-                  </span>
+                  <span className="text-rose-500">* (Required for Staff)</span>
                 ) : (
                   <span className="text-slate-400 font-normal">
-                    (Optional for {selectedRoleObj?.role_name || "this role"})
+                    (Optional — can assign later)
                   </span>
                 )}
               </label>
@@ -319,7 +316,7 @@ export function AssignRoleModal({
                     <span className="text-slate-400">
                       {isDepartmentRequired
                         ? "— Select Required Department —"
-                        : "— No Department Assigned —"}
+                        : "— Assign Later / None —"}
                     </span>
                   )}
                 </SelectValue>
@@ -330,7 +327,7 @@ export function AssignRoleModal({
                     value="NONE"
                     className="text-xs cursor-pointer text-slate-500 italic"
                   >
-                    — No Department (Unassigned) —
+                    — Assign Later / None —
                   </SelectItem>
                 )}
                 {activeDepartments.map((d) => (
@@ -347,8 +344,7 @@ export function AssignRoleModal({
 
             {isDepartmentRequired && !selectedDeptId && (
               <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                A department must be assigned when granting the{" "}
-                {selectedRoleObj?.role_name} role.
+                A department must be assigned when granting the Staff role.
               </p>
             )}
           </div>

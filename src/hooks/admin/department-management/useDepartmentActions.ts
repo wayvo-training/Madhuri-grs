@@ -120,6 +120,10 @@ export function useDepartmentActions(
       toast.error("Department code is required (e.g. HR, FIN, IT, FAC).");
       return;
     }
+    if (!selectedHeadId) {
+      toast.error("Please select a Department Head.");
+      return;
+    }
     if (!contactEmail.trim()) {
       toast.error("Department contact email is required.");
       return;
