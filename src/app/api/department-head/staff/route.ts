@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
-import { prisma } from "@/lib/prisma";
+import { fetchDepartmentHeadStaff } from "@/lib/department-head/loaders";
 
 export async function GET(request: Request) {
   const auth = await resolveDepartmentHeadAuth(request);
@@ -11,62 +11,11 @@ export async function GET(request: Request) {
   const { departmentId } = auth;
 
   try {
-    const rawStaff = await prisma.users.findMany({
-      where: {
-        department_id: departmentId,
-        roles: {
-          role_name: "STAFF",
-        },
-      },
-      include: {
-        roles: true,
-        departments: true,
-        assignments_assignments_staff_idTousers: {
-          where: {
-            assignment_status: "ASSIGNED",
-            grievances: {
-              status: { notIn: ["CLOSED"] },
-            },
-          },
-          select: {
-            assignment_id: true,
-          },
-        },
-      },
-      orderBy: [{ role_id: "desc" }, { first_name: "asc" }],
-    });
-
-    const staffMembers = rawStaff.map((u) => {
-      const activeTickets = u.assignments_assignments_staff_idTousers.length;
-      const maxCapacity = 10;
-
-      let status: "ACTIVE" | "ON_LEAVE" | "BUSY" = "ACTIVE";
-      if (u.status === "ON_LEAVE" || u.status === "INACTIVE") {
-        status = "ON_LEAVE";
-      } else if (activeTickets >= maxCapacity) {
-        status = "BUSY";
-      }
-
-      const roleDisplay =
-        u.roles.role_name === "DEPARTMENT_HEAD"
-          ? "Department Head"
-          : "Grievance Staff";
-
-      return {
-        id: u.user_id.toString(),
-        employeeCode: u.employee_code,
-        name: `${u.first_name} ${u.last_name || ""}`.trim(),
-        designation: `${roleDisplay} (${u.departments?.department_name || "Operations"})`,
-        email: u.email,
-        activeTickets,
-        maxCapacity,
-        status,
-      };
-    });
+    const { staff } = await fetchDepartmentHeadStaff(departmentId);
 
     return NextResponse.json({
       success: true,
-      staff: staffMembers,
+      staff,
     });
   } catch (error) {
     console.error("Error in /api/department-head/staff:", error);

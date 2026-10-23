@@ -10,6 +10,10 @@ export default async function DepartmentHeadQueuePage({
   searchParams,
 }: PageProps) {
   const resolvedParams = searchParams ? await searchParams : {};
+  const deptId =
+    typeof resolvedParams.deptId === "string"
+      ? resolvedParams.deptId
+      : undefined;
   const statusParam =
     typeof resolvedParams.status === "string"
       ? resolvedParams.status
@@ -25,11 +29,18 @@ export default async function DepartmentHeadQueuePage({
       ? (resolvedParams.tab as DepartmentHeadTab)
       : undefined;
 
-  const { finalDeptName, hodName, hodEmail, employeeCode, isAdmin } =
-    await getDepartmentHeadPageData();
+  const {
+    finalDeptName,
+    hodName,
+    hodEmail,
+    employeeCode,
+    isAdmin,
+    initialData,
+  } = await getDepartmentHeadPageData({ deptId });
 
   return (
     <DepartmentHeadOverview
+      initialData={initialData}
       departmentName={finalDeptName}
       hodName={hodName}
       hodEmail={hodEmail}

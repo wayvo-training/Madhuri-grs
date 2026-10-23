@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import { ResolutionForm } from "@/components/staff/resolution-form";
 import {
-  useDepartmentHeadData,
   useDepartmentHeadNavigation,
   useGrievanceActions,
   useQueueFilters,
@@ -41,6 +41,7 @@ import {
 } from "./views";
 
 export function DepartmentHeadOverviewInner({
+  initialData,
   departmentName = "Department Operations",
   hodName = "Department Head",
   hodEmail = "",
@@ -52,29 +53,70 @@ export function DepartmentHeadOverviewInner({
   initialStaffFilter,
   initialTab,
 }: DepartmentHeadOverviewProps) {
-  // Data management
-  const {
-    grievances,
-    setGrievances,
-    staffList,
-    setStaffList,
-    governanceAuditFeed,
-    setGovernanceAuditFeed,
-    isLoading,
-    selectedDeptId,
-    setSelectedDeptId,
-    availableDepartments,
-    currentDepartmentName,
-    currentHodName,
-    currentHodEmail,
-    currentEmployeeCode,
-    loadData,
-  } = useDepartmentHeadData({
-    initialDepartmentName: departmentName,
-    initialHodName: hodName,
-    initialHodEmail: hodEmail,
-    initialEmployeeCode: employeeCode,
-  });
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Data management via server component initialData
+  const [grievances, setGrievances] = useState<GrievanceItem[]>(
+    initialData?.grievances || [],
+  );
+  const [staffList, setStaffList] = useState<StaffMember[]>(
+    initialData?.staffList || [],
+  );
+  const [governanceAuditFeed, setGovernanceAuditFeed] = useState(
+    initialData?.governanceAuditFeed || [],
+  );
+  const [availableDepartments, setAvailableDepartments] = useState(
+    initialData?.availableDepartments || [],
+  );
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(
+    initialData?.selectedDeptId || "",
+  );
+
+  const [currentDepartmentName, setCurrentDepartmentName] =
+    useState(departmentName);
+  const [currentHodName, setCurrentHodName] = useState(hodName);
+  const [currentHodEmail, setCurrentHodEmail] = useState(hodEmail);
+  const [currentEmployeeCode, setCurrentEmployeeCode] = useState(employeeCode);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Synchronize state when server component passes fresh initialData (e.g. after router.refresh() or router.push())
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.grievances) setGrievances(initialData.grievances);
+      if (initialData.staffList) setStaffList(initialData.staffList);
+      if (initialData.governanceAuditFeed)
+        setGovernanceAuditFeed(initialData.governanceAuditFeed);
+      if (initialData.availableDepartments)
+        setAvailableDepartments(initialData.availableDepartments);
+      if (initialData.selectedDeptId)
+        setSelectedDeptId(initialData.selectedDeptId);
+    }
+    if (departmentName) setCurrentDepartmentName(departmentName);
+    if (hodName) setCurrentHodName(hodName);
+    if (hodEmail) setCurrentHodEmail(hodEmail);
+    if (employeeCode) setCurrentEmployeeCode(employeeCode);
+  }, [initialData, departmentName, hodName, hodEmail, employeeCode]);
+
+  const loadData = useCallback(
+    async (deptId?: string, isSilentRefresh = false) => {
+      const targetDeptId = deptId !== undefined ? deptId : selectedDeptId;
+      if (targetDeptId && targetDeptId !== selectedDeptId) {
+        setSelectedDeptId(targetDeptId);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("deptId", targetDeptId);
+        router.push(`${pathname}?${params.toString()}`);
+      } else {
+        if (!isSilentRefresh) {
+          setIsLoading(true);
+        }
+        router.refresh();
+        setIsLoading(false);
+      }
+    },
+    [selectedDeptId, searchParams, pathname, router],
+  );
 
   // Navigation
   const { activeView, switchView } = useDepartmentHeadNavigation(initialView);
