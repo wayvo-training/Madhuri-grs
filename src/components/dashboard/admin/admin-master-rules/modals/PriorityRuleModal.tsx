@@ -13,8 +13,8 @@ export function PriorityRuleModal({
   setRuleName,
   priorityLevel,
   setPriorityLevel,
-  ruleOrder,
-  setRuleOrder,
+  ruleOrder: _ruleOrder,
+  setRuleOrder: _setRuleOrder,
   isDefault,
   setIsDefault,
   selectedPriorityCatId,
@@ -76,43 +76,24 @@ export function PriorityRuleModal({
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="priority-level-select"
-                  className="block font-semibold text-slate-700 dark:text-slate-300"
-                >
-                  Assigned Priority *
-                </label>
-                <select
-                  id="priority-level-select"
-                  value={priorityLevel}
-                  onChange={(e) => setPriorityLevel(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                >
-                  <option value="CRITICAL">Critical</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="rule-order-input"
-                  className="block font-semibold text-slate-700 dark:text-slate-300"
-                >
-                  Execution Order *
-                </label>
-                <input
-                  id="rule-order-input"
-                  type="number"
-                  min="1"
-                  value={ruleOrder}
-                  onChange={(e) => setRuleOrder(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                />
-              </div>
+            <div>
+              <label
+                htmlFor="priority-level-select"
+                className="block font-semibold text-slate-700 dark:text-slate-300"
+              >
+                Assigned Priority *
+              </label>
+              <select
+                id="priority-level-select"
+                value={priorityLevel}
+                onChange={(e) => setPriorityLevel(e.target.value)}
+                className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+              >
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
             </div>
 
             <div>

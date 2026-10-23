@@ -99,8 +99,8 @@ export interface PriorityRuleModalProps {
   setRuleName: Dispatch<SetStateAction<string>>;
   priorityLevel: string;
   setPriorityLevel: Dispatch<SetStateAction<string>>;
-  ruleOrder: string;
-  setRuleOrder: Dispatch<SetStateAction<string>>;
+  ruleOrder?: string;
+  setRuleOrder?: Dispatch<SetStateAction<string>>;
   isDefault: boolean;
   setIsDefault: Dispatch<SetStateAction<boolean>>;
   selectedPriorityCatId: string;

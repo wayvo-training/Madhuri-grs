@@ -1348,7 +1348,7 @@ export function RoutingRuleModal({
                                   }`}
                                 >
                                   {isSelected && (
-                                    <Check className="h-3 w-3 stroke-[3]" />
+                                    <Check className="h-3 w-3 stroke-3" />
                                   )}
                                 </div>
 
