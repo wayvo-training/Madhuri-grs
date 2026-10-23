@@ -32,6 +32,17 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!/[a-zA-Z]/.test(trimmedName)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+        },
+        { status: 400 },
+      );
+    }
+
     const requestedStatus = body.status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
     const slaTypeVal = sla_type || "RESOLUTION";
 
@@ -216,6 +227,17 @@ export async function PATCH(request: Request) {
           {
             success: false,
             message: "Policy name and target duration are required.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!/[a-zA-Z]/.test(trimmedName)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
           },
           { status: 400 },
         );

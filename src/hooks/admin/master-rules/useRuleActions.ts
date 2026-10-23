@@ -667,7 +667,8 @@ export function useRuleActions({
         isEditing &&
         (modalRuleType === "priority" ||
           modalRuleType === "routing" ||
-          modalRuleType === "sla")
+          modalRuleType === "sla" ||
+          modalRuleType === "reopen")
           ? "PATCH"
           : "POST";
       const submitPayload =
@@ -677,7 +678,9 @@ export function useRuleActions({
             ? { ...payload, routing_rule_id: editingRuleId }
             : isEditing && modalRuleType === "sla"
               ? { ...payload, sla_policy_id: editingRuleId }
-              : payload;
+              : isEditing && modalRuleType === "reopen"
+                ? { ...payload, reopen_policy_id: editingRuleId }
+                : payload;
 
       const res = await fetch(endpoint, {
         method,
@@ -738,7 +741,17 @@ export function useRuleActions({
           setSlaPolicies((prev) => [...prev, data.policy]);
         }
       } else if (modalRuleType === "reopen") {
-        setReopenPolicies((prev) => [...prev, data.policy]);
+        if (isEditing) {
+          setReopenPolicies((prev) =>
+            prev.map((p) =>
+              p.reopen_policy_id === editingRuleId
+                ? { ...p, ...data.policy }
+                : p,
+            ),
+          );
+        } else {
+          setReopenPolicies((prev) => [...prev, data.policy]);
+        }
       }
 
       showNotice(

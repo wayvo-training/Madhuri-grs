@@ -239,7 +239,9 @@ export function ReopenPoliciesView({
                                   </TableCell>
                                   <TableCell className="w-[190px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
                                     {p.reopen_window_hours
-                                      ? `${p.reopen_window_hours} Hours`
+                                      ? p.reopen_window_hours % 24 === 0
+                                        ? `${p.reopen_window_hours / 24} ${p.reopen_window_hours / 24 === 1 ? "Day" : "Days"} (${p.reopen_window_hours} hrs)`
+                                        : `${p.reopen_window_hours} Hours`
                                       : "Unlimited"}
                                   </TableCell>
                                   <TableCell className="w-[160px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">

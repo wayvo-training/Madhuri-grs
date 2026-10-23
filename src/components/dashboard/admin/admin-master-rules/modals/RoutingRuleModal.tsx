@@ -36,9 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
-import type {
-  ParticipatingDepartmentRow,
-  RoutingRuleModalProps,
+import {
+  isPurelyNumeric,
+  type ParticipatingDepartmentRow,
+  type RoutingRuleModalProps,
 } from "./types";
 
 export function RoutingRuleModal({
@@ -70,6 +71,12 @@ export function RoutingRuleModal({
   isSubmitting,
   onSubmit,
 }: RoutingRuleModalProps) {
+  const isRuleNameNumeric = isPurelyNumeric(ruleName);
+  const isCategoryNumeric =
+    selectedCatId === "CUSTOM" && isPurelyNumeric(newCategoryName);
+  const isSubcategoryNumeric =
+    selectedRoutingSubcatId === "CUSTOM" && isPurelyNumeric(newSubcategoryName);
+
   const [routingScope, setRoutingScope] = useState<"SINGLE" | "MULTI">(
     "SINGLE",
   );
@@ -567,8 +574,18 @@ export function RoutingRuleModal({
                   placeholder="e.g. Expense Reimbursement Routing"
                   value={ruleName}
                   onChange={(e) => setRuleName(e.target.value)}
-                  className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none transition focus:border-teal-600"
+                  className={`mt-1 h-9.5 w-full rounded-xl border ${
+                    isRuleNameNumeric
+                      ? "border-rose-500 focus:border-rose-600"
+                      : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                  } bg-white dark:bg-slate-900 px-3 text-xs text-slate-800 dark:text-slate-100 outline-none transition`}
                 />
+                {isRuleNameNumeric && (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    Policy rule name cannot consist of only numbers. It must
+                    include letters or an alphanumeric combination.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -712,22 +729,33 @@ export function RoutingRuleModal({
                     Category Scope *
                   </label>
                   {selectedCatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom category name"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        required
-                        className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCatId("")}
-                        className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        ×
-                      </button>
+                    <div className="space-y-1">
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom category name"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          required
+                          className={`h-9.5 w-full rounded-xl border ${
+                            isCategoryNumeric
+                              ? "border-rose-500 focus:border-rose-600"
+                              : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                          } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCatId("")}
+                          className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {isCategoryNumeric && (
+                        <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                          Category name cannot consist of only numbers.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <Select
@@ -782,22 +810,35 @@ export function RoutingRuleModal({
                     Subcategory Scope *
                   </label>
                   {selectedRoutingSubcatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom subcategory name"
-                        value={newSubcategoryName}
-                        onChange={(e) => setNewSubcategoryName(e.target.value)}
-                        required
-                        className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedRoutingSubcatId("")}
-                        className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        ×
-                      </button>
+                    <div className="space-y-1">
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom subcategory name"
+                          value={newSubcategoryName}
+                          onChange={(e) =>
+                            setNewSubcategoryName(e.target.value)
+                          }
+                          required
+                          className={`h-9.5 w-full rounded-xl border ${
+                            isSubcategoryNumeric
+                              ? "border-rose-500 focus:border-rose-600"
+                              : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                          } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedRoutingSubcatId("")}
+                          className="flex h-9.5 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {isSubcategoryNumeric && (
+                        <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                          Subcategory name cannot consist of only numbers.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <Select
@@ -1457,6 +1498,11 @@ export function RoutingRuleModal({
                 disabled={
                   isSubmitting ||
                   !ruleName.trim() ||
+                  isRuleNameNumeric ||
+                  (selectedCatId === "CUSTOM" &&
+                    (!newCategoryName.trim() || isCategoryNumeric)) ||
+                  (selectedRoutingSubcatId === "CUSTOM" &&
+                    (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
                   !selectedCatId ||
                   !selectedRoutingSubcatId ||
                   (routingScope === "SINGLE" &&

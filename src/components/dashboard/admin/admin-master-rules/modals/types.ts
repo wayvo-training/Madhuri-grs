@@ -3,6 +3,11 @@ import type { SlaNotificationRecipients } from "@/hooks/admin/master-rules/useRu
 import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 import type { ModalRuleType } from "@/types/admin/master-rules";
 
+export function isPurelyNumeric(val: string): boolean {
+  const trimmed = val.trim();
+  return trimmed.length > 0 && !/[a-zA-Z]/.test(trimmed);
+}
+
 export const SLA_RECIPIENT_OPTIONS = [
   {
     id: "ASSIGNED_STAFF",

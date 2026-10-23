@@ -34,10 +34,20 @@ export async function POST(request: Request) {
     } = body;
 
     // 1. Validate rule_name
+    if (!rule_name || typeof rule_name !== "string" || !rule_name.trim()) {
+      return NextResponse.json(
+        { success: false, message: "Rule name is required." },
+        { status: 400 },
+      );
+    }
     const validatedRuleName = validateRuleName(rule_name);
     if (!validatedRuleName) {
       return NextResponse.json(
-        { success: false, message: "Rule name is required." },
+        {
+          success: false,
+          message:
+            "Rule name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+        },
         { status: 400 },
       );
     }

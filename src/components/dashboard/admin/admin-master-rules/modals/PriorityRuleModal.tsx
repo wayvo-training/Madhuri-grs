@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, X } from "lucide-react";
-import type { PriorityRuleModalProps } from "./types";
+import { isPurelyNumeric, type PriorityRuleModalProps } from "./types";
 
 export function PriorityRuleModal({
   open,
@@ -32,6 +32,13 @@ export function PriorityRuleModal({
   onSubmit,
 }: PriorityRuleModalProps) {
   if (!open) return null;
+
+  const isRuleNameNumeric = isPurelyNumeric(ruleName);
+  const isCategoryNumeric =
+    selectedPriorityCatId === "CUSTOM" && isPurelyNumeric(newCategoryName);
+  const isSubcategoryNumeric =
+    selectedPrioritySubcatId === "CUSTOM" &&
+    isPurelyNumeric(newSubcategoryName);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
@@ -71,8 +78,18 @@ export function PriorityRuleModal({
               placeholder="e.g. Critical Safety Escalation"
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+              className={`mt-1 h-9 w-full rounded-xl border ${
+                isRuleNameNumeric
+                  ? "border-rose-500 focus:border-rose-600"
+                  : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+              } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
             />
+            {isRuleNameNumeric && (
+              <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                Rule name cannot consist of only numbers. It must include
+                letters or an alphanumeric combination.
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -126,22 +143,33 @@ export function PriorityRuleModal({
                     Category Scope {!keywords.trim() && "*"}
                   </label>
                   {selectedPriorityCatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom category name"
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                        required
-                        className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPriorityCatId("")}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        ×
-                      </button>
+                    <div className="space-y-1">
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom category name"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          required
+                          className={`h-9 w-full rounded-xl border ${
+                            isCategoryNumeric
+                              ? "border-rose-500 focus:border-rose-600"
+                              : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                          } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPriorityCatId("")}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {isCategoryNumeric && (
+                        <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                          Category name cannot consist of only numbers.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <select
@@ -175,22 +203,35 @@ export function PriorityRuleModal({
                     Subcategory Scope
                   </label>
                   {selectedPrioritySubcatId === "CUSTOM" ? (
-                    <div className="mt-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter custom subcategory name"
-                        value={newSubcategoryName}
-                        onChange={(e) => setNewSubcategoryName(e.target.value)}
-                        required
-                        className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPrioritySubcatId("")}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                      >
-                        ×
-                      </button>
+                    <div className="space-y-1">
+                      <div className="mt-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="Enter custom subcategory name"
+                          value={newSubcategoryName}
+                          onChange={(e) =>
+                            setNewSubcategoryName(e.target.value)
+                          }
+                          required
+                          className={`h-9 w-full rounded-xl border ${
+                            isSubcategoryNumeric
+                              ? "border-rose-500 focus:border-rose-600"
+                              : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                          } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPrioritySubcatId("")}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {isSubcategoryNumeric && (
+                        <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                          Subcategory name cannot consist of only numbers.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <select
@@ -237,12 +278,12 @@ export function PriorityRuleModal({
                     required={!isDefault && !selectedPriorityCatId}
                     className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">
-                    Matches case-insensitively against grievance title and
-                    description.
-                    {!selectedPriorityCatId &&
-                      !isDefault &&
-                      " Required when 'All Categories' is selected."}
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block">
+                    {selectedPriorityCatId
+                      ? "Optional: Leave empty to apply to all grievances in this category, or enter keywords to narrow down."
+                      : !isDefault
+                        ? "Required when 'All Categories' is selected. Scans grievance title and description."
+                        : "Matches case-insensitively against grievance title and description."}
                   </span>
                 </div>
               </div>
@@ -279,6 +320,11 @@ export function PriorityRuleModal({
                 disabled={
                   isSubmitting ||
                   !ruleName.trim() ||
+                  isRuleNameNumeric ||
+                  (selectedPriorityCatId === "CUSTOM" &&
+                    (!newCategoryName.trim() || isCategoryNumeric)) ||
+                  (selectedPrioritySubcatId === "CUSTOM" &&
+                    (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
                   (!isDefault && !selectedPriorityCatId && !keywords.trim())
                 }
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"

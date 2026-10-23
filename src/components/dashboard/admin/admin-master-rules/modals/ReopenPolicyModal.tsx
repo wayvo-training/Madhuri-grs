@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, X } from "lucide-react";
-import type { ReopenPolicyModalProps } from "./types";
+import { isPurelyNumeric, type ReopenPolicyModalProps } from "./types";
 
 export function ReopenPolicyModal({
   open,
@@ -30,6 +30,43 @@ export function ReopenPolicyModal({
   onSubmit,
 }: ReopenPolicyModalProps) {
   if (!open) return null;
+
+  const isRuleNameNumeric = isPurelyNumeric(ruleName);
+  const isCategoryNumeric =
+    selectedPriorityCatId === "CUSTOM" && isPurelyNumeric(newCategoryName);
+  const isSubcategoryNumeric =
+    selectedPrioritySubcatId === "CUSTOM" &&
+    isPurelyNumeric(newSubcategoryName);
+
+  // Reopen window in days: 1 to 30 days
+  const windowDays = reopenWindowHours
+    ? (Number(reopenWindowHours) / 24).toString()
+    : "";
+  const numDays = Number(windowDays);
+  const isWindowInvalid =
+    !windowDays ||
+    Number.isNaN(numDays) ||
+    numDays < 1 ||
+    numDays > 30 ||
+    !Number.isInteger(numDays);
+
+  // Max reopens limit: 1 to 10
+  const numReopens = Number(maxReopens);
+  const isMaxReopensInvalid =
+    !maxReopens ||
+    Number.isNaN(numReopens) ||
+    numReopens < 1 ||
+    numReopens > 10 ||
+    !Number.isInteger(numReopens);
+
+  // Manual reviews limit: 1 to 10
+  const numReviews = Number(maxReviews);
+  const isMaxReviewsInvalid =
+    !maxReviews ||
+    Number.isNaN(numReviews) ||
+    numReviews < 1 ||
+    numReviews > 10 ||
+    !Number.isInteger(numReviews);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-xs">
@@ -69,8 +106,18 @@ export function ReopenPolicyModal({
               placeholder="e.g. Standard 72hr Reopen Policy"
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
-              className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+              className={`mt-1 h-9 w-full rounded-xl border ${
+                isRuleNameNumeric
+                  ? "border-rose-500 focus:border-rose-600"
+                  : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+              } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
             />
+            {isRuleNameNumeric && (
+              <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                Policy name cannot consist of only numbers. It must include
+                letters or an alphanumeric combination.
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -83,22 +130,33 @@ export function ReopenPolicyModal({
                   Category Scope
                 </label>
                 {selectedPriorityCatId === "CUSTOM" ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter custom category name"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      required
-                      className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPriorityCatId("")}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                    >
-                      ×
-                    </button>
+                  <div className="space-y-1">
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom category name"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        required
+                        className={`h-9 w-full rounded-xl border ${
+                          isCategoryNumeric
+                            ? "border-rose-500 focus:border-rose-600"
+                            : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                        } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPriorityCatId("")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {isCategoryNumeric && (
+                      <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                        Category name cannot consist of only numbers.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <select
@@ -129,22 +187,33 @@ export function ReopenPolicyModal({
                   Subcategory Scope
                 </label>
                 {selectedPrioritySubcatId === "CUSTOM" ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter custom subcategory name"
-                      value={newSubcategoryName}
-                      onChange={(e) => setNewSubcategoryName(e.target.value)}
-                      required
-                      className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPrioritySubcatId("")}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                    >
-                      ×
-                    </button>
+                  <div className="space-y-1">
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter custom subcategory name"
+                        value={newSubcategoryName}
+                        onChange={(e) => setNewSubcategoryName(e.target.value)}
+                        required
+                        className={`h-9 w-full rounded-xl border ${
+                          isSubcategoryNumeric
+                            ? "border-rose-500 focus:border-rose-600"
+                            : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                        } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPrioritySubcatId("")}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    {isSubcategoryNumeric && (
+                      <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                        Subcategory name cannot consist of only numbers.
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <select
@@ -172,22 +241,49 @@ export function ReopenPolicyModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label
                   htmlFor="reopen-window-input"
                   className="block font-semibold text-slate-700 dark:text-slate-300"
                 >
-                  Reopen Window (Hours) *
+                  Reopen Window (Days) *
                 </label>
                 <input
                   id="reopen-window-input"
                   type="number"
                   min="1"
-                  value={reopenWindowHours}
-                  onChange={(e) => setReopenWindowHours(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                  max="30"
+                  placeholder="1 - 30"
+                  value={windowDays}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setReopenWindowHours("");
+                    } else {
+                      const parsed = Number(val);
+                      setReopenWindowHours((parsed * 24).toString());
+                    }
+                  }}
+                  className={`mt-1 h-9 w-full rounded-xl border ${
+                    isWindowInvalid && windowDays !== ""
+                      ? "border-rose-500 focus:border-rose-600"
+                      : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                  } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
                 />
+                {isWindowInvalid && windowDays !== "" ? (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    Must be 1 to 30 days.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Max 30 days (
+                    {numDays && numDays >= 1 && numDays <= 30
+                      ? `${numDays * 24} hrs`
+                      : "1 - 30"}
+                    )
+                  </p>
+                )}
               </div>
 
               <div>
@@ -201,10 +297,25 @@ export function ReopenPolicyModal({
                   id="max-reopens-input"
                   type="number"
                   min="1"
+                  max="10"
+                  placeholder="1 - 10"
                   value={maxReopens}
                   onChange={(e) => setMaxReopens(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                  className={`mt-1 h-9 w-full rounded-xl border ${
+                    isMaxReopensInvalid && maxReopens !== ""
+                      ? "border-rose-500 focus:border-rose-600"
+                      : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                  } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
                 />
+                {isMaxReopensInvalid && maxReopens !== "" ? (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    Must be 1 to 10.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Limit: 1 - 10 times
+                  </p>
+                )}
               </div>
 
               <div>
@@ -218,10 +329,25 @@ export function ReopenPolicyModal({
                   id="max-reviews-input"
                   type="number"
                   min="1"
+                  max="10"
+                  placeholder="1 - 10"
                   value={maxReviews}
                   onChange={(e) => setMaxReviews(e.target.value)}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                  className={`mt-1 h-9 w-full rounded-xl border ${
+                    isMaxReviewsInvalid && maxReviews !== ""
+                      ? "border-rose-500 focus:border-rose-600"
+                      : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
+                  } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
                 />
+                {isMaxReviewsInvalid && maxReviews !== "" ? (
+                  <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    Must be 1 to 10.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Limit: 1 - 10 reviews
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -256,9 +382,14 @@ export function ReopenPolicyModal({
                 disabled={
                   isSubmitting ||
                   !ruleName.trim() ||
-                  !reopenWindowHours ||
-                  !maxReopens ||
-                  !maxReviews
+                  isRuleNameNumeric ||
+                  (selectedPriorityCatId === "CUSTOM" &&
+                    (!newCategoryName.trim() || isCategoryNumeric)) ||
+                  (selectedPrioritySubcatId === "CUSTOM" &&
+                    (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
+                  isWindowInvalid ||
+                  isMaxReopensInvalid ||
+                  isMaxReviewsInvalid
                 }
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
               >
