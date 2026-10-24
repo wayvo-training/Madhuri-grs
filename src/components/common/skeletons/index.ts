@@ -4,5 +4,6 @@ export * from "./EndUserDashboardSkeleton";
 export * from "./EndUserGrievancesSkeleton";
 export * from "./GrievanceDetails4TabSkeleton";
 export * from "./GrievanceTableSkeleton";
+export * from "./KnowledgeBaseSkeleton";
 export * from "./MessagesSkeleton";
 export * from "./NotificationsSkeleton";

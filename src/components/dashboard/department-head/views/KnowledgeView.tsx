@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, CheckCircle2, FileX, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { KnowledgeArticleCardSkeleton } from "@/components/common/skeletons";
 import { KnowledgeArticleCard } from "@/components/knowledge/KnowledgeArticleCard";
 import {
   type KnowledgeArticleData,
@@ -246,36 +247,9 @@ export function KnowledgeView() {
         {/* Scrollable Container */}
         {loading ? (
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 space-y-3">
-            {["kb-skel-1", "kb-skel-2", "kb-skel-3", "kb-skel-4"].map(
-              (skelId) => (
-                <div
-                  key={skelId}
-                  className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4 shadow-2xs space-y-3 animate-pulse"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-full" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
-                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="space-y-2 py-1">
-                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-700/60 rounded" />
-                    <div className="h-3.5 w-3/4 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                  </div>
-                  <div className="flex items-center gap-4 pt-1">
-                    <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700/60 rounded-md" />
-                    <div className="h-3.5 w-32 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                    <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                  </div>
-                </div>
-              ),
-            )}
+            {[1, 2, 3, 4].map((i) => (
+              <KnowledgeArticleCardSkeleton key={`kb-skel-${i}`} />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-12 text-center space-y-2">
