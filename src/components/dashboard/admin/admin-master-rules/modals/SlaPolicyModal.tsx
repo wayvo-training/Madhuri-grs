@@ -21,13 +21,9 @@ export function SlaPolicyModal({
   durationHours,
   setDurationHours,
   warningPercent,
-  setWarningPercent,
   atRiskPercent = "75",
-  setAtRiskPercent,
   criticalPercent = "90",
-  setCriticalPercent,
   escalationPercent,
-  setEscalationPercent,
   slaRecipients,
   setSlaRecipients,
   isSubmitting,
@@ -309,7 +305,6 @@ export function SlaPolicyModal({
                 const isWarning = currentTierKey === "warning";
                 const isAtRisk = currentTierKey === "at_risk";
                 const isCritical = currentTierKey === "critical";
-                const isBreach = currentTierKey === "escalation";
 
                 const tierName = isWarning
                   ? "Warning Threshold"
@@ -377,94 +372,11 @@ export function SlaPolicyModal({
                       </span>
                     </div>
 
-                    {/* Step A: Threshold Percentage */}
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="sla-tier-percent-input"
-                        className="block text-xs font-bold text-slate-800 dark:text-slate-200"
-                      >
-                        1. Threshold Percentage (%) *
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-36">
-                          {isWarning && (
-                            <input
-                              id="sla-tier-percent-input"
-                              type="number"
-                              min="1"
-                              max="99"
-                              value={warningPercent}
-                              onChange={(e) =>
-                                setWarningPercent(e.target.value)
-                              }
-                              placeholder="50"
-                              className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 pr-8 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none transition focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
-                            />
-                          )}
-                          {isAtRisk && (
-                            <input
-                              id="sla-tier-percent-input"
-                              type="number"
-                              min="1"
-                              max="99"
-                              value={atRiskPercent}
-                              onChange={(e) =>
-                                setAtRiskPercent?.(e.target.value)
-                              }
-                              placeholder="75"
-                              className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 pr-8 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none transition focus:border-amber-600 focus:ring-1 focus:ring-amber-600"
-                            />
-                          )}
-                          {isCritical && (
-                            <input
-                              id="sla-tier-percent-input"
-                              type="number"
-                              min="1"
-                              max="99"
-                              value={criticalPercent}
-                              onChange={(e) =>
-                                setCriticalPercent?.(e.target.value)
-                              }
-                              placeholder="90"
-                              className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 pr-8 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none transition focus:border-orange-600 focus:ring-1 focus:ring-orange-600"
-                            />
-                          )}
-                          {isBreach && (
-                            <input
-                              id="sla-tier-percent-input"
-                              type="number"
-                              min="100"
-                              value={escalationPercent}
-                              onChange={(e) =>
-                                setEscalationPercent(e.target.value)
-                              }
-                              placeholder="100"
-                              className="h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 px-3 pr-8 text-xs font-bold text-slate-900 dark:text-slate-100 outline-none transition focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
-                            />
-                          )}
-                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-bold">
-                            %
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {isBreach
-                            ? "Triggered at 100%+ of elapsed target resolution SLA."
-                            : `Triggered when elapsed clock reaches ${
-                                (isWarning
-                                  ? warningPercent
-                                  : isAtRisk
-                                    ? atRiskPercent
-                                    : criticalPercent) || 0
-                              }% of total SLA.`}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Step B: Designated Recipients */}
-                    <div className="space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    {/* Designated Recipients */}
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                          2. Designated Recipients (Select Designations) *
+                          Designated Recipients (Select Designations) *
                         </span>
                         <span className="text-[10px] text-slate-400 dark:text-slate-500">
                           Click to toggle designation
