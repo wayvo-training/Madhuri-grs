@@ -254,8 +254,8 @@ export async function calculateStaffRecommendations(
           matchedSkills.push(rawSkillName);
         }
       } else {
-        // Baseline competency for department member having any registered skill
-        matchWeight = 8 * mult;
+        // No match with grievance category, subcategory, or content
+        matchWeight = 0;
       }
 
       skillScore = Math.max(skillScore, matchWeight);
@@ -335,12 +335,8 @@ export async function calculateStaffRecommendations(
       experienceScore = 20;
     } else if (pastCategoryCases >= 1) {
       experienceScore = 15;
-    } else if (
-      staff.user_skills.some((us) => (Number(us.experience_years) || 0) >= 3)
-    ) {
-      experienceScore = 12;
     } else {
-      experienceScore = 8;
+      experienceScore = 0;
     }
 
     // --- Factor 3: Current Workload (20%) ---
@@ -420,7 +416,7 @@ export async function calculateStaffRecommendations(
     } else if (matchedSkills.length > 0) {
       bulletReasons.push(`Relevant skills: ${matchedSkills[0]}`);
     } else {
-      bulletReasons.push("General departmental competency");
+      bulletReasons.push("No direct skill match for this category");
     }
 
     const totalRelevantPast = pastSubcategoryCases + pastCategoryCases;
@@ -429,7 +425,7 @@ export async function calculateStaffRecommendations(
         `Relevant previous experience (${totalRelevantPast} similar case${totalRelevantPast > 1 ? "s" : ""} handled)`,
       );
     } else {
-      bulletReasons.push("Qualified for category procedures");
+      bulletReasons.push("No previous cases resolved in this category");
     }
 
     if (availabilityStatus === "AVAILABLE" && activeWorkload < maxCapacity) {
