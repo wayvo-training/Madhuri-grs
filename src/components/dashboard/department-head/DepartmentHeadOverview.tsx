@@ -27,7 +27,6 @@ import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 import {
   CaseFileInspectionModal,
   DepartmentHeadEscalationModal,
-  DepartmentHeadLeaveReassignmentModal,
   DepartmentHeadResolutionModal,
   DocumentViewerModal,
   SmartStaffAssignmentModal,
@@ -169,42 +168,11 @@ export function DepartmentHeadOverviewInner({
     loadData,
   });
 
-  // Leave Reassignment Modal State
-  const [leaveReassignmentModalStaff, setLeaveReassignmentModalStaff] =
-    useState<StaffMember | null>(null);
-  const [leaveReassignTargetStaffId, setLeaveReassignTargetStaffId] =
-    useState("");
-  const [leaveReassignNote, setLeaveReassignNote] = useState("");
-
-  const openLeaveReassignmentModal = useCallback(
-    (staff: StaffMember) => {
-      const defaultTarget = staffList.find(
-        (s: StaffMember) => s.id !== staff.id && s.status === "ACTIVE",
-      );
-      setLeaveReassignTargetStaffId(defaultTarget ? defaultTarget.id : "");
-      setLeaveReassignNote(
-        `Temporary leave reassignment authorized by Department Head ${currentHodName}.`,
-      );
-      setLeaveReassignmentModalStaff(staff);
-    },
-    [currentHodName, staffList],
-  );
-
   // Staff Availability Actions
-  const {
-    handleToggleStaffAvailability,
-    handleBulkReassignAndMarkLeave: executeBulkReassign,
-    handleKeepTicketsAndMarkLeave: executeKeepTickets,
-  } = useStaffActions({
-    currentHodName,
-    staffList,
-    grievances,
+  const { handleToggleStaffAvailability } = useStaffActions({
     setStaffList,
-    setGrievances,
-    setGovernanceAuditFeed,
     showSuccess,
     loadData,
-    openLeaveReassignmentModal,
   });
 
   // Modals state
@@ -364,23 +332,6 @@ export function DepartmentHeadOverviewInner({
       actionTaken: actionTaken || undefined,
     });
     setResolutionModalGrievance(null);
-  };
-
-  const handleBulkReassignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!leaveReassignmentModalStaff || !leaveReassignTargetStaffId) return;
-    await executeBulkReassign({
-      leavingStaff: leaveReassignmentModalStaff,
-      targetStaffId: leaveReassignTargetStaffId,
-      note: leaveReassignNote,
-    });
-    setLeaveReassignmentModalStaff(null);
-  };
-
-  const handleKeepTicketsSubmit = async () => {
-    if (!leaveReassignmentModalStaff) return;
-    await executeKeepTickets(leaveReassignmentModalStaff);
-    setLeaveReassignmentModalStaff(null);
   };
 
   return (
@@ -616,22 +567,6 @@ export function DepartmentHeadOverviewInner({
             onFeedbackChange={setResolutionFeedback}
           />
         ))}
-
-      {leaveReassignmentModalStaff && (
-        <DepartmentHeadLeaveReassignmentModal
-          staff={leaveReassignmentModalStaff}
-          grievances={grievances}
-          targetStaffId={leaveReassignTargetStaffId}
-          note={leaveReassignNote}
-          onClose={() => setLeaveReassignmentModalStaff(null)}
-          onSubmit={handleBulkReassignSubmit}
-          onTargetStaffIdChange={setLeaveReassignTargetStaffId}
-          onNoteChange={setLeaveReassignNote}
-          onInspect={handleInspectCase}
-          onMarkLeave={handleKeepTicketsSubmit}
-          staffList={staffList}
-        />
-      )}
 
       {selectedCaseFile && (
         <CaseFileInspectionModal

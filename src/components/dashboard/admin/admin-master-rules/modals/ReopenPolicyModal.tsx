@@ -1,6 +1,13 @@
 "use client";
 
 import { Loader2, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { isPurelyNumeric, type ReopenPolicyModalProps } from "./types";
 
 export function ReopenPolicyModal({
@@ -159,23 +166,54 @@ export function ReopenPolicyModal({
                     )}
                   </div>
                 ) : (
-                  <select
-                    id="reopen-cat-select"
-                    value={selectedPriorityCatId}
-                    onChange={(e) => {
-                      setSelectedPriorityCatId(e.target.value);
-                      setSelectedPrioritySubcatId("");
+                  <Select
+                    value={selectedPriorityCatId || "ALL"}
+                    onValueChange={(val) => {
+                      if (!val || val === "ALL") {
+                        setSelectedPriorityCatId("");
+                        setSelectedPrioritySubcatId("");
+                      } else {
+                        setSelectedPriorityCatId(val);
+                        setSelectedPrioritySubcatId("");
+                      }
                     }}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
                   >
-                    <option value="">-- All Categories --</option>
-                    {categories.map((c) => (
-                      <option key={c.category_id} value={c.category_id}>
-                        {c.category_name}
-                      </option>
-                    ))}
-                    <option value="CUSTOM">Custom (Add New)</option>
-                  </select>
+                    <SelectTrigger
+                      id="reopen-cat-select"
+                      className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
+                    >
+                      <SelectValue placeholder="-- All Categories --">
+                        {selectedPriorityCatId
+                          ? categories.find(
+                              (c) => c.category_id === selectedPriorityCatId,
+                            )?.category_name || selectedPriorityCatId
+                          : "-- All Categories --"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                      <SelectItem
+                        value="ALL"
+                        className="text-xs cursor-pointer"
+                      >
+                        -- All Categories --
+                      </SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem
+                          key={c.category_id}
+                          value={c.category_id}
+                          className="text-xs cursor-pointer"
+                        >
+                          {c.category_name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem
+                        value="CUSTOM"
+                        className="text-xs font-semibold text-teal-600 dark:text-teal-400 cursor-pointer"
+                      >
+                        + Custom (Add New)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
@@ -216,27 +254,60 @@ export function ReopenPolicyModal({
                     )}
                   </div>
                 ) : (
-                  <select
-                    id="reopen-subcat-select"
-                    value={selectedPrioritySubcatId}
+                  <Select
+                    value={selectedPrioritySubcatId || "ALL"}
                     disabled={!selectedPriorityCatId}
-                    onChange={(e) =>
-                      setSelectedPrioritySubcatId(e.target.value)
-                    }
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600 disabled:opacity-50"
+                    onValueChange={(val) => {
+                      setSelectedPrioritySubcatId(
+                        !val || val === "ALL" ? "" : val,
+                      );
+                    }}
                   >
-                    <option value="">-- All Subcategories --</option>
-                    {categories
-                      .find((c) => c.category_id === selectedPriorityCatId)
-                      ?.subcategories?.map((s) => (
-                        <option key={s.subcategory_id} value={s.subcategory_id}>
-                          {s.subcategory_name}
-                        </option>
-                      ))}
-                    {selectedPriorityCatId && (
-                      <option value="CUSTOM">Custom (Add New)</option>
-                    )}
-                  </select>
+                    <SelectTrigger
+                      id="reopen-subcat-select"
+                      className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium disabled:opacity-50"
+                    >
+                      <SelectValue placeholder="-- All Subcategories --">
+                        {selectedPrioritySubcatId
+                          ? categories
+                              .find(
+                                (c) => c.category_id === selectedPriorityCatId,
+                              )
+                              ?.subcategories?.find(
+                                (s) =>
+                                  s.subcategory_id === selectedPrioritySubcatId,
+                              )?.subcategory_name || selectedPrioritySubcatId
+                          : "-- All Subcategories --"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                      <SelectItem
+                        value="ALL"
+                        className="text-xs cursor-pointer"
+                      >
+                        -- All Subcategories --
+                      </SelectItem>
+                      {categories
+                        .find((c) => c.category_id === selectedPriorityCatId)
+                        ?.subcategories?.map((s) => (
+                          <SelectItem
+                            key={s.subcategory_id}
+                            value={s.subcategory_id}
+                            className="text-xs cursor-pointer"
+                          >
+                            {s.subcategory_name}
+                          </SelectItem>
+                        ))}
+                      {selectedPriorityCatId && (
+                        <SelectItem
+                          value="CUSTOM"
+                          className="text-xs font-semibold text-teal-600 dark:text-teal-400 cursor-pointer"
+                        >
+                          + Custom (Add New)
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>

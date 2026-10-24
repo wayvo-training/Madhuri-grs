@@ -7,6 +7,13 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { useEffect } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface PaginationProps {
   currentPage: number;
@@ -107,18 +114,32 @@ export function Pagination({
         {onPageSizeChange && pageSizeOptions && pageSizeOptions.length > 1 && (
           <div className="flex items-center gap-1.5 mr-2 text-xs text-slate-500">
             <span className="hidden sm:inline">Per page:</span>
-            <select
-              aria-label="Items per page"
-              value={pageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 focus:border-[#0F766E] focus:outline-none focus:ring-1 focus:ring-[#0F766E] cursor-pointer"
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => {
+                if (val) handlePageSizeChange(Number(val));
+              }}
             >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger
+                aria-label="Items per page"
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 focus:border-[#0F766E] focus:outline-none focus:ring-1 focus:ring-[#0F766E] cursor-pointer min-w-16"
+              >
+                <SelectValue placeholder={String(pageSize)}>
+                  {pageSize}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-white border border-slate-200 shadow-lg min-w-16">
+                {pageSizeOptions.map((opt) => (
+                  <SelectItem
+                    key={opt}
+                    value={String(opt)}
+                    className="text-xs cursor-pointer"
+                  >
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 

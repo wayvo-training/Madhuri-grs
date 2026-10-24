@@ -1,4 +1,11 @@
 import { Building2, CheckCircle2, Loader2, Pencil, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { DepartmentHeadOption } from "@/types/admin/departments";
 
 export interface DepartmentModalsProps {
@@ -134,27 +141,49 @@ export function DepartmentModals({
                 >
                   Department Head <span className="text-amber-800">*</span>
                 </label>
-                <select
-                  id="new-dept-head"
-                  required
+                <Select
                   value={selectedHeadId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    onSetSelectedHeadId(id);
-                    const head = departmentHeads.find((h) => h.user_id === id);
-                    if (head && !contactEmail) {
-                      onSetContactEmail(head.email);
+                  onValueChange={(id) => {
+                    if (id) {
+                      onSetSelectedHeadId(id);
+                      const head = departmentHeads.find(
+                        (h) => h.user_id === id,
+                      );
+                      if (head && !contactEmail) {
+                        onSetContactEmail(head.email);
+                      }
                     }
                   }}
-                  className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
                 >
-                  <option value="">— Select Department Head —</option>
-                  {departmentHeads.map((head) => (
-                    <option key={head.user_id} value={head.user_id}>
-                      {head.first_name} {head.last_name} ({head.email})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="new-dept-head"
+                    className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+                  >
+                    <SelectValue placeholder="— Select Department Head —">
+                      {selectedHeadId
+                        ? (() => {
+                            const h = departmentHeads.find(
+                              (head) => head.user_id === selectedHeadId,
+                            );
+                            return h
+                              ? `${h.first_name} ${h.last_name} (${h.email})`
+                              : selectedHeadId;
+                          })()
+                        : "— Select Department Head —"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-56">
+                    {departmentHeads.map((head) => (
+                      <SelectItem
+                        key={head.user_id}
+                        value={head.user_id}
+                        className="text-xs cursor-pointer py-1.5"
+                      >
+                        {head.first_name} {head.last_name} ({head.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {departmentHeads.length === 0 && (
                   <p className="mt-1 text-[11px] text-amber-600">
                     No users currently have the Department Head role. Please

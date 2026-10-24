@@ -3,6 +3,13 @@
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   isPurelyNumeric,
   SLA_RECIPIENT_OPTIONS,
   type SlaPolicyModalProps,
@@ -155,17 +162,49 @@ export function SlaPolicyModal({
                   >
                     Priority Tier Scope *
                   </label>
-                  <select
-                    id="sla-priority-select"
+                  <Select
                     value={priorityLevel}
-                    onChange={(e) => setPriorityLevel(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                    onValueChange={(val) => {
+                      if (val) setPriorityLevel(val);
+                    }}
                   >
-                    <option value="CRITICAL">Critical Priority Tier</option>
-                    <option value="HIGH">High Priority Tier</option>
-                    <option value="MEDIUM">Medium Priority Tier</option>
-                    <option value="LOW">Low Priority Tier</option>
-                  </select>
+                    <SelectTrigger
+                      id="sla-priority-select"
+                      className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
+                    >
+                      <SelectValue placeholder="Select Priority Tier">
+                        {priorityLevel
+                          ? `${priorityLevel.charAt(0) + priorityLevel.slice(1).toLowerCase()} Priority Tier`
+                          : "Select Priority Tier"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
+                      <SelectItem
+                        value="CRITICAL"
+                        className="text-xs cursor-pointer"
+                      >
+                        Critical Priority Tier
+                      </SelectItem>
+                      <SelectItem
+                        value="HIGH"
+                        className="text-xs cursor-pointer"
+                      >
+                        High Priority Tier
+                      </SelectItem>
+                      <SelectItem
+                        value="MEDIUM"
+                        className="text-xs cursor-pointer"
+                      >
+                        Medium Priority Tier
+                      </SelectItem>
+                      <SelectItem
+                        value="LOW"
+                        className="text-xs cursor-pointer"
+                      >
+                        Low Priority Tier
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>

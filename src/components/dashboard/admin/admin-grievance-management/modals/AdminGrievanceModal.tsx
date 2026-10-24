@@ -9,6 +9,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type {
   DepartmentOption,
   SerializedGrievance,
@@ -309,25 +316,41 @@ export function AdminGrievanceModal({
                   >
                     Primary Department <span className="text-rose-500">*</span>
                   </label>
-                  <select
-                    id="manual-routing-primary-dept"
+                  <Select
                     value={targetDeptId}
-                    onChange={(e) => {
-                      const newPrimaryId = e.target.value;
-                      setTargetDeptId(newPrimaryId);
-                      setSelectedSupportingDeptIds((prev) =>
-                        prev.filter((id) => id !== newPrimaryId),
-                      );
+                    onValueChange={(newPrimaryId) => {
+                      if (newPrimaryId) {
+                        setTargetDeptId(newPrimaryId);
+                        setSelectedSupportingDeptIds((prev) =>
+                          prev.filter((id) => id !== newPrimaryId),
+                        );
+                      }
                     }}
-                    className="h-9 w-full rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-amber-600 focus:ring-1 focus:ring-amber-600/20"
                   >
-                    <option value="">-- Select Primary Department --</option>
-                    {departments.map((d) => (
-                      <option key={d.department_id} value={d.department_id}>
-                        {d.department_name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      id="manual-routing-primary-dept"
+                      className="h-9.5 w-full rounded-xl border border-amber-300 bg-white px-3 text-xs font-medium text-slate-800 outline-none transition focus:border-amber-600 focus:ring-1 focus:ring-amber-600/20 cursor-pointer"
+                    >
+                      <SelectValue placeholder="-- Select Primary Department --">
+                        {targetDeptId
+                          ? departments.find(
+                              (d) => d.department_id === targetDeptId,
+                            )?.department_name || targetDeptId
+                          : "-- Select Primary Department --"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-56">
+                      {departments.map((d) => (
+                        <SelectItem
+                          key={d.department_id}
+                          value={d.department_id}
+                          className="text-xs cursor-pointer py-1.5"
+                        >
+                          {d.department_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
