@@ -447,13 +447,17 @@ export async function POST(request: Request) {
                 matchedDept &&
                 matchedDept.involvement_type === "SUPPORTING"
               ) {
-                await prisma.attachment_department_grants.create({
-                  data: {
-                    attachment_id: newAttachment.attachment_id,
-                    department_id: BigInt(deptId),
-                    granted_by: user.user_id,
-                  },
-                });
+                try {
+                  await prisma.attachment_department_grants.create({
+                    data: {
+                      attachment_id: newAttachment.attachment_id,
+                      department_id: BigInt(deptId),
+                      granted_by: user.user_id,
+                    },
+                  });
+                } catch {
+                  // Fallback safely if attachment_department_grants table is not yet migrated
+                }
               }
             }
           } catch (classifyErr) {

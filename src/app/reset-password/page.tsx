@@ -68,6 +68,10 @@ function ResetPasswordFlow() {
 
       if (data.resetToken) {
         setActiveToken(data.resetToken);
+      } else {
+        setRequestError(
+          "No account found with this email. Please check your email address.",
+        );
       }
     } catch (err) {
       console.error("Forgot password failed:", err);

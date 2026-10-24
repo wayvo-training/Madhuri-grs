@@ -678,6 +678,7 @@ export function DepartmentHeadOverviewInner({
 export function DepartmentHeadOverview(props: DepartmentHeadOverviewProps) {
   return (
     <DepartmentHeadProvider
+      initialData={props.initialData}
       initialDepartmentName={props.departmentName}
       initialHodName={props.hodName}
       initialHodEmail={props.hodEmail}

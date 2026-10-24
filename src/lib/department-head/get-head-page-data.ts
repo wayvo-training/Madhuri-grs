@@ -91,7 +91,7 @@ export async function getDepartmentHeadPageData(options?: {
   const isAdmin = user.roles.role_name === "ADMIN";
 
   const page = options?.page ? Math.max(1, options.page) : 1;
-  const limit = options?.limit ? Math.max(1, options.limit) : 100;
+  const limit = options?.limit ? Math.max(1, options.limit) : 25;
   const skip = (page - 1) * limit;
 
   let deptName = user.departments?.department_name;

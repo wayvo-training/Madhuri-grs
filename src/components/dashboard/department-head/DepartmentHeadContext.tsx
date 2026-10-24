@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   CaseDrawerTab,
+  DepartmentHeadInitialData,
   EscalationAuditRecord,
   EscalationInterventionType,
   GrievanceItem,
@@ -146,6 +147,7 @@ export function useDepartmentHead() {
 
 interface ProviderProps {
   children: React.ReactNode;
+  initialData?: DepartmentHeadInitialData;
   initialDepartmentName?: string;
   initialHodName?: string;
   initialHodEmail?: string;
@@ -154,19 +156,28 @@ interface ProviderProps {
 
 export function DepartmentHeadProvider({
   children,
+  initialData,
   initialDepartmentName = "Department Operations",
   initialHodName = "Department Head",
   initialHodEmail = "",
   initialEmployeeCode = "HOD-01",
 }: ProviderProps) {
-  const [grievances, setGrievances] = useState<GrievanceItem[]>([]);
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [grievances, setGrievances] = useState<GrievanceItem[]>(
+    initialData?.grievances || [],
+  );
+  const [staffList, setStaffList] = useState<StaffMember[]>(
+    initialData?.staffList || [],
+  );
+  const [isLoading, setIsLoading] = useState(
+    !initialData || initialData.grievances.length === 0,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(
+    initialData?.selectedDeptId || "",
+  );
   const [availableDepartments, setAvailableDepartments] = useState<
     { id: string; name: string }[]
-  >([]);
+  >(initialData?.availableDepartments || []);
   const [currentDepartmentName, setCurrentDepartmentName] = useState(
     initialDepartmentName,
   );
@@ -244,7 +255,7 @@ export function DepartmentHeadProvider({
   const [escalationNote, setEscalationNote] = useState("");
   const [governanceAuditFeed, setGovernanceAuditFeed] = useState<
     EscalationAuditRecord[]
-  >([]);
+  >(initialData?.governanceAuditFeed || []);
   const [resolutionModalGrievance, setResolutionModalGrievance] =
     useState<GrievanceItem | null>(null);
   const [resolutionDecision, setResolutionDecision] = useState<
@@ -326,8 +337,24 @@ export function DepartmentHeadProvider({
   );
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!initialData) {
+      loadData();
+    }
+  }, [initialData, loadData]);
+
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.grievances) setGrievances(initialData.grievances);
+      if (initialData.staffList) setStaffList(initialData.staffList);
+      if (initialData.governanceAuditFeed)
+        setGovernanceAuditFeed(initialData.governanceAuditFeed);
+      if (initialData.availableDepartments)
+        setAvailableDepartments(initialData.availableDepartments);
+      if (initialData.selectedDeptId)
+        setSelectedDeptId(initialData.selectedDeptId);
+      setIsLoading(false);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
