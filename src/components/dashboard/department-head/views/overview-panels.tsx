@@ -272,7 +272,7 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={`att-skel-${
@@ -350,7 +350,7 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedList
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((item) => {

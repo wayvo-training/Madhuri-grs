@@ -441,7 +441,7 @@ export function EndUserPortal({
           </Link>
         </div>
 
-        <div className="mt-2 overflow-y-auto custom-scrollbar flex-1 relative min-h-0">
+        <div className="mt-2 overflow-y-auto custom-scrollbar flex-1 relative min-h-0 max-h-[400px]">
           <table className="w-full text-left border-collapse text-sm">
             <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
               <tr>
@@ -482,19 +482,21 @@ export function EndUserPortal({
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                   >
                     <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold whitespace-nowrap align-middle">
-                      <Link
-                        href={`/end-user/grievances/${g.id}`}
-                        className="text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer"
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGrievance(g)}
+                        className="font-mono text-xs font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
                       >
                         {g.grievanceNumber}
-                      </Link>
+                      </button>
                     </td>
                     <td className="py-2.5 px-2 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={g.title}
                         maxChars={25}
                         alwaysShowTooltip={true}
-                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px]"
+                        onClick={() => setSelectedGrievance(g)}
+                        className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px] hover:underline hover:text-teal-600 cursor-pointer"
                       />
                     </td>
                     <td className="py-2.5 px-2 whitespace-nowrap align-middle max-w-[180px]">
@@ -524,10 +526,7 @@ export function EndUserPortal({
                           {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
-                            onClick: () =>
-                              router.push(
-                                `/end-user/grievances/${g.id}?tab=overview`,
-                              ),
+                            onClick: () => setSelectedGrievance(g),
                           },
                           {
                             label: "Track",

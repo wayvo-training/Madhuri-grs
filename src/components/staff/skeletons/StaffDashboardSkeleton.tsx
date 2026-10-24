@@ -90,12 +90,17 @@ export function StaffDashboardSkeleton() {
         </div>
       </div>
 
-      {/* 3. Grievances Requiring Immediate Attention Table Skeleton */}
+      {/* 3. Recent Grievances Table Skeleton */}
       <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 space-y-2 shadow-2xs overflow-hidden">
-        <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 gap-2 shrink-0">
           <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded-full" />
-            <Skeleton className="h-3.5 w-60" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Recent Grievances
+            </h3>
+            <span className="text-slate-300 hidden sm:inline">&bull;</span>
+            <p className="text-xs text-slate-500 font-normal hidden sm:inline">
+              Grievances assigned to you
+            </p>
           </div>
           <Skeleton className="h-3.5 w-28" />
         </div>

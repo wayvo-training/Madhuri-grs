@@ -91,19 +91,16 @@ export function DepartmentHeadDashboardSkeleton() {
         </div>
       </div>
 
-      {/* 3. Attention Required Panel Table Skeleton */}
-      <div className="flex-1 flex flex-col min-h-[200px] rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-2xs">
+      {/* 3. Recent Grievances Panel Table Skeleton */}
+      <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-2xs">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 gap-2 shrink-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Attention Required
+              Recent Grievances
             </h3>
-            <span className="rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              5
-            </span>
             <span className="text-slate-300 hidden sm:inline">&bull;</span>
             <p className="text-xs text-slate-500 hidden sm:inline">
-              Grievances requiring review or intervention
+              Grievances submitted to this department
             </p>
           </div>
           <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
