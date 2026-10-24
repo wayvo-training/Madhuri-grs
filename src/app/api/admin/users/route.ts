@@ -493,6 +493,76 @@ export async function PATCH(request: Request) {
         },
       });
 
+      if (status && status !== "ACTIVE" && existing.status === "ACTIVE") {
+        const activeAssignments = await tx.assignments.findMany({
+          where: {
+            staff_id: targetUserId,
+            assignment_status: "ASSIGNED",
+            grievances: {
+              status: { notIn: ["CLOSED", "RESOLVED"] },
+            },
+          },
+          include: {
+            grievances: {
+              select: {
+                grievance_id: true,
+                grievance_number: true,
+                title: true,
+              },
+            },
+          },
+        });
+
+        if (activeAssignments.length > 0) {
+          const deptId = updated.department_id || existing.department_id;
+          if (deptId) {
+            const departmentHeads = await tx.users.findMany({
+              where: {
+                department_id: deptId,
+                roles: { role_name: "DEPARTMENT_HEAD" },
+                status: "ACTIVE",
+              },
+              select: { user_id: true },
+            });
+
+            const staffFullName =
+              `${updated.first_name} ${updated.last_name || ""}`.trim();
+            for (const head of departmentHeads) {
+              for (const asgn of activeAssignments) {
+                await tx.notifications.create({
+                  data: {
+                    user_id: head.user_id,
+                    notification_type: "STAFF_DEACTIVATED",
+                    channel: "IN_APP",
+                    title: `Staff Deactivated: ${staffFullName}`,
+                    message: `Staff member ${staffFullName} was deactivated by Admin. Case ${asgn.grievances.grievance_number} requires immediate reassignment.`,
+                    grievance_id: asgn.grievances.grievance_id,
+                    status: "PENDING",
+                  },
+                });
+
+                await tx.audit_logs.create({
+                  data: {
+                    user_id: user.user_id,
+                    grievance_id: asgn.grievances.grievance_id,
+                    action: "STAFF_DEACTIVATED_REASSIGNMENT_REQUIRED",
+                    entity_type: "GRIEVANCE",
+                    entity_id: asgn.grievances.grievance_id,
+                    new_value: {
+                      staffId: targetUserId.toString(),
+                      staffName: staffFullName,
+                      reason:
+                        "Assigned staff member was deactivated by Admin. Reassignment required.",
+                      deactivatedBy: user.email,
+                    },
+                  },
+                });
+              }
+            }
+          }
+        }
+      }
+
       return updated;
     });
 

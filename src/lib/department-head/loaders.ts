@@ -900,6 +900,12 @@ export async function fetchDepartmentHeadGrievances(
           ? assignedStaff.user_id.toString()
           : null,
       assignedStaffName: resolvedAssignedStaffName,
+      assignedStaffStatus: assignedStaff?.status || null,
+      isAssignedStaffInactive: Boolean(
+        assignedStaff &&
+          (assignedStaff.status === "INACTIVE" ||
+            assignedStaff.status === "SUSPENDED"),
+      ),
       createdAt: formatFriendlyDate(g.created_at),
       isReopened: g.reopen_count > 0 || g.status === "REOPENED",
       reopenCount: g.reopen_count,

@@ -372,6 +372,7 @@ export function DepartmentHeadOverviewInner({
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
           onInspectGrievance={handleInspectCase}
+          onAssignGrievance={handleOpenAssignModal}
           onFilterQueue={(filterType, value) => {
             resetFilters();
             if (filterType === "status") {

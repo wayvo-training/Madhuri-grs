@@ -205,6 +205,7 @@ export function computeAttentionRequiredList(
   return grievances
     .filter((g) => {
       if (g.status === "CLOSED" || g.status === "RESOLVED") return false;
+      const isStaffInactive = Boolean(g.isAssignedStaffInactive);
       const isBreached = g.slaStatus === "BREACHED" || g.status === "ESCALATED";
       const isAtRisk = g.slaStatus === "AT_RISK";
       const isUnassigned =
@@ -213,11 +214,17 @@ export function computeAttentionRequiredList(
       const isException =
         g.isReopened || g.status === "REOPENED" || g.isCrossDepartment;
       return (
-        isBreached || isAtRisk || isUnassigned || isPendingReview || isException
+        isStaffInactive ||
+        isBreached ||
+        isAtRisk ||
+        isUnassigned ||
+        isPendingReview ||
+        isException
       );
     })
     .sort((a, b) => {
       const getPriorityRank = (g: GrievanceItem) => {
+        if (g.isAssignedStaffInactive) return 5;
         if (g.slaStatus === "BREACHED" || g.status === "ESCALATED") return 4;
         if (g.slaStatus === "AT_RISK") return 3;
         if (!g.assignedStaffId) return 2;

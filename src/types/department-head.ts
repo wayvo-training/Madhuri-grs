@@ -71,6 +71,8 @@ export interface GrievanceItem {
   slaConsumptionPercent?: number;
   assignedStaffId?: string | null;
   assignedStaffName?: string | null;
+  assignedStaffStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED" | string | null;
+  isAssignedStaffInactive?: boolean;
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;

@@ -33,7 +33,7 @@ export async function getCurrentUser() {
       },
     });
 
-    if (!session) {
+    if (!session || session.users.status !== "ACTIVE") {
       return null;
     }
 

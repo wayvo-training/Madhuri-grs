@@ -840,6 +840,11 @@ export function QueueView({
                               <span className="truncate">
                                 {item.assignedStaffName}
                               </span>
+                              {item.isAssignedStaffInactive && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 shrink-0">
+                                  Inactive
+                                </span>
+                              )}
                             </span>
                           ) : isItemClosed ? (
                             <span className="inline-flex items-center text-sm font-normal text-slate-400">
@@ -928,7 +933,26 @@ export function QueueView({
                                     },
                                   ]
                                 : []),
+                              ...(item.isAssignedStaffInactive &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED"
+                                ? [
+                                    {
+                                      label: "Reassign (Staff Inactive)",
+                                      icon: (
+                                        <UserCheck className="h-3.5 w-3.5 text-rose-600" />
+                                      ),
+                                      variant: "warning" as const,
+                                      onClick: () =>
+                                        onAssign(
+                                          item,
+                                          item.assignedStaffId || "",
+                                        ),
+                                    },
+                                  ]
+                                : []),
                               ...(!hasHeadResolutionAuthority(item) &&
+                              !item.isAssignedStaffInactive &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
                               item.status !== "COMPLETED" &&

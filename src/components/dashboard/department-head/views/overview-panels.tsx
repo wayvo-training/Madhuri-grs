@@ -11,6 +11,7 @@ import {
   FileCheck,
   ShieldAlert,
   ShieldCheck,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -94,12 +95,14 @@ export function AttentionRequiredPanel({
   isLoading = false,
   onInspect,
   onViewFullQueue,
+  onAssign,
 }: {
   attentionRequiredList?: GrievanceItem[];
   grievances?: GrievanceItem[];
   isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: "progress" | "statement") => void;
   onViewFullQueue: () => void;
+  onAssign?: (item: GrievanceItem) => void;
 }) {
   type SortKey =
     | "ticketCode"
@@ -441,7 +444,16 @@ export function AttentionRequiredPanel({
                             Blocked
                           </span>
                         ) : item.assignedStaffName ? (
-                          item.assignedStaffName
+                          <span className="inline-flex items-center gap-1.5 max-w-full">
+                            <span className="truncate">
+                              {item.assignedStaffName}
+                            </span>
+                            {item.isAssignedStaffInactive && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 shrink-0">
+                                Inactive
+                              </span>
+                            )}
+                          </span>
                         ) : (
                           <span className="italic text-xs text-slate-400 font-normal">
                             Unassigned
@@ -450,14 +462,30 @@ export function AttentionRequiredPanel({
                       </span>
                     </div>
                     <div className="w-18 sm:w-20 shrink-0 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => onInspect(item, "progress")}
-                        className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs cursor-pointer"
-                      >
-                        <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
-                        <span>Inspect</span>
-                      </button>
+                      {item.isAssignedStaffInactive ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onAssign
+                              ? onAssign(item)
+                              : onInspect(item, "progress")
+                          }
+                          className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-rose-300 bg-rose-50 px-1.5 py-0.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-400 transition shadow-2xs cursor-pointer"
+                          title="Staff deactivated by Admin - Reassign immediately"
+                        >
+                          <UserCheck className="h-3 w-3 text-rose-600" />
+                          <span>Reassign</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onInspect(item, "progress")}
+                          className="inline-flex w-full justify-center items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 transition shadow-2xs cursor-pointer"
+                        >
+                          <Eye className="h-3 w-3 text-slate-400 group-hover:text-slate-600" />
+                          <span>Inspect</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
