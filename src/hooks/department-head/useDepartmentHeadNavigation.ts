@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { DepartmentHeadView } from "@/types/department-head";
 
@@ -8,59 +8,96 @@ export function useDepartmentHeadNavigation(
   initialView: DepartmentHeadView = "overview",
 ) {
   const pathname = usePathname();
-  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const getInitialView = (): DepartmentHeadView => {
+  // SSR-safe view: must NOT reference typeof window !== 'undefined' to prevent React hydration mismatch!
+  const getSsrSafeView = (): DepartmentHeadView => {
     if (pathname === "/department-head/workload") return "staff";
     if (pathname === "/department-head/queue") return "queue";
     if (pathname === "/department-head/activity") return "activity";
     if (pathname === "/department-head/knowledge") return "knowledge";
+    if (pathname === "/department-head/notifications") return "notifications";
     return initialView;
   };
 
   const [activeView, setActiveView] =
-    useState<DepartmentHeadView>(getInitialView);
+    useState<DepartmentHeadView>(getSsrSafeView);
 
   useEffect(() => {
-    // If the path itself corresponds to a view, synchronize
-    if (pathname === "/department-head/workload") {
-      setActiveView("staff");
-      return;
-    }
-    if (pathname === "/department-head/queue") {
-      setActiveView("queue");
-      return;
-    }
-    if (pathname === "/department-head/activity") {
-      setActiveView("activity");
-      return;
-    }
-    if (pathname === "/department-head/knowledge") {
-      setActiveView("knowledge");
-      return;
-    }
-
-    // Otherwise, support hash fallback on /department-head/dashboard
-    const handleHash = () => {
-      const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (hash === "sla") {
-        setActiveView("queue");
-      } else if (
-        hash === "queue" ||
-        hash === "staff" ||
-        hash === "activity" ||
-        hash === "knowledge"
-      ) {
-        setActiveView(hash as DepartmentHeadView);
-      } else {
-        setActiveView("overview");
+    const syncView = () => {
+      // 1. Path-based routing
+      if (pathname === "/department-head/workload") {
+        setActiveView("staff");
+        return;
       }
+      if (pathname === "/department-head/queue") {
+        setActiveView("queue");
+        return;
+      }
+      if (pathname === "/department-head/activity") {
+        setActiveView("activity");
+        return;
+      }
+      if (pathname === "/department-head/knowledge") {
+        setActiveView("knowledge");
+        return;
+      }
+      if (pathname === "/department-head/notifications") {
+        setActiveView("notifications");
+        return;
+      }
+
+      // 2. Hash-based tabs
+      if (typeof window !== "undefined" && window.location.hash) {
+        const hash = window.location.hash.replace("#", "").toLowerCase();
+        if (hash === "sla") {
+          setActiveView("queue");
+          return;
+        }
+        if (
+          hash === "queue" ||
+          hash === "staff" ||
+          hash === "activity" ||
+          hash === "knowledge" ||
+          hash === "notifications"
+        ) {
+          setActiveView(hash as DepartmentHeadView);
+          return;
+        }
+      }
+
+      // 3. SearchParam tab (?tab=... or ?view=...)
+      const querySearch =
+        typeof window !== "undefined" ? window.location.search : "";
+      const urlParams = querySearch
+        ? new URLSearchParams(querySearch)
+        : searchParams;
+      const tabParam = urlParams.get("tab") || urlParams.get("view");
+      if (tabParam) {
+        const lower = tabParam.toLowerCase();
+        if (
+          lower === "queue" ||
+          lower === "staff" ||
+          lower === "activity" ||
+          lower === "knowledge" ||
+          lower === "notifications"
+        ) {
+          setActiveView(lower as DepartmentHeadView);
+          return;
+        }
+      }
+
+      setActiveView(initialView || "overview");
     };
 
-    handleHash();
-    window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
-  }, [pathname]);
+    syncView();
+    window.addEventListener("hashchange", syncView);
+    window.addEventListener("popstate", syncView);
+    return () => {
+      window.removeEventListener("hashchange", syncView);
+      window.removeEventListener("popstate", syncView);
+    };
+  }, [initialView, pathname, searchParams]);
 
   const switchView = (
     view: DepartmentHeadView,
@@ -68,23 +105,17 @@ export function useDepartmentHeadNavigation(
   ) => {
     setActiveView(view);
 
-    const queryString = query
-      ? `?${new URLSearchParams(query).toString()}`
-      : "";
+    const params = new URLSearchParams(query);
+    if (view !== "overview") {
+      params.set("tab", view);
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : "";
 
-    // If navigating between dedicated sub-routes
-    if (view === "overview") {
-      router.push(`/department-head/dashboard${queryString}`);
-    } else if (view === "staff") {
-      router.push(`/department-head/workload${queryString}`);
-    } else if (view === "queue") {
-      router.push(`/department-head/queue${queryString}`);
-    } else if (view === "activity") {
-      router.push(`/department-head/activity${queryString}`);
-    } else if (view === "knowledge") {
-      router.push(`/department-head/knowledge${queryString}`);
-    } else if (view === "sla") {
-      router.push(`/department-head/queue${queryString}`);
+    if (typeof window !== "undefined") {
+      const newUrl = `/department-head/dashboard${queryString}`;
+      window.history.pushState(null, "", newUrl);
+      window.dispatchEvent(new Event("hashchange"));
+      window.dispatchEvent(new Event("popstate"));
     }
   };
 

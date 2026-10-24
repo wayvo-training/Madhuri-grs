@@ -215,7 +215,8 @@ export type DepartmentHeadView =
   | "staff"
   | "sla"
   | "activity"
-  | "knowledge";
+  | "knowledge"
+  | "notifications";
 
 export type CaseDrawerTab =
   | "progress"

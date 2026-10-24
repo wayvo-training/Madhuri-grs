@@ -1,18 +1,8 @@
 "use client";
 
-import {
-  AlertCircle,
-  BookOpen,
-  CheckCircle2,
-  Clock,
-  Eye,
-  FileCheck2,
-  FileX,
-  Filter,
-  Search,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookOpen, CheckCircle2, FileX, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { KnowledgeArticleCard } from "@/components/knowledge/KnowledgeArticleCard";
 import {
@@ -26,8 +16,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 
 export function KnowledgeView() {
-  const [articles, setArticles] = useState<KnowledgeArticleData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("PENDING_REVIEW");
   const [searchQuery, setSearchQuery] = useState("");
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -46,7 +35,7 @@ export function KnowledgeView() {
     { id: "search", label: "Search Knowledge", type: "text" },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     let newSearch = "";
     conditions.forEach((condition) => {
       const valArray = Array.isArray(condition.value)
@@ -59,26 +48,28 @@ export function KnowledgeView() {
     setSearchQuery(newSearch);
   };
 
-  const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/department-head/knowledge?status=${statusFilter === "ALL" ? "" : statusFilter}`,
-      );
+  const {
+    data: allArticles = [],
+    isLoading: loading,
+    refetch: _fetchArticles,
+  } = useQuery<KnowledgeArticleData[]>({
+    queryKey: ["department-head-knowledge"],
+    queryFn: async () => {
+      const res = await fetch("/api/department-head/knowledge");
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.articles)) {
-        setArticles(data.articles);
+        return data.articles;
       }
-    } catch (err) {
-      console.error("Failed to fetch knowledge articles:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+      return [];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchArticles();
-  }, [fetchArticles]);
+  const articles = useMemo(() => {
+    if (statusFilter === "ALL") return allArticles;
+    return allArticles.filter((art) => art.status === statusFilter);
+  }, [allArticles, statusFilter]);
 
   const handlePublish = async (article: KnowledgeArticleData) => {
     if (isSubmitting) return;
@@ -99,7 +90,9 @@ export function KnowledgeView() {
       toast.success("Knowledge Article Published", {
         description: `"${article.title}" has been published to the Knowledge Base.`,
       });
-      fetchArticles();
+      queryClient.invalidateQueries({
+        queryKey: ["department-head-knowledge"],
+      });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to publish article";
@@ -136,7 +129,9 @@ export function KnowledgeView() {
       });
       setRejectingArticle(null);
       setRejectionReason("");
-      fetchArticles();
+      queryClient.invalidateQueries({
+        queryKey: ["department-head-knowledge"],
+      });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to reject article";

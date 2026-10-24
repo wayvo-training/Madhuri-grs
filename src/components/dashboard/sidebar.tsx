@@ -139,7 +139,17 @@ export function DashboardSidebar({
   useEffect(() => {
     const updateHash = () => {
       if (typeof window !== "undefined") {
-        setCurrentHash(window.location.hash.toLowerCase());
+        if (window.location.hash) {
+          setCurrentHash(window.location.hash.toLowerCase());
+        } else {
+          const params = new URLSearchParams(window.location.search);
+          const tab = params.get("tab") || params.get("view");
+          if (tab) {
+            setCurrentHash(`#${tab.toLowerCase()}`);
+          } else {
+            setCurrentHash("");
+          }
+        }
       }
     };
 
@@ -161,39 +171,41 @@ export function DashboardSidebar({
       setOpenMobile(false);
     }
 
-    if (itemHref.includes("#")) {
-      const [itemPathWithQuery, itemHash] = itemHref.split("#");
-      const itemBaseRoute = itemPathWithQuery.split("?")[0];
-      if (pathname === itemBaseRoute) {
-        e.preventDefault();
-        const cleanHash = itemHash.toLowerCase();
-        setCurrentHash(`#${cleanHash}`);
-        window.location.hash = itemHash;
-        window.dispatchEvent(new Event("hashchange"));
-      }
-    } else if (itemHref === pathname) {
-      if (currentHash) {
-        e.preventDefault();
-        setCurrentHash("");
-        if (window.location.hash) {
-          history.replaceState(null, "", itemHref);
-        }
-        window.dispatchEvent(new Event("hashchange"));
-      }
+    const itemBaseRoute = itemHref.split("?")[0].split("#")[0];
+    const isSameRoute = pathname === itemBaseRoute;
+
+    if (isSameRoute) {
+      e.preventDefault();
+
+      const tabMatch = itemHref.match(/[?&]tab=([^&#]+)/i);
+      const hashMatch = itemHref.split("#")[1];
+      const activeKey = tabMatch
+        ? tabMatch[1].toLowerCase()
+        : hashMatch
+          ? hashMatch.toLowerCase()
+          : "";
+
+      setCurrentHash(activeKey ? `#${activeKey}` : "");
+      window.history.pushState(null, "", itemHref);
+      window.dispatchEvent(new Event("hashchange"));
+      window.dispatchEvent(new Event("popstate"));
     }
   };
 
   const isItemActive = (itemHref: string) => {
-    if (itemHref.includes("#")) {
-      const [itemPathWithQuery, itemHash] = itemHref.split("#");
-      const itemBaseRoute = itemPathWithQuery.split("?")[0];
-      return (
-        pathname === itemBaseRoute &&
-        currentHash === `#${itemHash.toLowerCase()}`
-      );
-    }
+    const itemBaseRoute = itemHref.split("?")[0].split("#")[0];
+    if (pathname === itemBaseRoute) {
+      const tabMatch = itemHref.match(/[?&]tab=([^&#]+)/i);
+      const hashMatch = itemHref.split("#")[1];
+      const itemKey = tabMatch
+        ? tabMatch[1].toLowerCase()
+        : hashMatch
+          ? hashMatch.toLowerCase()
+          : "";
 
-    if (pathname === itemHref) {
+      if (itemKey) {
+        return currentHash === `#${itemKey}`;
+      }
       return (
         !currentHash ||
         currentHash === "" ||
@@ -311,16 +323,30 @@ export function DashboardSidebar({
                         ? unreadNotifications.toString()
                         : item.badge;
 
+                    const itemBaseRoute = item.href.split("?")[0].split("#")[0];
+                    const isSameRoute = pathname === itemBaseRoute;
+
                     return (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                           isActive={isActive}
                           tooltip={item.title}
                           render={
-                            <Link
-                              href={item.href}
-                              onClick={(e) => handleItemClick(e, item.href)}
-                            />
+                            isSameRoute ? (
+                              // biome-ignore lint/a11y/useAnchorContent: children are provided by useRender
+                              <a
+                                href={item.href}
+                                aria-label={item.title}
+                                onClick={(e) => handleItemClick(e, item.href)}
+                              />
+                            ) : (
+                              // biome-ignore lint/a11y/useAnchorContent: children are provided by useRender
+                              <Link
+                                href={item.href}
+                                aria-label={item.title}
+                                onClick={(e) => handleItemClick(e, item.href)}
+                              />
+                            )
                           }
                         >
                           <Icon />

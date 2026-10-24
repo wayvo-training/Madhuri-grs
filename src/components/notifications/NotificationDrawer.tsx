@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   BookOpen,
@@ -9,8 +10,8 @@ import {
   Info,
   MessageSquare,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export interface Notification {
   id: string;
@@ -47,54 +48,42 @@ export function NotificationDrawer({
   userRole?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [showAll] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const headers: HeadersInit = userId
-        ? { "x-user-id": userId }
-        : { "x-user-id": "1" };
+  const {
+    data: notifications = [],
+    isLoading,
+    refetch: fetchNotifications,
+  } = useQuery<Notification[]>({
+    queryKey: ["notifications", userId || "me"],
+    queryFn: async () => {
+      const headers: HeadersInit = userId ? { "x-user-id": userId } : {};
       const res = await fetch("/api/notifications", { headers });
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return [];
       const data = await res.json();
-      if (data.success) {
-        setNotifications(data.notifications);
-      }
-    } catch (error) {
-      if (
-        error instanceof TypeError &&
-        error.message.includes("Failed to fetch")
-      ) {
-        // Silently skip transient polling / dev server reconnection errors
-        return;
-      }
-      console.error("Failed to load notifications", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+      return data.success && Array.isArray(data.notifications)
+        ? data.notifications
+        : [];
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-  // Fetch on mount and set up polling
+  // Polling every 30 seconds
   useEffect(() => {
-    fetchNotifications();
-
-    // Poll every 30 seconds for new notifications
     const intervalId = setInterval(() => {
       if (!isOpen) {
-        // only poll if closed to avoid jitter while reading
         fetchNotifications();
       }
     }, 30000);
 
     const handleNotificationsChanged = () => {
-      fetchNotifications();
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", userId || "me"],
+      });
     };
     if (typeof window !== "undefined") {
       window.addEventListener(
@@ -102,7 +91,6 @@ export function NotificationDrawer({
         handleNotificationsChanged,
       );
     }
-
     return () => {
       clearInterval(intervalId);
       if (typeof window !== "undefined") {
@@ -112,14 +100,7 @@ export function NotificationDrawer({
         );
       }
     };
-  }, [fetchNotifications, isOpen]);
-
-  // Fetch immediately when opened to get latest
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-  }, [isOpen, fetchNotifications]);
+  }, [fetchNotifications, isOpen, queryClient, userId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -138,10 +119,15 @@ export function NotificationDrawer({
 
   const markAsRead = async (id: string) => {
     try {
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      queryClient.setQueryData<Notification[]>(
+        ["notifications", userId || "me"],
+        (old) =>
+          old ? old.map((n) => (n.id === id ? { ...n, isRead: true } : n)) : [],
       );
       await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", userId || "me"],
+      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("notifications-changed"));
       }
@@ -165,6 +151,8 @@ export function NotificationDrawer({
     }
   };
 
+  const pathname = usePathname();
+
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
       markAsRead(notification.id);
@@ -178,13 +166,30 @@ export function NotificationDrawer({
     } else if (notification.grievanceId) {
       params.set("grievanceId", notification.grievanceId);
     }
-    router.push(`${baseUrl}?${params.toString()}`);
+
+    const [basePath, baseHash] = baseUrl.split("#");
+    const queryStr = params.toString() ? `?${params.toString()}` : "";
+    const hashStr = baseHash ? `#${baseHash}` : "";
+    const targetUrl = `${basePath}${queryStr}${hashStr}`;
+
+    if (pathname === basePath) {
+      window.history.pushState(null, "", targetUrl);
+      window.dispatchEvent(new Event("hashchange"));
+    } else {
+      router.push(targetUrl);
+    }
   };
 
   const markAllAsRead = async () => {
     try {
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      queryClient.setQueryData<Notification[]>(
+        ["notifications", userId || "me"],
+        (old) => (old ? old.map((n) => ({ ...n, isRead: true })) : []),
+      );
       await fetch(`/api/notifications/read-all`, { method: "PATCH" });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", userId || "me"],
+      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("notifications-changed"));
       }
@@ -383,7 +388,14 @@ export function NotificationDrawer({
                 className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 cursor-pointer inline-flex items-center gap-1"
                 onClick={() => {
                   setIsOpen(false);
-                  router.push(getNotificationsUrl());
+                  const targetUrl = getNotificationsUrl();
+                  const [basePath] = targetUrl.split("#");
+                  if (pathname === basePath) {
+                    window.history.pushState(null, "", targetUrl);
+                    window.dispatchEvent(new Event("hashchange"));
+                  } else {
+                    router.push(targetUrl);
+                  }
                 }}
               >
                 <span>View all notifications</span>

@@ -4,6 +4,17 @@ import { KnowledgeSimilarityService } from "@/lib/knowledge/similarity-service";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
+const duplicateCheckMemoryCache = new Map<string, unknown>();
+interface CachedArticlesResponse {
+  timestamp: number;
+  data: unknown;
+}
+const articlesResponseCache = new Map<string, CachedArticlesResponse>();
+
+export function invalidateKnowledgeArticlesCache() {
+  articlesResponseCache.clear();
+}
+
 export async function GET(request: Request) {
   const auth = await resolveDepartmentHeadAuth(request);
   if ("error" in auth) {
@@ -13,6 +24,12 @@ export async function GET(request: Request) {
   const { departmentId, isAdmin } = auth;
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get("status");
+
+  const cacheKey = `${departmentId?.toString() || "all"}_${isAdmin}_${statusParam || "ALL"}`;
+  const cached = articlesResponseCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 30_000) {
+    return NextResponse.json(cached.data);
+  }
 
   try {
     const articles = await prisma.knowledge_articles.findMany({
@@ -187,7 +204,10 @@ export async function GET(request: Request) {
             (departmentId !== null && allDepartmentIds.has(departmentId));
 
           // Run or extract duplicate check for review decision support
-          let duplicateCheck = parsedContent.duplicateCheck || null;
+          let duplicateCheck =
+            parsedContent.duplicateCheck ||
+            duplicateCheckMemoryCache.get(art.article_id.toString()) ||
+            null;
           if (
             !duplicateCheck &&
             art.status === "PENDING_REVIEW" &&
@@ -228,6 +248,10 @@ export async function GET(request: Request) {
                   candidates: [],
                 };
               }
+              duplicateCheckMemoryCache.set(
+                art.article_id.toString(),
+                duplicateCheck,
+              );
             } catch {
               // Non-fatal duplicate detection fallback
             }
@@ -272,10 +296,16 @@ export async function GET(request: Request) {
       return true;
     });
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       articles: result,
+    };
+    articlesResponseCache.set(cacheKey, {
+      timestamp: Date.now(),
+      data: responsePayload,
     });
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("Error in GET /api/department-head/knowledge:", error);
     return NextResponse.json(

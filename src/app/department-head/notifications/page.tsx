@@ -2,7 +2,7 @@ import { NotificationsPageView } from "@/components/notifications/NotificationsP
 import { requirePageRole } from "@/lib/permissions";
 
 export default async function DepartmentHeadNotificationPage() {
-  const user = await requirePageRole("DEPARTMENT_HEAD");
+  const user = await requirePageRole(["DEPARTMENT_HEAD", "ADMIN"]);
 
   return (
     <NotificationsPageView

@@ -1,11 +1,6 @@
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import type {
-  DepartmentHeadInitialData,
-  EscalationAuditRecord,
-  GrievanceItem,
-  StaffMember,
-} from "@/types/department-head";
+import type { DepartmentHeadInitialData } from "@/types/department-head";
 import {
   fetchDepartmentHeadGrievances,
   fetchDepartmentHeadOverview,
@@ -19,6 +14,67 @@ export interface DepartmentHeadPageDataResult {
   employeeCode: string;
   isAdmin: boolean;
   initialData: DepartmentHeadInitialData;
+}
+
+const overviewCache = new Map<
+  string,
+  {
+    data: Awaited<ReturnType<typeof fetchDepartmentHeadOverview>>;
+    timestamp: number;
+  }
+>();
+const staffCache = new Map<
+  string,
+  {
+    data: Awaited<ReturnType<typeof fetchDepartmentHeadStaff>>;
+    timestamp: number;
+  }
+>();
+const grievancesCache = new Map<
+  string,
+  {
+    data: Awaited<ReturnType<typeof fetchDepartmentHeadGrievances>>;
+    timestamp: number;
+  }
+>();
+const SERVER_CACHE_TTL_MS = 30 * 1000; // 30 seconds in-memory TTL
+
+async function getCachedDepartmentOverview(deptId: bigint) {
+  const key = deptId.toString();
+  const cached = overviewCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < SERVER_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const data = await fetchDepartmentHeadOverview(deptId);
+  overviewCache.set(key, { data, timestamp: now });
+  return data;
+}
+
+async function getCachedDepartmentStaff(deptId: bigint) {
+  const key = deptId.toString();
+  const cached = staffCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < SERVER_CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const data = await fetchDepartmentHeadStaff(deptId);
+  staffCache.set(key, { data, timestamp: now });
+  return data;
+}
+
+async function getCachedDepartmentGrievances(
+  params: Parameters<typeof fetchDepartmentHeadGrievances>[0],
+) {
+  const key = `${params.departmentId}_${params.tab || "all"}_${params.skip || 0}_${params.limit || 100}_${params.search || ""}_${params.priority || ""}_${params.staffId || ""}`;
+  const cached = grievancesCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < 20 * 1000) {
+    return cached.data;
+  }
+  const data = await fetchDepartmentHeadGrievances(params);
+  grievancesCache.set(key, { data, timestamp: now });
+  return data;
 }
 
 export async function getDepartmentHeadPageData(options?: {
@@ -35,7 +91,7 @@ export async function getDepartmentHeadPageData(options?: {
   const isAdmin = user.roles.role_name === "ADMIN";
 
   const page = options?.page ? Math.max(1, options.page) : 1;
-  const limit = options?.limit ? Math.max(1, options.limit) : 5;
+  const limit = options?.limit ? Math.max(1, options.limit) : 100;
   const skip = (page - 1) * limit;
 
   let deptName = user.departments?.department_name;
@@ -104,10 +160,10 @@ export async function getDepartmentHeadPageData(options?: {
   const finalDeptName = deptName || "Department Operations";
   const validDeptId = targetDeptId || BigInt(1);
 
-  // Fetch full department head data in parallel on the server with exact requested page limit
+  // Fetch department head data in parallel (with in-memory cache for overview & staff)
   const [overviewData, grievancesData, staffData] = await Promise.all([
-    fetchDepartmentHeadOverview(validDeptId),
-    fetchDepartmentHeadGrievances({
+    getCachedDepartmentOverview(validDeptId),
+    getCachedDepartmentGrievances({
       departmentId: validDeptId,
       user,
       isAdmin,
@@ -118,7 +174,7 @@ export async function getDepartmentHeadPageData(options?: {
       skip,
       limit,
     }),
-    fetchDepartmentHeadStaff(validDeptId),
+    getCachedDepartmentStaff(validDeptId),
   ]);
 
   if (overviewData.department?.name) {

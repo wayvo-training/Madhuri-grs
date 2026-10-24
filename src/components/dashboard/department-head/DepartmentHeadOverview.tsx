@@ -1,9 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { NotificationsPageView } from "@/components/notifications/NotificationsPageView";
 import { ResolutionForm } from "@/components/staff/resolution-form";
 import {
   useDepartmentHeadNavigation,
@@ -80,7 +82,7 @@ export function DepartmentHeadOverviewInner({
   const [currentEmployeeCode, setCurrentEmployeeCode] = useState(employeeCode);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Synchronize state when server component passes fresh initialData (e.g. after router.refresh() or router.push())
+  // Synchronize state when server component passes fresh initialData
   useEffect(() => {
     if (initialData) {
       if (initialData.grievances) setGrievances(initialData.grievances);
@@ -119,6 +121,34 @@ export function DepartmentHeadOverviewInner({
 
   // Navigation
   const { activeView, switchView } = useDepartmentHeadNavigation(initialView);
+  const queryClient = useQueryClient();
+
+  // Background prefetch notifications & knowledge so tab clicks are 0ms
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["notifications", "me"],
+      queryFn: async () => {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+        return data.success && Array.isArray(data.notifications)
+          ? data.notifications
+          : [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: ["department-head-knowledge"],
+      queryFn: async () => {
+        const res = await fetch("/api/department-head/knowledge");
+        const data = await res.json();
+        return data.success && Array.isArray(data.articles)
+          ? data.articles
+          : [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient]);
 
   // Queue Filters & Metrics
   const {
@@ -480,6 +510,9 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "knowledge" && <KnowledgeView />}
+      {activeView === "notifications" && (
+        <NotificationsPageView userRole="DEPARTMENT_HEAD" />
+      )}
 
       {/* Modals & Dialogs */}
       {assignModalGrievance && (
