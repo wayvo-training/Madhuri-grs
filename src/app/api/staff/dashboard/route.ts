@@ -65,16 +65,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // Evaluate active grievances SLA thresholds
-    try {
-      const { evaluateAllActiveGrievancesSla } = await import(
-        "@/lib/engines/sla-engine"
-      );
-      await evaluateAllActiveGrievancesSla(departmentId ?? undefined);
-    } catch (slaErr) {
-      console.error("SLA evaluation error in staff dashboard:", slaErr);
-    }
-
     const assignmentQuery = {
       include: {
         grievance_departments: true,

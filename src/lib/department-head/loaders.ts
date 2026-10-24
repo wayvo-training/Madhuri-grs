@@ -6,10 +6,7 @@ import {
   formatRelativeTime,
   formatSlaTimeLeft,
 } from "@/lib/department-head";
-import {
-  calculateSlaConsumption,
-  evaluateAllActiveGrievancesSla,
-} from "@/lib/engines/sla-engine";
+import { calculateSlaConsumption } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 import type {
@@ -299,7 +296,7 @@ export async function fetchDepartmentHeadGrievances(
           include: {
             users: { include: { roles: true } },
           },
-          take: 50,
+          take: 15,
         },
       },
       orderBy: [{ priority: "desc" }, { created_at: "desc" }],
@@ -1065,11 +1062,6 @@ export async function fetchDepartmentHeadStaff(departmentId: bigint) {
 }
 
 export async function fetchDepartmentHeadOverview(departmentId: bigint) {
-  // Run SLA threshold evaluations non-blocking in background so HTTP response is not delayed
-  evaluateAllActiveGrievancesSla(departmentId).catch((err) => {
-    console.error("Background SLA evaluation error:", err);
-  });
-
   const deptGrievances = await prisma.grievance_departments.findMany({
     where: { department_id: departmentId },
     include: {

@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const cookieStore = await cookies();
 
   const sessionToken = cookieStore.get("session_token")?.value;
@@ -88,6 +89,6 @@ export async function getCurrentUser() {
     );
     return null;
   }
-}
+});
 
 export type AuthUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
