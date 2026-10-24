@@ -294,6 +294,15 @@ export function QueueView({
 
     return list.sort((a, b) => {
       const field = sortState.field as keyof GrievanceItem;
+
+      if (field === "createdAt") {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+          return sortState.direction === "asc" ? timeA - timeB : timeB - timeA;
+        }
+      }
+
       const rawA = a[field] ?? "";
       const rawB = b[field] ?? "";
 

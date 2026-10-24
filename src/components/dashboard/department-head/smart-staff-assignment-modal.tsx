@@ -1133,9 +1133,7 @@ export function SmartStaffAssignmentModal({
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#115E59] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>
-                {isReassignment ? "Change Assignment" : "Assign Staff"}
-              </span>
+              <span>Submit</span>
             </button>
           </div>
         </div>

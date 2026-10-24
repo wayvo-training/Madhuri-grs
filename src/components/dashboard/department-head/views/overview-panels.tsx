@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AdminMetricCard } from "@/components/dashboard/admin/admin-shared";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Pagination } from "@/components/ui/pagination";
@@ -70,13 +70,33 @@ export function OverviewMetricsSection({
   );
 }
 
+const priorityWeight: Record<string, number> = {
+  CRITICAL: 4,
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
+const statusWeight: Record<string, number> = {
+  WAITING_ON_USER: 4,
+  IN_PROGRESS: 3,
+  ASSIGNED: 2,
+  UNDER_REVIEW: 1,
+};
+const slaWeight: Record<string, number> = {
+  BREACHED: 3,
+  AT_RISK: 2,
+  ON_TRACK: 1,
+};
+
 export function AttentionRequiredPanel({
-  attentionRequiredList,
+  attentionRequiredList = [],
+  grievances = [],
   isLoading = false,
   onInspect,
   onViewFullQueue,
 }: {
-  attentionRequiredList: GrievanceItem[];
+  attentionRequiredList?: GrievanceItem[];
+  grievances?: GrievanceItem[];
   isLoading?: boolean;
   onInspect: (item: GrievanceItem, tab?: "progress" | "statement") => void;
   onViewFullQueue: () => void;
@@ -93,9 +113,22 @@ export function AttentionRequiredPanel({
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  // Pick recent grievances by submitted/created date
+  const displayList = useMemo(() => {
+    const source = grievances.length > 0 ? grievances : attentionRequiredList;
+    return [...source].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+        return timeB - timeA;
+      }
+      return Number(b.id) - Number(a.id);
+    });
+  }, [grievances, attentionRequiredList]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
-  const totalCount = attentionRequiredList.length;
+  const totalCount = displayList.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   const handleSort = (key: SortKey) => {
@@ -111,57 +144,42 @@ export function AttentionRequiredPanel({
     }
   };
 
-  const priorityWeight: Record<string, number> = {
-    CRITICAL: 4,
-    HIGH: 3,
-    MEDIUM: 2,
-    LOW: 1,
-  };
-  const statusWeight: Record<string, number> = {
-    WAITING_ON_USER: 4,
-    IN_PROGRESS: 3,
-    ASSIGNED: 2,
-    UNDER_REVIEW: 1,
-  };
-  const slaWeight: Record<string, number> = {
-    BREACHED: 3,
-    AT_RISK: 2,
-    ON_TRACK: 1,
-  };
-
-  const sortedList = [...attentionRequiredList].sort((a, b) => {
-    if (!sortKey) return 0;
-    let comp = 0;
-    switch (sortKey) {
-      case "ticketCode":
-        comp = a.ticketCode.localeCompare(b.ticketCode, undefined, {
-          numeric: true,
-        });
-        break;
-      case "title":
-        comp = a.title.localeCompare(b.title);
-        break;
-      case "category":
-        comp = (a.category || "").localeCompare(b.category || "");
-        break;
-      case "priority":
-        comp =
-          (priorityWeight[a.priority] || 0) - (priorityWeight[b.priority] || 0);
-        break;
-      case "status":
-        comp = (statusWeight[a.status] || 0) - (statusWeight[b.status] || 0);
-        break;
-      case "slaStatus":
-        comp = (slaWeight[a.slaStatus] || 0) - (slaWeight[b.slaStatus] || 0);
-        break;
-      case "assignedStaffName":
-        comp = (a.assignedStaffName || "").localeCompare(
-          b.assignedStaffName || "",
-        );
-        break;
-    }
-    return sortDirection === "asc" ? comp : -comp;
-  });
+  const sortedList = useMemo(() => {
+    if (!sortKey) return displayList;
+    return [...displayList].sort((a, b) => {
+      let comp = 0;
+      switch (sortKey) {
+        case "ticketCode":
+          comp = a.ticketCode.localeCompare(b.ticketCode, undefined, {
+            numeric: true,
+          });
+          break;
+        case "title":
+          comp = a.title.localeCompare(b.title);
+          break;
+        case "category":
+          comp = (a.category || "").localeCompare(b.category || "");
+          break;
+        case "priority":
+          comp =
+            (priorityWeight[a.priority] || 0) -
+            (priorityWeight[b.priority] || 0);
+          break;
+        case "status":
+          comp = (statusWeight[a.status] || 0) - (statusWeight[b.status] || 0);
+          break;
+        case "slaStatus":
+          comp = (slaWeight[a.slaStatus] || 0) - (slaWeight[b.slaStatus] || 0);
+          break;
+        case "assignedStaffName":
+          comp = (a.assignedStaffName || "").localeCompare(
+            b.assignedStaffName || "",
+          );
+          break;
+      }
+      return sortDirection === "asc" ? comp : -comp;
+    });
+  }, [displayList, sortKey, sortDirection]);
 
   const renderSortHeader = (label: string, key: SortKey) => {
     const isActive = sortKey === key;
@@ -188,20 +206,15 @@ export function AttentionRequiredPanel({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-[200px] rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs">
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs">
       <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm sm:text-sm font-semibold text-slate-900">
-            Attention Required
+            Recent Grievances
           </h3>
-          {attentionRequiredList.length > 0 && (
-            <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-sm font-semibold text-slate-700">
-              {attentionRequiredList.length}
-            </span>
-          )}
           <span className="text-slate-300 hidden sm:inline">&bull;</span>
-          <p className="text-sm text-slate-500 font-normal hidden sm:inline">
-            Grievances requiring review or intervention
+          <p className="text-xs text-slate-500 font-normal hidden sm:inline">
+            Grievances submitted to this department
           </p>
         </div>
 
@@ -259,7 +272,7 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={`att-skel-${
@@ -297,15 +310,14 @@ export function AttentionRequiredPanel({
             ))}
           </div>
         </div>
-      ) : attentionRequiredList.length === 0 ? (
+      ) : displayList.length === 0 ? (
         <div className="py-6 flex-1 flex flex-col items-center justify-center text-center text-sm font-normal text-slate-400">
           <CheckCircle2 className="mx-auto h-6 w-6 text-emerald-600 mb-1.5" />
           <p className="font-semibold text-slate-700 text-sm">
-            No grievances require intervention
+            No grievances submitted yet
           </p>
           <p className="text-sm text-slate-400 mt-0.5">
-            All active grievances are operating within their defined SLA
-            thresholds.
+            New grievances submitted to this department will appear here.
           </p>
         </div>
       ) : (
@@ -338,12 +350,25 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedList
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((item) => {
+                const isItemBlocked = Boolean(
+                  item.isBlocked ||
+                    item.status === "BLOCKED" ||
+                    item.myDepartmentStatus === "BLOCKED",
+                );
+                const isItemClosed = Boolean(
+                  item.status === "CLOSED" ||
+                    item.status === "RESOLVED" ||
+                    item.myDepartmentStatus === "COMPLETED",
+                );
                 const isEscalated = item.status === "ESCALATED";
-                const isBreached = item.slaStatus === "BREACHED";
+                const isBreached =
+                  !isItemBlocked &&
+                  !isItemClosed &&
+                  item.slaStatus === "BREACHED";
                 const highlightSla = !isEscalated && isBreached;
 
                 return (
@@ -354,7 +379,7 @@ export function AttentionRequiredPanel({
                     <div className="w-24 sm:w-28 shrink-0">
                       <button
                         type="button"
-                        onClick={() => onInspect(item, "statement")}
+                        onClick={() => onInspect(item, "progress")}
                         className="font-mono text-xs font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs truncate block"
                       >
                         {item.ticketCode}
@@ -365,7 +390,8 @@ export function AttentionRequiredPanel({
                         text={item.title}
                         maxChars={48}
                         alwaysShowTooltip={true}
-                        className="text-xs font-medium text-slate-800 dark:text-slate-200 block w-full border-none truncate"
+                        onClick={() => onInspect(item, "progress")}
+                        className="text-xs font-medium text-slate-800 dark:text-slate-200 block w-full border-none truncate hover:underline hover:text-teal-800 dark:hover:text-teal-300"
                       />
                     </div>
                     <div className="flex-1 min-w-0 pr-2">
@@ -383,15 +409,27 @@ export function AttentionRequiredPanel({
                       <StatusBadge status={item.status} />
                     </div>
                     <div className="w-26 sm:w-30 shrink-0 text-center">
-                      <span
-                        className={`text-xs font-medium w-full whitespace-nowrap ${
-                          highlightSla
-                            ? "text-slate-900 font-semibold"
-                            : "text-slate-600"
-                        }`}
-                      >
-                        {item.slaTimeLeft}
-                      </span>
+                      {isItemBlocked ? (
+                        <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                          Paused
+                        </span>
+                      ) : isItemClosed ? (
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                          Completed
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-xs font-medium w-full whitespace-nowrap ${
+                            highlightSla
+                              ? "text-rose-600 font-bold dark:text-rose-400"
+                              : item.slaStatus === "AT_RISK"
+                                ? "text-amber-800 font-semibold dark:text-amber-400"
+                                : "text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {item.slaTimeLeft}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-[0.9] min-w-0 text-left truncate hidden sm:block">
                       <span className="text-[11px] font-normal text-slate-400">
@@ -428,7 +466,7 @@ export function AttentionRequiredPanel({
         </div>
       )}
 
-      {attentionRequiredList.length > 0 && (
+      {totalCount > 0 && (
         <div className="mt-auto pt-2 shrink-0 border-t border-slate-100">
           <Pagination
             currentPage={currentPage}
@@ -436,7 +474,10 @@ export function AttentionRequiredPanel({
             totalCount={totalCount}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             pageSizeOptions={[5, 10, 20]}
             itemLabel="Grievances"
           />

@@ -100,6 +100,7 @@ export function OverviewView({
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}
+        grievances={grievances}
         isLoading={isLoading}
         onInspect={onInspectGrievance}
         onViewFullQueue={onViewQueue}
