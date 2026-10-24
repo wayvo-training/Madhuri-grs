@@ -215,6 +215,11 @@ export async function GET(
           | "EQUAL",
         status: deptStatus,
         assignedStaff,
+        slaPercentAllocation: d.sla_percent_allocation
+          ? Number(d.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: d.allocated_duration_minutes || null,
+        executionOrder: d.execution_order || 1,
       };
     });
 
@@ -325,14 +330,48 @@ export async function GET(
 
     // 2. SLA calculations
     const now = new Date();
-    const createdAt = new Date(grievance.created_at);
-    const dueAt = grievance.due_at ? new Date(grievance.due_at) : null;
+    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
+    const deptAllocatedMins =
+      myDeptRecord?.allocated_duration_minutes ||
+      (grievance.due_at && grievance.created_at
+        ? Math.max(
+            1,
+            Math.round(
+              ((new Date(grievance.due_at).getTime() -
+                new Date(grievance.created_at).getTime()) *
+                (Number(myDeptRecord?.sla_percent_allocation || 100) / 100)) /
+                60000,
+            ),
+          )
+        : 1440);
+
+    const createdAt = myDeptRecord?.activated_at
+      ? new Date(myDeptRecord.activated_at)
+      : myDeptRecord?.assigned_at
+        ? new Date(myDeptRecord.assigned_at)
+        : new Date(grievance.created_at);
+
+    const dueAt = isDeptBlocked
+      ? null
+      : myDeptRecord?.due_at
+        ? new Date(myDeptRecord.due_at)
+        : grievance.due_at
+          ? new Date(grievance.due_at)
+          : null;
+
     let consumptionPercent = 0;
-    let timeRemainingStr = "N/A";
+    let timeRemainingStr = isDeptBlocked
+      ? "Pending Prerequisites (Blocked)"
+      : "N/A";
     let isBreached = false;
     let isApproaching = false;
 
-    if (dueAt) {
+    if (isDeptBlocked) {
+      consumptionPercent = 0;
+      timeRemainingStr = "Pending Prerequisites (Blocked)";
+      isBreached = false;
+      isApproaching = false;
+    } else if (dueAt) {
       if (isSlaExtensionActive && interventionLog) {
         // Calculate SLA consumption relative to the extension grace window
         const extensionStartTime = new Date(interventionLog.created_at);
@@ -401,10 +440,16 @@ export async function GET(
       }
     }
 
+    const dueAtLabel = isDeptBlocked
+      ? `${Math.round(deptAllocatedMins / 60)}h allocated (${Number(myDeptRecord?.sla_percent_allocation || 100)}%)`
+      : dueAt
+        ? formatFullDateTime(dueAt)
+        : "No Target Set";
+
     const sla = {
       consumptionPercent,
       timeRemaining: timeRemainingStr,
-      dueAt: dueAt ? formatFullDateTime(dueAt) : "No Target Set",
+      dueAt: dueAtLabel,
       state: isBreached
         ? "BREACHED"
         : isSlaExtensionActive
@@ -423,10 +468,13 @@ export async function GET(
           : isApproaching || grievance.sla_status === "AT_RISK"
             ? "SLA At Risk"
             : "Within SLA",
+      slaPercentAllocation: myDeptRecord?.sla_percent_allocation
+        ? Number(myDeptRecord.sla_percent_allocation)
+        : 100,
+      allocatedDurationMinutes: deptAllocatedMins,
     };
 
     // 3. Current Stage & Stepper (Department-Scoped)
-    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
     const rawPrereqs = Array.isArray(myDeptRecord?.prerequisite_department_ids)
       ? (
           myDeptRecord.prerequisite_department_ids as (

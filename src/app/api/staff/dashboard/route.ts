@@ -196,7 +196,24 @@ export async function GET(request: Request) {
         myInvolvementType === "EQUAL" ||
         isAdmin;
 
-      const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
+      let slaCalc: ReturnType<typeof calculateSlaStatus>;
+      if (a.grievance_departments?.status === "BLOCKED") {
+        slaCalc = {
+          consumptionPercent: 0,
+          timeRemaining: "Pending Prerequisites",
+          state: "ON_TRACK",
+          stateLabel: "Blocked",
+        };
+      } else {
+        const deptStart =
+          a.grievance_departments?.activated_at ||
+          a.grievance_departments?.assigned_at ||
+          g.created_at;
+        const deptDue = a.grievance_departments?.due_at || g.due_at;
+        const deptSlaStatus =
+          a.grievance_departments?.sla_status || g.sla_status;
+        slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+      }
 
       const latestResolution = g.resolutions?.[0];
       const latestReview = latestResolution?.resolution_reviews?.[0];

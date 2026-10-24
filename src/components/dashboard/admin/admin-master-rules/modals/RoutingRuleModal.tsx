@@ -345,8 +345,13 @@ export function RoutingRuleModal({
         .map((r, idx) => ({
           department_name: r.department_name,
           execution_order: idx + 1,
-          stage: 1,
-          prerequisites: r.prerequisites || [],
+          stage: idx + 1,
+          prerequisites:
+            r.prerequisites && r.prerequisites.length > 0
+              ? r.prerequisites
+              : dependencyType === "SEQUENTIAL" && idx > 0
+                ? [updatedRows[idx - 1].department_name]
+                : [],
           involvement_type: r.involvement_type,
           sla_percent_allocation: r.sla_percent_allocation,
           allocated_duration_minutes: r.allocated_duration_minutes ?? null,

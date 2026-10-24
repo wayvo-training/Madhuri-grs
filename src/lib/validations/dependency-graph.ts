@@ -78,12 +78,17 @@ export function deriveTopologicalOrder(
     const custom = depMap.get(lower);
 
     let rawPrereqs: string[] = [];
-    if (custom && Array.isArray(custom.prerequisites)) {
+    if (
+      custom &&
+      Array.isArray(custom.prerequisites) &&
+      custom.prerequisites.length > 0
+    ) {
       rawPrereqs = custom.prerequisites
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
     } else if (!dept.isPrimary) {
-      // Backward compatibility fallback for legacy rules without explicit prerequisites array
+      // In sequential mode, if no custom prerequisites were explicitly provided,
+      // fallback to depending on the primary lead department
       const primaryDept = allDepartments.find((d) => d.isPrimary);
       rawPrereqs = primaryDept ? [primaryDept.name] : [];
     }

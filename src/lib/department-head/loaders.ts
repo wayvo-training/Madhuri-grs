@@ -6,7 +6,10 @@ import {
   formatRelativeTime,
   formatSlaTimeLeft,
 } from "@/lib/department-head";
-import { calculateSlaConsumption } from "@/lib/engines/sla-engine";
+import {
+  calculateDepartmentSlaConsumption,
+  calculateSlaConsumption,
+} from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 import type {
@@ -848,17 +851,82 @@ export async function fetchDepartmentHeadGrievances(
       }
     }
 
-    const slaConsumption = calculateSlaConsumption(
-      g.created_at,
-      g.due_at,
-      g.priority,
-    );
-    const calculatedTimeLeft = formatSlaTimeLeft(
-      g.due_at,
-      g.sla_status,
-      g.priority,
-      g.created_at,
-    );
+    let resolvedSlaConsumptionPercent = 0;
+    let resolvedSlaTimeLeft = "N/A";
+    let resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+    let resolvedSlaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" =
+      (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") || "ON_TRACK";
+
+    if (myDeptRecord) {
+      if (myDeptRecord.status === "BLOCKED") {
+        resolvedSlaConsumptionPercent = 0;
+        resolvedSlaTimeLeft = "Pending Prerequisites (Blocked)";
+        resolvedSlaDeadline = myDeptRecord.allocated_duration_minutes
+          ? `${Math.round(myDeptRecord.allocated_duration_minutes / 60)}h allocated (${Number(myDeptRecord.sla_percent_allocation || 0)}%)`
+          : "Blocked";
+        resolvedSlaStatus = "ON_TRACK";
+      } else {
+        const deptAllocatedMins =
+          myDeptRecord.allocated_duration_minutes ||
+          (g.due_at && g.created_at
+            ? Math.max(
+                1,
+                Math.round(
+                  ((g.due_at.getTime() - g.created_at.getTime()) *
+                    (Number(myDeptRecord.sla_percent_allocation || 100) /
+                      100)) /
+                    60000,
+                ),
+              )
+            : 1440);
+
+        const deptStart =
+          myDeptRecord.activated_at || myDeptRecord.assigned_at || g.created_at;
+        const deptDue =
+          myDeptRecord.due_at ||
+          new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
+
+        const deptSlaResult = calculateDepartmentSlaConsumption(
+          deptStart,
+          deptDue,
+          deptAllocatedMins,
+          myDeptRecord.completed_at,
+        );
+
+        resolvedSlaConsumptionPercent = deptSlaResult.consumptionPercent;
+        resolvedSlaStatus =
+          (myDeptRecord.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
+          deptSlaResult.slaStatus;
+        resolvedSlaDeadline = formatFriendlyDate(deptDue);
+        resolvedSlaTimeLeft = formatSlaTimeLeft(
+          deptDue,
+          resolvedSlaStatus,
+          g.priority,
+          deptStart,
+        );
+      }
+    } else {
+      const slaConsumption = calculateSlaConsumption(
+        g.created_at,
+        g.due_at,
+        g.priority,
+      );
+      resolvedSlaConsumptionPercent = slaConsumption.consumptionPercent;
+      resolvedSlaStatus =
+        (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
+        (slaConsumption.consumptionPercent >= 100
+          ? "BREACHED"
+          : slaConsumption.consumptionPercent >= 75
+            ? "AT_RISK"
+            : "ON_TRACK");
+      resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+      resolvedSlaTimeLeft = formatSlaTimeLeft(
+        g.due_at,
+        g.sla_status,
+        g.priority,
+        g.created_at,
+      );
+    }
     const submitterFullName =
       `${g.users?.first_name || "Unknown"} ${g.users?.last_name || ""}`.trim();
 
@@ -876,16 +944,10 @@ export async function fetchDepartmentHeadGrievances(
       submitterEmail: g.users?.email || "",
       priority: g.priority as GrievanceItem["priority"],
       status: resolvedStatus,
-      slaStatus:
-        (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
-        (slaConsumption.consumptionPercent >= 100
-          ? "BREACHED"
-          : slaConsumption.consumptionPercent >= 75
-            ? "AT_RISK"
-            : "ON_TRACK"),
-      slaDeadline: g.due_at ? formatFriendlyDate(g.due_at) : "N/A",
-      slaTimeLeft: calculatedTimeLeft,
-      slaConsumptionPercent: slaConsumption.consumptionPercent,
+      slaStatus: resolvedSlaStatus,
+      slaDeadline: resolvedSlaDeadline,
+      slaTimeLeft: resolvedSlaTimeLeft,
+      slaConsumptionPercent: resolvedSlaConsumptionPercent,
       assignedStaffId: departmentId
         ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
           (["CLOSED", "RESOLVED"].includes(g.status)

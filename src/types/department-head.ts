@@ -155,12 +155,17 @@ export interface GrievanceItem {
   supportingFindings?: SupportingDepartmentFinding[];
   blockedReason?: string;
   prerequisiteDepartments?: string[];
+  slaPercentAllocation?: number | null;
+  allocatedDurationMinutes?: number | null;
   departmentsInvolved?: {
     id: string;
     departmentName: string;
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
+    executionOrder?: number;
   }[];
 }
 
@@ -301,6 +306,8 @@ export interface CaseProgressData {
     dueAt: string;
     state: string;
     stateLabel: string;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
   };
   latestActivity?: string;
   timeline?: {
@@ -317,6 +324,9 @@ export interface CaseProgressData {
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
+    executionOrder?: number;
   }[];
   hodIntervention?: GrievanceItem["hodIntervention"];
   internalNotes?: InternalNoteItem[];

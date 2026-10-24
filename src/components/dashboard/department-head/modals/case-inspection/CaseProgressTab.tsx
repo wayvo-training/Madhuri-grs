@@ -429,6 +429,16 @@ export function CaseProgressTab({
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-emerald-800 dark:text-teal-400" />
               SLA Status
+              {Boolean(
+                caseProgressData?.sla?.slaPercentAllocation ??
+                  currentGrievance?.slaPercentAllocation,
+              ) && (
+                <span className="text-[10px] font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800 normal-case">
+                  {caseProgressData?.sla?.slaPercentAllocation ??
+                    currentGrievance?.slaPercentAllocation}
+                  % Dept Share
+                </span>
+              )}
             </span>
             <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase">
               {slaStateLabel}
@@ -439,6 +449,20 @@ export function CaseProgressTab({
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-600 dark:text-slate-300 font-medium">
                 SLA Consumed
+                {Boolean(
+                  caseProgressData?.sla?.allocatedDurationMinutes ??
+                    currentGrievance?.allocatedDurationMinutes,
+                ) && (
+                  <span className="text-slate-400 ml-1 text-[11px]">
+                    (of{" "}
+                    {(
+                      (caseProgressData?.sla?.allocatedDurationMinutes ??
+                        currentGrievance?.allocatedDurationMinutes ??
+                        0) / 60
+                    ).toFixed(1)}
+                    h budget)
+                  </span>
+                )}
               </span>
               <span className="text-slate-900 dark:text-slate-100 font-semibold">
                 {slaPercent}%
@@ -516,19 +540,26 @@ export function CaseProgressTab({
                           </span>
                         )}
                       </div>
-                      <span
-                        className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
-                          dept.involvementType === "PRIMARY"
-                            ? "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
-                            : dept.involvementType === "EQUAL"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
-                              : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
-                        }`}
-                      >
-                        {dept.involvementType === "SUPPORTING"
-                          ? "SUPPORTIVE"
-                          : dept.involvementType}
-                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {dept.slaPercentAllocation != null && (
+                          <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                            {dept.slaPercentAllocation}% SLA
+                          </span>
+                        )}
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
+                            dept.involvementType === "PRIMARY"
+                              ? "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
+                              : dept.involvementType === "EQUAL"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                                : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {dept.involvementType === "SUPPORTING"
+                            ? "SUPPORTIVE"
+                            : dept.involvementType}
+                        </span>
+                      </div>
                     </div>
 
                     {isHeadAuthorityForThisDept ? (

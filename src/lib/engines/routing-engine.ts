@@ -714,6 +714,11 @@ export async function populateGrievanceDepartments(
                 prereqDepartmentIds.push(matchedDept.department_id);
               }
             }
+          } else if (executionOrder > 1) {
+            // SEQUENTIAL WORKFLOW: If execution_order > 1 and no explicit custom prereqs,
+            // it must wait for the primary lead department
+            isBlocked = true;
+            prereqDepartmentIds = [primaryDeptId];
           }
         } else {
           // Default sequential: waits for primary department
