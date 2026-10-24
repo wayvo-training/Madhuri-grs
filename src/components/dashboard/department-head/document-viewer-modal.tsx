@@ -3,6 +3,7 @@
 import {
   CheckCircle2,
   Download,
+  ExternalLink,
   FileQuestion,
   FileSpreadsheet,
   FileText,
@@ -13,10 +14,12 @@ import {
 } from "lucide-react";
 
 export interface DocumentPreviewData {
+  id?: string;
   name: string;
   size: string;
   type: string;
   path?: string;
+  downloadUrl?: string;
   uploadedAt?: string;
   grievanceNumber?: string;
   category?: string;
@@ -42,9 +45,33 @@ export function DocumentViewerModal({
 
   const fn = document.name.toLowerCase();
   const isImage =
-    fn.endsWith(".jpg") || fn.endsWith(".jpeg") || fn.endsWith(".png");
+    fn.endsWith(".jpg") ||
+    fn.endsWith(".jpeg") ||
+    fn.endsWith(".png") ||
+    fn.endsWith(".webp") ||
+    fn.endsWith(".svg");
+  const isPdf = fn.endsWith(".pdf");
   const isExcel =
     fn.endsWith(".xlsx") || fn.endsWith(".xls") || fn.endsWith(".csv");
+
+  const targetUrl =
+    document.downloadUrl ||
+    (document.path?.startsWith("/api/attachments/")
+      ? document.path
+      : document.id
+        ? `/api/attachments/${document.id}/download`
+        : document.path?.startsWith("http")
+          ? document.path
+          : null);
+
+  const handleDownloadClick = () => {
+    if (targetUrl) {
+      const dlUrl = `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}download=true`;
+      window.open(dlUrl, "_blank");
+    } else {
+      onDownload(document);
+    }
+  };
 
   const isSalary =
     fn.includes("salary") ||
@@ -142,7 +169,7 @@ export function DocumentViewerModal({
             )}
             <button
               type="button"
-              onClick={() => onDownload(document)}
+              onClick={handleDownloadClick}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs"
               title="Download File"
             >
@@ -232,541 +259,619 @@ export function DocumentViewerModal({
 
             {/* Document Specific Preview Rendering */}
             <div className="space-y-4 text-xs leading-relaxed text-slate-700">
-              {/* 1. SALARY & PAYROLL STATEMENTS */}
-              {isSalary && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      Payroll Ledger & Salary Reconciliation Extract
-                    </h4>
-                    <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                      Discrepancy Under Review
-                    </span>
-                  </div>
-
-                  <p>
-                    This document extract provides verified payroll calculation
-                    lines for the affected pay cycle. Discrepancies noted in
-                    allowances and unauthorized deduction columns are flagged
-                    for Department Head review.
-                  </p>
-
-                  <div className="overflow-x-auto rounded-lg border border-slate-200">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">Component / Description</th>
-                          <th className="p-2.5 text-right">Scheduled (₹)</th>
-                          <th className="p-2.5 text-right">Disbursed (₹)</th>
-                          <th className="p-2.5 text-right">Variance (₹)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-mono">
-                        <tr>
-                          <td className="p-2.5 font-sans font-medium text-slate-900">
-                            Basic Pay
-                          </td>
-                          <td className="p-2.5 text-right">58,000.00</td>
-                          <td className="p-2.5 text-right">58,000.00</td>
-                          <td className="p-2.5 text-right text-slate-400">
-                            0.00
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 font-sans font-medium text-slate-900">
-                            House Rent Allowance (HRA)
-                          </td>
-                          <td className="p-2.5 text-right">23,200.00</td>
-                          <td className="p-2.5 text-right">23,200.00</td>
-                          <td className="p-2.5 text-right text-slate-400">
-                            0.00
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 font-sans font-medium text-slate-900">
-                            Special & Shift Allowances
-                          </td>
-                          <td className="p-2.5 text-right">18,500.00</td>
-                          <td className="p-2.5 text-right">18,500.00</td>
-                          <td className="p-2.5 text-right text-slate-400">
-                            0.00
-                          </td>
-                        </tr>
-                        <tr className="bg-rose-50/60 font-medium">
-                          <td className="p-2.5 font-sans text-rose-900 font-semibold">
-                            Recovery & Unadjusted Deduction
-                          </td>
-                          <td className="p-2.5 text-right text-slate-500">
-                            0.00
-                          </td>
-                          <td className="p-2.5 text-right text-rose-700 font-bold">
-                            -12,450.00
-                          </td>
-                          <td className="p-2.5 text-right text-rose-700 font-bold">
-                            -12,450.00
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 font-sans font-medium text-slate-900">
-                            Provident Fund (Employee EPF)
-                          </td>
-                          <td className="p-2.5 text-right">-6,960.00</td>
-                          <td className="p-2.5 text-right">-6,960.00</td>
-                          <td className="p-2.5 text-right text-slate-400">
-                            0.00
-                          </td>
-                        </tr>
-                        <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
-                          <td className="p-2.5 font-sans text-slate-900">
-                            Net Credit Payable
-                          </td>
-                          <td className="p-2.5 text-right">92,740.00</td>
-                          <td className="p-2.5 text-right text-rose-800">
-                            80,290.00
-                          </td>
-                          <td className="p-2.5 text-right text-rose-800">
-                            -12,450.00
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900 space-y-1">
-                    <strong className="font-semibold block text-xs">
-                      Payroll Auditor Remarks:
-                    </strong>
-                    <p className="text-2.75 leading-relaxed">
-                      Deduction code{" "}
-                      <code className="bg-white/80 px-1 py-0.5 rounded font-mono">
-                        DED_REC_049
-                      </code>{" "}
-                      was automatically triggered without corresponding absence
-                      or tax adjustment approval. Recommended for immediate
-                      payroll adjustment voucher credit in the upcoming pay
-                      cycle.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* 2. COMMUNICATION & SLACK / EMAIL RECORDS */}
-              {isCommunication && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      Transcribed Electronic Communications Trail
-                    </h4>
-                    <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      IT Archive Extract
-                    </span>
-                  </div>
-
-                  <p>
-                    The following electronic communications were archived and
-                    submitted as factual evidence in support of case inquiry:
-                  </p>
-
-                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 font-sans">
-                    <div className="rounded-lg bg-white p-3 border border-slate-200/80 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-2.75 text-slate-500 border-b border-slate-100 pb-1">
-                        <strong className="text-slate-800">
-                          Reporting Supervisor
-                        </strong>
-                        <span>
-                          18 Sep 2026, 09:42 AM &bull; Channel: #operations-core
-                        </span>
-                      </div>
-                      <p className="text-slate-700 text-xs pt-1">
-                        "Ensure this deliverable is completed by midnight.
-                        Excuses regarding shift allocations will not be
-                        entertained and will reflect adversely on annual
-                        evaluations."
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-emerald-50/70 p-3 border border-emerald-200 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-2.75 text-emerald-800 border-b border-emerald-200/60 pb-1">
-                        <strong className="text-emerald-950">
-                          Complainant
-                        </strong>
-                        <span>18 Sep 2026, 10:15 AM &bull; Direct Message</span>
-                      </div>
-                      <p className="text-slate-800 text-xs pt-1">
-                        "I have already completed my designated 9-hour roster
-                        and communicated earlier regarding medical appointments.
-                        Requesting re-allocation according to policy
-                        guidelines."
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-rose-50/70 p-3 border border-rose-200 shadow-2xs space-y-1">
-                      <div className="flex items-center justify-between text-2.75 text-rose-800 border-b border-rose-200/60 pb-1">
-                        <strong className="text-rose-950">
-                          Reporting Supervisor (Flagged Message)
-                        </strong>
-                        <span>18 Sep 2026, 10:24 AM &bull; Direct Message</span>
-                      </div>
-                      <p className="text-slate-800 text-xs pt-1">
-                        "Your non-compliance is being noted on HR records. Do
-                        not escalate or contest this decision further in team
-                        meetings."
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg bg-slate-100 p-3 text-2.75 text-slate-600 border border-slate-200">
-                    <strong className="font-semibold text-slate-800">
-                      Investigating Officer Certification:
-                    </strong>{" "}
-                    Log timestamp integrity has been cryptographically confirmed
-                    against the organization workspace audit log.
-                  </div>
-                </div>
-              )}
-
-              {/* 3. WORKPLACE SAFETY & SITE INSPECTIONS */}
-              {isSafety && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      Workplace Safety Compliance & Site Inspection Assessment
-                    </h4>
-                    <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                      High Priority Hazard
-                    </span>
-                  </div>
-
+              {/* REAL UPLOADED DOCUMENT PREVIEW */}
+              {targetUrl ? (
+                <div className="space-y-3">
                   {isImage ? (
-                    <div className="space-y-3">
-                      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-900 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-55">
-                        <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
-                          <ImageIcon className="h-8 w-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="font-bold text-white text-sm">
-                            SITE EVIDENCE PHOTO: {document.name}
-                          </div>
-                          <p className="text-xs text-slate-400 max-w-md">
-                            High-resolution photographic observation captured
-                            on-site during initial compliance inspection.
-                          </p>
-                          <div className="text-2.75 font-mono text-emerald-400 pt-2">
-                            GPS / EXIF: Building B, Bay 4 Floor Junction &bull;
-                            2026-09-19 14:35:10 IST
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-600 italic text-center">
-                        Evidence photo verified by Safety Officer. Shows exposed
-                        conduits and ungrounded wiring conduit near employee
-                        walkway.
-                      </p>
+                    <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <img
+                        src={targetUrl}
+                        alt={document.name}
+                        className="max-h-[65vh] max-w-full rounded-lg object-contain shadow-xs"
+                      />
+                    </div>
+                  ) : isPdf ? (
+                    <div className="w-full h-[68vh] rounded-xl overflow-hidden border border-slate-300 bg-slate-50">
+                      <iframe
+                        src={targetUrl}
+                        title={document.name}
+                        className="w-full h-full border-0"
+                      />
                     </div>
                   ) : (
                     <div className="space-y-3">
+                      <div className="w-full h-[60vh] rounded-xl overflow-hidden border border-slate-300 bg-slate-50">
+                        <iframe
+                          src={`https://docs.google.com/viewer?url=${encodeURIComponent(
+                            targetUrl.startsWith("http")
+                              ? targetUrl
+                              : typeof window !== "undefined"
+                                ? `${window.location.origin}${targetUrl}`
+                                : targetUrl,
+                          )}&embedded=true`}
+                          title={document.name}
+                          className="w-full h-full border-0"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                        <span className="text-slate-600 font-medium">
+                          Viewing {document.name} ({document.size})
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={targetUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50 text-[#0F766E] font-semibold hover:bg-teal-100 transition"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            <span>Open in Tab</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={handleDownloadClick}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0F766E] text-white font-semibold hover:bg-[#115E59] transition"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Fallback to document templates if no real URL */}
+                  {isSalary && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          Payroll Ledger & Salary Reconciliation Extract
+                        </h4>
+                        <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                          Discrepancy Under Review
+                        </span>
+                      </div>
+
                       <p>
-                        A certified on-site inspection was executed following
-                        the registered safety alert. Findings and containment
-                        actions:
+                        This document extract provides verified payroll
+                        calculation lines for the affected pay cycle.
+                        Discrepancies noted in allowances and unauthorized
+                        deduction columns are flagged for Department Head
+                        review.
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
-                          <span className="text-2.75 text-slate-400 uppercase font-semibold">
-                            Location / Area
-                          </span>
-                          <p className="font-bold text-slate-900 text-xs">
-                            Facilities Wing East, Floor 2 Emergency Corridor
+                      <div className="overflow-x-auto rounded-lg border border-slate-200">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                            <tr>
+                              <th className="p-2.5">Component / Description</th>
+                              <th className="p-2.5 text-right">
+                                Scheduled (₹)
+                              </th>
+                              <th className="p-2.5 text-right">
+                                Disbursed (₹)
+                              </th>
+                              <th className="p-2.5 text-right">Variance (₹)</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono">
+                            <tr>
+                              <td className="p-2.5 font-sans font-medium text-slate-900">
+                                Basic Pay
+                              </td>
+                              <td className="p-2.5 text-right">58,000.00</td>
+                              <td className="p-2.5 text-right">58,000.00</td>
+                              <td className="p-2.5 text-right text-slate-400">
+                                0.00
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="p-2.5 font-sans font-medium text-slate-900">
+                                House Rent Allowance (HRA)
+                              </td>
+                              <td className="p-2.5 text-right">23,200.00</td>
+                              <td className="p-2.5 text-right">23,200.00</td>
+                              <td className="p-2.5 text-right text-slate-400">
+                                0.00
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="p-2.5 font-sans font-medium text-slate-900">
+                                Special & Shift Allowances
+                              </td>
+                              <td className="p-2.5 text-right">18,500.00</td>
+                              <td className="p-2.5 text-right">18,500.00</td>
+                              <td className="p-2.5 text-right text-slate-400">
+                                0.00
+                              </td>
+                            </tr>
+                            <tr className="bg-rose-50/60 font-medium">
+                              <td className="p-2.5 font-sans text-rose-900 font-semibold">
+                                Recovery & Unadjusted Deduction
+                              </td>
+                              <td className="p-2.5 text-right text-slate-500">
+                                0.00
+                              </td>
+                              <td className="p-2.5 text-right text-rose-700 font-bold">
+                                -12,450.00
+                              </td>
+                              <td className="p-2.5 text-right text-rose-700 font-bold">
+                                -12,450.00
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="p-2.5 font-sans font-medium text-slate-900">
+                                Provident Fund (Employee EPF)
+                              </td>
+                              <td className="p-2.5 text-right">-6,960.00</td>
+                              <td className="p-2.5 text-right">-6,960.00</td>
+                              <td className="p-2.5 text-right text-slate-400">
+                                0.00
+                              </td>
+                            </tr>
+                            <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
+                              <td className="p-2.5 font-sans text-slate-900">
+                                Net Credit Payable
+                              </td>
+                              <td className="p-2.5 text-right">92,740.00</td>
+                              <td className="p-2.5 text-right text-rose-800">
+                                80,290.00
+                              </td>
+                              <td className="p-2.5 text-right text-rose-800">
+                                -12,450.00
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900 space-y-1">
+                        <strong className="font-semibold block text-xs">
+                          Payroll Auditor Remarks:
+                        </strong>
+                        <p className="text-2.75 leading-relaxed">
+                          Deduction code{" "}
+                          <code className="bg-white/80 px-1 py-0.5 rounded font-mono">
+                            DED_REC_049
+                          </code>{" "}
+                          was automatically triggered without corresponding
+                          absence or tax adjustment approval. Recommended for
+                          immediate payroll adjustment voucher credit in the
+                          upcoming pay cycle.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. COMMUNICATION & SLACK / EMAIL RECORDS */}
+                  {isCommunication && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          Transcribed Electronic Communications Trail
+                        </h4>
+                        <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                          IT Archive Extract
+                        </span>
+                      </div>
+
+                      <p>
+                        The following electronic communications were archived
+                        and submitted as factual evidence in support of case
+                        inquiry:
+                      </p>
+
+                      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4 font-sans">
+                        <div className="rounded-lg bg-white p-3 border border-slate-200/80 shadow-2xs space-y-1">
+                          <div className="flex items-center justify-between text-2.75 text-slate-500 border-b border-slate-100 pb-1">
+                            <strong className="text-slate-800">
+                              Reporting Supervisor
+                            </strong>
+                            <span>
+                              18 Sep 2026, 09:42 AM &bull; Channel:
+                              #operations-core
+                            </span>
+                          </div>
+                          <p className="text-slate-700 text-xs pt-1">
+                            "Ensure this deliverable is completed by midnight.
+                            Excuses regarding shift allocations will not be
+                            entertained and will reflect adversely on annual
+                            evaluations."
                           </p>
                         </div>
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
-                          <span className="text-2.75 text-slate-400 uppercase font-semibold">
-                            Risk Rating
-                          </span>
-                          <p className="font-bold text-rose-700 text-xs">
-                            Level 2 (Imminent Slip & Electrical Hazard)
+
+                        <div className="rounded-lg bg-emerald-50/70 p-3 border border-emerald-200 shadow-2xs space-y-1">
+                          <div className="flex items-center justify-between text-2.75 text-emerald-800 border-b border-emerald-200/60 pb-1">
+                            <strong className="text-emerald-950">
+                              Complainant
+                            </strong>
+                            <span>
+                              18 Sep 2026, 10:15 AM &bull; Direct Message
+                            </span>
+                          </div>
+                          <p className="text-slate-800 text-xs pt-1">
+                            "I have already completed my designated 9-hour
+                            roster and communicated earlier regarding medical
+                            appointments. Requesting re-allocation according to
+                            policy guidelines."
                           </p>
+                        </div>
+
+                        <div className="rounded-lg bg-rose-50/70 p-3 border border-rose-200 shadow-2xs space-y-1">
+                          <div className="flex items-center justify-between text-2.75 text-rose-800 border-b border-rose-200/60 pb-1">
+                            <strong className="text-rose-950">
+                              Reporting Supervisor (Flagged Message)
+                            </strong>
+                            <span>
+                              18 Sep 2026, 10:24 AM &bull; Direct Message
+                            </span>
+                          </div>
+                          <p className="text-slate-800 text-xs pt-1">
+                            "Your non-compliance is being noted on HR records.
+                            Do not escalate or contest this decision further in
+                            team meetings."
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-100 p-3 text-2.75 text-slate-600 border border-slate-200">
+                        <strong className="font-semibold text-slate-800">
+                          Investigating Officer Certification:
+                        </strong>{" "}
+                        Log timestamp integrity has been cryptographically
+                        confirmed against the organization workspace audit log.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. WORKPLACE SAFETY & SITE INSPECTIONS */}
+                  {isSafety && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          Workplace Safety Compliance & Site Inspection
+                          Assessment
+                        </h4>
+                        <span className="text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                          High Priority Hazard
+                        </span>
+                      </div>
+
+                      {isImage ? (
+                        <div className="space-y-3">
+                          <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-900 p-6 flex flex-col items-center justify-center text-center space-y-3 min-h-55">
+                            <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center text-amber-400">
+                              <ImageIcon className="h-8 w-8" />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="font-bold text-white text-sm">
+                                SITE EVIDENCE PHOTO: {document.name}
+                              </div>
+                              <p className="text-xs text-slate-400 max-w-md">
+                                High-resolution photographic observation
+                                captured on-site during initial compliance
+                                inspection.
+                              </p>
+                              <div className="text-2.75 font-mono text-emerald-400 pt-2">
+                                GPS / EXIF: Building B, Bay 4 Floor Junction
+                                &bull; 2026-09-19 14:35:10 IST
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600 italic text-center">
+                            Evidence photo verified by Safety Officer. Shows
+                            exposed conduits and ungrounded wiring conduit near
+                            employee walkway.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p>
+                            A certified on-site inspection was executed
+                            following the registered safety alert. Findings and
+                            containment actions:
+                          </p>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
+                              <span className="text-2.75 text-slate-400 uppercase font-semibold">
+                                Location / Area
+                              </span>
+                              <p className="font-bold text-slate-900 text-xs">
+                                Facilities Wing East, Floor 2 Emergency Corridor
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
+                              <span className="text-2.75 text-slate-400 uppercase font-semibold">
+                                Risk Rating
+                              </span>
+                              <p className="font-bold text-rose-700 text-xs">
+                                Level 2 (Imminent Slip & Electrical Hazard)
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+                            <h5 className="font-semibold text-slate-900 text-xs">
+                              Corrective Actions Executed:
+                            </h5>
+                            <ul className="list-disc list-inside space-y-1 text-slate-600 text-xs">
+                              <li>
+                                Hazard perimeter barricaded with caution signage
+                                within 45 minutes of report.
+                              </li>
+                              <li>
+                                Contractor Work Order #WO-1049 dispatched for
+                                emergency conduit re-insulation.
+                              </li>
+                              <li>
+                                Final clearance inspection conducted and signed
+                                off by Facilities Engineering Lead.
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 4. LEAVE & HRMS RECORDS */}
+                  {isLeave && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          HRMS Electronic Leave & Attendance Docket
+                        </h4>
+                        <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          System Audit Log
+                        </span>
+                      </div>
+
+                      <p>
+                        Summary of leave transaction history and automated
+                        workflow routing timeline:
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
+                          <span className="text-2.5 text-slate-400 uppercase block font-semibold">
+                            Leave Type
+                          </span>
+                          <strong className="text-slate-800 text-xs">
+                            Privilege Leave (PL)
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
+                          <span className="text-2.5 text-slate-400 uppercase block font-semibold">
+                            Duration
+                          </span>
+                          <strong className="text-slate-800 text-xs">
+                            3 Days (14–16 Sep)
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
+                          <span className="text-2.5 text-slate-400 uppercase block font-semibold">
+                            Available Balance
+                          </span>
+                          <strong className="text-emerald-700 text-xs">
+                            14.5 Days Remaining
+                          </strong>
                         </div>
                       </div>
 
                       <div className="rounded-lg border border-slate-200 p-3 space-y-2">
                         <h5 className="font-semibold text-slate-900 text-xs">
-                          Corrective Actions Executed:
+                          Workflow Routing Audit:
                         </h5>
-                        <ul className="list-disc list-inside space-y-1 text-slate-600 text-xs">
-                          <li>
-                            Hazard perimeter barricaded with caution signage
-                            within 45 minutes of report.
-                          </li>
-                          <li>
-                            Contractor Work Order #WO-1049 dispatched for
-                            emergency conduit re-insulation.
-                          </li>
-                          <li>
-                            Final clearance inspection conducted and signed off
-                            by Facilities Engineering Lead.
-                          </li>
-                        </ul>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex items-center justify-between text-slate-600">
+                            <span>1. Employee Submission</span>
+                            <span className="font-mono text-2.75 text-slate-500">
+                              10 Sep 2026, 11:20 AM &bull; Status:
+                              Auto-Validated
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-rose-700 font-medium">
+                            <span>2. Manager Approval Step</span>
+                            <span className="font-mono text-2.75">
+                              Pending &bull; Exceeded 48h SLA Window
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-slate-400">
+                            <span>3. HR Notification & Credit</span>
+                            <span className="font-mono text-2.75">
+                              Queued upon Stage 2 clearance
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* 4. LEAVE & HRMS RECORDS */}
-              {isLeave && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      HRMS Electronic Leave & Attendance Docket
-                    </h4>
-                    <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      System Audit Log
-                    </span>
-                  </div>
-
-                  <p>
-                    Summary of leave transaction history and automated workflow
-                    routing timeline:
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
-                        Leave Type
-                      </span>
-                      <strong className="text-slate-800 text-xs">
-                        Privilege Leave (PL)
-                      </strong>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
-                        Duration
-                      </span>
-                      <strong className="text-slate-800 text-xs">
-                        3 Days (14–16 Sep)
-                      </strong>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-200">
-                      <span className="text-2.5 text-slate-400 uppercase block font-semibold">
-                        Available Balance
-                      </span>
-                      <strong className="text-emerald-700 text-xs">
-                        14.5 Days Remaining
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 p-3 space-y-2">
-                    <h5 className="font-semibold text-slate-900 text-xs">
-                      Workflow Routing Audit:
-                    </h5>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between text-slate-600">
-                        <span>1. Employee Submission</span>
-                        <span className="font-mono text-2.75 text-slate-500">
-                          10 Sep 2026, 11:20 AM &bull; Status: Auto-Validated
+                  {/* 5. APPRAISAL & PERFORMANCE */}
+                  {isAppraisal && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          Annual Appraisal & KPI Evaluation Review Docket
+                        </h4>
+                        <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                          Evaluation Contest
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-rose-700 font-medium">
-                        <span>2. Manager Approval Step</span>
-                        <span className="font-mono text-2.75">
-                          Pending &bull; Exceeded 48h SLA Window
+
+                      <p>
+                        Official record of performance cycle scores and
+                        contested ratings under grievance appeal:
+                      </p>
+
+                      <div className="rounded-lg border border-slate-200 overflow-hidden">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                            <tr>
+                              <th className="p-2.5">
+                                Key Performance Indicator (KPI)
+                              </th>
+                              <th className="p-2.5 text-center">Self</th>
+                              <th className="p-2.5 text-center">Manager</th>
+                              <th className="p-2.5">HR Review Note</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-sans">
+                            <tr>
+                              <td className="p-2.5 font-medium text-slate-900">
+                                Project Delivery & Milestones
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-emerald-700">
+                                4.5 / 5.0
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-slate-700">
+                                4.2 / 5.0
+                              </td>
+                              <td className="p-2.5 text-slate-600">
+                                On-time delivery confirmed.
+                              </td>
+                            </tr>
+                            <tr className="bg-rose-50/50">
+                              <td className="p-2.5 font-medium text-slate-900">
+                                Cross-Team Collaboration
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-emerald-700">
+                                4.0 / 5.0
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-rose-700">
+                                2.0 / 5.0
+                              </td>
+                              <td className="p-2.5 text-rose-800 font-medium">
+                                Contested &bull; Lack of documented feedback.
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="p-2.5 font-medium text-slate-900">
+                                Technical Competence & Innovation
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-emerald-700">
+                                4.5 / 5.0
+                              </td>
+                              <td className="p-2.5 text-center font-bold text-slate-700">
+                                4.0 / 5.0
+                              </td>
+                              <td className="p-2.5 text-slate-600">
+                                Exceeds benchmarks.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <p className="text-slate-600 text-xs">
+                        Complainant requests independent panel review regarding
+                        the collaboration category rating discrepancy in
+                        accordance with Section 8.3 of Employee Handbook.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 6. INVESTIGATION & FINDINGS */}
+                  {isInvestigation && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                          Formal Inquiry Committee Findings & Determination
+                        </h4>
+                        <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          Officer Report
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-slate-400">
-                        <span>3. HR Notification & Credit</span>
-                        <span className="font-mono text-2.75">
-                          Queued upon Stage 2 clearance
-                        </span>
+
+                      <div className="space-y-3 text-xs">
+                        <div>
+                          <h5 className="font-bold text-slate-900 text-xs mb-1">
+                            1. Inquiries & Witness Interviews:
+                          </h5>
+                          <p className="text-slate-600">
+                            Inquiry meetings were convened with all involved
+                            parties. Corroborating statements were obtained and
+                            logged under case file records.
+                          </p>
+                        </div>
+
+                        <div>
+                          <h5 className="font-bold text-slate-900 text-xs mb-1">
+                            2. Findings of Fact:
+                          </h5>
+                          <p className="text-slate-600">
+                            The inquiry established procedural deviation and
+                            confirmed that established escalation and workplace
+                            conduct protocols were not strictly adhered to.
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-emerald-950 space-y-1">
+                          <h5 className="font-bold text-xs">
+                            3. Resolution Recommendation:
+                          </h5>
+                          <p className="text-2.75 leading-relaxed">
+                            Formal advisory issued to concerned parties.
+                            Remedial adjustment instructions submitted to
+                            Department Head for final sign-off and closure.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+
+                  {/* 7. FALLBACK / GENERAL STATEMENT */}
+                  {!isSalary &&
+                    !isCommunication &&
+                    !isSafety &&
+                    !isLeave &&
+                    !isAppraisal &&
+                    !isInvestigation && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                          <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
+                            Official Complainant Statement of Grievance
+                          </h4>
+                          <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            Written Particulars
+                          </span>
+                        </div>
+
+                        <div className="space-y-3 text-xs leading-relaxed text-slate-700">
+                          <p>
+                            <strong>Statement Subject:</strong>{" "}
+                            {document.title || "Grievance Particulars"}
+                          </p>
+                          <p>
+                            I hereby declare that the particulars furnished in
+                            this grievance submission are true to the best of my
+                            knowledge and belief. The circumstances cited have
+                            impeded fair workplace operations and necessitated
+                            formal administrative review.
+                          </p>
+                          <p>
+                            I request the Department Head and the designated
+                            inquiry officer to examine the matter objectively,
+                            enforce compliance with standard operational
+                            procedures, and grant fair redressal.
+                          </p>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-2.75 text-slate-500">
+                          <span>
+                            Signature of Complainant:{" "}
+                            <strong className="text-slate-800">
+                              {document.submitterName || "Digitally Signed"}
+                            </strong>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                </>
               )}
-
-              {/* 5. APPRAISAL & PERFORMANCE */}
-              {isAppraisal && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      Annual Appraisal & KPI Evaluation Review Docket
-                    </h4>
-                    <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                      Evaluation Contest
-                    </span>
-                  </div>
-
-                  <p>
-                    Official record of performance cycle scores and contested
-                    ratings under grievance appeal:
-                  </p>
-
-                  <div className="rounded-lg border border-slate-200 overflow-hidden">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
-                        <tr>
-                          <th className="p-2.5">
-                            Key Performance Indicator (KPI)
-                          </th>
-                          <th className="p-2.5 text-center">Self</th>
-                          <th className="p-2.5 text-center">Manager</th>
-                          <th className="p-2.5">HR Review Note</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-sans">
-                        <tr>
-                          <td className="p-2.5 font-medium text-slate-900">
-                            Project Delivery & Milestones
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-emerald-700">
-                            4.5 / 5.0
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-slate-700">
-                            4.2 / 5.0
-                          </td>
-                          <td className="p-2.5 text-slate-600">
-                            On-time delivery confirmed.
-                          </td>
-                        </tr>
-                        <tr className="bg-rose-50/50">
-                          <td className="p-2.5 font-medium text-slate-900">
-                            Cross-Team Collaboration
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-emerald-700">
-                            4.0 / 5.0
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-rose-700">
-                            2.0 / 5.0
-                          </td>
-                          <td className="p-2.5 text-rose-800 font-medium">
-                            Contested &bull; Lack of documented feedback.
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="p-2.5 font-medium text-slate-900">
-                            Technical Competence & Innovation
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-emerald-700">
-                            4.5 / 5.0
-                          </td>
-                          <td className="p-2.5 text-center font-bold text-slate-700">
-                            4.0 / 5.0
-                          </td>
-                          <td className="p-2.5 text-slate-600">
-                            Exceeds benchmarks.
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <p className="text-slate-600 text-xs">
-                    Complainant requests independent panel review regarding the
-                    collaboration category rating discrepancy in accordance with
-                    Section 8.3 of Employee Handbook.
-                  </p>
-                </div>
-              )}
-
-              {/* 6. INVESTIGATION & FINDINGS */}
-              {isInvestigation && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                      Formal Inquiry Committee Findings & Determination
-                    </h4>
-                    <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Officer Report
-                    </span>
-                  </div>
-
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <h5 className="font-bold text-slate-900 text-xs mb-1">
-                        1. Inquiries & Witness Interviews:
-                      </h5>
-                      <p className="text-slate-600">
-                        Inquiry meetings were convened with all involved
-                        parties. Corroborating statements were obtained and
-                        logged under case file records.
-                      </p>
-                    </div>
-
-                    <div>
-                      <h5 className="font-bold text-slate-900 text-xs mb-1">
-                        2. Findings of Fact:
-                      </h5>
-                      <p className="text-slate-600">
-                        The inquiry established procedural deviation and
-                        confirmed that established escalation and workplace
-                        conduct protocols were not strictly adhered to.
-                      </p>
-                    </div>
-
-                    <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 text-emerald-950 space-y-1">
-                      <h5 className="font-bold text-xs">
-                        3. Resolution Recommendation:
-                      </h5>
-                      <p className="text-2.75 leading-relaxed">
-                        Formal advisory issued to concerned parties. Remedial
-                        adjustment instructions submitted to Department Head for
-                        final sign-off and closure.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 7. FALLBACK / GENERAL STATEMENT */}
-              {!isSalary &&
-                !isCommunication &&
-                !isSafety &&
-                !isLeave &&
-                !isAppraisal &&
-                !isInvestigation && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                      <h4 className="font-bold text-sm text-slate-900 uppercase tracking-wide">
-                        Official Complainant Statement of Grievance
-                      </h4>
-                      <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                        Written Particulars
-                      </span>
-                    </div>
-
-                    <div className="space-y-3 text-xs leading-relaxed text-slate-700">
-                      <p>
-                        <strong>Statement Subject:</strong>{" "}
-                        {document.title || "Grievance Particulars"}
-                      </p>
-                      <p>
-                        I hereby declare that the particulars furnished in this
-                        grievance submission are true to the best of my
-                        knowledge and belief. The circumstances cited have
-                        impeded fair workplace operations and necessitated
-                        formal administrative review.
-                      </p>
-                      <p>
-                        I request the Department Head and the designated inquiry
-                        officer to examine the matter objectively, enforce
-                        compliance with standard operational procedures, and
-                        grant fair redressal.
-                      </p>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-2.75 text-slate-500">
-                      <span>
-                        Signature of Complainant:{" "}
-                        <strong className="text-slate-800">
-                          {document.submitterName || "Digitally Signed"}
-                        </strong>
-                      </span>
-                      <span>Date: {document.uploadedAt || "24 Sep 2026"}</span>
-                    </div>
-                  </div>
-                )}
             </div>
 
             {/* Document Footer Authentication */}

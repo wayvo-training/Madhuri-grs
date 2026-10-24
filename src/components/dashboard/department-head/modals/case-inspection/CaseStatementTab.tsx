@@ -6,6 +6,7 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
+  Paperclip,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -20,10 +21,12 @@ interface CaseStatementTabProps {
   currentHodEmail?: string;
   hodEmail?: string;
   onDocumentClick: (file: {
+    id?: string;
     name: string;
     size: string;
     type: string;
     path?: string;
+    downloadUrl?: string;
     uploadedAt?: string;
   }) => void;
   onDownloadDocument: (doc: DocumentPreviewData) => void;
@@ -188,6 +191,103 @@ export function CaseStatementTab({
           </p>
         )}
       </div>
+
+      {/* Staff Resolution Supportive Documents */}
+      {currentGrievance.submittedResolution?.attachments &&
+        currentGrievance.submittedResolution.attachments.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-slate-200">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
+              Staff Supportive Resolution Documents (
+              {currentGrievance.submittedResolution.attachments.length})
+            </h4>
+            <div className="space-y-2">
+              {currentGrievance.submittedResolution.attachments.map((file) => (
+                <div
+                  key={file.id || file.name}
+                  className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/20 p-3 text-xs transition hover:border-emerald-300 hover:shadow-2xs"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onDocumentClick({
+                        id: file.id,
+                        name: file.name,
+                        size: file.size || "Document",
+                        type: file.type || "Supportive Document",
+                        path: file.path,
+                        downloadUrl: file.downloadUrl,
+                        uploadedAt: file.uploadedAt,
+                      })
+                    }
+                    className="flex items-center gap-3 cursor-pointer flex-1 min-w-0 text-left bg-transparent border-0 p-0"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F0FDFA] text-[#0F766E] border border-teal-200/60 shrink-0">
+                      {file.name.endsWith(".pdf") ? (
+                        <FileText className="h-4.5 w-4.5 text-rose-600" />
+                      ) : file.name.endsWith(".jpg") ||
+                        file.name.endsWith(".jpeg") ||
+                        file.name.endsWith(".png") ? (
+                        <ImageIcon className="h-4.5 w-4.5 text-blue-600" />
+                      ) : (
+                        <FileText className="h-4.5 w-4.5 text-emerald-700" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 truncate hover:text-emerald-800 transition">
+                        {file.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {file.size || "Document"} &bull; Submitted with
+                        Resolution by{" "}
+                        {currentGrievance.submittedResolution?.staffName ||
+                          "Staff"}
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onDocumentClick({
+                          id: file.id,
+                          name: file.name,
+                          size: file.size || "Document",
+                          type: file.type || "Supportive Document",
+                          path: file.path,
+                          downloadUrl: file.downloadUrl,
+                          uploadedAt: file.uploadedAt,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-2.75 font-semibold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs cursor-pointer"
+                    >
+                      <Eye className="h-3 w-3" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onDownloadDocument({
+                          name: file.name,
+                          size: file.size || "Document",
+                          type: file.type || "Supportive Document",
+                          path: file.path,
+                          downloadUrl: file.downloadUrl,
+                          uploadedAt: file.uploadedAt,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-2.75 font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                      title="Download File"
+                    >
+                      <Download className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Handling Officer Overview */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-xs">

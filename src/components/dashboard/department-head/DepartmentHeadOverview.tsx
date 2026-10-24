@@ -489,6 +489,16 @@ export function DepartmentHeadOverviewInner({
           onClose={() => setAssignModalGrievance(null)}
           onAssignmentSuccess={(staffId, staffName) => {
             handleAssignmentSuccess(assignModalGrievance, staffId, staffName);
+            setSelectedCaseFile((prev) =>
+              prev && prev.id === assignModalGrievance.id
+                ? {
+                    ...prev,
+                    assignedStaffId: staffId,
+                    assignedStaffName: staffName,
+                    status: "ASSIGNED",
+                  }
+                : prev,
+            );
             setAssignModalGrievance(null);
           }}
         />

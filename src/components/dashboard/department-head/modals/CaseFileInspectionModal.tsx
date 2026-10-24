@@ -147,17 +147,21 @@ export function CaseFileInspectionModal({
 
   const handleDocumentClick = useCallback(
     (file: {
+      id?: string;
       name: string;
       size: string;
       type: string;
       path?: string;
+      downloadUrl?: string;
       uploadedAt?: string;
     }) => {
       onOpenDocumentPreview({
+        id: file.id,
         name: file.name,
         size: file.size,
         type: file.type || "Document",
         path: file.path,
+        downloadUrl: file.downloadUrl,
         uploadedAt: file.uploadedAt || currentGrievance.createdAt || "Recent",
         grievanceNumber: currentGrievance.ticketCode || "GRS-2026",
         category: `${currentGrievance.category || "General"} / ${currentGrievance.subcategory || "General"}`,

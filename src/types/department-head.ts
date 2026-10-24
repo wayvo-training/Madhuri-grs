@@ -249,10 +249,12 @@ export interface DepartmentHeadOverviewProps {
 }
 
 export interface DocumentPreviewData {
+  id?: string;
   name: string;
   size: string;
   type: string;
   path?: string;
+  downloadUrl?: string;
   uploadedAt?: string;
   grievanceNumber?: string;
   category?: string;

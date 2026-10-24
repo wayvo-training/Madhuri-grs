@@ -126,6 +126,7 @@ export async function GET(
             knowledge_articles: {
               select: { article_id: true },
             },
+            attachments: true,
           },
         },
       },
@@ -1183,6 +1184,30 @@ export async function GET(
                 submittedAt: formatRelativeTime(
                   grievance.resolutions[0].submitted_at,
                 ),
+                attachments: (
+                  (
+                    grievance.resolutions[0] as unknown as {
+                      attachments?: Array<{
+                        attachment_id: bigint | number;
+                        file_name: string;
+                        file_size?: bigint | number | null;
+                        file_type?: string | null;
+                        file_path: string;
+                        uploaded_at: Date;
+                      }>;
+                    }
+                  ).attachments || []
+                ).map((att) => ({
+                  id: att.attachment_id.toString(),
+                  name: att.file_name,
+                  size: att.file_size
+                    ? `${Math.round(Number(att.file_size) / 1024)} KB`
+                    : undefined,
+                  type: att.file_type || undefined,
+                  path: att.file_path,
+                  downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+                  uploadedAt: formatFullDateTime(att.uploaded_at),
+                })),
               }
             : null,
           hasProposedKb:

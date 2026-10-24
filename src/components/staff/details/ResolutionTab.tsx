@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  Download,
   Eye,
   FileCheck2,
   FileSpreadsheet,
@@ -12,11 +13,14 @@ import {
 import { useState } from "react";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import { canStaffProposeKnowledge } from "@/lib/staff/utils";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ResolutionTabProps {
   grievance: StaffGrievanceItem;
   onOpenDocumentPreview?: (doc: {
+    id?: string;
+    downloadUrl?: string;
     name: string;
     size: string;
     type: string;
@@ -148,10 +152,12 @@ export function ResolutionTab({
                   type="button"
                   onClick={() =>
                     onOpenDocumentPreview?.({
+                      id: file.id,
                       name: file.name,
                       size: file.size,
                       type: file.type || "Supportive Document",
                       path: file.path,
+                      downloadUrl: file.downloadUrl,
                       uploadedAt: file.uploadedAt,
                       grievanceNumber: grievance.grievanceNumber,
                       category: `${grievance.category} / ${grievance.subcategory}`,
@@ -187,27 +193,49 @@ export function ResolutionTab({
                   </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    onOpenDocumentPreview?.({
-                      name: file.name,
-                      size: file.size,
-                      type: file.type || "Supportive Document",
-                      path: file.path,
-                      uploadedAt: file.uploadedAt,
-                      grievanceNumber: grievance.grievanceNumber,
-                      category: `${grievance.category} / ${grievance.subcategory}`,
-                      title: grievance.title,
-                      submitterName: "Staff Member",
-                      submitterRole: "Assigned Staff",
-                    })
-                  }
-                  className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition shrink-0 ml-2"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  View
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenDocumentPreview?.({
+                        id: file.id,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type || "Supportive Document",
+                        path: file.path,
+                        downloadUrl: file.downloadUrl,
+                        uploadedAt: file.uploadedAt,
+                        grievanceNumber: grievance.grievanceNumber,
+                        category: `${grievance.category} / ${grievance.subcategory}`,
+                        title: grievance.title,
+                        submitterName: "Staff Member",
+                        submitterRole: "Assigned Staff",
+                      })
+                    }
+                    className="flex items-center gap-1.5 text-emerald-700 hover:text-emerald-900 font-semibold px-2.5 py-1.5 rounded-lg border border-emerald-200 hover:bg-emerald-50 transition cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const dlUrl =
+                        file.downloadUrl ||
+                        (file.id
+                          ? `/api/attachments/${file.id}/download?download=true`
+                          : "") ||
+                        file.path;
+                      if (dlUrl) {
+                        triggerFileDownload(dlUrl, file.name);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-slate-700 hover:text-slate-900 font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+                    title="Download document"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

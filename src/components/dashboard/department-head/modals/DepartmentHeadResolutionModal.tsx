@@ -148,20 +148,62 @@ export function DepartmentHeadResolutionModal({
         </div>
 
         <form onSubmit={handleFormSubmit} className="mt-4 space-y-4">
-          {!isDirectResolution && grievance.submittedResolution && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-2">
-              <div className="flex items-center justify-between font-semibold text-emerald-950">
-                <span>
-                  Assigned Staff Findings:{" "}
+          {grievance.submittedResolution && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-xs text-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between font-semibold text-emerald-950 border-b border-emerald-200/60 pb-1.5">
+                <span className="flex items-center gap-1.5">
+                  <FileText className="h-4 w-4 text-emerald-700" />
+                  Assigned Staff Findings & Resolution:{" "}
                   {grievance.submittedResolution.staffName}
                 </span>
                 <span className="text-[11px] font-normal text-slate-500">
                   {grievance.submittedResolution.submittedAt}
                 </span>
               </div>
-              <p className="font-normal leading-relaxed">
-                {grievance.submittedResolution.note}
-              </p>
+
+              {grievance.submittedResolution.problemSummary && (
+                <div>
+                  <span className="font-semibold text-slate-700 block text-[11px]">
+                    Problem Summary:
+                  </span>
+                  <p className="text-slate-800 font-normal leading-relaxed mt-0.5">
+                    {grievance.submittedResolution.problemSummary}
+                  </p>
+                </div>
+              )}
+
+              {grievance.submittedResolution.findings && (
+                <div>
+                  <span className="font-semibold text-slate-700 block text-[11px]">
+                    Findings:
+                  </span>
+                  <p className="text-slate-800 font-normal leading-relaxed mt-0.5">
+                    {grievance.submittedResolution.findings}
+                  </p>
+                </div>
+              )}
+
+              {grievance.submittedResolution.actionTaken && (
+                <div>
+                  <span className="font-semibold text-slate-700 block text-[11px]">
+                    Action Taken:
+                  </span>
+                  <p className="text-slate-800 font-normal leading-relaxed mt-0.5">
+                    {grievance.submittedResolution.actionTaken}
+                  </p>
+                </div>
+              )}
+
+              {grievance.submittedResolution.outcome && (
+                <div>
+                  <span className="font-semibold text-slate-700 block text-[11px]">
+                    Outcome / Recommendation:
+                  </span>
+                  <p className="text-slate-800 font-normal leading-relaxed mt-0.5">
+                    {grievance.submittedResolution.outcome}
+                  </p>
+                </div>
+              )}
 
               {grievance.submittedResolution.attachments &&
                 grievance.submittedResolution.attachments.length > 0 && (
@@ -169,7 +211,7 @@ export function DepartmentHeadResolutionModal({
                     <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-950">
                       <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
                       <span>
-                        Resolution Attachments (
+                        Supportive Resolution Documents (
                         {grievance.submittedResolution.attachments.length})
                       </span>
                     </div>
@@ -183,7 +225,10 @@ export function DepartmentHeadResolutionModal({
                             <div className="flex items-center gap-1.5 min-w-0">
                               <FileText className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
                               <div className="min-w-0">
-                                <p className="text-[11px] font-medium text-slate-800 truncate">
+                                <p
+                                  className="text-[11px] font-medium text-slate-800 truncate"
+                                  title={att.name}
+                                >
                                   {att.name}
                                 </p>
                                 {att.size && (
@@ -206,7 +251,7 @@ export function DepartmentHeadResolutionModal({
                                   <span>View</span>
                                 </a>
                                 <a
-                                  href={att.downloadUrl}
+                                  href={`${att.downloadUrl}${att.downloadUrl.includes("?") ? "&" : "?"}download=true`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   download={att.name}

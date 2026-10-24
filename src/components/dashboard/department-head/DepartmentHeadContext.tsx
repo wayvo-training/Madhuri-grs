@@ -364,12 +364,20 @@ export function DepartmentHeadProvider({
   );
 
   const handleDownloadDocument = useCallback((doc: DocumentPreviewData) => {
-    const sampleText = `REPUBLIC OF INDIA / CENTRAL GRIEVANCE REDRESSAL SYSTEM\nOFFICIAL ATTACHMENT RECORD\n\nTicket Code: ${doc.grievanceNumber}\nFile Name: ${doc.name}\nSize: ${doc.size}\nCategory: ${doc.category}\nComplainant: ${doc.submitterName} (${doc.submitterRole})\nUploaded: ${doc.uploadedAt}\n\n--- DOCUMENT CONTENT EXTRACT ---\nThis official digital document was retrieved from the grievance case dossier.\nCryptographic Verification: SHA-256 Validated\nStatus: Certified Authentic Evidence\n`;
-    const blob = new Blob([sampleText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    triggerFileDownload(url, doc.name);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast.success(`Downloaded file: ${doc.name}`);
+    const dlUrl =
+      doc.downloadUrl ||
+      (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+      (doc.path?.startsWith("/api/attachments/")
+        ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
+        : doc.path);
+
+    if (dlUrl) {
+      triggerFileDownload(dlUrl, doc.name);
+      toast.success(`Downloading file: ${doc.name}`);
+      return;
+    }
+
+    toast.error(`File path unavailable for ${doc.name}`);
   }, []);
 
   const value = {
