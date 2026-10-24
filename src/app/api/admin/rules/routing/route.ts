@@ -262,15 +262,9 @@ export async function POST(request: Request) {
         finalSubcatId = newSub.subcategory_id;
         finalSubcatName = newSub.subcategory_name;
       }
-    } else if (!subcategory_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "subcategory_id is required. Every routing rule must be scoped to an exact Category and Subcategory combination.",
-        },
-        { status: 400 },
-      );
+    } else if (!subcategory_id || subcategory_id === "ALL") {
+      finalSubcatId = null;
+      finalSubcatName = "All Subcategories";
     } else {
       finalSubcatId = validateBigIntId(subcategory_id);
       if (!finalSubcatId) {
@@ -808,8 +802,19 @@ export async function PATCH(request: Request) {
       }
     }
 
-    if (subcategory_id !== undefined && subcategory_id !== null) {
-      if (subcategory_id === "CUSTOM" && new_subcategory_name && finalCatId) {
+    if (subcategory_id !== undefined) {
+      if (
+        subcategory_id === "ALL" ||
+        subcategory_id === null ||
+        subcategory_id === ""
+      ) {
+        finalSubcatId = null;
+        finalSubcatName = "All Subcategories";
+      } else if (
+        subcategory_id === "CUSTOM" &&
+        new_subcategory_name &&
+        finalCatId
+      ) {
         const trimmedSubcat = new_subcategory_name.trim();
         if (!/[a-zA-Z]/.test(trimmedSubcat)) {
           return NextResponse.json(

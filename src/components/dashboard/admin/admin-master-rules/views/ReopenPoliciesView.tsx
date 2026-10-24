@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText } from "lucide-react";
+import { CheckCircle2, FileText, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
@@ -31,7 +31,7 @@ export function ReopenPoliciesView({
   statusFilter,
   onEdit,
   onToggleStatus,
-  onDelete,
+  onDelete: _onDelete,
 }: ReopenPoliciesViewProps) {
   const filtered = policies.filter((p) => {
     if (statusFilter.length > 0 && !statusFilter.includes(p.status))
@@ -251,25 +251,41 @@ export function ReopenPoliciesView({
                                     {p.max_manual_review_count}
                                   </TableCell>
                                   <TableCell className="w-[110px] px-3 py-3 whitespace-nowrap overflow-hidden text-ellipsis text-[13px] align-middle">
-                                    <span
-                                      className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                                    <button
+                                      type="button"
+                                      onClick={() => onToggleStatus(p)}
+                                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[12px] font-semibold cursor-pointer hover:opacity-80 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500 ${
+                                        p.status === "ACTIVE"
+                                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                          : "bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+                                      }`}
+                                      title="Click to toggle active/inactive status"
                                     >
                                       {p.status === "ACTIVE"
                                         ? "Active"
                                         : "Inactive"}
-                                    </span>
+                                    </button>
                                   </TableCell>
                                   <TableCell className="w-[90px] py-3 pl-2 pr-4 text-right whitespace-nowrap overflow-hidden align-middle">
                                     <ActionMenu
                                       widthClass="w-36"
                                       items={[
                                         {
-                                          label: "Delete Policy",
-                                          variant: "danger" as const,
+                                          label: "Edit Policy",
                                           icon: (
-                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                            <Pencil className="h-3.5 w-3.5" />
                                           ),
-                                          onClick: () => onDelete(p),
+                                          onClick: () => onEdit(p),
+                                        },
+                                        {
+                                          label:
+                                            p.status === "ACTIVE"
+                                              ? "Deactivate"
+                                              : "Activate",
+                                          icon: (
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                          ),
+                                          onClick: () => onToggleStatus(p),
                                         },
                                       ]}
                                     />

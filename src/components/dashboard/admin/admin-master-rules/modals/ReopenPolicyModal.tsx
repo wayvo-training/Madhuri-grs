@@ -7,8 +7,8 @@ export function ReopenPolicyModal({
   open,
   onClose,
   editingRuleId,
-  ruleStatus,
-  setRuleStatus,
+  ruleStatus: _ruleStatus,
+  setRuleStatus: _setRuleStatus,
   ruleName,
   setRuleName,
   selectedPriorityCatId,
@@ -352,53 +352,33 @@ export function ReopenPolicyModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-            {editingRuleId && setRuleStatus && (
-              <button
-                type="button"
-                onClick={() =>
-                  setRuleStatus(ruleStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE")
-                }
-                className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition cursor-pointer ${
-                  ruleStatus === "ACTIVE"
-                    ? "border-rose-200 text-rose-600 hover:bg-rose-50"
-                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                }`}
-              >
-                {ruleStatus === "ACTIVE" ? "Deactivate" : "Activate"}
-              </button>
-            )}
-
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !ruleName.trim() ||
-                  isRuleNameNumeric ||
-                  (selectedPriorityCatId === "CUSTOM" &&
-                    (!newCategoryName.trim() || isCategoryNumeric)) ||
-                  (selectedPrioritySubcatId === "CUSTOM" &&
-                    (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
-                  isWindowInvalid ||
-                  isMaxReopensInvalid ||
-                  isMaxReviewsInvalid
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
-                <span>Save Policy</span>
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !ruleName.trim() ||
+                isRuleNameNumeric ||
+                (selectedPriorityCatId === "CUSTOM" &&
+                  (!newCategoryName.trim() || isCategoryNumeric)) ||
+                (selectedPrioritySubcatId === "CUSTOM" &&
+                  (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
+                isWindowInvalid ||
+                isMaxReopensInvalid ||
+                isMaxReviewsInvalid
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>Save Policy</span>
+            </button>
           </div>
         </form>
       </div>

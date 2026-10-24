@@ -135,7 +135,7 @@ export function RoutingRulesView({
   statusFilter: externalStatus,
   onEdit,
   onToggleStatus,
-  onDelete,
+  onDelete: _onDelete,
 }: RoutingRulesViewProps) {
   const [selectedWorkflowRule, setSelectedWorkflowRule] =
     useState<SerializedRoutingRule | null>(null);
@@ -417,13 +417,21 @@ export function RoutingRulesView({
 
                                   {/* Subcategory */}
                                   <TableCell className="w-[180px] px-3.5 py-3 min-w-[180px] max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                                    <TruncatedTextTooltip
-                                      text={r.subcategory_name || "—"}
-                                      tooltipHeader="Subcategory"
-                                      threshold={24}
-                                      maxWidthClass="max-w-[170px] w-full block"
-                                      className="text-[13px] text-slate-700 dark:text-slate-300 font-normal"
-                                    />
+                                    {r.subcategory_name &&
+                                    r.subcategory_name !==
+                                      "All Subcategories" ? (
+                                      <TruncatedTextTooltip
+                                        text={r.subcategory_name}
+                                        tooltipHeader="Subcategory"
+                                        threshold={24}
+                                        maxWidthClass="max-w-[170px] w-full block"
+                                        className="text-[13px] text-slate-700 dark:text-slate-300 font-normal"
+                                      />
+                                    ) : (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                                        All Subcategories
+                                      </span>
+                                    )}
                                   </TableCell>
 
                                   {/* Primary Dept */}
@@ -596,14 +604,6 @@ export function RoutingRulesView({
                                               <CheckCircle2 className="h-3.5 w-3.5" />
                                             ),
                                             onClick: () => onToggleStatus(r),
-                                          },
-                                          {
-                                            label: "Delete Rule",
-                                            variant: "danger" as const,
-                                            icon: (
-                                              <AlertTriangle className="h-3.5 w-3.5" />
-                                            ),
-                                            onClick: () => onDelete(r),
                                           },
                                         ]}
                                       />

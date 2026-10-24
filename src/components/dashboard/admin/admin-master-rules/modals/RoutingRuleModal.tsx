@@ -46,8 +46,8 @@ export function RoutingRuleModal({
   open,
   onClose,
   editingRuleId,
-  ruleStatus,
-  setRuleStatus,
+  ruleStatus: _ruleStatus,
+  setRuleStatus: _setRuleStatus,
   ruleName,
   setRuleName,
   selectedDeptId,
@@ -853,19 +853,33 @@ export function RoutingRuleModal({
                         className="mt-1 h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium disabled:opacity-50"
                       >
                         <SelectValue placeholder="-- Select Subcategory --">
-                          {categories
-                            .find((c) => c.category_id === selectedCatId)
-                            ?.subcategories?.find(
-                              (s) =>
-                                s.subcategory_id === selectedRoutingSubcatId,
-                            )?.subcategory_name || (
-                            <span className="text-slate-400">
-                              Select Subcategory
+                          {selectedRoutingSubcatId === "ALL" ? (
+                            <span className="font-semibold text-teal-700 dark:text-teal-300">
+                              ★ All Subcategories (Category-wide)
                             </span>
+                          ) : (
+                            categories
+                              .find((c) => c.category_id === selectedCatId)
+                              ?.subcategories?.find(
+                                (s) =>
+                                  s.subcategory_id === selectedRoutingSubcatId,
+                              )?.subcategory_name || (
+                              <span className="text-slate-400">
+                                -- Select Subcategory --
+                              </span>
+                            )
                           )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-60">
+                        {selectedCatId && selectedCatId !== "CUSTOM" && (
+                          <SelectItem
+                            value="ALL"
+                            className="text-xs font-bold text-teal-700 dark:text-teal-300 cursor-pointer"
+                          >
+                            ★ All Subcategories (Category-wide)
+                          </SelectItem>
+                        )}
                         {categories
                           .find((c) => c.category_id === selectedCatId)
                           ?.subcategories?.map((s) => (
@@ -1443,22 +1457,6 @@ export function RoutingRuleModal({
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-            {editingRuleId && setRuleStatus && (
-              <button
-                type="button"
-                onClick={() =>
-                  setRuleStatus(ruleStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE")
-                }
-                className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition cursor-pointer ${
-                  ruleStatus === "ACTIVE"
-                    ? "border-rose-200 text-rose-600 hover:bg-rose-50"
-                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                }`}
-              >
-                {ruleStatus === "ACTIVE" ? "Deactivate" : "Activate"}
-              </button>
-            )}
-
             <div className="flex items-center gap-2 ml-auto">
               {routingScope === "MULTI" && participatingRows.length < 2 && (
                 <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">

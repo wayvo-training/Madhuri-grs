@@ -561,7 +561,8 @@ export function useRuleActions({
           rule_name: ruleName.trim(),
           department_id: selectedDeptId,
           category_id: selectedCatId,
-          subcategory_id: selectedRoutingSubcatId,
+          subcategory_id:
+            selectedRoutingSubcatId === "ALL" ? null : selectedRoutingSubcatId,
           involvement_type: resolvedInvolvement,
           supporting_departments: selectedSupportingDepts,
           conditions: {
@@ -579,9 +580,11 @@ export function useRuleActions({
               ? newCategoryName
               : chosenCat?.category_name,
           subcategory_name:
-            selectedRoutingSubcatId === "CUSTOM"
-              ? newSubcategoryName
-              : chosenSub?.subcategory_name,
+            selectedRoutingSubcatId === "ALL"
+              ? "All Subcategories"
+              : selectedRoutingSubcatId === "CUSTOM"
+                ? newSubcategoryName
+                : chosenSub?.subcategory_name,
           new_category_name:
             selectedCatId === "CUSTOM" ? newCategoryName : undefined,
           new_subcategory_name:
