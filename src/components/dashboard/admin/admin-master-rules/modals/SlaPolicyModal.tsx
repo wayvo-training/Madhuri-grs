@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import {
   isPurelyNumeric,
@@ -12,8 +12,6 @@ export function SlaPolicyModal({
   open,
   onClose,
   editingRuleId,
-  ruleStatus,
-  setRuleStatus,
   ruleName,
   setRuleName,
   priorityLevel,
@@ -30,6 +28,33 @@ export function SlaPolicyModal({
   onSubmit,
 }: SlaPolicyModalProps) {
   const isRuleNameNumeric = isPurelyNumeric(ruleName);
+  const durationNum = Number(durationHours);
+  const isDurationValidNumber =
+    Boolean(durationHours) &&
+    !Number.isNaN(durationNum) &&
+    Number.isInteger(durationNum);
+  const isDurationTooLow = isDurationValidNumber && durationNum < 1;
+  const isDurationTooHigh = isDurationValidNumber && durationNum > 720;
+  const isDurationInvalid =
+    !isDurationValidNumber || isDurationTooLow || isDurationTooHigh;
+
+  const getDurationDisplay = (hours: number) => {
+    if (hours < 1) return null;
+    if (hours > 720) {
+      const days = Math.round(hours / 24).toLocaleString();
+      return `Exceeds maximum limit: ${hours.toLocaleString()} hours is ≈ ${days} days. Maximum allowed is 720 hours (30 days).`;
+    }
+    if (hours % 24 === 0) {
+      const days = hours / 24;
+      return `Equivalent to ${days} Day${days > 1 ? "s" : ""}`;
+    }
+    if (hours >= 24) {
+      const days = (hours / 24).toFixed(1);
+      return `Equivalent to ≈ ${days} Days (${hours} Hours)`;
+    }
+    return `Equivalent to ${hours} Hour${hours > 1 ? "s" : ""}`;
+  };
+
   const [activeSlaTier, setActiveSlaTier] = useState<
     "warning" | "at_risk" | "critical" | "escalation"
   >("warning");
@@ -144,22 +169,98 @@ export function SlaPolicyModal({
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="target-duration-input"
-                    className="block font-semibold text-slate-700 dark:text-slate-300"
-                  >
-                    Target Duration (Hours) *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="target-duration-input"
+                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      Target Duration (Hours) *
+                    </label>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Range: 1 - 720 Hours (Max 30 Days)
+                    </span>
+                  </div>
                   <input
                     id="target-duration-input"
                     type="number"
                     min="1"
+                    max="720"
                     value={durationHours}
                     onChange={(e) => setDurationHours(e.target.value)}
                     placeholder="e.g. 24"
                     required
-                    className="mt-1 h-9 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition focus:border-teal-600"
+                    className={`mt-1 h-9 w-full rounded-xl border ${
+                      durationHours && isDurationInvalid
+                        ? "border-rose-500 focus:border-rose-600 bg-rose-50/20"
+                        : "border-slate-200 dark:border-slate-700 focus:border-teal-600 bg-white dark:bg-slate-800"
+                    } px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
                   />
+
+                  {/* Quick Preset Buttons */}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                      Presets:
+                    </span>
+                    {[
+                      { label: "1 Day (24h)", val: "24" },
+                      { label: "2 Days (48h)", val: "48" },
+                      { label: "3 Days (72h)", val: "72" },
+                      { label: "5 Days (120h)", val: "120" },
+                      { label: "7 Days (168h)", val: "168" },
+                    ].map((p) => (
+                      <button
+                        key={p.val}
+                        type="button"
+                        onClick={() => setDurationHours(p.val)}
+                        className={`rounded-md px-2 py-0.5 text-[10px] font-semibold transition cursor-pointer border ${
+                          durationHours === p.val
+                            ? "bg-teal-600 text-white border-teal-600 shadow-xs"
+                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-500"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Oversized Input Alert (e.g. 168932566) */}
+                  {durationHours && isDurationTooHigh && (
+                    <div className="mt-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 p-2.5 text-rose-800 dark:text-rose-200 shadow-xs">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5 text-xs">
+                          <p className="font-bold text-rose-700 dark:text-rose-300">
+                            {durationNum.toLocaleString()} Hours ≈{" "}
+                            {Math.round(durationNum / 24).toLocaleString()} Days
+                            {durationNum >= 8760
+                              ? ` (≈ ${(durationNum / 8760).toFixed(1)} Years!)`
+                              : ""}
+                          </p>
+                          <p className="text-[11px] text-rose-600 dark:text-rose-400 font-normal">
+                            ⚠️ This value is unrealistically high! Maximum
+                            allowed resolution SLA is{" "}
+                            <strong>720 Hours (30 Days)</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Below Minimum Input Alert (<1) */}
+                  {durationHours && isDurationTooLow && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>Duration must be at least 1 hour.</span>
+                    </div>
+                  )}
+
+                  {/* Valid Conversion Display (e.g. 24 -> 1 Day) */}
+                  {durationHours && !isDurationInvalid && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-1.5 rounded-xl">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <span>✓ {getDurationDisplay(durationNum)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -501,47 +602,28 @@ export function SlaPolicyModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-            {editingRuleId && setRuleStatus && (
-              <button
-                type="button"
-                onClick={() =>
-                  setRuleStatus(ruleStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE")
-                }
-                className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition cursor-pointer ${
-                  ruleStatus === "ACTIVE"
-                    ? "border-rose-200 text-rose-600 hover:bg-rose-50"
-                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
-                }`}
-              >
-                {ruleStatus === "ACTIVE" ? "Deactivate" : "Activate"}
-              </button>
-            )}
-
-            <div className="flex items-center gap-2 ml-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  !ruleName.trim() ||
-                  isRuleNameNumeric ||
-                  !durationHours
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
-                <span>Save Policy</span>
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                !ruleName.trim() ||
+                isRuleNameNumeric ||
+                !durationHours ||
+                isDurationInvalid
+              }
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>Save Policy</span>
+            </button>
           </div>
         </form>
       </div>
