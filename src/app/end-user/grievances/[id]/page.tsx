@@ -333,6 +333,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         ? `${h.users.first_name} ${h.users.last_name || ""}`.trim()
         : undefined,
       roleName: h.users?.roles?.role_name,
+      remarks: h.remarks || undefined,
     })),
   };
 

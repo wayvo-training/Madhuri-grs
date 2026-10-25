@@ -15,6 +15,7 @@ import {
   Lock,
   MessageSquare,
   Paperclip,
+  RotateCcw,
   Search,
   Shield,
   ShieldCheck,
@@ -50,6 +51,7 @@ export interface StatusHistoryItem {
   changedAt: string;
   changedBy?: string;
   roleName?: string;
+  remarks?: string;
 }
 
 export interface DepartmentItem {
@@ -195,6 +197,13 @@ export function EndUserCaseHub({
             .join(" • ")
         : "Assigned for detailed investigation";
 
+    const reopenHistory = (grievance.statusHistory || []).find(
+      (h) => h.status.toUpperCase() === "REOPENED",
+    );
+    const hasReopened = Boolean(
+      grievance.status === "REOPENED" || reopenHistory,
+    );
+
     const baseStages: TimelineStageItem[] = [
       {
         id: "SUBMITTED",
@@ -219,7 +228,9 @@ export function EndUserCaseHub({
       },
       {
         id: "IN_PROGRESS",
-        title: "Investigation In Progress",
+        title: hasReopened
+          ? "Initial Investigation"
+          : "Investigation In Progress",
         defaultDesc: "Evidence analysis and departmental verification underway",
         icon: Search,
       },
@@ -250,6 +261,31 @@ export function EndUserCaseHub({
             : "Department filed findings and action outcome",
         icon: FileCheck,
       },
+      ...(hasReopened
+        ? [
+            {
+              id: "REOPENED",
+              title: "Case Reopened",
+              defaultDesc: reopenHistory?.remarks
+                ? `Reopened by Complainant: "${reopenHistory.remarks}"`
+                : "Reopened by Complainant for re-investigation",
+              icon: RotateCcw,
+              customDate: reopenHistory?.changedAt,
+            },
+          ]
+        : []),
+      ...(hasReopened &&
+      (grievance.status === "IN_PROGRESS" || grievance.status === "ESCALATED")
+        ? [
+            {
+              id: "RE_INVESTIGATION",
+              title: "Re-investigation In Progress",
+              defaultDesc:
+                "Department is re-examining evidence and resolution outcome",
+              icon: Search,
+            },
+          ]
+        : []),
       {
         id: "UNDER_REVIEW",
         title: "Citizen Review",
@@ -289,6 +325,7 @@ export function EndUserCaseHub({
         historyDates.UNDER_REVIEW = h.changedAt;
       }
       if (s === "CLOSED") historyDates.CLOSED = h.changedAt;
+      if (s === "REOPENED") historyDates.REOPENED = h.changedAt;
     });
 
     if (resolution?.submittedAt) {
@@ -314,6 +351,7 @@ export function EndUserCaseHub({
         "UNDER_REVIEW",
         "RESOLVED",
         "CLOSED",
+        "REOPENED",
       ].includes(grievance.status)
     ) {
       historyDates.ASSIGNED =
@@ -321,14 +359,18 @@ export function EndUserCaseHub({
     }
     if (
       !historyDates.IN_PROGRESS &&
-      ["UNDER_REVIEW", "RESOLVED", "CLOSED"].includes(grievance.status)
+      ["UNDER_REVIEW", "RESOLVED", "CLOSED", "REOPENED"].includes(
+        grievance.status,
+      )
     ) {
       historyDates.IN_PROGRESS =
         historyDates.RESOLUTION || historyDates.ASSIGNED || grievance.createdAt;
     }
     if (
       !historyDates.RESOLUTION &&
-      ["UNDER_REVIEW", "RESOLVED", "CLOSED"].includes(grievance.status)
+      ["UNDER_REVIEW", "RESOLVED", "CLOSED", "REOPENED"].includes(
+        grievance.status,
+      )
     ) {
       historyDates.RESOLUTION =
         resolution?.submittedAt ||
@@ -337,15 +379,8 @@ export function EndUserCaseHub({
         historyDates.IN_PROGRESS ||
         grievance.createdAt;
     }
-    if (
-      !historyDates.UNDER_REVIEW &&
-      ["UNDER_REVIEW", "RESOLVED", "CLOSED"].includes(grievance.status)
-    ) {
-      historyDates.UNDER_REVIEW =
-        historyDates.RESOLUTION ||
-        historyDates.CLOSED ||
-        historyDates.IN_PROGRESS ||
-        grievance.createdAt;
+    if (!historyDates.REOPENED && reopenHistory?.changedAt) {
+      historyDates.REOPENED = reopenHistory.changedAt;
     }
     if (!historyDates.CLOSED && grievance.status === "CLOSED") {
       historyDates.CLOSED =
@@ -363,6 +398,17 @@ export function EndUserCaseHub({
         grievance.status === "UNDER_REVIEW"
       ) {
         return s.id === "UNDER_REVIEW";
+      }
+      if (hasReopened) {
+        if (grievance.status === "REOPENED") {
+          return s.id === "REOPENED";
+        }
+        if (
+          grievance.status === "IN_PROGRESS" ||
+          grievance.status === "ESCALATED"
+        ) {
+          return s.id === "RE_INVESTIGATION";
+        }
       }
       if (
         grievance.status === "IN_PROGRESS" ||
@@ -971,7 +1017,14 @@ export function EndUserCaseHub({
                             <Check className="h-3.5 w-3.5 stroke-[2.5]" />
                           </div>
                         ) : node.isCurrent ? (
-                          <div className="h-6 w-6 rounded-full bg-teal-600 ring-4 ring-teal-100 dark:ring-teal-950 text-white flex items-center justify-center shadow-xs animate-pulse">
+                          <div
+                            className={cn(
+                              "h-6 w-6 rounded-full ring-4 text-white flex items-center justify-center shadow-xs animate-pulse",
+                              node.id === "REOPENED"
+                                ? "bg-amber-600 ring-amber-100 dark:ring-amber-950"
+                                : "bg-teal-600 ring-teal-100 dark:ring-teal-950",
+                            )}
+                          >
                             <IconComponent className="h-3.5 w-3.5" />
                           </div>
                         ) : (
@@ -998,7 +1051,9 @@ export function EndUserCaseHub({
                         <div
                           className={`text-sm font-bold leading-tight ${
                             node.isCurrent
-                              ? "text-[#0F766E] dark:text-teal-400 font-extrabold"
+                              ? node.id === "REOPENED"
+                                ? "text-amber-700 dark:text-amber-400 font-extrabold"
+                                : "text-[#0F766E] dark:text-teal-400 font-extrabold"
                               : node.isCompleted
                                 ? "text-slate-800 dark:text-slate-200"
                                 : "text-slate-400 dark:text-slate-500"
