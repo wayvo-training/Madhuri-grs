@@ -53,11 +53,7 @@ export function NotificationDrawer({
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const {
-    data: notifications = [],
-    isLoading,
-    refetch: fetchNotifications,
-  } = useQuery<Notification[]>({
+  const { data: notifications = [], isLoading } = useQuery<Notification[]>({
     queryKey: ["notifications", userId || "me"],
     queryFn: async () => {
       const headers: HeadersInit = userId ? { "x-user-id": userId } : {};
@@ -68,18 +64,13 @@ export function NotificationDrawer({
         ? data.notifications
         : [];
     },
-    staleTime: 60 * 1000,
+    staleTime: 5 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchInterval: 10 * 1000,
+    refetchIntervalInBackground: true,
   });
 
-  // Polling every 30 seconds
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (!isOpen) {
-        fetchNotifications();
-      }
-    }, 30000);
-
     const handleNotificationsChanged = () => {
       queryClient.invalidateQueries({
         queryKey: ["notifications", userId || "me"],
@@ -92,7 +83,6 @@ export function NotificationDrawer({
       );
     }
     return () => {
-      clearInterval(intervalId);
       if (typeof window !== "undefined") {
         window.removeEventListener(
           "notifications-changed",
@@ -100,7 +90,7 @@ export function NotificationDrawer({
         );
       }
     };
-  }, [fetchNotifications, isOpen, queryClient, userId]);
+  }, [queryClient, userId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

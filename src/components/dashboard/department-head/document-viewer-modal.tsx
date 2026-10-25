@@ -3,11 +3,9 @@
 import {
   Download,
   ExternalLink,
-  FileQuestion,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
-  Printer,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -38,7 +36,6 @@ export function DocumentViewerModal({
   document,
   onClose,
   onDownload,
-  onRequestAdditionalDocs,
 }: DocumentViewerModalProps) {
   if (!document) return null;
 
@@ -107,10 +104,6 @@ export function DocumentViewerModal({
     fn.includes("warning") ||
     fn.includes("resolution");
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative flex flex-col w-full max-w-5xl h-[90vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
@@ -150,22 +143,6 @@ export function DocumentViewerModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {onRequestAdditionalDocs && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onRequestAdditionalDocs();
-                }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition shadow-2xs cursor-pointer"
-                title="Request Additional Documents from Employee"
-              >
-                <FileQuestion className="h-3.5 w-3.5 text-blue-600" />
-                <span className="hidden sm:inline">
-                  Request Additional Documents
-                </span>
-              </button>
-            )}
             <button
               type="button"
               onClick={handleDownloadClick}
@@ -174,15 +151,6 @@ export function DocumentViewerModal({
             >
               <Download className="h-3.5 w-3.5 text-slate-600" />
               <span className="hidden sm:inline">Download</span>
-            </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs"
-              title="Print Document"
-            >
-              <Printer className="h-3.5 w-3.5 text-slate-600" />
-              <span className="hidden sm:inline">Print</span>
             </button>
             <button
               type="button"

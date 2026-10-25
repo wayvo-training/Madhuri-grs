@@ -176,16 +176,21 @@ export function StaffGrievanceManager({
       return;
     }
 
-    const pendingSupporting = (g.departmentsInvolved || []).filter(
-      (d) =>
-        d.involvementType === "SUPPORTING" &&
-        d.status !== "COMPLETED" &&
-        d.status !== "RESOLVED" &&
-        d.status !== "REMOVED",
-    );
-    if (g.isPrimaryOwner !== false && pendingSupporting.length > 0) {
+    if (g.myDepartmentStatus === "BLOCKED") {
       toast.error(
-        `Cannot submit final resolution: Awaiting findings from supportive department(s) [${pendingSupporting.map((d) => d.departmentName).join(", ")}].`,
+        "Your department is currently blocked waiting for prerequisite departments to complete their findings.",
+      );
+      handleExamine(g);
+      return;
+    }
+
+    if (
+      !g.canSubmitFinalResolution &&
+      !g.canSubmitFindings &&
+      g.isMyDepartmentCompleted
+    ) {
+      toast.info(
+        "Department findings already submitted. Awaiting subsequent department stages.",
       );
       handleExamine(g);
       return;

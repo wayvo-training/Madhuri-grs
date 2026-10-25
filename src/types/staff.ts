@@ -153,6 +153,9 @@ export interface StaffGrievanceItem {
   isPrimaryOwner?: boolean;
   myDepartmentStatus?: string;
   isMyDepartmentCompleted?: boolean;
+  canSubmitFinalResolution?: boolean;
+  canSubmitFindings?: boolean;
+  isFinalSequentialDepartment?: boolean;
   overallStatus?: string;
   activeDepartmentName?: string;
 }

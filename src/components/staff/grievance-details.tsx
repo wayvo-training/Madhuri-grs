@@ -444,7 +444,55 @@ export function GrievanceDetails({
 
             {!isCompleted && grievance.status !== "ASSIGNED" && (
               <>
-                {grievance.isPrimaryOwner !== false ? (
+                {grievance.myDepartmentStatus === "BLOCKED" ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200"
+                    title="Awaiting prerequisite departments to complete their investigation stage."
+                  >
+                    <Clock className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Stage Blocked · Awaiting Prerequisites</span>
+                  </span>
+                ) : grievance.canSubmitFinalResolution ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenResolutionForm) {
+                        onOpenResolutionForm(grievance);
+                      } else {
+                        onOpenResolveModal?.();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Submit Final Resolution</span>
+                  </button>
+                ) : grievance.canSubmitFindings ||
+                  (!grievance.isMyDepartmentCompleted &&
+                    grievance.myDepartmentStatus !== "COMPLETED") ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenResolutionForm) {
+                        onOpenResolutionForm(grievance);
+                      } else {
+                        onOpenResolveModal?.();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Submit Department Findings</span>
+                  </button>
+                ) : grievance.isMyDepartmentCompleted ||
+                  grievance.myDepartmentStatus === "COMPLETED" ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                      Department Findings Submitted · Awaiting Subsequent Stage
+                    </span>
+                  </div>
+                ) : (
                   (() => {
                     const pendingSupporting = (
                       grievance.departmentsInvolved || []
@@ -489,30 +537,6 @@ export function GrievanceDetails({
                       </button>
                     );
                   })()
-                ) : grievance.isMyDepartmentCompleted ||
-                  grievance.myDepartmentStatus === "COMPLETED" ? (
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                      Department Findings Submitted · Awaiting Lead Dept
-                      Resolution
-                    </span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenResolutionForm) {
-                        onOpenResolutionForm(grievance);
-                      } else {
-                        onOpenResolveModal?.();
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
-                  >
-                    <FileCheck2 className="h-3.5 w-3.5" />
-                    <span>Submit Department Findings</span>
-                  </button>
                 )}
               </>
             )}

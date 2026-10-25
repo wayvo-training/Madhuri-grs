@@ -31,12 +31,6 @@ export async function GET() {
     const userId = user.user_id;
     const userRole = user.roles?.role_name || "END_USER";
 
-    const cacheKey = `${userId.toString()}_${userRole}`;
-    const cached = notificationsCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < 15_000) {
-      return NextResponse.json(cached.data);
-    }
-
     // Internal notification types prohibited for END_USER
     const prohibitedForEndUser = [
       "HEAD_INTERNAL_NOTE",
@@ -250,10 +244,6 @@ export async function GET() {
       success: true,
       notifications: serializedNotifications,
     };
-    notificationsCache.set(cacheKey, {
-      timestamp: Date.now(),
-      data: responsePayload,
-    });
 
     return NextResponse.json(responsePayload);
   } catch (error) {

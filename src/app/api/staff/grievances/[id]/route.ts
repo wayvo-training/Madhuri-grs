@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -614,6 +615,24 @@ export async function GET(
                 : grievance.status
     ) as StaffGrievanceItem["status"];
 
+    const targetDeptId =
+      myDeptRaw?.department_id ||
+      departmentId ||
+      rawDepartments[0]?.department_id;
+
+    const resolutionAuth = targetDeptId
+      ? canDepartmentSubmitFinalResolution(targetDeptId, rawDepartments)
+      : {
+          canResolve: isPrimaryOwner,
+          canSubmitFindings: !isMyDeptCompleted,
+          isFinalSequentialDept: false,
+        };
+
+    const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
+    const canSubmitFindings =
+      !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
+    const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -667,6 +686,9 @@ export async function GET(
       isPrimaryOwner,
       myDepartmentStatus: myDept?.status || "ASSIGNED",
       isMyDepartmentCompleted: isMyDeptCompleted,
+      canSubmitFinalResolution,
+      canSubmitFindings,
+      isFinalSequentialDepartment,
       overallStatus: grievance.status,
       activeDepartmentName,
     };

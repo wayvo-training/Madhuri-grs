@@ -290,8 +290,10 @@ export function NotificationsPageView({
       }
       return [];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 1000,
     gcTime: 15 * 60 * 1000,
+    refetchInterval: 10 * 1000,
+    refetchIntervalInBackground: true,
   });
 
   // Filter States

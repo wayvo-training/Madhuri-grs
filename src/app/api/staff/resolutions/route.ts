@@ -4,6 +4,7 @@ import {
   evaluateReopenPolicy,
   requiresHeadManualReview,
 } from "@/lib/engines/reopen-engine";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -199,50 +200,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // In a multi-department collaboration, verify primary or equal co-lead responsibility
+    // In a multi-department collaboration, verify resolution authority
+    // (Primary lead with all supporting completed, OR final sequential department where all prerequisites are completed)
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: gId },
       include: { departments: true },
     });
-    const hasMultipleDepts = allInvolvedDepts.length > 1;
-    const myInvolvement = myAssignment?.grievance_departments?.involvement_type;
-    const isAuthorizedLeadStaff =
-      myInvolvement === "PRIMARY" || myInvolvement === "EQUAL";
 
-    if (!isAdmin && hasMultipleDepts && !isAuthorizedLeadStaff) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Forbidden: As a supportive department contributor, please submit your department findings via the Collaboration tab. Only Primary Lead or Equal Co-Lead department officers can submit the final customer resolution.",
-        },
-        { status: 403 },
+    const myDeptId = myAssignment?.grievance_departments?.department_id;
+    if (!isAdmin && myDeptId) {
+      const authResult = canDepartmentSubmitFinalResolution(
+        myDeptId,
+        allInvolvedDepts,
       );
-    }
-
-    // Ensure required supporting departments have completed
-    const incompleteRequiredSupporting = allInvolvedDepts.filter(
-      (d) =>
-        d.involvement_type === "SUPPORTING" &&
-        d.status !== "COMPLETED" &&
-        d.status !== "RESOLVED" &&
-        d.status !== "REMOVED",
-    );
-
-    if (incompleteRequiredSupporting.length > 0) {
-      const incompleteNames = incompleteRequiredSupporting
-        .map(
-          (d) =>
-            d.departments?.department_name || `Department ${d.department_id}`,
-        )
-        .join(", ");
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Cannot submit final resolution: Required supportive department(s) [${incompleteNames}] have not completed their findings.`,
-        },
-        { status: 400 },
-      );
+      if (!authResult.canResolve) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              authResult.reason ||
+              "Forbidden: As a supportive department contributor, please submit your department findings via the Findings form. Only Primary Lead, Equal Co-Lead, or the Final Sequential Department can submit the final customer resolution.",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     // 1. Create formal resolution entry
@@ -422,7 +403,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Notify the submitting staff member with confirmation
+    // Notify the submitting staff member with confirmation (self notification)
     await NotificationService.send({
       userId: staffId,
       grievanceId: gId,
@@ -432,6 +413,34 @@ export async function POST(request: Request) {
         ? `You submitted a resolution proposal for grievance ${grievance.grievance_number}. It is pending Department Head review.`
         : `You submitted the resolution for grievance ${grievance.grievance_number}. It has been sent to the complainant.`,
     });
+
+    // If resolved by a supporting or final sequential department, notify primary lead department
+    const primaryDeptRecord = allInvolvedDepts.find(
+      (d) => d.involvement_type === "PRIMARY",
+    );
+    if (
+      primaryDeptRecord &&
+      primaryDeptRecord.department_id !==
+        myAssignment?.grievance_departments?.department_id
+    ) {
+      const primaryHod = await prisma.users.findFirst({
+        where: {
+          department_id: primaryDeptRecord.department_id,
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+      if (primaryHod && primaryHod.user_id !== staffId) {
+        await NotificationService.send({
+          userId: primaryHod.user_id,
+          grievanceId: gId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `Case Resolved by Supporting Department: ${grievance.grievance_number}`,
+          message: `The sequential supporting department has concluded the investigation and submitted the final resolution for ${grievance.grievance_number}.`,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

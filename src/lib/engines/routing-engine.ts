@@ -825,6 +825,139 @@ export async function populateGrievanceDepartments(
   return prisma.$transaction(executeInTx);
 }
 
+export interface DepartmentResolutionAuthority {
+  canResolve: boolean;
+  canSubmitFindings: boolean;
+  isFinalSequentialDept: boolean;
+  reason?: string;
+}
+
+/**
+ * Determines whether a department is authorized to submit the final customer resolution,
+ * or if it should submit department findings to advance the multi-department workflow.
+ *
+ * Rules:
+ * 1. Single department case -> Can submit final resolution.
+ * 2. Primary / Equal Co-Lead -> Can submit final resolution once all supporting departments are COMPLETED / RESOLVED.
+ * 3. In sequential workflow: The FINAL sequential department (all preceding prerequisites are COMPLETED/RESOLVED,
+ *    and no downstream departments exist) has full authority to submit the final customer resolution.
+ * 4. Any active department that has downstream departments or is supporting and not final -> Submits department findings.
+ */
+export function canDepartmentSubmitFinalResolution(
+  departmentId: bigint | number | string,
+  allDepts: Array<{
+    department_id: bigint | number | string;
+    involvement_type: string;
+    dependency_type?: string | null;
+    execution_order: number;
+    status: string;
+    prerequisite_department_ids?: unknown;
+  }>,
+): DepartmentResolutionAuthority {
+  const deptIdStr = departmentId.toString();
+  const currentDept = allDepts.find(
+    (d) => d.department_id.toString() === deptIdStr,
+  );
+  if (!currentDept) {
+    return {
+      canResolve: false,
+      canSubmitFindings: false,
+      isFinalSequentialDept: false,
+      reason: "Department not found on grievance",
+    };
+  }
+
+  const activeDepts = allDepts.filter((d) => d.status !== "REMOVED");
+
+  // Single active department on grievance
+  if (activeDepts.length <= 1) {
+    return {
+      canResolve: true,
+      canSubmitFindings: false,
+      isFinalSequentialDept: true,
+    };
+  }
+
+  const isPrimaryOrEqual =
+    currentDept.involvement_type === "PRIMARY" ||
+    currentDept.involvement_type === "EQUAL";
+
+  // Incomplete supporting departments
+  const pendingSupporting = activeDepts.filter(
+    (d) =>
+      d.involvement_type === "SUPPORTING" &&
+      d.status !== "COMPLETED" &&
+      d.status !== "RESOLVED",
+  );
+
+  // If Primary/Equal and all supporting departments have finished
+  if (isPrimaryOrEqual && pendingSupporting.length === 0) {
+    return {
+      canResolve: true,
+      canSubmitFindings: false,
+      isFinalSequentialDept: true,
+    };
+  }
+
+  // Check sequential workflow execution order
+  const hasSequential = activeDepts.some(
+    (d) => d.dependency_type === "SEQUENTIAL",
+  );
+
+  if (hasSequential) {
+    // Check if any preceding departments in execution order are not completed
+    const precedingIncomplete = activeDepts.filter(
+      (d) =>
+        d.department_id.toString() !== deptIdStr &&
+        d.execution_order < currentDept.execution_order &&
+        d.status !== "COMPLETED" &&
+        d.status !== "RESOLVED",
+    );
+
+    // Check if there are downstream departments with higher execution order
+    const downstreamDepts = activeDepts.filter(
+      (d) =>
+        d.department_id.toString() !== deptIdStr &&
+        d.execution_order > currentDept.execution_order,
+    );
+
+    // If this is the final sequential department in the workflow chain
+    // (no preceding incomplete and no downstream departments waiting)
+    if (precedingIncomplete.length === 0 && downstreamDepts.length === 0) {
+      return {
+        canResolve: true,
+        canSubmitFindings: false,
+        isFinalSequentialDept: true,
+      };
+    }
+  }
+
+  // If not authorized for final resolution yet:
+  // Can it submit findings? Yes, if not blocked and not already completed!
+  const isCurrentDeptCompleted =
+    currentDept.status === "COMPLETED" || currentDept.status === "RESOLVED";
+  const isCurrentDeptBlocked = currentDept.status === "BLOCKED";
+
+  const canSubmitFindings = !isCurrentDeptCompleted && !isCurrentDeptBlocked;
+
+  let reason = "Awaiting upstream stages.";
+  if (isPrimaryOrEqual && pendingSupporting.length > 0) {
+    reason = `Awaiting findings from supporting department(s): ${pendingSupporting
+      .map((d) => d.department_id.toString())
+      .join(", ")}`;
+  } else if (!isPrimaryOrEqual) {
+    reason =
+      "As a supportive department, findings must be submitted to advance the workflow.";
+  }
+
+  return {
+    canResolve: false,
+    canSubmitFindings,
+    isFinalSequentialDept: false,
+    reason,
+  };
+}
+
 /**
  * Unblocks any sequential departments for a grievance once their prerequisite departments have completed.
  * Uses AND semantics: all prerequisites must be completed or resolved.
@@ -943,11 +1076,8 @@ export async function activateNextSequentialDepartments(
 
       activatedDeptIds.push(blocked.department_id);
 
-      // Notify the activated department heads
+      // Dispatch activation notifications asynchronously to prevent holding or expiring the transaction
       try {
-        const { NotificationService } = await import(
-          "@/lib/services/notification.service"
-        );
         const deptHeads = await client.users.findMany({
           where: {
             department_id: blocked.department_id,
@@ -957,28 +1087,56 @@ export async function activateNextSequentialDepartments(
           select: { user_id: true },
         });
 
-        for (const head of deptHeads) {
-          const existingNotif = await client.notifications.findFirst({
-            where: {
-              user_id: head.user_id,
-              grievance_id: gId,
-              title: "Department Stage Activated",
-            },
-          });
+        const activeAssignment = await client.assignments.findFirst({
+          where: {
+            grievance_department_id: blocked.grievance_department_id,
+            assignment_status: "ASSIGNED",
+          },
+          select: { staff_id: true },
+        });
 
-          if (!existingNotif) {
-            await NotificationService.send({
-              userId: head.user_id,
-              grievanceId: gId,
-              type: "ASSIGNMENT",
-              title: "Department Stage Activated",
-              message: `Prerequisite departments have completed. Grievance is now active for ${blocked.departments.department_name}.`,
-            });
+        const deptName = blocked.departments.department_name;
+
+        const notifDispatch = async () => {
+          try {
+            const { NotificationService } = await import(
+              "@/lib/services/notification.service"
+            );
+            for (const head of deptHeads) {
+              await NotificationService.send({
+                userId: head.user_id,
+                grievanceId: gId,
+                type: "ASSIGNMENT",
+                title: "Department Stage Activated",
+                message: `Prerequisite departments have completed. Grievance is now active for ${deptName}.`,
+              });
+            }
+
+            if (activeAssignment?.staff_id) {
+              await NotificationService.send({
+                userId: activeAssignment.staff_id,
+                grievanceId: gId,
+                type: "ASSIGNMENT",
+                title: "Department Stage Activated",
+                message: `Prerequisite departments have completed. Grievance is now active for your department (${deptName}). You may begin investigation.`,
+              });
+            }
+          } catch (err) {
+            console.error(
+              "Non-fatal: Failed to send activation notification:",
+              err,
+            );
           }
+        };
+
+        if (tx) {
+          setImmediate(notifDispatch);
+        } else {
+          await notifDispatch();
         }
       } catch (err) {
         console.error(
-          "Non-fatal: Failed to send activation notification:",
+          "Non-fatal: Failed to prepare activation notification:",
           err,
         );
       }
