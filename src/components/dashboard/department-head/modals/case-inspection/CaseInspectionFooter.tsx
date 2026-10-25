@@ -146,7 +146,7 @@ export function CaseInspectionFooter({
             )}
 
           {canHeadSubmitResolution(currentGrievance) ? (
-            currentGrievance.isPrimaryDepartment !== false ? (
+            currentGrievance.canSubmitFinalResolution !== false ? (
               <button
                 type="button"
                 onClick={() => onReviewResolutionClick(currentGrievance)}
@@ -158,7 +158,7 @@ export function CaseInspectionFooter({
             ) : currentGrievance.myDepartmentStatus === "COMPLETED" ? (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                Department Findings Submitted · Awaiting Lead Dept Resolution
+                Department Findings Submitted · Next Stage Activated
               </span>
             ) : (
               <button

@@ -7,6 +7,12 @@ import type {
 
 export function isResolutionSubmittedByHead(item: GrievanceItem): boolean {
   if (!item.submittedResolution) return false;
+  // A resolution only represents an active "submitted by Head awaiting citizen review" state
+  // when the grievance is actively in UNDER_REVIEW status.
+  // If the grievance was reopened or escalated, any past resolution belongs to a prior cycle.
+  if (item.status !== "UNDER_REVIEW") {
+    return false;
+  }
   const role = item.submittedResolution.submittedByRole;
   if (role === "DEPARTMENT_HEAD" || role === "ADMIN") {
     return true;
@@ -50,11 +56,19 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
   if (item.status === "UNDER_REVIEW" && isResolutionSubmittedByHead(item)) {
     return false;
   }
+  // If this department's stage is already completed in a multi-department case
+  if (item.myDepartmentStatus === "COMPLETED") {
+    return false;
+  }
   // 1. Department Head explicitly assumed resolution authority (and hasn't submitted yet)
   if (hasHeadResolutionAuthority(item)) {
     return true;
   }
-  // 2. Staff submitted a resolution pending Head review
+  // 2. Grievance is directly assigned to the Department Head (e.g. via Smart Assignment)
+  if (item.isAssignedToHead) {
+    return true;
+  }
+  // 3. Staff submitted a resolution pending Head review
   if (
     item.status === "UNDER_REVIEW" &&
     item.submittedResolution &&

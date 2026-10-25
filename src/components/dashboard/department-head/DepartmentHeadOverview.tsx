@@ -331,8 +331,13 @@ export function DepartmentHeadOverviewInner({
       return;
     }
 
+    const currentModalGrievance = escalationModalGrievance;
+    const isAssumingAuthority =
+      escalationInterventionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+      escalationInterventionType === "DIRECT_OVERSIGHT";
+
     await executeEscalationSubmit({
-      grievance: escalationModalGrievance,
+      grievance: currentModalGrievance,
       bottleneck: escalationBottleneck,
       bottleneckExplanation: escalationBottleneckExplanation,
       interventionType: escalationInterventionType,
@@ -342,6 +347,24 @@ export function DepartmentHeadOverviewInner({
       extensionHours: escalationExtensionHours,
     });
     setEscalationModalGrievance(null);
+
+    if (isAssumingAuthority) {
+      handleOpenResolutionModal({
+        ...currentModalGrievance,
+        hodIntervention: {
+          actionType: escalationInterventionType,
+          actionLabel:
+            escalationInterventionType === "ASSUME_RESOLUTION_AUTHORITY"
+              ? "Resolution Authority Assumed"
+              : "Direct Oversight",
+          note: escalationNote,
+          intervenedAt: "Just now",
+          intervenedBy: currentHodName || "Department Head",
+          isResolutionAuthority: true,
+          resolutionAuthorityName: currentHodName || "Department Head",
+        },
+      });
+    }
   };
 
   const handleResolutionFormSubmit = async (e: React.FormEvent) => {
@@ -522,6 +545,17 @@ export function DepartmentHeadOverviewInner({
           staffList={staffList}
           onClose={() => setAssignModalGrievance(null)}
           onAssignmentSuccess={(staffId, staffName) => {
+            const assignedStaffMember = staffList.find((s) => s.id === staffId);
+            const isAssignedToHead = Boolean(
+              assignedStaffMember?.designation === "Department Head" ||
+                (currentHodName &&
+                  (staffName
+                    .toLowerCase()
+                    .includes(currentHodName.toLowerCase()) ||
+                    currentHodName
+                      .toLowerCase()
+                      .includes(staffName.toLowerCase()))),
+            );
             handleAssignmentSuccess(assignModalGrievance, staffId, staffName);
             setSelectedCaseFile((prev) =>
               prev && prev.id === assignModalGrievance.id
@@ -529,6 +563,7 @@ export function DepartmentHeadOverviewInner({
                     ...prev,
                     assignedStaffId: staffId,
                     assignedStaffName: staffName,
+                    isAssignedToHead,
                     status: "ASSIGNED",
                   }
                 : prev,
@@ -585,8 +620,14 @@ export function DepartmentHeadOverviewInner({
                 reopenCount: resolutionModalGrievance.reopenCount,
                 isPrimaryOwner: resolutionModalGrievance.isPrimaryDepartment,
                 myInvolvementType: resolutionModalGrievance.myInvolvementType,
+                canSubmitFinalResolution:
+                  resolutionModalGrievance.canSubmitFinalResolution ?? false,
               } as StaffGrievanceItem
             }
+            onResolutionSuccess={() => {
+              setResolutionModalGrievance(null);
+              loadData(undefined, true);
+            }}
             onSubmit={async (_id, data) => {
               await executeResolutionSubmit({
                 grievance: resolutionModalGrievance,

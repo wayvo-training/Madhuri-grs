@@ -251,8 +251,17 @@ export async function GET(
             : null);
 
     const assignedUser = primaryAssignment?.users_assignments_staff_idTousers;
+    const isAssignedToHead = Boolean(
+      !isDeptPending &&
+        assignedUser &&
+        (assignedUser.roles?.role_name === "DEPARTMENT_HEAD" ||
+          (user?.user_id &&
+            assignedUser.user_id &&
+            BigInt(assignedUser.user_id) === BigInt(user.user_id))),
+    );
     const assignment = {
       isAssigned: !isDeptPending && !!assignedUser,
+      isAssignedToHead,
       staffId:
         !isDeptPending && assignedUser ? assignedUser.user_id.toString() : null,
       staffName:
@@ -1179,6 +1188,7 @@ export async function GET(
           subcategory: grievance.subcategories?.subcategory_name || "General",
           priority: grievance.priority,
           status: grievance.status,
+          isAssignedToHead,
           createdAt: formatFullDateTime(grievance.created_at),
           submitterName:
             `${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim() ||

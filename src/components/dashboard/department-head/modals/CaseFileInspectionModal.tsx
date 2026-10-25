@@ -132,6 +132,17 @@ export function CaseFileInspectionModal({
             ...(json.data.supportingFindings
               ? { supportingFindings: json.data.supportingFindings }
               : {}),
+            ...(json.data.grievance?.isAssignedToHead !== undefined
+              ? { isAssignedToHead: json.data.grievance.isAssignedToHead }
+              : json.data.assignment?.isAssignedToHead !== undefined
+                ? { isAssignedToHead: json.data.assignment.isAssignedToHead }
+                : {}),
+            ...(json.data.assignment?.staffName
+              ? { assignedStaffName: json.data.assignment.staffName }
+              : {}),
+            ...(json.data.assignment?.staffId
+              ? { assignedStaffId: json.data.assignment.staffId }
+              : {}),
           }));
         }
       })

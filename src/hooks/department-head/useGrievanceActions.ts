@@ -64,6 +64,14 @@ export function useGrievanceActions({
         }),
       );
 
+      const assignedStaffMember = staffList.find((s) => s.id === staffId);
+      const isAssignedToHead = Boolean(
+        assignedStaffMember?.designation === "Department Head" ||
+          (currentHodName &&
+            (staffName.toLowerCase().includes(currentHodName.toLowerCase()) ||
+              currentHodName.toLowerCase().includes(staffName.toLowerCase()))),
+      );
+
       setGrievances((prev) =>
         prev.map((g) =>
           g.id === grievance.id
@@ -71,6 +79,7 @@ export function useGrievanceActions({
                 ...g,
                 assignedStaffId: staffId,
                 assignedStaffName: staffName,
+                isAssignedToHead,
                 status: "ASSIGNED",
               }
             : g,
@@ -79,7 +88,7 @@ export function useGrievanceActions({
 
       loadData(undefined, true);
     },
-    [loadData, setGrievances, setStaffList],
+    [currentHodName, loadData, setGrievances, setStaffList, staffList],
   );
 
   const handleEscalationSubmit = useCallback(

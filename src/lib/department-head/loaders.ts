@@ -6,6 +6,7 @@ import {
   formatRelativeTime,
   formatSlaTimeLeft,
 } from "@/lib/department-head";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import {
   calculateDepartmentSlaConsumption,
   calculateSlaConsumption,
@@ -259,7 +260,9 @@ export async function fetchDepartmentHeadGrievances(
             assignments: {
               where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
               include: {
-                users_assignments_staff_idTousers: true,
+                users_assignments_staff_idTousers: {
+                  include: { roles: true },
+                },
               },
             },
           },
@@ -270,7 +273,9 @@ export async function fetchDepartmentHeadGrievances(
             grievance_departments: { department_id: departmentId },
           },
           include: {
-            users_assignments_staff_idTousers: true,
+            users_assignments_staff_idTousers: {
+              include: { roles: true },
+            },
           },
           orderBy: { assigned_at: "desc" },
           take: 1,
@@ -321,7 +326,9 @@ export async function fetchDepartmentHeadGrievances(
         assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
       },
       include: {
-        users_assignments_staff_idTousers: true,
+        users_assignments_staff_idTousers: {
+          include: { roles: true },
+        },
         grievance_departments: { include: { departments: true } },
       },
       orderBy: { assigned_at: "desc" },
@@ -888,6 +895,11 @@ export async function fetchDepartmentHeadGrievances(
       myInvolvementType === "EQUAL" ||
       !departmentId;
 
+    const authResult = departmentId
+      ? canDepartmentSubmitFinalResolution(departmentId, relatedDepts)
+      : { canResolve: true, canSubmitFindings: false };
+    const canSubmitFinalResolution = authResult.canResolve;
+
     let resolvedStatus: GrievanceItem["status"] =
       g.status as GrievanceItem["status"];
     if (myDeptRecord) {
@@ -1026,10 +1038,17 @@ export async function fetchDepartmentHeadGrievances(
           : null,
       assignedStaffName: resolvedAssignedStaffName,
       assignedStaffStatus: assignedStaff?.status || null,
+      assignedStaffRole: assignedStaff?.roles?.role_name || null,
       isAssignedStaffInactive: Boolean(
         assignedStaff &&
           (assignedStaff.status === "INACTIVE" ||
             assignedStaff.status === "SUSPENDED"),
+      ),
+      isAssignedToHead: Boolean(
+        assignedStaff?.roles?.role_name === "DEPARTMENT_HEAD" ||
+          (user?.user_id &&
+            assignedStaff?.user_id &&
+            BigInt(assignedStaff.user_id) === BigInt(user.user_id)),
       ),
       createdAt: formatFriendlyDate(g.created_at),
       isReopened: g.reopen_count > 0 || g.status === "REOPENED",
@@ -1039,6 +1058,7 @@ export async function fetchDepartmentHeadGrievances(
       collaboratingDepartments: deptList,
       departmentsInvolved,
       isPrimaryDepartment,
+      canSubmitFinalResolution,
       myInvolvementType,
       myDepartmentStatus:
         myDeptRecord?.status ||

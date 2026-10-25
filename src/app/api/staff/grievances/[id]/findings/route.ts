@@ -137,8 +137,11 @@ export async function POST(
     // Find the current staff member's department record
     const myDeptRecord = allInvolvedDepts.find(
       (d) =>
-        d.assignments?.staff_id === staffId ||
-        (!isAdmin && departmentId ? d.department_id === departmentId : false),
+        (d.assignments?.staff_id &&
+          d.assignments.staff_id.toString() === staffId.toString()) ||
+        (!isAdmin && departmentId
+          ? d.department_id.toString() === departmentId.toString()
+          : false),
     );
 
     if (!myDeptRecord && !isAdmin) {
@@ -312,14 +315,30 @@ export async function POST(
         select: { user_id: true },
       });
 
+      const pendingDepts = allInvolvedDepts.filter(
+        (d) =>
+          d.department_id !== myDeptRecord?.department_id &&
+          d.status !== "COMPLETED" &&
+          d.status !== "RESOLVED" &&
+          d.status !== "REMOVED",
+      );
+      const isAllDeptsCompleted = pendingDepts.length === 0;
+
       for (const hod of otherHods) {
         if (hod.user_id !== staffId) {
+          const isLeadHod = otherDept.involvement_type === "PRIMARY";
           await NotificationService.send({
             userId: hod.user_id,
             grievanceId,
             type: "HEAD_INTERNAL_NOTE",
-            title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
-            message: `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
+            title:
+              isAllDeptsCompleted && isLeadHod
+                ? `[${priority}] All Department Inquiries Complete: (${grievance.grievance_number})`
+                : `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message:
+              isAllDeptsCompleted && isLeadHod
+                ? `${priorityTag} All collaborating departments have completed their inquiries for case ${grievance.grievance_number}. Please review findings and submit the final citizen resolution.`
+                : `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
           });
         }
       }

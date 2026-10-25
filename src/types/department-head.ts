@@ -72,7 +72,9 @@ export interface GrievanceItem {
   assignedStaffId?: string | null;
   assignedStaffName?: string | null;
   assignedStaffStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED" | string | null;
+  assignedStaffRole?: string | null;
   isAssignedStaffInactive?: boolean;
+  isAssignedToHead?: boolean;
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;
@@ -81,6 +83,7 @@ export interface GrievanceItem {
   isCrossDepartment?: boolean;
   collaboratingDepartments?: string[];
   isPrimaryDepartment?: boolean;
+  canSubmitFinalResolution?: boolean;
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   myDepartmentStatus?: string;
   isBlocked?: boolean;

@@ -903,10 +903,13 @@ export function QueueView({
                               ...(canHeadSubmitResolution(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
-                              item.isPrimaryDepartment !== false
+                              item.myDepartmentStatus !== "COMPLETED"
                                 ? [
                                     {
-                                      label: "Submit Resolution",
+                                      label:
+                                        item.canSubmitFinalResolution !== false
+                                          ? "Submit Resolution"
+                                          : "Submit Findings",
                                       icon: (
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                       ),

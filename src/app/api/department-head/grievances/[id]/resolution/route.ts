@@ -40,6 +40,7 @@ export async function POST(
         ...(isAdmin ? {} : { department_id: departmentId }),
       },
       include: {
+        departments: true,
         grievances: {
           include: {
             assignments: {
@@ -70,24 +71,6 @@ export async function POST(
       include: { departments: true },
     });
 
-    if (!isAdmin && departmentId) {
-      const authResult = canDepartmentSubmitFinalResolution(
-        departmentId,
-        allInvolvedDepts,
-      );
-      if (!authResult.canResolve) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              authResult.reason ||
-              "Forbidden: As a supportive department, only Primary Lead, Equal Co-Lead, or the Final Sequential Department Heads can approve or submit the final resolution.",
-          },
-          { status: 403 },
-        );
-      }
-    }
-
     const grievance = grievanceDept.grievances;
     const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
     const latestResolution = grievance.resolutions[0];
@@ -112,6 +95,7 @@ export async function POST(
 
     // Server-side authorization check for Direct Resolution by Department Head:
     // Verify SLA intervention has actually been executed and user is the active resolution authority
+    let hasInterventionAuthority = false;
     if (isDirectResolution) {
       const interventionLogs = await prisma.audit_logs.findMany({
         where: {
@@ -122,7 +106,6 @@ export async function POST(
         take: 10,
       });
 
-      let hasInterventionAuthority = false;
       for (const log of interventionLogs) {
         if (!log.new_value) continue;
         let val: Record<string, unknown> = {};
@@ -151,9 +134,21 @@ export async function POST(
         }
       }
 
-      // Explicit intervention authority assumed, requires head review per reopen policy, or admin
+      // Check if this grievance is actively assigned to the Department Head herself (e.g. from Smart Assignment)
+      const isAssignedToUser = await prisma.assignments.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          staff_id: user.user_id,
+          assignment_status: "ASSIGNED",
+        },
+      });
+
+      // Explicit intervention authority assumed, requires head review per reopen policy, assigned to head, or admin
       const isAuthorizedHead =
-        hasInterventionAuthority || requiresHeadReview || isAdmin;
+        hasInterventionAuthority ||
+        requiresHeadReview ||
+        Boolean(isAssignedToUser) ||
+        isAdmin;
 
       if (!isAuthorizedHead) {
         return NextResponse.json(
@@ -161,6 +156,33 @@ export async function POST(
             success: false,
             message:
               "Resolution authority is not active. The Department Head must first identify the bottleneck and execute an SLA Escalation Intervention assuming resolution authority before submitting a resolution.",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    const isPrimaryOrEqual =
+      grievanceDept.involvement_type === "PRIMARY" ||
+      grievanceDept.involvement_type === "EQUAL";
+
+    if (!isAdmin && departmentId) {
+      const authResult = canDepartmentSubmitFinalResolution(
+        departmentId,
+        allInvolvedDepts,
+      );
+      // If Primary/Equal lead has intervention authority or case is escalated to manual head review,
+      // the Head has executive authority to finalize and resolve the case even if supporting dept was lagging!
+      const canBypassPendingSupporting =
+        isPrimaryOrEqual && (hasInterventionAuthority || requiresHeadReview);
+
+      if (!authResult.canResolve && !canBypassPendingSupporting) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              authResult.reason ||
+              "Forbidden: As a supportive department, only Primary Lead, Equal Co-Lead, or the Final Sequential Department Heads can approve or submit the final resolution.",
           },
           { status: 403 },
         );
@@ -275,46 +297,76 @@ export async function POST(
           },
         });
 
+        const isSupportingContributor =
+          grievanceDept && grievanceDept.involvement_type === "SUPPORTING";
+
+        const otherIncompleteDepts = await tx.grievance_departments.count({
+          where: {
+            grievance_id: grievanceId,
+            grievance_department_id: {
+              not: grievanceDept.grievance_department_id,
+            },
+            status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
+          },
+        });
+
+        const newOverallStatus =
+          isSupportingContributor && otherIncompleteDepts > 0
+            ? grievance.status
+            : "UNDER_REVIEW";
+
         // IMPORTANT BUSINESS RULE:
         // When Department Head submits resolution:
         // DO NOT directly close the grievance!
-        // Move to UNDER_REVIEW for Employee Review:
+        // Move to UNDER_REVIEW for Employee Review (or keep in progress if supporting dept):
         // Head submits resolution -> UNDER_REVIEW / Employee Review -> Employee reviews -> Accept -> CLOSED
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
           data: {
-            status: "UNDER_REVIEW",
+            status: newOverallStatus,
             closed_at: null,
             updated_at: new Date(),
           },
         });
 
-        // Log status history
-        await tx.grievance_status_history.create({
-          data: {
-            grievance_id: grievanceId,
-            old_status: grievance.status,
-            new_status: "UNDER_REVIEW",
-            changed_by: user.user_id,
-            remarks:
-              "Department Head submitted resolution. Grievance placed in Employee Review.",
-          },
-        });
+        // Log status history if status changed
+        if (newOverallStatus !== grievance.status) {
+          await tx.grievance_status_history.create({
+            data: {
+              grievance_id: grievanceId,
+              old_status: grievance.status,
+              new_status: newOverallStatus,
+              changed_by: user.user_id,
+              remarks:
+                "Department Head submitted resolution. Grievance placed in Employee Review.",
+            },
+          });
+        }
 
         // Audit log
         await tx.audit_logs.create({
           data: {
             grievance_id: grievanceId,
             user_id: user.user_id,
-            action: "RESOLUTION_SUBMITTED",
+            action: isSupportingContributor
+              ? "SUPPORTING_FINDINGS_SUBMITTED"
+              : "RESOLUTION_SUBMITTED",
             entity_type: "grievance",
             entity_id: grievanceId,
             new_value: {
-              stage: "UNDER_REVIEW",
+              stage: newOverallStatus,
+              departmentId: grievanceDept.department_id.toString(),
+              departmentName:
+                grievanceDept.departments?.department_name || "Department",
+              findings: findings || cleanFindings,
+              actionTaken: actionTaken || cleanAction,
               submittedByRole: "DEPARTMENT_HEAD",
               submittedBy: hodFullName,
               outcome: outcome || "RESOLVED",
-              details: `Department Head submitted resolution following SLA intervention. Placed in UNDER_REVIEW for Employee review and acceptance.`,
+              isFindings: isSupportingContributor,
+              details: isSupportingContributor
+                ? `Department Head submitted department findings and signed off stage.`
+                : `Department Head submitted resolution following SLA intervention or direct assignment. Placed in UNDER_REVIEW for Employee review and acceptance.`,
             },
           },
         });
@@ -341,6 +393,26 @@ export async function POST(
             completed_at: new Date(),
           },
         });
+
+        // When Primary Head resolves case with executive intervention authority or on maximum reopens,
+        // complete any lingering supporting department stages so the grievance moves cleanly to Employee Review
+        if (
+          isPrimaryOrEqual &&
+          (hasInterventionAuthority || requiresHeadReview)
+        ) {
+          await tx.grievance_departments.updateMany({
+            where: {
+              grievance_id: grievanceId,
+              involvement_type: "SUPPORTING",
+              status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
+            },
+            data: {
+              status: "COMPLETED",
+              completed_at: new Date(),
+            },
+          });
+        }
+
         await activateNextSequentialDepartments(grievanceId, tx);
       } else if (latestResolution) {
         // Standard Staff Resolution Review by Department Head
