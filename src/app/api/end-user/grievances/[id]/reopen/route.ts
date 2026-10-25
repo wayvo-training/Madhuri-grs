@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { validateReopenReason } from "@/lib/constants/reopen";
 import {
   evaluateReopenPolicy,
   requiresHeadManualReview,
@@ -84,7 +85,18 @@ export async function POST(
     }
 
     const body = await request.json().catch(() => ({}));
-    const reason = body.reason || "Reopened by user";
+    const rawReason = typeof body.reason === "string" ? body.reason : "";
+    const reasonValidation = validateReopenReason(rawReason);
+    if (!reasonValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: reasonValidation.error || "Invalid reopen reason",
+        },
+        { status: 400 },
+      );
+    }
+    const reason = rawReason.trim();
 
     const newReopenCount = grievance.reopen_count + 1;
     // Escalate on reaching manual review threshold or max allowed count

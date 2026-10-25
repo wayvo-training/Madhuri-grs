@@ -270,7 +270,11 @@ export function SmartStaffAssignmentModal({
   );
 
   const isReassignment = Boolean(
-    grievance.assignedStaffId || grievance.assignedStaffName,
+    (grievance.assignedStaffId && grievance.assignedStaffId.trim() !== "") ||
+      (grievance.assignedStaffName &&
+        grievance.assignedStaffName.trim() !== "" &&
+        grievance.assignedStaffName.toLowerCase() !== "unassigned" &&
+        grievance.assignedStaffName.toLowerCase() !== "blocked"),
   );
 
   const [loading, setLoading] = useState(true);
