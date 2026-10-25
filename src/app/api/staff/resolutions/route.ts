@@ -4,7 +4,10 @@ import {
   evaluateReopenPolicy,
   requiresHeadManualReview,
 } from "@/lib/engines/reopen-engine";
-import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
+import {
+  activateNextSequentialDepartments,
+  canDepartmentSubmitFinalResolution,
+} from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -204,7 +207,10 @@ export async function POST(request: Request) {
     // (Primary lead with all supporting completed, OR final sequential department where all prerequisites are completed)
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
       where: { grievance_id: gId },
-      include: { departments: true },
+      include: {
+        departments: true,
+        assignments: true,
+      },
     });
 
     const myDeptId = myAssignment?.grievance_departments?.department_id;
@@ -239,7 +245,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Save optional supporting resolution attachments
+    // Save optional supporting resolution attachments and collect metadata
+    const savedAttachments: Array<{
+      id: string;
+      name: string;
+      size: string;
+      type: string;
+      path: string;
+      downloadUrl: string;
+    }> = [];
+
     if (Array.isArray(body.attachments) && body.attachments.length > 0) {
       for (const rawAtt of body.attachments) {
         const att = rawAtt as {
@@ -268,16 +283,27 @@ export async function POST(request: Request) {
             }
           }
 
-          await prisma.attachments.create({
+          const newAtt = await prisma.attachments.create({
             data: {
               grievance_id: gId,
               resolution_id: resolution.resolution_id,
+              grievance_department_id:
+                myAssignment?.grievance_department_id || null,
               file_name: resolvedFileName,
               file_path: relativeStoragePath,
               file_type: att.fileType || att.type || "application/octet-stream",
               file_size: calculatedSize,
               uploaded_by: staffId,
             },
+          });
+
+          savedAttachments.push({
+            id: newAtt.attachment_id.toString(),
+            name: newAtt.file_name,
+            size: `${Math.round(Number(newAtt.file_size || 1024) / 1024)} KB`,
+            type: newAtt.file_type,
+            path: newAtt.file_path,
+            downloadUrl: `/api/attachments/${newAtt.attachment_id}/download`,
           });
         }
       }
@@ -342,6 +368,21 @@ export async function POST(request: Request) {
       });
     }
 
+    // Unblock any downstream sequential departments if applicable
+    await activateNextSequentialDepartments(gId);
+
+    // Retrieve submitting author details
+    const authorUser = await prisma.users.findUnique({
+      where: { user_id: staffId },
+      select: { first_name: true, last_name: true },
+    });
+    const authorName = authorUser
+      ? `${authorUser.first_name} ${authorUser.last_name || ""}`.trim()
+      : "Staff Member";
+    const submittingDeptName =
+      allInvolvedDepts.find((d) => d.department_id === myDeptId)?.departments
+        ?.department_name || "Department";
+
     // 3. Log audit event
     await prisma.audit_logs.create({
       data: {
@@ -351,7 +392,38 @@ export async function POST(request: Request) {
         entity_type: "GRIEVANCE",
         entity_id: gId,
         new_value: {
-          details: `Investigation completed and resolution submitted: ${outcome.trim()}`,
+          details: `Investigation completed and resolution submitted: ${cleanOutcome}`,
+          department: submittingDeptName,
+          submittedBy: authorName,
+          problemSummary: cleanSummary,
+          findings: cleanFindings,
+          actionTaken: cleanAction,
+          notes: cleanOutcome,
+          attachments: savedAttachments,
+          isFindings: true,
+          isResolution: true,
+          resolutionId: resolution.resolution_id.toString(),
+        },
+      },
+    });
+
+    // Also record companion supporting findings audit log so Department Findings tab reflects seamlessly
+    await prisma.audit_logs.create({
+      data: {
+        grievance_id: gId,
+        user_id: staffId,
+        action: "SUPPORTING_FINDINGS_SUBMITTED",
+        entity_type: "GRIEVANCE",
+        entity_id: gId,
+        new_value: {
+          department: submittingDeptName,
+          submittedBy: authorName,
+          findings: cleanFindings,
+          actionTaken: cleanAction,
+          notes: cleanOutcome,
+          attachments: savedAttachments,
+          isResolution: true,
+          resolutionId: resolution.resolution_id.toString(),
         },
       },
     });
@@ -367,7 +439,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // 4. Notification
+    // 4. Notifications with priority distribution
+    const priority = grievance.priority?.toUpperCase() || "NORMAL";
+    const priorityTag = `[${priority} Priority]`;
+
     if (requiresHeadReview) {
       const targetDeptIds = allInvolvedDepts.map((d) => d.department_id);
       if (departmentId && !targetDeptIds.includes(departmentId)) {
@@ -388,18 +463,18 @@ export async function POST(request: Request) {
           userId: hod.user_id,
           grievanceId: gId,
           type: "RESOLUTION_SUBMITTED",
-          title: `Resolution Submitted: ${grievance.grievance_number}`,
-          message: `Staff member has submitted a formal resolution proposal for grievance ${grievance.grievance_number}. Review is required due to multiple reopenings.`,
+          title: `[${priority}] Resolution Proposal: ${grievance.grievance_number}`,
+          message: `${priorityTag} Staff member ${authorName} (${submittingDeptName}) has submitted a formal resolution proposal for grievance ${grievance.grievance_number}. Review is required due to multiple reopenings.`,
         });
       }
-    } else if (!requiresHeadReview) {
+    } else {
       // Notify the complainant directly since no head review is required
       await NotificationService.send({
         userId: grievance.submitted_by,
         grievanceId: gId,
         type: "RESOLUTION_SUBMITTED",
-        title: `Resolution Submitted: ${grievance.grievance_number}`,
-        message: `A resolution has been provided for your grievance ${grievance.grievance_number}. Please review it.`,
+        title: `[${priority}] Resolution Submitted: ${grievance.grievance_number}`,
+        message: `${priorityTag} A formal resolution has been provided for your grievance ${grievance.grievance_number}. Please review the outcome.`,
       });
     }
 
@@ -408,37 +483,72 @@ export async function POST(request: Request) {
       userId: staffId,
       grievanceId: gId,
       type: "RESOLUTION_SUBMITTED",
-      title: `Resolution Submitted: ${grievance.grievance_number}`,
+      title: `[${priority}] Resolution Submitted: ${grievance.grievance_number}`,
       message: requiresHeadReview
-        ? `You submitted a resolution proposal for grievance ${grievance.grievance_number}. It is pending Department Head review.`
-        : `You submitted the resolution for grievance ${grievance.grievance_number}. It has been sent to the complainant.`,
+        ? `${priorityTag} You submitted a resolution proposal for grievance ${grievance.grievance_number}. It is pending Department Head review.`
+        : `${priorityTag} You submitted the resolution for grievance ${grievance.grievance_number}. It has been sent to the complainant.`,
     });
 
-    // If resolved by a supporting or final sequential department, notify primary lead department
-    const primaryDeptRecord = allInvolvedDepts.find(
-      (d) => d.involvement_type === "PRIMARY",
+    // Cross-department notifications to ALL collaborating departments (HODs and assigned staff)
+    const otherInvolvedDepts = allInvolvedDepts.filter(
+      (d) => d.department_id !== myDeptId,
     );
-    if (
-      primaryDeptRecord &&
-      primaryDeptRecord.department_id !==
-        myAssignment?.grievance_departments?.department_id
-    ) {
-      const primaryHod = await prisma.users.findFirst({
+
+    for (const otherDept of otherInvolvedDepts) {
+      const otherStaffId = otherDept.assignments?.staff_id;
+      if (otherStaffId && otherStaffId !== staffId) {
+        await NotificationService.send({
+          userId: otherStaffId,
+          grievanceId: gId,
+          type: "RESOLUTION_SUBMITTED",
+          title: `[${priority}] Case Resolved by ${submittingDeptName}: ${grievance.grievance_number}`,
+          message: `${priorityTag} ${authorName} (${submittingDeptName}) has concluded the investigation and submitted the resolution for ${grievance.grievance_number}.`,
+        });
+      }
+
+      const otherHods = await prisma.users.findMany({
         where: {
-          department_id: primaryDeptRecord.department_id,
+          department_id: otherDept.department_id,
           roles: { role_name: "DEPARTMENT_HEAD" },
           status: "ACTIVE",
         },
         select: { user_id: true },
       });
-      if (primaryHod && primaryHod.user_id !== staffId) {
-        await NotificationService.send({
-          userId: primaryHod.user_id,
-          grievanceId: gId,
-          type: "RESOLUTION_SUBMITTED",
-          title: `Case Resolved by Supporting Department: ${grievance.grievance_number}`,
-          message: `The sequential supporting department has concluded the investigation and submitted the final resolution for ${grievance.grievance_number}.`,
-        });
+
+      for (const hod of otherHods) {
+        if (hod.user_id !== staffId) {
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId: gId,
+            type: "RESOLUTION_SUBMITTED",
+            title: `[${priority}] Case Resolved by ${submittingDeptName}: ${grievance.grievance_number}`,
+            message: `${priorityTag} ${authorName} (${submittingDeptName}) has concluded the investigation and submitted the resolution for ${grievance.grievance_number}.`,
+          });
+        }
+      }
+    }
+
+    // Submitter's own HOD notification (if not the submitter)
+    if (myDeptId) {
+      const ownHods = await prisma.users.findMany({
+        where: {
+          department_id: myDeptId,
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+
+      for (const hod of ownHods) {
+        if (hod.user_id !== staffId) {
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId: gId,
+            type: "RESOLUTION_SUBMITTED",
+            title: `[${priority}] Resolution Submitted: ${grievance.grievance_number}`,
+            message: `${priorityTag} Staff member ${authorName} has submitted the resolution for grievance ${grievance.grievance_number}.`,
+          });
+        }
       }
     }
 

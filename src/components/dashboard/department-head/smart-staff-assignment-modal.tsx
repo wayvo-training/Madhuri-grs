@@ -294,27 +294,43 @@ export function SmartStaffAssignmentModal({
           (s.activeTickets / effectiveMax) * 100,
         );
 
-        // Calculate dynamic factors that accurately reflect workload and profile
+        // Calculate dynamic factors that accurately reflect workload and profile without artificial minimum defaults
         const workloadScore = Math.max(0, 20 - s.activeTickets * 2);
         const availabilityScore =
           s.status === "ON_LEAVE"
             ? 0
             : isAtCap
-              ? 1
+              ? 0
               : s.activeTickets <= 2
                 ? 10
                 : s.activeTickets <= 5
-                  ? 8
-                  : 5;
-        const skillScore = isTop ? 30 : Math.max(10, 26 - index * 4);
-        const experienceScore = isTop ? 20 : Math.max(6, 18 - index * 3);
+                  ? 7
+                  : 4;
+        const skillScore = isTop ? 25 : Math.max(0, 20 - index * 6);
+        const experienceScore = isTop ? 18 : Math.max(0, 14 - index * 5);
+        const isHigh =
+          grievance.priority === "CRITICAL" || grievance.priority === "HIGH";
         const slaScore =
-          s.activeTickets <= 2 ? 10 : s.activeTickets <= 5 ? 8 : 4;
+          isAtCap || s.status === "ON_LEAVE"
+            ? 0
+            : isHigh
+              ? isTop && s.activeTickets <= 2
+                ? 10
+                : s.activeTickets <= 2
+                  ? 6
+                  : s.activeTickets <= 4
+                    ? 3
+                    : 0
+              : s.activeTickets <= 2
+                ? 10
+                : s.activeTickets <= 5
+                  ? 6
+                  : 0;
 
         const computedScore = Math.min(
-          95,
+          100,
           Math.max(
-            35,
+            0,
             skillScore +
               experienceScore +
               workloadScore +
@@ -347,6 +363,11 @@ export function SmartStaffAssignmentModal({
               : isAtCap
                 ? "Maximum active capacity reached (10 / 10 assigned) - Ineligible for new assignments"
                 : "Available for assignment",
+            isHigh && slaScore >= 6
+              ? `Suitable for ${grievance.priority} priority SLA turnaround`
+              : !isHigh && slaScore >= 6
+                ? "Suitable for standard SLA resolution"
+                : `Lower suitability for ${grievance.priority || "current"} priority turnaround`,
           ],
           rawReasons: {
             matched_skills: ["Department Redressal Operations"],
@@ -358,7 +379,12 @@ export function SmartStaffAssignmentModal({
                   ? "MEDIUM"
                   : "HIGH",
             availability: s.status === "ON_LEAVE" ? "BUSY" : "AVAILABLE",
-            sla_risk: "LOW",
+            sla_risk:
+              isHigh && (s.activeTickets >= 5 || slaScore < 6)
+                ? "HIGH"
+                : isHigh || s.activeTickets >= 6
+                  ? "MEDIUM"
+                  : "LOW",
           },
           factorBreakdown: {
             skillScore,
@@ -371,7 +397,7 @@ export function SmartStaffAssignmentModal({
       },
     );
     setRecommendations(fallbackList);
-  }, [staffList]);
+  }, [staffList, grievance.priority]);
 
   useEffect(() => {
     let isMounted = true;

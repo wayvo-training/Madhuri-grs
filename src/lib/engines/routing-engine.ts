@@ -975,7 +975,12 @@ export async function activateNextSequentialDepartments(
     include: {
       departments: { select: { department_name: true } },
       grievances: {
-        select: { due_at: true, created_at: true, priority: true },
+        select: {
+          due_at: true,
+          created_at: true,
+          priority: true,
+          grievance_number: true,
+        },
       },
     },
   });
@@ -1026,6 +1031,8 @@ export async function activateNextSequentialDepartments(
       const now = new Date();
       const activePriority =
         blocked.grievances?.priority?.toUpperCase() || "MEDIUM";
+      const grievanceNumber =
+        blocked.grievances?.grievance_number || `GRS-${gId.toString()}`;
 
       // Dynamically query active SLA policy configured by Admin in database
       const dynamicSlaPolicy = await client.sla_policies.findFirst({
@@ -1107,8 +1114,8 @@ export async function activateNextSequentialDepartments(
                 userId: head.user_id,
                 grievanceId: gId,
                 type: "ASSIGNMENT",
-                title: "Department Stage Activated",
-                message: `Prerequisite departments have completed. Grievance is now active for ${deptName}.`,
+                title: `[${activePriority}] Department Stage Activated: ${deptName}`,
+                message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active for ${deptName}.`,
               });
             }
 
@@ -1117,8 +1124,8 @@ export async function activateNextSequentialDepartments(
                 userId: activeAssignment.staff_id,
                 grievanceId: gId,
                 type: "ASSIGNMENT",
-                title: "Department Stage Activated",
-                message: `Prerequisite departments have completed. Grievance is now active for your department (${deptName}). You may begin investigation.`,
+                title: `[${activePriority}] Stage Activated: ${deptName}`,
+                message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active for your department (${deptName}). You may begin investigation.`,
               });
             }
           } catch (err) {

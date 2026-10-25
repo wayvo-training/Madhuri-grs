@@ -187,7 +187,33 @@ export function checkAttachmentAccess(
     };
   }
 
-  // 5. Department Grants or Dynamic In-Memory Classification (Document Visibility)
+  // 5. Primary Lead Department officers & assigned staff always have access to citizen-uploaded grievance dossier attachments
+  const isAssignedToPrimaryOrEqual = assignments.some((a) => {
+    if (BigInt(a.staff_id) !== currentUserId) return false;
+    if (
+      a.assignment_status !== "ASSIGNED" &&
+      a.assignment_status !== "COMPLETED"
+    )
+      return false;
+    const dept = grievanceDepartments.find(
+      (gd) =>
+        BigInt(gd.grievance_department_id) ===
+        BigInt(a.grievance_department_id),
+    );
+    return (
+      dept?.involvement_type === "PRIMARY" || dept?.involvement_type === "EQUAL"
+    );
+  });
+
+  if (isPrimaryOrEqual || isAssignedToPrimaryOrEqual) {
+    return {
+      allowed: true,
+      reason:
+        "Primary Lead Department officers have full access to grievance dossier attachments.",
+    };
+  }
+
+  // 6. Department Grants or Dynamic In-Memory Classification (Document Visibility for Supporting Departments)
   const thisAttachmentGrants = departmentGrants.filter(
     (g) => BigInt(g.attachment_id) === BigInt(attachment.attachment_id),
   );
@@ -271,41 +297,6 @@ export function checkAttachmentAccess(
       allowed: false,
       reason:
         "Forbidden: Access to this document is restricted to other designated departments.",
-    };
-  }
-
-  // 6. Unrestricted Primary Lead access for unclassified / legacy attachments
-  if (isPrimaryOrEqual) {
-    return {
-      allowed: true,
-      reason:
-        "Primary Lead Department officers have full access to grievance dossier attachments.",
-    };
-  }
-
-  // 7. Staff member actively assigned specifically to the Primary or Equal department
-  const isAssignedToPrimaryOrEqual = assignments.some((a) => {
-    if (BigInt(a.staff_id) !== currentUserId) return false;
-    if (
-      a.assignment_status !== "ASSIGNED" &&
-      a.assignment_status !== "COMPLETED"
-    )
-      return false;
-    const dept = grievanceDepartments.find(
-      (gd) =>
-        BigInt(gd.grievance_department_id) ===
-        BigInt(a.grievance_department_id),
-    );
-    return (
-      dept?.involvement_type === "PRIMARY" || dept?.involvement_type === "EQUAL"
-    );
-  });
-
-  if (isAssignedToPrimaryOrEqual) {
-    return {
-      allowed: true,
-      reason:
-        "Staff assigned to Primary Department has access to grievance dossier attachments.",
     };
   }
 

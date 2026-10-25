@@ -280,40 +280,72 @@ export async function POST(
       { timeout: 30000, maxWait: 10000 },
     );
 
-    // 3. Notify Primary Department Lead and Primary HOD
-    const primaryRecord = allInvolvedDepts.find(
-      (d) => d.involvement_type === "PRIMARY",
+    // 3. Notify Collaborating Departments (HODs and Staff)
+    const priority = grievance.priority?.toUpperCase() || "NORMAL";
+    const priorityTag = `[${priority} Priority]`;
+
+    // Find all other departments involved in this grievance
+    const otherInvolvedDepts = allInvolvedDepts.filter(
+      (d) => d.department_id !== myDeptRecord?.department_id,
     );
-    const primaryStaffId = primaryRecord?.assignments?.staff_id;
 
-    if (primaryStaffId && primaryStaffId !== staffId) {
-      await NotificationService.send({
-        userId: primaryStaffId,
-        grievanceId,
-        type: "HEAD_INTERNAL_NOTE",
-        title: `Department Findings Submitted (${grievance.grievance_number})`,
-        message: `${authorName} (${deptName}) has submitted departmental findings for ${grievance.grievance_number}. Review in the Department Findings tab to compile the final resolution.`,
-      });
-    }
+    for (const otherDept of otherInvolvedDepts) {
+      // Notify other department's assigned staff if assigned
+      const assignedStaffId = otherDept.assignments?.staff_id;
+      if (assignedStaffId && assignedStaffId !== staffId) {
+        await NotificationService.send({
+          userId: assignedStaffId,
+          grievanceId,
+          type: "HEAD_INTERNAL_NOTE",
+          title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+          message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
+        });
+      }
 
-    if (primaryRecord?.department_id) {
-      const primaryHod = await prisma.users.findFirst({
+      // Notify other department's HOD(s)
+      const otherHods = await prisma.users.findMany({
         where: {
-          department_id: primaryRecord.department_id,
+          department_id: otherDept.department_id,
           roles: { role_name: "DEPARTMENT_HEAD" },
           status: "ACTIVE",
         },
         select: { user_id: true },
       });
 
-      if (primaryHod && primaryHod.user_id !== staffId) {
-        await NotificationService.send({
-          userId: primaryHod.user_id,
-          grievanceId,
-          type: "HEAD_INTERNAL_NOTE",
-          title: `Supportive Findings Completed (${grievance.grievance_number})`,
-          message: `${deptName} has completed their supportive investigation for ${grievance.grievance_number}.`,
-        });
+      for (const hod of otherHods) {
+        if (hod.user_id !== staffId) {
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message: `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
+          });
+        }
+      }
+    }
+
+    // Also notify submitter's own HOD (if not the submitter)
+    if (myDeptRecord?.department_id) {
+      const ownHods = await prisma.users.findMany({
+        where: {
+          department_id: myDeptRecord.department_id,
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+
+      for (const hod of ownHods) {
+        if (hod.user_id !== staffId) {
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title: `[${priority}] Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message: `${priorityTag} Staff member ${authorName} has submitted departmental inquiry findings and attached documents for case ${grievance.grievance_number}.`,
+          });
+        }
       }
     }
 
@@ -323,10 +355,10 @@ export async function POST(
       userId: staffId,
       grievanceId,
       type: "SYSTEM",
-      title: `Findings Submitted: ${grievance.grievance_number}`,
+      title: `[${priority}] Findings Submitted: ${grievance.grievance_number}`,
       message: isSubmittingPrimary
-        ? `You submitted departmental findings for grievance ${grievance.grievance_number}. Downstream sequential department stages have been activated.`
-        : `You submitted departmental findings for grievance ${grievance.grievance_number}. They have been shared with the Lead Department.`,
+        ? `${priorityTag} You submitted departmental findings for grievance ${grievance.grievance_number}. Downstream sequential department stages have been activated.`
+        : `${priorityTag} You submitted departmental findings for grievance ${grievance.grievance_number}. They have been shared across collaborating departments.`,
     });
 
     return NextResponse.json({

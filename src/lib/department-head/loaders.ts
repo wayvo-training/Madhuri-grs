@@ -282,10 +282,10 @@ export async function fetchDepartmentHeadGrievances(
         },
         resolutions: {
           orderBy: { submitted_at: "desc" },
-          take: 1,
+          take: 5,
           include: {
             users: {
-              include: { roles: true },
+              include: { roles: true, departments: true },
             },
             knowledge_articles: {
               select: { article_id: true },
@@ -575,6 +575,50 @@ export async function fetchDepartmentHeadGrievances(
           timestamp: formatRelativeTime(l.created_at),
         };
       });
+
+    // Merge formal resolution submissions if not already represented in supportingFindings
+    for (const res of g.resolutions || []) {
+      const alreadyIncluded = supportingFindings.some(
+        (sf) =>
+          sf.id === `res-${res.resolution_id.toString()}` ||
+          (res.resolution_id && sf.id.includes(res.resolution_id.toString())),
+      );
+      if (!alreadyIncluded) {
+        const resUser = res.users;
+        const resAuthor = resUser
+          ? `${resUser.first_name} ${resUser.last_name || ""}`.trim()
+          : "Staff Member";
+        const resDeptName =
+          resUser?.departments?.department_name ||
+          g.grievance_departments?.find(
+            (gd) => gd.assignments?.staff_id === res.submitted_by,
+          )?.departments?.department_name ||
+          "Department";
+
+        const resAttList = (res.attachments || []).map((att) => ({
+          id: att.attachment_id.toString(),
+          name: att.file_name,
+          size: att.file_size
+            ? `${Math.round(Number(att.file_size) / 1024)} KB`
+            : undefined,
+          type: att.file_type || undefined,
+          path: att.file_path,
+          downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+        }));
+
+        supportingFindings.push({
+          id: `res-${res.resolution_id.toString()}`,
+          departmentName: resDeptName,
+          submittedBy: resAuthor,
+          findings: res.findings || res.problem_summary || "",
+          actionTaken: res.action_taken || undefined,
+          notes: res.outcome || undefined,
+          attachments: resAttList.length > 0 ? resAttList : undefined,
+          createdAt: res.submitted_at.toISOString(),
+          timestamp: formatRelativeTime(res.submitted_at),
+        });
+      }
+    }
 
     const auditTrail = g.audit_logs
       .filter((l) => {
