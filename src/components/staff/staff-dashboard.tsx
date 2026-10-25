@@ -143,8 +143,16 @@ export function StaffDashboard({
     useState<DocumentPreviewData | null>(null);
 
   const handleDownloadDocument = (doc: DocumentPreviewData) => {
-    if (doc.path) {
-      triggerFileDownload(doc.path, doc.name);
+    const dlUrl =
+      (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+      (doc.downloadUrl
+        ? `${doc.downloadUrl}${doc.downloadUrl.includes("?") ? "&" : "?"}download=true`
+        : "") ||
+      (doc.path?.startsWith("/api/attachments/")
+        ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
+        : doc.path);
+    if (dlUrl) {
+      triggerFileDownload(dlUrl, doc.name);
     }
   };
 

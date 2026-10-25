@@ -17,6 +17,7 @@ import {
   formatAuditLogContent,
 } from "@/lib/department-head/utils";
 import { buildGmailComposeUrl } from "@/lib/email";
+import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   CaseProgressData,
   GrievanceItem,
@@ -872,15 +873,24 @@ export function CaseProgressTab({
                               >
                                 View
                               </a>
-                              <a
-                                href={`${file.downloadUrl}${file.downloadUrl.includes("?") ? "&" : "?"}download=true`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                download={file.name}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition"
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const dlUrl =
+                                    (file.id
+                                      ? `/api/attachments/${file.id}/download?download=true`
+                                      : "") ||
+                                    (file.downloadUrl
+                                      ? `${file.downloadUrl}${file.downloadUrl.includes("?") ? "&" : "?"}download=true`
+                                      : "");
+                                  if (dlUrl) {
+                                    triggerFileDownload(dlUrl, file.name);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
                               >
                                 Download
-                              </a>
+                              </button>
                             </div>
                           )}
                         </div>

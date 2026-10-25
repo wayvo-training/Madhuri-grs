@@ -269,6 +269,7 @@ export function CaseStatementTab({
                       type="button"
                       onClick={() =>
                         onDownloadDocument({
+                          id: file.id,
                           name: file.name,
                           size: file.size || "Document",
                           type: file.type || "Supportive Document",

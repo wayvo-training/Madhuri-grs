@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
-  Clock,
   Eye,
   FilePlus,
   FileText,
@@ -66,8 +65,6 @@ export function EndUserPortal({
   const router = useRouter();
   const [grievances, setGrievances] =
     useState<UserGrievanceItem[]>(initialGrievances);
-  const [selectedGrievance, setSelectedGrievance] =
-    useState<UserGrievanceItem | null>(null);
   const [isRespondingTo, setIsRespondingTo] =
     useState<UserGrievanceItem | null>(null);
 
@@ -482,20 +479,23 @@ export function EndUserPortal({
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition"
                   >
                     <td className="py-2.5 pl-4 pr-2 font-mono text-xs font-bold whitespace-nowrap align-middle">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedGrievance(g)}
+                      <Link
+                        href={`/end-user/grievances/${g.id}?tab=overview`}
                         className="font-mono text-xs font-bold text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 hover:underline transition-colors cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
                       >
                         {g.grievanceNumber}
-                      </button>
+                      </Link>
                     </td>
                     <td className="py-2.5 px-2 whitespace-nowrap align-middle max-w-[240px]">
                       <TruncatedText
                         text={g.title}
                         maxChars={25}
                         alwaysShowTooltip={true}
-                        onClick={() => setSelectedGrievance(g)}
+                        onClick={() =>
+                          router.push(
+                            `/end-user/grievances/${g.id}?tab=overview`,
+                          )
+                        }
                         className="font-semibold text-slate-900 dark:text-slate-100 text-sm border-none truncate whitespace-nowrap block max-w-[220px] hover:underline hover:text-teal-600 cursor-pointer"
                       />
                     </td>
@@ -526,7 +526,10 @@ export function EndUserPortal({
                           {
                             label: "View Details",
                             icon: <Eye className="h-4 w-4" />,
-                            onClick: () => setSelectedGrievance(g),
+                            onClick: () =>
+                              router.push(
+                                `/end-user/grievances/${g.id}?tab=overview`,
+                              ),
                           },
                           {
                             label: "Track",
@@ -729,100 +732,6 @@ export function EndUserPortal({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Case Details Viewer Modal */}
-      {selectedGrievance && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="relative flex flex-col w-full max-w-2xl max-h-[85vh] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden animate-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-900">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Grievance Details
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelectedGrievance(null)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm font-bold text-teal-700 dark:text-teal-400">
-                    {selectedGrievance.grievanceNumber}
-                  </span>
-                  <StatusBadge status={selectedGrievance.status} />
-                  <PriorityBadge priority={selectedGrievance.priority} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-snug">
-                  {selectedGrievance.title}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> Filed:{" "}
-                    {new Date(selectedGrievance.createdAt).toLocaleDateString()}
-                  </span>
-                  <span>&bull;</span>
-                  <span>
-                    Category:{" "}
-                    <strong>
-                      {selectedGrievance.category} /{" "}
-                      {selectedGrievance.subcategory}
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              <div className="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                <p className="whitespace-pre-wrap leading-relaxed">
-                  {selectedGrievance.description}
-                </p>
-              </div>
-
-              {selectedGrievance.attachments &&
-                selectedGrievance.attachments.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Attached Evidence
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedGrievance.attachments.map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center gap-3 p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800"
-                        >
-                          <div className="p-2 bg-teal-50 dark:bg-teal-900/30 rounded-lg text-teal-600 dark:text-teal-400">
-                            <Paperclip className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                              {file.name}
-                            </p>
-                            <p className="text-[10px] text-slate-500">
-                              {file.size}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </div>
-
-            <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSelectedGrievance(null)}
-                className="px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
-              >
-                Close Details
-              </button>
-            </div>
           </div>
         </div>
       )}

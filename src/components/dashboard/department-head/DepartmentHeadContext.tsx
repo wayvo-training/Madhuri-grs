@@ -392,8 +392,10 @@ export function DepartmentHeadProvider({
 
   const handleDownloadDocument = useCallback((doc: DocumentPreviewData) => {
     const dlUrl =
-      doc.downloadUrl ||
       (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+      (doc.downloadUrl
+        ? `${doc.downloadUrl}${doc.downloadUrl.includes("?") ? "&" : "?"}download=true`
+        : "") ||
       (doc.path?.startsWith("/api/attachments/")
         ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
         : doc.path);

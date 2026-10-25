@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import { triggerFileDownload } from "@/lib/utils/download";
 
 export interface DocumentPreviewData {
   id?: string;
@@ -61,9 +62,16 @@ export function DocumentViewerModal({
           : null);
 
   const handleDownloadClick = () => {
-    if (targetUrl) {
-      const dlUrl = `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}download=true`;
-      window.open(dlUrl, "_blank");
+    const dlUrl =
+      (document.id
+        ? `/api/attachments/${document.id}/download?download=true`
+        : "") ||
+      (targetUrl
+        ? `${targetUrl}${targetUrl.includes("?") ? "&" : "?"}download=true`
+        : "");
+
+    if (dlUrl) {
+      triggerFileDownload(dlUrl, document.name);
     } else {
       onDownload(document);
     }
