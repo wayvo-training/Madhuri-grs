@@ -674,10 +674,14 @@ export function QueueView({
                       item.slaStatus === "BREACHED";
                     const highlightSla = !isEscalated && isBreached;
                     const hasAssignedStaff = Boolean(
-                      item.assignedStaffId ||
-                        (item.assignedStaffName &&
-                          item.assignedStaffName !== "Unassigned" &&
-                          item.assignedStaffName !== "Blocked"),
+                      item.myDepartmentStatus !== "PENDING_ASSIGNMENT" &&
+                        item.status !== "PENDING_ASSIGNMENT" &&
+                        item.status !== "ROUTED" &&
+                        item.status !== "SUBMITTED" &&
+                        (item.assignedStaffId ||
+                          (item.assignedStaffName &&
+                            item.assignedStaffName !== "Unassigned" &&
+                            item.assignedStaffName !== "Blocked")),
                     );
 
                     return (

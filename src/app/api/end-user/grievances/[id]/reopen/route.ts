@@ -103,7 +103,12 @@ export async function POST(
     const isEscalated = requiresHeadManualReview(newReopenCount, reopenPolicy);
     const newStatus = isEscalated ? "ESCALATED" : "REOPENED";
 
-    // Resolve target Department Head or fallback Admin
+    // Resolve all participating departments and their Department Heads
+    const allInvolvedDepts = await prisma.grievance_departments.findMany({
+      where: { grievance_id: grievanceId },
+      include: { departments: true },
+    });
+
     const primaryDeptRecord = getPrimaryDepartment(grievance);
     const pRecord = primaryDeptRecord as
       | {
@@ -114,22 +119,30 @@ export async function POST(
 
     let targetDeptId = pRecord?.department_id;
     if (!targetDeptId) {
-      const gDept = await prisma.grievance_departments.findFirst({
-        where: { grievance_id: grievanceId },
-      });
-      targetDeptId = gDept?.department_id;
+      targetDeptId = allInvolvedDepts[0]?.department_id;
     }
 
-    let hod = targetDeptId
-      ? await prisma.users.findFirst({
-          where: {
-            department_id: targetDeptId,
-            roles: { role_name: "DEPARTMENT_HEAD" },
-            status: "ACTIVE",
-          },
-          select: { user_id: true },
-        })
-      : null;
+    const involvedDeptIds = allInvolvedDepts.map((d) => d.department_id);
+
+    // Fetch HODs for all participating departments
+    const allDepartmentHeads = await prisma.users.findMany({
+      where: {
+        department_id: { in: involvedDeptIds },
+        roles: { role_name: "DEPARTMENT_HEAD" },
+        status: "ACTIVE",
+      },
+      select: { user_id: true, department_id: true },
+    });
+
+    let hod: { user_id: bigint; department_id: bigint | null } | null =
+      allDepartmentHeads.find(
+        (h) =>
+          h.department_id &&
+          targetDeptId &&
+          BigInt(h.department_id) === BigInt(targetDeptId),
+      ) ||
+      allDepartmentHeads[0] ||
+      null;
 
     if (!hod) {
       hod = await prisma.users.findFirst({
@@ -137,7 +150,7 @@ export async function POST(
           roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
           status: "ACTIVE",
         },
-        select: { user_id: true },
+        select: { user_id: true, department_id: true },
       });
     }
 
@@ -201,11 +214,11 @@ export async function POST(
         }
       }
 
-      // 3. Revoke active assignments so the grievance returns to the unassigned queue
+      // 3. Revoke active and completed assignments so the grievance returns to the unassigned queue
       await tx.assignments.updateMany({
         where: {
           grievance_id: grievanceId,
-          assignment_status: "ASSIGNED",
+          assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
         },
         data: {
           assignment_status: "REVOKED",
@@ -268,8 +281,46 @@ export async function POST(
       message: `Your grievance ${grievance.grievance_number} has been successfully reopened and placed back into the investigation queue.`,
     });
 
-    // 2. Notify Department Head / Admin
-    if (hod) {
+    // 2. Notify Department Heads of all participating departments
+    const notifiedHeadIds = new Set<string>();
+
+    for (const dHead of allDepartmentHeads) {
+      const isLeadHead =
+        targetDeptId &&
+        dHead.department_id &&
+        BigInt(dHead.department_id) === BigInt(targetDeptId);
+
+      const deptRecord = allInvolvedDepts.find(
+        (d) =>
+          dHead.department_id &&
+          BigInt(d.department_id) === BigInt(dHead.department_id),
+      );
+      const deptName = deptRecord?.departments?.department_name || "Department";
+
+      notifiedHeadIds.add(dHead.user_id.toString());
+
+      await NotificationService.send({
+        userId: dHead.user_id,
+        grievanceId: grievanceId,
+        type:
+          isEscalated && isLeadHead
+            ? "GRIEVANCE_ESCALATED"
+            : "GRIEVANCE_REOPENED",
+        title: isLeadHead
+          ? isEscalated
+            ? "Max Reopen Limit Reached — Head Manual Review Required"
+            : "Grievance Reopened by Employee"
+          : `Collaborating Grievance Reopened: ${grievance.grievance_number}`,
+        message: isLeadHead
+          ? isEscalated
+            ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Employee reason: ${reason}. As Lead Department Head, you can solve this grievance directly or assign it to another person.`
+            : `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}. Please assign staff for re-investigation.`
+          : `Grievance ${grievance.grievance_number} involving your department (${deptName}) has been reopened by the employee. Reason: ${reason}. The lead department is initiating re-investigation.`,
+      });
+    }
+
+    // Fallback if no specific department head was found in the involved list
+    if (hod && !notifiedHeadIds.has(hod.user_id.toString())) {
       await NotificationService.send({
         userId: hod.user_id,
         grievanceId: grievanceId,
@@ -277,9 +328,7 @@ export async function POST(
         title: isEscalated
           ? "Max Reopen Limit Reached — Head Manual Review Required"
           : "Grievance Reopened by Employee",
-        message: isEscalated
-          ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Employee reason: ${reason}. As Department Head, you can solve this grievance directly or assign it to another person.`
-          : `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}`,
+        message: `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}`,
       });
     }
 

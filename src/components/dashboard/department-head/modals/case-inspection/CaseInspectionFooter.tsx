@@ -132,7 +132,13 @@ export function CaseInspectionFooter({
               >
                 <UserCheck className="h-3.5 w-3.5 text-slate-500" />
                 <span>
-                  {currentGrievance.assignedStaffId
+                  {currentGrievance.assignedStaffId &&
+                  currentGrievance.assignedStaffName !== "Unassigned" &&
+                  currentGrievance.myDepartmentStatus !==
+                    "PENDING_ASSIGNMENT" &&
+                  currentGrievance.status !== "PENDING_ASSIGNMENT" &&
+                  currentGrievance.status !== "ROUTED" &&
+                  currentGrievance.status !== "SUBMITTED"
                     ? "Change Assignment"
                     : "Assign Staff"}
                 </span>

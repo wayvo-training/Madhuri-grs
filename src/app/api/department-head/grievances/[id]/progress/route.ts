@@ -198,11 +198,11 @@ export async function GET(
 
       const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaff =
-        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" ||
+        !deptAssignment ||
+        deptAssignment.assignment_status !== "ASSIGNED"
           ? null
-          : staffUser &&
-              (deptAssignment?.assignment_status === "ASSIGNED" ||
-                deptAssignment?.assignment_status === "COMPLETED")
+          : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
@@ -227,22 +227,40 @@ export async function GET(
     const myDeptRecord = rawDepartments.find(
       (d) => d.department_id === departmentId,
     );
+    const isDeptPending =
+      myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+      grievance.status === "SUBMITTED" ||
+      grievance.status === "ROUTED" ||
+      (grievance.status === "REOPENED" &&
+        myDeptRecord?.status === "PENDING_ASSIGNMENT");
+
     const primaryAssignment = myDeptRecord
-      ? allDeptAssignments.find(
-          (a) =>
-            a.grievance_department_id === myDeptRecord.grievance_department_id,
-        ) || null
-      : allDeptAssignments[0] || grievance.assignments?.[0] || null;
+      ? isDeptPending
+        ? null
+        : allDeptAssignments.find(
+            (a) =>
+              a.grievance_department_id ===
+                myDeptRecord.grievance_department_id &&
+              a.assignment_status === "ASSIGNED",
+          ) || null
+      : isDeptPending
+        ? null
+        : allDeptAssignments.find((a) => a.assignment_status === "ASSIGNED") ||
+          (grievance.assignments?.[0]?.assignment_status === "ASSIGNED"
+            ? grievance.assignments[0]
+            : null);
 
     const assignedUser = primaryAssignment?.users_assignments_staff_idTousers;
     const assignment = {
-      isAssigned: !!assignedUser,
-      staffId: assignedUser ? assignedUser.user_id.toString() : null,
-      staffName: assignedUser
-        ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
-        : myDeptRecord?.status === "BLOCKED"
-          ? "Blocked (Waiting for Prerequisite)"
-          : "Unassigned",
+      isAssigned: !isDeptPending && !!assignedUser,
+      staffId:
+        !isDeptPending && assignedUser ? assignedUser.user_id.toString() : null,
+      staffName:
+        !isDeptPending && assignedUser
+          ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
+          : myDeptRecord?.status === "BLOCKED"
+            ? "Blocked (Waiting for Prerequisite)"
+            : "Unassigned",
       designation: assignedUser?.roles?.role_name || "Investigating Officer",
       email: assignedUser?.email || null,
       assignedAt: primaryAssignment?.assigned_at

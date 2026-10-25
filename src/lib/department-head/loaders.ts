@@ -342,18 +342,35 @@ export async function fetchDepartmentHeadGrievances(
         )
       : null;
 
+    const isDeptPendingAssignment =
+      myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+      g.status === "SUBMITTED" ||
+      g.status === "ROUTED" ||
+      (g.status === "REOPENED" &&
+        myDeptRecord?.status === "PENDING_ASSIGNMENT");
+
     const myDeptAssignment = departmentId
-      ? grievanceAssignments.find(
-          (a) =>
-            a.grievance_departments?.department_id &&
-            BigInt(a.grievance_departments.department_id) ===
-              BigInt(departmentId),
-        )
+      ? isDeptPendingAssignment
+        ? null
+        : grievanceAssignments.find(
+            (a) =>
+              a.grievance_departments?.department_id &&
+              BigInt(a.grievance_departments.department_id) ===
+                BigInt(departmentId) &&
+              a.assignment_status === "ASSIGNED",
+          ) || null
       : null;
 
     const activeAssignment = departmentId
       ? myDeptAssignment
-      : g.assignments[0] || grievanceAssignments[0] || null;
+      : isDeptPendingAssignment
+        ? null
+        : grievanceAssignments.find(
+            (a) => a.assignment_status === "ASSIGNED",
+          ) ||
+          (g.assignments && g.assignments[0]?.assignment_status === "ASSIGNED"
+            ? g.assignments[0]
+            : null);
     const assignedStaff =
       activeAssignment?.users_assignments_staff_idTousers || null;
 
@@ -362,12 +379,17 @@ export async function fetchDepartmentHeadGrievances(
 
     let resolvedAssignedStaffName: string | null = null;
     if (departmentId) {
-      if (myDeptAssignment) {
+      if (
+        myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+        isDeptPendingAssignment
+      ) {
+        resolvedAssignedStaffName = "Unassigned";
+      } else if (myDeptRecord?.status === "BLOCKED") {
+        resolvedAssignedStaffName = "Blocked";
+      } else if (myDeptAssignment) {
         const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
         resolvedAssignedStaffName =
           `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
-      } else if (myDeptRecord?.status === "BLOCKED") {
-        resolvedAssignedStaffName = "Blocked";
       } else if (
         ["CLOSED", "RESOLVED"].includes(g.status) &&
         (latestResolution?.users ||
@@ -391,15 +413,20 @@ export async function fetchDepartmentHeadGrievances(
         resolvedAssignedStaffName = "Unassigned";
       }
     } else {
-      if (grievanceAssignments.length > 0) {
+      if (isDeptPendingAssignment) {
+        resolvedAssignedStaffName = "Unassigned";
+      } else if (assignedStaff) {
+        resolvedAssignedStaffName =
+          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+      } else if (
+        ["CLOSED", "RESOLVED"].includes(g.status) &&
+        grievanceAssignments.length > 0
+      ) {
         resolvedAssignedStaffName = grievanceAssignments
           .map((a) =>
             `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
           )
           .join(", ");
-      } else if (assignedStaff) {
-        resolvedAssignedStaffName =
-          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
       } else {
         resolvedAssignedStaffName = "Unassigned";
       }
@@ -828,24 +855,17 @@ export async function fetchDepartmentHeadGrievances(
 
     const departmentsInvolved = relatedDepts.map((d) => {
       const deptAssignment = grievanceAssignments.find(
-        (a) => a.grievance_department_id === d.grievance_department_id,
+        (a) =>
+          a.grievance_department_id === d.grievance_department_id &&
+          a.assignment_status === "ASSIGNED",
       );
-      let deptStatus = d.status;
-      if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
-        if (deptStatus === "PENDING_ASSIGNMENT") {
-          deptStatus = "ASSIGNED";
-        }
-      } else if (!deptAssignment && deptStatus === "ASSIGNED") {
-        deptStatus = "PENDING_ASSIGNMENT";
-      }
+      const deptStatus = d.status;
 
       const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaffUser =
-        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" || !deptAssignment
           ? null
-          : staffUser &&
-              (deptAssignment?.assignment_status === "ASSIGNED" ||
-                deptAssignment?.assignment_status === "COMPLETED")
+          : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
@@ -993,12 +1013,14 @@ export async function fetchDepartmentHeadGrievances(
       slaTimeLeft: resolvedSlaTimeLeft,
       slaConsumptionPercent: resolvedSlaConsumptionPercent,
       assignedStaffId: departmentId
-        ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
-          (["CLOSED", "RESOLVED"].includes(g.status)
-            ? latestResolution?.users?.user_id?.toString() ||
-              grievanceAssignments[0]?.users_assignments_staff_idTousers?.user_id?.toString() ||
-              null
-            : null)
+        ? isDeptPendingAssignment || !myDeptAssignment
+          ? null
+          : myDeptAssignment.users_assignments_staff_idTousers?.user_id?.toString() ||
+            (["CLOSED", "RESOLVED"].includes(g.status)
+              ? latestResolution?.users?.user_id?.toString() ||
+                grievanceAssignments[0]?.users_assignments_staff_idTousers?.user_id?.toString() ||
+                null
+              : null)
         : assignedStaff
           ? assignedStaff.user_id.toString()
           : null,
