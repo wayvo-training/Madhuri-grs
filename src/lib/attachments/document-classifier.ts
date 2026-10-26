@@ -130,6 +130,26 @@ const DOMAIN_KEYWORDS: Record<string, string[]> = {
     "firewall",
     "it",
     "technical",
+    "cyber",
+    "security",
+    "database",
+    "sql",
+    "injection",
+    "hack",
+    "malware",
+    "breach",
+    "phishing",
+    "unauthorized",
+    "log",
+    "leak",
+    "vulnerability",
+    "incident",
+    "stack",
+    "techstack",
+    "table",
+    "query",
+    "code",
+    "script",
   ],
   FACILITIES: [
     "desk",
@@ -225,6 +245,10 @@ function resolveDepartmentDomain(deptName: string): string | null {
     return "HR";
   }
   if (
+    normalized.includes("cyber") ||
+    normalized.includes("crime") ||
+    normalized.includes("security") ||
+    normalized.includes("infosec") ||
     normalized.includes("it") ||
     normalized.includes("tech") ||
     normalized.includes("information tech") ||

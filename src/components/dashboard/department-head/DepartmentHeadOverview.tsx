@@ -1,9 +1,11 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
+import { NotificationsPageView } from "@/components/notifications/NotificationsPageView";
 import { ResolutionForm } from "@/components/staff/resolution-form";
 import {
   useDepartmentHeadNavigation,
@@ -27,7 +29,6 @@ import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 import {
   CaseFileInspectionModal,
   DepartmentHeadEscalationModal,
-  DepartmentHeadLeaveReassignmentModal,
   DepartmentHeadResolutionModal,
   DocumentViewerModal,
   SmartStaffAssignmentModal,
@@ -81,7 +82,7 @@ export function DepartmentHeadOverviewInner({
   const [currentEmployeeCode, setCurrentEmployeeCode] = useState(employeeCode);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Synchronize state when server component passes fresh initialData (e.g. after router.refresh() or router.push())
+  // Synchronize state when server component passes fresh initialData
   useEffect(() => {
     if (initialData) {
       if (initialData.grievances) setGrievances(initialData.grievances);
@@ -120,6 +121,34 @@ export function DepartmentHeadOverviewInner({
 
   // Navigation
   const { activeView, switchView } = useDepartmentHeadNavigation(initialView);
+  const queryClient = useQueryClient();
+
+  // Background prefetch notifications & knowledge so tab clicks are 0ms
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["notifications", "me"],
+      queryFn: async () => {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+        return data.success && Array.isArray(data.notifications)
+          ? data.notifications
+          : [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
+    queryClient.prefetchQuery({
+      queryKey: ["department-head-knowledge"],
+      queryFn: async () => {
+        const res = await fetch("/api/department-head/knowledge");
+        const data = await res.json();
+        return data.success && Array.isArray(data.articles)
+          ? data.articles
+          : [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient]);
 
   // Queue Filters & Metrics
   const {
@@ -169,42 +198,11 @@ export function DepartmentHeadOverviewInner({
     loadData,
   });
 
-  // Leave Reassignment Modal State
-  const [leaveReassignmentModalStaff, setLeaveReassignmentModalStaff] =
-    useState<StaffMember | null>(null);
-  const [leaveReassignTargetStaffId, setLeaveReassignTargetStaffId] =
-    useState("");
-  const [leaveReassignNote, setLeaveReassignNote] = useState("");
-
-  const openLeaveReassignmentModal = useCallback(
-    (staff: StaffMember) => {
-      const defaultTarget = staffList.find(
-        (s: StaffMember) => s.id !== staff.id && s.status === "ACTIVE",
-      );
-      setLeaveReassignTargetStaffId(defaultTarget ? defaultTarget.id : "");
-      setLeaveReassignNote(
-        `Temporary leave reassignment authorized by Department Head ${currentHodName}.`,
-      );
-      setLeaveReassignmentModalStaff(staff);
-    },
-    [currentHodName, staffList],
-  );
-
   // Staff Availability Actions
-  const {
-    handleToggleStaffAvailability,
-    handleBulkReassignAndMarkLeave: executeBulkReassign,
-    handleKeepTicketsAndMarkLeave: executeKeepTickets,
-  } = useStaffActions({
-    currentHodName,
-    staffList,
-    grievances,
+  const { handleToggleStaffAvailability } = useStaffActions({
     setStaffList,
-    setGrievances,
-    setGovernanceAuditFeed,
     showSuccess,
     loadData,
-    openLeaveReassignmentModal,
   });
 
   // Modals state
@@ -333,8 +331,13 @@ export function DepartmentHeadOverviewInner({
       return;
     }
 
+    const currentModalGrievance = escalationModalGrievance;
+    const isAssumingAuthority =
+      escalationInterventionType === "ASSUME_RESOLUTION_AUTHORITY" ||
+      escalationInterventionType === "DIRECT_OVERSIGHT";
+
     await executeEscalationSubmit({
-      grievance: escalationModalGrievance,
+      grievance: currentModalGrievance,
       bottleneck: escalationBottleneck,
       bottleneckExplanation: escalationBottleneckExplanation,
       interventionType: escalationInterventionType,
@@ -344,6 +347,24 @@ export function DepartmentHeadOverviewInner({
       extensionHours: escalationExtensionHours,
     });
     setEscalationModalGrievance(null);
+
+    if (isAssumingAuthority) {
+      handleOpenResolutionModal({
+        ...currentModalGrievance,
+        hodIntervention: {
+          actionType: escalationInterventionType,
+          actionLabel:
+            escalationInterventionType === "ASSUME_RESOLUTION_AUTHORITY"
+              ? "Resolution Authority Assumed"
+              : "Direct Oversight",
+          note: escalationNote,
+          intervenedAt: "Just now",
+          intervenedBy: currentHodName || "Department Head",
+          isResolutionAuthority: true,
+          resolutionAuthorityName: currentHodName || "Department Head",
+        },
+      });
+    }
   };
 
   const handleResolutionFormSubmit = async (e: React.FormEvent) => {
@@ -364,23 +385,6 @@ export function DepartmentHeadOverviewInner({
       actionTaken: actionTaken || undefined,
     });
     setResolutionModalGrievance(null);
-  };
-
-  const handleBulkReassignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!leaveReassignmentModalStaff || !leaveReassignTargetStaffId) return;
-    await executeBulkReassign({
-      leavingStaff: leaveReassignmentModalStaff,
-      targetStaffId: leaveReassignTargetStaffId,
-      note: leaveReassignNote,
-    });
-    setLeaveReassignmentModalStaff(null);
-  };
-
-  const handleKeepTicketsSubmit = async () => {
-    if (!leaveReassignmentModalStaff) return;
-    await executeKeepTickets(leaveReassignmentModalStaff);
-    setLeaveReassignmentModalStaff(null);
   };
 
   return (
@@ -421,6 +425,7 @@ export function DepartmentHeadOverviewInner({
           onViewStaff={() => switchView("staff")}
           onViewActivity={() => switchView("activity")}
           onInspectGrievance={handleInspectCase}
+          onAssignGrievance={handleOpenAssignModal}
           onFilterQueue={(filterType, value) => {
             resetFilters();
             if (filterType === "status") {
@@ -528,6 +533,9 @@ export function DepartmentHeadOverviewInner({
       )}
 
       {activeView === "knowledge" && <KnowledgeView />}
+      {activeView === "notifications" && (
+        <NotificationsPageView userRole="DEPARTMENT_HEAD" />
+      )}
 
       {/* Modals & Dialogs */}
       {assignModalGrievance && (
@@ -537,7 +545,29 @@ export function DepartmentHeadOverviewInner({
           staffList={staffList}
           onClose={() => setAssignModalGrievance(null)}
           onAssignmentSuccess={(staffId, staffName) => {
+            const assignedStaffMember = staffList.find((s) => s.id === staffId);
+            const isAssignedToHead = Boolean(
+              assignedStaffMember?.designation === "Department Head" ||
+                (currentHodName &&
+                  (staffName
+                    .toLowerCase()
+                    .includes(currentHodName.toLowerCase()) ||
+                    currentHodName
+                      .toLowerCase()
+                      .includes(staffName.toLowerCase()))),
+            );
             handleAssignmentSuccess(assignModalGrievance, staffId, staffName);
+            setSelectedCaseFile((prev) =>
+              prev && prev.id === assignModalGrievance.id
+                ? {
+                    ...prev,
+                    assignedStaffId: staffId,
+                    assignedStaffName: staffName,
+                    isAssignedToHead,
+                    status: "ASSIGNED",
+                  }
+                : prev,
+            );
             setAssignModalGrievance(null);
           }}
         />
@@ -590,8 +620,14 @@ export function DepartmentHeadOverviewInner({
                 reopenCount: resolutionModalGrievance.reopenCount,
                 isPrimaryOwner: resolutionModalGrievance.isPrimaryDepartment,
                 myInvolvementType: resolutionModalGrievance.myInvolvementType,
+                canSubmitFinalResolution:
+                  resolutionModalGrievance.canSubmitFinalResolution ?? false,
               } as StaffGrievanceItem
             }
+            onResolutionSuccess={() => {
+              setResolutionModalGrievance(null);
+              loadData(undefined, true);
+            }}
             onSubmit={async (_id, data) => {
               await executeResolutionSubmit({
                 grievance: resolutionModalGrievance,
@@ -616,22 +652,6 @@ export function DepartmentHeadOverviewInner({
             onFeedbackChange={setResolutionFeedback}
           />
         ))}
-
-      {leaveReassignmentModalStaff && (
-        <DepartmentHeadLeaveReassignmentModal
-          staff={leaveReassignmentModalStaff}
-          grievances={grievances}
-          targetStaffId={leaveReassignTargetStaffId}
-          note={leaveReassignNote}
-          onClose={() => setLeaveReassignmentModalStaff(null)}
-          onSubmit={handleBulkReassignSubmit}
-          onTargetStaffIdChange={setLeaveReassignTargetStaffId}
-          onNoteChange={setLeaveReassignNote}
-          onInspect={handleInspectCase}
-          onMarkLeave={handleKeepTicketsSubmit}
-          staffList={staffList}
-        />
-      )}
 
       {selectedCaseFile && (
         <CaseFileInspectionModal
@@ -699,6 +719,7 @@ export function DepartmentHeadOverviewInner({
 export function DepartmentHeadOverview(props: DepartmentHeadOverviewProps) {
   return (
     <DepartmentHeadProvider
+      initialData={props.initialData}
       initialDepartmentName={props.departmentName}
       initialHodName={props.hodName}
       initialHodEmail={props.hodEmail}

@@ -16,14 +16,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Record navigation event in background
-    await logger.logNavigation({
-      fromPath,
-      toPath,
-      user,
-      ip,
-      userAgent,
-    });
+    // Record navigation event in background without blocking response
+    logger
+      .logNavigation({
+        fromPath,
+        toPath,
+        user,
+        ip,
+        userAgent,
+      })
+      .catch((err) => {
+        console.error("Non-fatal error logging navigation:", err);
+      });
 
     return NextResponse.json({ success: true });
   } catch {

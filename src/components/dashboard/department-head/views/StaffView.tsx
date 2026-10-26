@@ -28,7 +28,7 @@ export interface StaffViewProps {
   currentDepartmentName: string;
   metrics: DepartmentMetricsSummary;
   isLoading?: boolean;
-  onToggleAvailability: (staff: StaffMember) => void;
+  onToggleAvailability?: (staff: StaffMember) => void;
   onInspect: (item: GrievanceItem, tab?: CaseDrawerTab) => void;
   onReassign: (item: GrievanceItem, staffId: string) => void;
   onFilterStaffInQueue: (staffId: string) => void;

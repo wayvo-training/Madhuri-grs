@@ -8,7 +8,7 @@ export default async function DepartmentHeadMessagesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requirePageRole(["DEPARTMENT_HEAD", "ADMIN"]);
+  const user = await requirePageRole("DEPARTMENT_HEAD");
 
   let conversations: Awaited<ReturnType<typeof getUserGrievanceConversations>> =
     [];

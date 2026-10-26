@@ -109,6 +109,9 @@ export interface StaffInvolvedDepartment {
   status: string;
   assignedStaff?: string | null;
   isMyAssignment?: boolean;
+  slaPercentAllocation?: number | null;
+  allocatedDurationMinutes?: number | null;
+  executionOrder?: number;
 }
 
 export interface StaffGrievanceItem {
@@ -128,6 +131,8 @@ export interface StaffGrievanceItem {
   slaConsumptionPercent: number;
   slaTimeLeft: string;
   dueAt: string | null;
+  slaPercentAllocation?: number | null;
+  allocatedDurationMinutes?: number | null;
   submittedAt: string;
   assignedAt: string;
   submitterName: string;
@@ -148,6 +153,9 @@ export interface StaffGrievanceItem {
   isPrimaryOwner?: boolean;
   myDepartmentStatus?: string;
   isMyDepartmentCompleted?: boolean;
+  canSubmitFinalResolution?: boolean;
+  canSubmitFindings?: boolean;
+  isFinalSequentialDepartment?: boolean;
   overallStatus?: string;
   activeDepartmentName?: string;
 }

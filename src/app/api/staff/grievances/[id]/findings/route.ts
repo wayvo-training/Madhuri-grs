@@ -137,8 +137,11 @@ export async function POST(
     // Find the current staff member's department record
     const myDeptRecord = allInvolvedDepts.find(
       (d) =>
-        d.assignments?.staff_id === staffId ||
-        (!isAdmin && departmentId ? d.department_id === departmentId : false),
+        (d.assignments?.staff_id &&
+          d.assignments.staff_id.toString() === staffId.toString()) ||
+        (!isAdmin && departmentId
+          ? d.department_id.toString() === departmentId.toString()
+          : false),
     );
 
     if (!myDeptRecord && !isAdmin) {
@@ -174,158 +177,214 @@ export async function POST(
 
     const _formattedNote = `[Department Findings - ${deptName}]\n\nFindings: ${findings.trim()}\n\nAction Taken: ${actionTaken.trim() || "Inquiry completed."}\n\nNotes: ${notes.trim() || "Ready for Lead Department compilation."}`;
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Mark this department's status and staff assignment as COMPLETED
-      if (myDeptRecord) {
-        await tx.grievance_departments.update({
-          where: {
-            grievance_department_id: myDeptRecord.grievance_department_id,
-          },
-          data: {
-            status: "COMPLETED",
-            completed_at: new Date(),
-          },
-        });
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. Mark this department's status and staff assignment as COMPLETED
+        if (myDeptRecord) {
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: myDeptRecord.grievance_department_id,
+            },
+            data: {
+              status: "COMPLETED",
+              completed_at: new Date(),
+            },
+          });
 
-        await tx.assignments.updateMany({
-          where: {
-            grievance_department_id: myDeptRecord.grievance_department_id,
-            assignment_status: "ASSIGNED",
-          },
-          data: {
-            assignment_status: "COMPLETED",
-            completed_at: new Date(),
-          },
-        });
+          await tx.assignments.updateMany({
+            where: {
+              grievance_department_id: myDeptRecord.grievance_department_id,
+              assignment_status: "ASSIGNED",
+            },
+            data: {
+              assignment_status: "COMPLETED",
+              completed_at: new Date(),
+            },
+          });
 
-        // Unblock any downstream sequential departments whose prerequisites are now satisfied
-        await activateNextSequentialDepartments(grievanceId, tx);
-      }
+          // Unblock any downstream sequential departments whose prerequisites are now satisfied
+          await activateNextSequentialDepartments(grievanceId, tx);
+        }
 
-      // 2. Save any uploaded supportive findings attachments
-      const savedAttachments = [];
-      if (Array.isArray(attachments) && attachments.length > 0) {
-        for (const rawAtt of attachments) {
-          const att = rawAtt as {
-            fileName?: string;
-            name?: string;
-            filePath?: string;
-            path?: string;
-            fileType?: string;
-            type?: string;
-            fileSize?: number;
-            size?: string | number;
-          };
-          const resolvedFileName = att.fileName || att.name;
-          if (resolvedFileName) {
-            const raw =
-              att.filePath || att.path || `findings/${resolvedFileName}`;
-            const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
-            const relativeStoragePath = norm.valid ? norm.storagePath : raw;
-            let calculatedSize = BigInt(1024);
-            if (typeof att.fileSize === "number") {
-              calculatedSize = BigInt(Math.round(att.fileSize));
-            } else if (typeof att.size === "string") {
-              const parsed = Number.parseFloat(att.size);
-              if (!Number.isNaN(parsed)) {
-                calculatedSize = BigInt(Math.round(parsed * 1024));
+        // 2. Save any uploaded supportive findings attachments
+        const savedAttachments = [];
+        if (Array.isArray(attachments) && attachments.length > 0) {
+          for (const rawAtt of attachments) {
+            const att = rawAtt as {
+              fileName?: string;
+              name?: string;
+              filePath?: string;
+              path?: string;
+              fileType?: string;
+              type?: string;
+              fileSize?: number;
+              size?: string | number;
+            };
+            const resolvedFileName = att.fileName || att.name;
+            if (resolvedFileName) {
+              const raw =
+                att.filePath || att.path || `findings/${resolvedFileName}`;
+              const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
+              const relativeStoragePath = norm.valid ? norm.storagePath : raw;
+              let calculatedSize = BigInt(1024);
+              if (typeof att.fileSize === "number") {
+                calculatedSize = BigInt(Math.round(att.fileSize));
+              } else if (typeof att.size === "string") {
+                const parsed = Number.parseFloat(att.size);
+                if (!Number.isNaN(parsed)) {
+                  calculatedSize = BigInt(Math.round(parsed * 1024));
+                }
               }
-            }
 
-            const newAtt = await tx.attachments.create({
-              data: {
-                grievance_id: grievanceId,
-                grievance_department_id: myDeptRecord?.grievance_department_id,
-                file_name: resolvedFileName,
-                file_path: relativeStoragePath,
-                file_type:
-                  att.fileType || att.type || "application/octet-stream",
-                file_size: calculatedSize,
-                uploaded_by: staffId,
-              },
-            });
-            savedAttachments.push({
-              id: newAtt.attachment_id.toString(),
-              name: newAtt.file_name,
-              size: `${Math.round(Number(newAtt.file_size || 1024) / 1024)} KB`,
-              type: newAtt.file_type,
-              path: newAtt.file_path,
-              downloadUrl: `/api/attachments/${newAtt.attachment_id}/download`,
-            });
+              const newAtt = await tx.attachments.create({
+                data: {
+                  grievance_id: grievanceId,
+                  grievance_department_id:
+                    myDeptRecord?.grievance_department_id,
+                  file_name: resolvedFileName,
+                  file_path: relativeStoragePath,
+                  file_type:
+                    att.fileType || att.type || "application/octet-stream",
+                  file_size: calculatedSize,
+                  uploaded_by: staffId,
+                },
+              });
+              savedAttachments.push({
+                id: newAtt.attachment_id.toString(),
+                name: newAtt.file_name,
+                size: `${Math.round(Number(newAtt.file_size || 1024) / 1024)} KB`,
+                type: newAtt.file_type,
+                path: newAtt.file_path,
+                downloadUrl: `/api/attachments/${newAtt.attachment_id}/download`,
+              });
+            }
           }
         }
+
+        // 3. Create Audit Log for Department Findings
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: staffId,
+            action: "SUPPORTING_FINDINGS_SUBMITTED",
+            entity_type: "grievance",
+            entity_id: grievanceId,
+            new_value: {
+              department: deptName,
+              submittedBy: authorName,
+              findings: findings.trim(),
+              actionTaken: actionTaken.trim(),
+              notes: notes.trim(),
+              attachments: savedAttachments,
+            },
+          },
+        });
+      },
+      { timeout: 30000, maxWait: 10000 },
+    );
+
+    // 3. Notify Collaborating Departments (HODs and Staff)
+    const priority = grievance.priority?.toUpperCase() || "NORMAL";
+    const priorityTag = `[${priority} Priority]`;
+
+    // Find all other departments involved in this grievance
+    const otherInvolvedDepts = allInvolvedDepts.filter(
+      (d) => d.department_id !== myDeptRecord?.department_id,
+    );
+
+    for (const otherDept of otherInvolvedDepts) {
+      // Notify other department's assigned staff if assigned
+      const assignedStaffId = otherDept.assignments?.staff_id;
+      if (assignedStaffId && assignedStaffId !== staffId) {
+        await NotificationService.send({
+          userId: assignedStaffId,
+          grievanceId,
+          type: "HEAD_INTERNAL_NOTE",
+          title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+          message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
+        });
       }
 
-      // 3. Create Audit Log for Department Findings
-      await tx.audit_logs.create({
-        data: {
-          grievance_id: grievanceId,
-          user_id: staffId,
-          action: "SUPPORTING_FINDINGS_SUBMITTED",
-          entity_type: "grievance",
-          entity_id: grievanceId,
-          new_value: {
-            department: deptName,
-            submittedBy: authorName,
-            findings: findings.trim(),
-            actionTaken: actionTaken.trim(),
-            notes: notes.trim(),
-            attachments: savedAttachments,
-          },
-        },
-      });
-    });
-
-    // 3. Notify Primary Department Lead and Primary HOD
-    const primaryRecord = allInvolvedDepts.find(
-      (d) => d.involvement_type === "PRIMARY",
-    );
-    const primaryStaffId = primaryRecord?.assignments?.staff_id;
-
-    if (primaryStaffId && primaryStaffId !== staffId) {
-      await NotificationService.send({
-        userId: primaryStaffId,
-        grievanceId,
-        type: "HEAD_INTERNAL_NOTE",
-        title: `Department Findings Submitted (${grievance.grievance_number})`,
-        message: `${authorName} (${deptName}) has submitted departmental findings for ${grievance.grievance_number}. Review in the Department Findings tab to compile the final resolution.`,
-      });
-    }
-
-    if (primaryRecord?.department_id) {
-      const primaryHod = await prisma.users.findFirst({
+      // Notify other department's HOD(s)
+      const otherHods = await prisma.users.findMany({
         where: {
-          department_id: primaryRecord.department_id,
+          department_id: otherDept.department_id,
           roles: { role_name: "DEPARTMENT_HEAD" },
           status: "ACTIVE",
         },
         select: { user_id: true },
       });
 
-      if (primaryHod && primaryHod.user_id !== staffId) {
-        await NotificationService.send({
-          userId: primaryHod.user_id,
-          grievanceId,
-          type: "HEAD_INTERNAL_NOTE",
-          title: `Supportive Findings Completed (${grievance.grievance_number})`,
-          message: `${deptName} has completed their supportive investigation for ${grievance.grievance_number}.`,
-        });
+      const pendingDepts = allInvolvedDepts.filter(
+        (d) =>
+          d.department_id !== myDeptRecord?.department_id &&
+          d.status !== "COMPLETED" &&
+          d.status !== "RESOLVED" &&
+          d.status !== "REMOVED",
+      );
+      const isAllDeptsCompleted = pendingDepts.length === 0;
+
+      for (const hod of otherHods) {
+        if (hod.user_id !== staffId) {
+          const isLeadHod = otherDept.involvement_type === "PRIMARY";
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title:
+              isAllDeptsCompleted && isLeadHod
+                ? `[${priority}] All Department Inquiries Complete: (${grievance.grievance_number})`
+                : `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message:
+              isAllDeptsCompleted && isLeadHod
+                ? `${priorityTag} All collaborating departments have completed their inquiries for case ${grievance.grievance_number}. Please review findings and submit the final citizen resolution.`
+                : `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
+          });
+        }
       }
     }
 
-    // Notify submitting staff member of successful submission
+    // Also notify submitter's own HOD (if not the submitter)
+    if (myDeptRecord?.department_id) {
+      const ownHods = await prisma.users.findMany({
+        where: {
+          department_id: myDeptRecord.department_id,
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+
+      for (const hod of ownHods) {
+        if (hod.user_id !== staffId) {
+          await NotificationService.send({
+            userId: hod.user_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title: `[${priority}] Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message: `${priorityTag} Staff member ${authorName} has submitted departmental inquiry findings and attached documents for case ${grievance.grievance_number}.`,
+          });
+        }
+      }
+    }
+
+    // Notify submitting staff member of successful submission (self notification)
+    const isSubmittingPrimary = myDeptRecord?.involvement_type === "PRIMARY";
     await NotificationService.send({
       userId: staffId,
       grievanceId,
       type: "SYSTEM",
-      title: `Findings Submitted: ${grievance.grievance_number}`,
-      message: `You submitted departmental findings for grievance ${grievance.grievance_number}. They have been shared with the Primary Lead Department.`,
+      title: `[${priority}] Findings Submitted: ${grievance.grievance_number}`,
+      message: isSubmittingPrimary
+        ? `${priorityTag} You submitted departmental findings for grievance ${grievance.grievance_number}. Downstream sequential department stages have been activated.`
+        : `${priorityTag} You submitted departmental findings for grievance ${grievance.grievance_number}. They have been shared across collaborating departments.`,
     });
 
     return NextResponse.json({
       success: true,
-      message:
-        "Department findings submitted successfully and shared with the Lead Department.",
+      message: isSubmittingPrimary
+        ? "Department findings submitted successfully. Next department stage activated."
+        : "Department findings submitted successfully and shared with the Lead Department.",
     });
   } catch (error: unknown) {
     console.error("Error in POST /api/staff/grievances/[id]/findings:", error);

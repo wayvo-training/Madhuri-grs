@@ -6,7 +6,12 @@ export function validateRuleName(ruleName: unknown): string | null {
   if (typeof ruleName !== "string" || !ruleName.trim()) {
     return null;
   }
-  return ruleName.trim();
+  const trimmed = ruleName.trim();
+  // Name cannot consist solely of numbers; must contain at least one letter.
+  if (!/[a-zA-Z]/.test(trimmed)) {
+    return null;
+  }
+  return trimmed;
 }
 
 export function validateStatus(status: unknown): RuleStatus | null {

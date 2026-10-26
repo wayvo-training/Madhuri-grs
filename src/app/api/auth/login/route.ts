@@ -131,6 +131,14 @@ export async function POST(request: Request) {
       path: "/",
     });
 
+    response.cookies.set("user_role", user.roles.role_name, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      expires: expiresAt,
+      path: "/",
+    });
+
     return response;
   } catch (error) {
     console.error("Login error:", error);

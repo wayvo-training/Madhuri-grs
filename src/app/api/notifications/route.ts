@@ -2,6 +2,24 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+interface CachedNotificationsResponse {
+  timestamp: number;
+  data: unknown;
+}
+const notificationsCache = new Map<string, CachedNotificationsResponse>();
+
+export function invalidateUserNotificationsCache(userId?: bigint | string) {
+  if (userId) {
+    for (const key of notificationsCache.keys()) {
+      if (key.startsWith(userId.toString())) {
+        notificationsCache.delete(key);
+      }
+    }
+  } else {
+    notificationsCache.clear();
+  }
+}
+
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -222,10 +240,12 @@ export async function GET() {
         };
       });
 
-    return NextResponse.json({
+    const responsePayload = {
       success: true,
       notifications: serializedNotifications,
-    });
+    };
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("Failed to fetch notifications:", error);
     return NextResponse.json(

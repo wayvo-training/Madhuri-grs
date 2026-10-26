@@ -14,6 +14,7 @@ import {
   Lock,
   Mail,
   MessageSquare,
+  Paperclip,
   Play,
   Send,
   Shield,
@@ -48,6 +49,8 @@ interface StatementTabProps {
     },
   ) => Promise<void>;
   onOpenDocumentPreview?: (doc: {
+    id?: string;
+    downloadUrl?: string;
     name: string;
     size: string;
     type: string;
@@ -758,10 +761,12 @@ export function StatementTab({
                   type="button"
                   onClick={() =>
                     onOpenDocumentPreview?.({
+                      id: file.id,
                       name: file.name,
                       size: file.size,
                       type: file.type || "Document",
                       path: file.path,
+                      downloadUrl: file.downloadUrl,
                       uploadedAt: file.uploadedAt,
                       grievanceNumber: grievance.grievanceNumber,
                       category: `${grievance.category} / ${grievance.subcategory}`,
@@ -801,10 +806,12 @@ export function StatementTab({
                   type="button"
                   onClick={() =>
                     onOpenDocumentPreview?.({
+                      id: file.id,
                       name: file.name,
                       size: file.size,
                       type: file.type || "Document",
                       path: file.path,
+                      downloadUrl: file.downloadUrl,
                       uploadedAt: file.uploadedAt,
                       grievanceNumber: grievance.grievanceNumber,
                       category: `${grievance.category} / ${grievance.subcategory}`,
@@ -827,6 +834,95 @@ export function StatementTab({
           </p>
         )}
       </div>
+
+      {/* Staff Resolution Supportive Documents */}
+      {grievance.submittedResolution?.attachments &&
+        grievance.submittedResolution.attachments.length > 0 && (
+          <div className="space-y-2 pt-2 border-t border-slate-200">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+              <Paperclip className="h-3.5 w-3.5 text-emerald-700" />
+              Staff Resolution Supportive Documents (
+              {grievance.submittedResolution.attachments.length})
+            </h4>
+            <div className="space-y-2">
+              {grievance.submittedResolution.attachments.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/20 p-3 text-xs transition hover:border-emerald-300 hover:shadow-2xs"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenDocumentPreview?.({
+                        id: file.id,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type || "Supportive Document",
+                        path: file.path,
+                        downloadUrl: file.downloadUrl,
+                        uploadedAt: file.uploadedAt,
+                        grievanceNumber: grievance.grievanceNumber,
+                        category: `${grievance.category} / ${grievance.subcategory}`,
+                        title: grievance.title,
+                        submitterName: "Staff Member",
+                        submitterRole: "Assigned Staff",
+                      })
+                    }
+                    className="flex items-center gap-3 cursor-pointer flex-1 min-w-0 text-left bg-transparent border-0 p-0"
+                  >
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F0FDFA] text-[#0F766E] border border-teal-200/60 shrink-0">
+                      {file.name.endsWith(".pdf") ? (
+                        <FileText className="h-4.5 w-4.5 text-rose-600" />
+                      ) : file.name.endsWith(".jpg") ||
+                        file.name.endsWith(".jpeg") ||
+                        file.name.endsWith(".png") ? (
+                        <ImageIcon className="h-4.5 w-4.5 text-blue-600" />
+                      ) : file.name.endsWith(".xlsx") ||
+                        file.name.endsWith(".xls") ||
+                        file.name.endsWith(".csv") ? (
+                        <FileSpreadsheet className="h-4.5 w-4.5 text-emerald-700" />
+                      ) : (
+                        <FileText className="h-4.5 w-4.5 text-emerald-700" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-800 truncate hover:text-emerald-800 transition">
+                        {file.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {file.size} &bull; {file.type || "Supportive Document"}
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenDocumentPreview?.({
+                        id: file.id,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type || "Supportive Document",
+                        path: file.path,
+                        downloadUrl: file.downloadUrl,
+                        uploadedAt: file.uploadedAt,
+                        grievanceNumber: grievance.grievanceNumber,
+                        category: `${grievance.category} / ${grievance.subcategory}`,
+                        title: grievance.title,
+                        submitterName: "Staff Member",
+                        submitterRole: "Assigned Staff",
+                      })
+                    }
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-600/30 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition shadow-2xs cursor-pointer ml-3 shrink-0"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>View Proof</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
       <KnowledgeArticleViewerModal
         isOpen={isKbModalOpen}

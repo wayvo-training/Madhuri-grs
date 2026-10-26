@@ -32,6 +32,33 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!/[a-zA-Z]/.test(trimmedName)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const durationNum = Number(target_duration_minutes);
+    if (
+      Number.isNaN(durationNum) ||
+      durationNum < 60 ||
+      durationNum > 720 * 60
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Target duration must be between 1 hour and 720 hours (30 days).",
+        },
+        { status: 400 },
+      );
+    }
+
     const requestedStatus = body.status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
     const slaTypeVal = sla_type || "RESOLUTION";
 
@@ -73,7 +100,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const durationNum = Number(target_duration_minutes);
     const warnPercent = Number(warning_threshold_percent) || 50;
     const atRiskPercent = Number(at_risk_threshold_percent) || 75;
     const critPercent = Number(critical_threshold_percent) || 90;
@@ -221,6 +247,17 @@ export async function PATCH(request: Request) {
         );
       }
 
+      if (!/[a-zA-Z]/.test(trimmedName)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+          },
+          { status: 400 },
+        );
+      }
+
       const requestedStatus =
         status === "INACTIVE"
           ? "INACTIVE"
@@ -278,6 +315,20 @@ export async function PATCH(request: Request) {
       }
 
       const durationNum = Number(target_duration_minutes);
+      if (
+        Number.isNaN(durationNum) ||
+        durationNum < 60 ||
+        durationNum > 720 * 60
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Target duration must be between 1 hour and 720 hours (30 days).",
+          },
+          { status: 400 },
+        );
+      }
       const warnPercent = Number(warning_threshold_percent) || 50;
       const atRiskPercent = Number(at_risk_threshold_percent) || 75;
       const critPercent = Number(critical_threshold_percent) || 90;
@@ -446,24 +497,47 @@ export async function DELETE(request: Request) {
         throw new Error("SLA policy not found");
       }
 
-      await tx.sla_policies.delete({
-        where: { sla_policy_id: policyId },
-      });
+      const [trackingCount, escalationCount] = await Promise.all([
+        tx.sla_tracking.count({ where: { sla_policy_id: policyId } }),
+        tx.escalations.count({ where: { sla_policy_id: policyId } }),
+      ]);
+
+      const isLinkedToHistory = trackingCount > 0 || escalationCount > 0;
+
+      if (isLinkedToHistory) {
+        // Soft-deactivate to preserve historical grievance audit trail & FK integrity
+        await tx.sla_policies.update({
+          where: { sla_policy_id: policyId },
+          data: { status: "INACTIVE" },
+        });
+      } else {
+        await tx.sla_policies.delete({
+          where: { sla_policy_id: policyId },
+        });
+      }
 
       await tx.audit_logs.create({
         data: {
           user_id: user.user_id,
-          action: "DELETE_SLA_POLICY",
+          action: isLinkedToHistory
+            ? "DEACTIVATE_SLA_POLICY"
+            : "DELETE_SLA_POLICY",
           entity_type: "SLA_POLICY",
           entity_id: policyId,
-          old_value: { policy_name: existing.policy_name },
+          old_value: {
+            policy_name: existing.policy_name,
+            status: existing.status,
+          },
+          new_value: isLinkedToHistory
+            ? { status: "INACTIVE" }
+            : { status: "DELETED" },
         },
       });
     });
 
     return NextResponse.json({
       success: true,
-      message: "SLA policy deleted successfully.",
+      message: "SLA policy removed successfully.",
     });
   } catch (error) {
     console.error("Failed to delete SLA policy:", error);

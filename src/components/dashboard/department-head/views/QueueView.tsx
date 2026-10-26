@@ -294,6 +294,15 @@ export function QueueView({
 
     return list.sort((a, b) => {
       const field = sortState.field as keyof GrievanceItem;
+
+      if (field === "createdAt") {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+          return sortState.direction === "asc" ? timeA - timeB : timeB - timeA;
+        }
+      }
+
       const rawA = a[field] ?? "";
       const rawB = b[field] ?? "";
 
@@ -415,6 +424,26 @@ export function QueueView({
     setCurrentPage(1);
   };
 
+  const colGroup = (
+    <colgroup>
+      {[
+        { id: "col-id", width: "w-[130px]" },
+        { id: "col-title", width: "w-[320px]" },
+        { id: "col-cat", width: "w-[160px]" },
+        { id: "col-subcat", width: "w-[160px]" },
+        { id: "col-priority", width: "w-[110px]" },
+        { id: "col-status", width: "w-[195px]" },
+        { id: "col-sla", width: "w-[170px]" },
+        { id: "col-hod", width: "w-[240px]" },
+        { id: "col-staff", width: "w-[185px]" },
+        { id: "col-submitted", width: "w-[165px]" },
+        { id: "col-actions", width: "w-[110px]" },
+      ].map((c) => (
+        <col key={c.id} className={c.width} />
+      ))}
+    </colgroup>
+  );
+
   return (
     <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden">
       {/* Queue Filter Controls Bar */}
@@ -466,22 +495,10 @@ export function QueueView({
 
       {/* Grievances Data Table */}
       <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
-        <div className="min-w-[1650px] flex-1 min-h-0 flex flex-col">
+        <div className="min-w-[1950px] flex-1 min-h-0 flex flex-col">
           {/* Static Header Table: no scrollbar next to header */}
           <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-            <colgroup>
-              <col className="w-[115px]" />
-              <col className="w-[245px]" />
-              <col className="w-[140px]" />
-              <col className="w-[135px]" />
-              <col className="w-[90px]" />
-              <col className="w-[135px]" />
-              <col className="w-[155px]" />
-              <col className="w-[215px]" />
-              <col className="w-[170px]" />
-              <col className="w-[155px]" />
-              <col className="w-[95px]" />
-            </colgroup>
+            {colGroup}
             <thead>
               <tr>
                 <SortableTableHead
@@ -567,19 +584,7 @@ export function QueueView({
           {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
             <table className="w-full text-left text-sm table-fixed border-collapse">
-              <colgroup>
-                <col className="w-[115px]" />
-                <col className="w-[245px]" />
-                <col className="w-[140px]" />
-                <col className="w-[135px]" />
-                <col className="w-[100px]" />
-                <col className="w-[125px]" />
-                <col className="w-[155px]" />
-                <col className="w-[215px]" />
-                <col className="w-[170px]" />
-                <col className="w-[155px]" />
-                <col className="w-[95px]" />
-              </colgroup>
+              {colGroup}
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, i) => (
@@ -669,10 +674,14 @@ export function QueueView({
                       item.slaStatus === "BREACHED";
                     const highlightSla = !isEscalated && isBreached;
                     const hasAssignedStaff = Boolean(
-                      item.assignedStaffId ||
-                        (item.assignedStaffName &&
-                          item.assignedStaffName !== "Unassigned" &&
-                          item.assignedStaffName !== "Blocked"),
+                      item.myDepartmentStatus !== "PENDING_ASSIGNMENT" &&
+                        item.status !== "PENDING_ASSIGNMENT" &&
+                        item.status !== "ROUTED" &&
+                        item.status !== "SUBMITTED" &&
+                        (item.assignedStaffId ||
+                          (item.assignedStaffName &&
+                            item.assignedStaffName !== "Unassigned" &&
+                            item.assignedStaffName !== "Blocked")),
                     );
 
                     return (
@@ -685,6 +694,7 @@ export function QueueView({
                           <button
                             type="button"
                             onClick={() => onInspect(item, "statement")}
+                            title={`Inspect ${item.ticketCode}`}
                             className="font-mono text-sm font-semibold text-teal-800 dark:text-teal-300 hover:text-teal-950 dark:hover:text-teal-100 hover:underline inline-block cursor-pointer text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-teal-500 rounded-xs"
                           >
                             {item.ticketCode}
@@ -692,12 +702,12 @@ export function QueueView({
                         </TableCell>
 
                         {/* 2. Title & Badges */}
-                        <TableCell className="py-3 px-3 align-top max-w-[240px] overflow-hidden">
+                        <TableCell className="py-3 px-3 align-top overflow-hidden">
                           <div className="space-y-1 min-w-0">
                             <TruncatedText
                               text={item.title}
-                              maxChars={24}
-                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 block max-w-[215px] truncate border-none"
+                              maxChars={36}
+                              className="font-semibold text-sm text-slate-900 dark:text-slate-100 block max-w-full truncate border-none cursor-pointer"
                             />
 
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -716,18 +726,18 @@ export function QueueView({
                         </TableCell>
 
                         {/* 2b. Category */}
-                        <TableCell className="py-3 px-3 align-top max-w-[140px] overflow-hidden">
+                        <TableCell className="py-3 px-3 align-top overflow-hidden">
                           <TruncatedText
                             text={item.category}
-                            maxChars={16}
-                            className="text-[13px] text-slate-600 dark:text-slate-300 font-medium border-none block max-w-[125px] truncate"
+                            maxChars={20}
+                            className="text-[13px] text-slate-600 dark:text-slate-300 font-medium border-none block max-w-full truncate cursor-pointer"
                           />
                         </TableCell>
-                        <TableCell className="py-3 px-3 align-top max-w-[130px] overflow-hidden">
+                        <TableCell className="py-3 px-3 align-top overflow-hidden">
                           <TruncatedText
                             text={item.subcategory}
-                            maxChars={16}
-                            className="text-[13px] text-slate-500 dark:text-slate-400 border-none block max-w-[115px] truncate"
+                            maxChars={20}
+                            className="text-[13px] text-slate-500 dark:text-slate-400 border-none block max-w-full truncate cursor-pointer"
                           />
                         </TableCell>
 
@@ -737,17 +747,22 @@ export function QueueView({
                         </TableCell>
 
                         {/* 4. Status */}
-                        <TableCell className="py-3 px-3 whitespace-nowrap align-top">
-                          <StatusBadge status={item.status} />
-                          {isItemBlocked && (
-                            <span className="block mt-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                              Waiting for Prerequisite
-                            </span>
-                          )}
+                        <TableCell className="py-3 px-3 align-top">
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusBadge status={item.status} />
+                            {isItemBlocked && (
+                              <span
+                                title="Department findings paused waiting for prerequisite department"
+                                className="inline-block text-[11px] font-semibold text-amber-700 dark:text-amber-400 leading-tight"
+                              >
+                                Waiting for Prerequisite
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
 
                         {/* 5. SLA Status */}
-                        <TableCell className="py-3 px-4 whitespace-nowrap align-top max-w-[155px] overflow-hidden">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top overflow-hidden">
                           <div className="flex flex-col items-start gap-1 min-w-0">
                             {isItemBlocked ? (
                               <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -780,8 +795,8 @@ export function QueueView({
                           </div>
                         </TableCell>
 
-                        {/* 6. Head Intervention (New Column) */}
-                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                        {/* 6. Head Intervention */}
+                        <TableCell className="py-3 px-4 align-top overflow-hidden">
                           {isItemBlocked ? (
                             <span className="text-xs text-slate-400 font-normal">
                               —
@@ -791,22 +806,34 @@ export function QueueView({
                               —
                             </span>
                           ) : hasHeadResolutionAuthority(item) ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
-                              <ShieldAlert className="h-3 w-3 text-amber-600 shrink-0" />
+                            <span
+                              title="Department Head intervention active - resolution authority available"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-1 rounded-md border border-amber-200 dark:border-amber-800 whitespace-nowrap"
+                            >
+                              <ShieldAlert className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                               <span>Intervention Active</span>
                             </span>
                           ) : item.hodIntervention ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-300 px-2 py-0.5 rounded-md border border-teal-200 dark:border-teal-800">
-                              <ShieldCheck className="h-3 w-3 text-teal-600 shrink-0" />
-                              <span>
+                            <span
+                              title={
+                                item.hodIntervention.actionLabel ||
+                                "Intervention Taken"
+                              }
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-300 px-2.5 py-1 rounded-md border border-teal-200 dark:border-teal-800 max-w-full"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                              <span className="truncate">
                                 {item.hodIntervention.actionLabel ||
                                   "Intervention Taken"}
                               </span>
                             </span>
                           ) : item.status === "ESCALATED" ||
                             item.slaStatus === "BREACHED" ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-800 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-2 py-0.5 rounded-md border border-rose-200 dark:border-rose-800">
-                              <AlertCircle className="h-3 w-3 text-rose-600 shrink-0" />
+                            <span
+                              title="SLA breached or grievance escalated - intervention required"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-800 bg-rose-50 dark:bg-rose-950/40 dark:text-rose-300 px-2.5 py-1 rounded-md border border-rose-200 dark:border-rose-800 whitespace-nowrap"
+                            >
+                              <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                               <span>Intervention Required</span>
                             </span>
                           ) : (
@@ -824,13 +851,18 @@ export function QueueView({
                             </span>
                           ) : hasAssignedStaff ? (
                             <span
-                              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 max-w-full truncate"
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800 dark:text-slate-200 max-w-full truncate"
                               title={item.assignedStaffName || undefined}
                             >
-                              <User className="h-3 w-3 text-slate-400 shrink-0" />
+                              <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                               <span className="truncate">
                                 {item.assignedStaffName}
                               </span>
+                              {item.isAssignedStaffInactive && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 shrink-0">
+                                  Inactive
+                                </span>
+                              )}
                             </span>
                           ) : isItemClosed ? (
                             <span className="inline-flex items-center text-sm font-normal text-slate-400">
@@ -844,9 +876,12 @@ export function QueueView({
                         </TableCell>
 
                         {/* 7. Submitter & Date */}
-                        <TableCell className="py-3 px-4 whitespace-nowrap align-top">
+                        <TableCell className="py-3 px-4 whitespace-nowrap align-top overflow-hidden">
                           <div className="text-sm">
-                            <p className="font-medium text-slate-800">
+                            <p
+                              className="font-medium text-slate-800 dark:text-slate-200 truncate"
+                              title={item.submitterName || undefined}
+                            >
                               {item.submitterName}
                             </p>
                             <p className="text-sm text-slate-400 font-normal mt-0.5">
@@ -868,10 +903,13 @@ export function QueueView({
                               ...(canHeadSubmitResolution(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
-                              item.isPrimaryDepartment !== false
+                              item.myDepartmentStatus !== "COMPLETED"
                                 ? [
                                     {
-                                      label: "Submit Resolution",
+                                      label:
+                                        item.canSubmitFinalResolution !== false
+                                          ? "Submit Resolution"
+                                          : "Submit Findings",
                                       icon: (
                                         <CheckCircle2 className="h-3.5 w-3.5" />
                                       ),
@@ -919,7 +957,26 @@ export function QueueView({
                                     },
                                   ]
                                 : []),
+                              ...(item.isAssignedStaffInactive &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED"
+                                ? [
+                                    {
+                                      label: "Reassign (Staff Inactive)",
+                                      icon: (
+                                        <UserCheck className="h-3.5 w-3.5 text-rose-600" />
+                                      ),
+                                      variant: "warning" as const,
+                                      onClick: () =>
+                                        onAssign(
+                                          item,
+                                          item.assignedStaffId || "",
+                                        ),
+                                    },
+                                  ]
+                                : []),
                               ...(!hasHeadResolutionAuthority(item) &&
+                              !item.isAssignedStaffInactive &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
                               item.status !== "COMPLETED" &&

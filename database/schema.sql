@@ -5,7 +5,7 @@
 -- Time Zone : Asia/Kolkata (IST)
 -- ORM       : Prisma
 -- Database  : PostgreSQL
--- Tables    : 27
+-- Tables    : 28
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -376,6 +376,27 @@ CREATE TABLE attachments (
         REFERENCES users(user_id),
 
     uploaded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE attachment_department_grants (
+    grant_id BIGSERIAL PRIMARY KEY,
+
+    attachment_id BIGINT NOT NULL
+        REFERENCES attachments(attachment_id)
+        ON DELETE CASCADE,
+
+    department_id BIGINT NOT NULL
+        REFERENCES departments(department_id)
+        ON DELETE CASCADE,
+
+    granted_by BIGINT NOT NULL
+        REFERENCES users(user_id),
+
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_attachment_department_grant
+        UNIQUE (attachment_id, department_id)
 );
 
 
@@ -823,6 +844,12 @@ ON attachments(grievance_id);
 
 CREATE INDEX idx_attachments_resolution_id
 ON attachments(resolution_id);
+
+CREATE INDEX idx_attachment_dept_grants_att_id
+ON attachment_department_grants(attachment_id);
+
+CREATE INDEX idx_attachment_dept_grants_dept_id
+ON attachment_department_grants(department_id);
 
 
 CREATE INDEX idx_routing_rules_category

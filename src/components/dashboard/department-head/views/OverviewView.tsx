@@ -28,6 +28,7 @@ export interface OverviewViewProps {
     item: GrievanceItem,
     tab?: "progress" | "statement",
   ) => void;
+  onAssignGrievance?: (item: GrievanceItem) => void;
   onFilterQueue?: (filterType: "status" | "priority", value: string) => void;
 }
 
@@ -46,6 +47,7 @@ export function OverviewView({
   onViewStaff: _onViewStaff,
   onViewActivity: _onViewActivity,
   onInspectGrievance,
+  onAssignGrievance,
   onFilterQueue,
 }: OverviewViewProps) {
   return (
@@ -100,9 +102,11 @@ export function OverviewView({
 
       <AttentionRequiredPanel
         attentionRequiredList={attentionRequiredList}
+        grievances={grievances}
         isLoading={isLoading}
         onInspect={onInspectGrievance}
         onViewFullQueue={onViewQueue}
+        onAssign={onAssignGrievance}
       />
     </div>
   );

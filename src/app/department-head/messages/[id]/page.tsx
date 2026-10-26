@@ -12,7 +12,7 @@ interface PageProps {
 export default async function DepartmentHeadGrievanceMessagesPage({
   params,
 }: PageProps) {
-  const user = await requirePageRole(["DEPARTMENT_HEAD", "ADMIN"]);
+  const user = await requirePageRole("DEPARTMENT_HEAD");
   const { id } = await params;
 
   const grievanceId = parseInt(id, 10);

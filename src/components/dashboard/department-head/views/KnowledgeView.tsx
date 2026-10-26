@@ -1,19 +1,10 @@
 "use client";
 
-import {
-  AlertCircle,
-  BookOpen,
-  CheckCircle2,
-  Clock,
-  Eye,
-  FileCheck2,
-  FileX,
-  Filter,
-  Search,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookOpen, CheckCircle2, FileX, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { KnowledgeArticleCardSkeleton } from "@/components/common/skeletons";
 import { KnowledgeArticleCard } from "@/components/knowledge/KnowledgeArticleCard";
 import {
   type KnowledgeArticleData,
@@ -26,8 +17,7 @@ import {
 } from "@/components/ui/advanced-table-search";
 
 export function KnowledgeView() {
-  const [articles, setArticles] = useState<KnowledgeArticleData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("PENDING_REVIEW");
   const [searchQuery, setSearchQuery] = useState("");
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
@@ -46,7 +36,7 @@ export function KnowledgeView() {
     { id: "search", label: "Search Knowledge", type: "text" },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
     let newSearch = "";
     conditions.forEach((condition) => {
       const valArray = Array.isArray(condition.value)
@@ -59,26 +49,28 @@ export function KnowledgeView() {
     setSearchQuery(newSearch);
   };
 
-  const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/api/department-head/knowledge?status=${statusFilter === "ALL" ? "" : statusFilter}`,
-      );
+  const {
+    data: allArticles = [],
+    isLoading: loading,
+    refetch: _fetchArticles,
+  } = useQuery<KnowledgeArticleData[]>({
+    queryKey: ["department-head-knowledge"],
+    queryFn: async () => {
+      const res = await fetch("/api/department-head/knowledge");
       const data = await res.json();
       if (res.ok && data.success && Array.isArray(data.articles)) {
-        setArticles(data.articles);
+        return data.articles;
       }
-    } catch (err) {
-      console.error("Failed to fetch knowledge articles:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter]);
+      return [];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchArticles();
-  }, [fetchArticles]);
+  const articles = useMemo(() => {
+    if (statusFilter === "ALL") return allArticles;
+    return allArticles.filter((art) => art.status === statusFilter);
+  }, [allArticles, statusFilter]);
 
   const handlePublish = async (article: KnowledgeArticleData) => {
     if (isSubmitting) return;
@@ -99,7 +91,9 @@ export function KnowledgeView() {
       toast.success("Knowledge Article Published", {
         description: `"${article.title}" has been published to the Knowledge Base.`,
       });
-      fetchArticles();
+      queryClient.invalidateQueries({
+        queryKey: ["department-head-knowledge"],
+      });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to publish article";
@@ -136,7 +130,9 @@ export function KnowledgeView() {
       });
       setRejectingArticle(null);
       setRejectionReason("");
-      fetchArticles();
+      queryClient.invalidateQueries({
+        queryKey: ["department-head-knowledge"],
+      });
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to reject article";
@@ -251,36 +247,9 @@ export function KnowledgeView() {
         {/* Scrollable Container */}
         {loading ? (
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-4 space-y-3">
-            {["kb-skel-1", "kb-skel-2", "kb-skel-3", "kb-skel-4"].map(
-              (skelId) => (
-                <div
-                  key={skelId}
-                  className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-4 shadow-2xs space-y-3 animate-pulse"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-64 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                        <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-full" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
-                      <div className="h-7 w-20 bg-slate-200 dark:bg-slate-700/60 rounded-lg" />
-                    </div>
-                  </div>
-                  <div className="space-y-2 py-1">
-                    <div className="h-3.5 w-full bg-slate-200 dark:bg-slate-700/60 rounded" />
-                    <div className="h-3.5 w-3/4 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                  </div>
-                  <div className="flex items-center gap-4 pt-1">
-                    <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700/60 rounded-md" />
-                    <div className="h-3.5 w-32 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                    <div className="h-3.5 w-28 bg-slate-200 dark:bg-slate-700/60 rounded" />
-                  </div>
-                </div>
-              ),
-            )}
+            {[1, 2, 3, 4].map((i) => (
+              <KnowledgeArticleCardSkeleton key={`kb-skel-${i}`} />
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-12 text-center space-y-2">

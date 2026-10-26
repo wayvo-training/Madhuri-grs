@@ -22,10 +22,7 @@ import {
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
-import {
-  CustomSelect,
-  type CustomSelectOption,
-} from "@/components/ui/custom-select";
+import type { CustomSelectOption } from "@/components/ui/custom-select";
 import { Pagination } from "@/components/ui/pagination";
 import { Popover } from "@/components/ui/popover";
 import {

@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { PriorityBadge } from "@/components/dashboard/badges";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatEscalationNotice } from "@/lib/department-head/utils";
 import type {
   EscalationBottleneck,
@@ -543,28 +550,38 @@ export function DepartmentHeadEscalationModal({
                   Select Collaborating Department{" "}
                   <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  id="escalation-target-dept"
-                  required
+                <Select
                   value={targetDept}
-                  onChange={(e) => onTargetDeptChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
+                  onValueChange={(val) => {
+                    if (val && val !== "NONE") onTargetDeptChange(val);
+                  }}
                 >
-                  <option value="">
-                    -- Select a Collaborating Department --
-                  </option>
-                  {eligibleDepartments.length === 0 ? (
-                    <option value="" disabled>
-                      No other active departments available
-                    </option>
-                  ) : (
-                    eligibleDepartments.map((dept) => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name}
-                      </option>
-                    ))
-                  )}
-                </select>
+                  <SelectTrigger
+                    id="escalation-target-dept"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
+                  >
+                    <SelectValue placeholder="-- Select a Collaborating Department --">
+                      {targetDept || "-- Select a Collaborating Department --"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-56">
+                    {eligibleDepartments.length === 0 ? (
+                      <SelectItem value="NONE" disabled className="text-xs">
+                        No other active departments available
+                      </SelectItem>
+                    ) : (
+                      eligibleDepartments.map((dept) => (
+                        <SelectItem
+                          key={dept.id}
+                          value={dept.name}
+                          className="text-xs cursor-pointer"
+                        >
+                          {dept.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

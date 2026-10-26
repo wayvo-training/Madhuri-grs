@@ -71,6 +71,10 @@ export interface GrievanceItem {
   slaConsumptionPercent?: number;
   assignedStaffId?: string | null;
   assignedStaffName?: string | null;
+  assignedStaffStatus?: "ACTIVE" | "INACTIVE" | "SUSPENDED" | string | null;
+  assignedStaffRole?: string | null;
+  isAssignedStaffInactive?: boolean;
+  isAssignedToHead?: boolean;
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;
@@ -79,6 +83,7 @@ export interface GrievanceItem {
   isCrossDepartment?: boolean;
   collaboratingDepartments?: string[];
   isPrimaryDepartment?: boolean;
+  canSubmitFinalResolution?: boolean;
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   myDepartmentStatus?: string;
   isBlocked?: boolean;
@@ -153,12 +158,17 @@ export interface GrievanceItem {
   supportingFindings?: SupportingDepartmentFinding[];
   blockedReason?: string;
   prerequisiteDepartments?: string[];
+  slaPercentAllocation?: number | null;
+  allocatedDurationMinutes?: number | null;
   departmentsInvolved?: {
     id: string;
     departmentName: string;
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
+    executionOrder?: number;
   }[];
 }
 
@@ -213,7 +223,8 @@ export type DepartmentHeadView =
   | "staff"
   | "sla"
   | "activity"
-  | "knowledge";
+  | "knowledge"
+  | "notifications";
 
 export type CaseDrawerTab =
   | "progress"
@@ -249,10 +260,12 @@ export interface DepartmentHeadOverviewProps {
 }
 
 export interface DocumentPreviewData {
+  id?: string;
   name: string;
   size: string;
   type: string;
   path?: string;
+  downloadUrl?: string;
   uploadedAt?: string;
   grievanceNumber?: string;
   category?: string;
@@ -296,6 +309,8 @@ export interface CaseProgressData {
     dueAt: string;
     state: string;
     stateLabel: string;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
   };
   latestActivity?: string;
   timeline?: {
@@ -312,6 +327,9 @@ export interface CaseProgressData {
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    slaPercentAllocation?: number | null;
+    allocatedDurationMinutes?: number | null;
+    executionOrder?: number;
   }[];
   hodIntervention?: GrievanceItem["hodIntervention"];
   internalNotes?: InternalNoteItem[];

@@ -22,6 +22,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Category {
   category_id: bigint | string;
@@ -379,36 +386,42 @@ export function SubmitGrievanceForm({
                   >
                     Category <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <LayoutGrid className="h-4 w-4" />
-                    </div>
-                    <select
-                      id="category"
-                      value={categoryId}
-                      onChange={(e) => {
-                        setCategoryId(e.target.value);
+                  <Select
+                    value={categoryId}
+                    onValueChange={(val) => {
+                      if (val) {
+                        setCategoryId(val);
                         setSubcategoryId("");
-                      }}
-                      required
-                      className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm text-slate-900 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition"
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="category"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition cursor-pointer"
                     >
-                      <option value="" disabled>
-                        Select a category
-                      </option>
+                      <div className="flex items-center gap-2.5">
+                        <LayoutGrid className="h-4 w-4 text-slate-400 shrink-0" />
+                        <SelectValue placeholder="Select a category">
+                          {categoryId
+                            ? categories.find(
+                                (c) => c.category_id.toString() === categoryId,
+                              )?.category_name || categoryId
+                            : "Select a category"}
+                        </SelectValue>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white border border-slate-200 shadow-xl max-h-60">
                       {categories.map((c) => (
-                        <option
+                        <SelectItem
                           key={c.category_id.toString()}
                           value={c.category_id.toString()}
+                          className="text-sm cursor-pointer py-2"
                         >
                           {c.category_name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Subcategory */}
@@ -419,34 +432,41 @@ export function SubmitGrievanceForm({
                   >
                     Subcategory <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                      <ListFilter className="h-4 w-4" />
-                    </div>
-                    <select
+                  <Select
+                    value={subcategoryId}
+                    disabled={!categoryId}
+                    onValueChange={(val) => {
+                      if (val) setSubcategoryId(val);
+                    }}
+                  >
+                    <SelectTrigger
                       id="subcategory"
-                      value={subcategoryId}
-                      onChange={(e) => setSubcategoryId(e.target.value)}
-                      required
-                      disabled={!categoryId}
-                      className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white pl-10 pr-10 text-sm text-slate-900 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 focus:border-[#0F766E] focus:outline-none focus:ring-2 focus:ring-teal-100 transition disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      <option value="" disabled>
-                        Select a subcategory
-                      </option>
+                      <div className="flex items-center gap-2.5">
+                        <ListFilter className="h-4 w-4 text-slate-400 shrink-0" />
+                        <SelectValue placeholder="Select a subcategory">
+                          {subcategoryId
+                            ? filteredSubcategories.find(
+                                (s) =>
+                                  s.subcategory_id.toString() === subcategoryId,
+                              )?.subcategory_name || subcategoryId
+                            : "Select a subcategory"}
+                        </SelectValue>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="z-50 bg-white border border-slate-200 shadow-xl max-h-60">
                       {filteredSubcategories.map((s) => (
-                        <option
+                        <SelectItem
                           key={s.subcategory_id.toString()}
                           value={s.subcategory_id.toString()}
+                          className="text-sm cursor-pointer py-2"
                         >
                           {s.subcategory_name}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </div>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Title */}

@@ -44,3 +44,7 @@ scratch/
 
 # uploads
 /public/uploads/
+
+# DB backups and migration scripts
+database_backup*.json
+/scripts/

@@ -64,6 +64,14 @@ export function useGrievanceActions({
         }),
       );
 
+      const assignedStaffMember = staffList.find((s) => s.id === staffId);
+      const isAssignedToHead = Boolean(
+        assignedStaffMember?.designation === "Department Head" ||
+          (currentHodName &&
+            (staffName.toLowerCase().includes(currentHodName.toLowerCase()) ||
+              currentHodName.toLowerCase().includes(staffName.toLowerCase()))),
+      );
+
       setGrievances((prev) =>
         prev.map((g) =>
           g.id === grievance.id
@@ -71,6 +79,7 @@ export function useGrievanceActions({
                 ...g,
                 assignedStaffId: staffId,
                 assignedStaffName: staffName,
+                isAssignedToHead,
                 status: "ASSIGNED",
               }
             : g,
@@ -79,7 +88,7 @@ export function useGrievanceActions({
 
       loadData(undefined, true);
     },
-    [loadData, setGrievances, setStaffList],
+    [currentHodName, loadData, setGrievances, setStaffList, staffList],
   );
 
   const handleEscalationSubmit = useCallback(
@@ -526,14 +535,22 @@ export function useGrievanceActions({
 
   const handleDownloadDocument = useCallback(
     (doc: DocumentPreviewData) => {
-      const sampleText = `REPUBLIC OF INDIA / CENTRAL GRIEVANCE REDRESSAL SYSTEM\nOFFICIAL ATTACHMENT RECORD\n\nTicket Code: ${doc.grievanceNumber || "GRS"}\nFile Name: ${doc.name}\nSize: ${doc.size}\nCategory: ${doc.category || "General"}\nComplainant: ${doc.submitterName || "Citizen"} (${doc.submitterRole || "Complainant"})\nUploaded: ${doc.uploadedAt || "Recent"}\n\n--- DOCUMENT CONTENT EXTRACT ---\nThis official digital document was retrieved from the grievance case dossier.\nCryptographic Verification: SHA-256 Validated\nStatus: Certified Authentic Evidence\n`;
-      const blob = new Blob([sampleText], {
-        type: "text/plain;charset=utf-8",
-      });
-      const url = URL.createObjectURL(blob);
-      triggerFileDownload(url, doc.name);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showSuccess(`Downloaded file: ${doc.name}`, 3000);
+      const dlUrl =
+        (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+        (doc.downloadUrl
+          ? `${doc.downloadUrl}${doc.downloadUrl.includes("?") ? "&" : "?"}download=true`
+          : "") ||
+        (doc.path?.startsWith("/api/attachments/")
+          ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
+          : doc.path);
+
+      if (dlUrl) {
+        triggerFileDownload(dlUrl, doc.name);
+        showSuccess(`Downloading file: ${doc.name}`, 3000);
+        return;
+      }
+
+      showSuccess(`File path unavailable for ${doc.name}`, 3000);
     },
     [showSuccess],
   );

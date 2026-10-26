@@ -126,6 +126,7 @@ export async function GET(
             knowledge_articles: {
               select: { article_id: true },
             },
+            attachments: true,
           },
         },
       },
@@ -197,11 +198,11 @@ export async function GET(
 
       const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaff =
-        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" ||
+        !deptAssignment ||
+        deptAssignment.assignment_status !== "ASSIGNED"
           ? null
-          : staffUser &&
-              (deptAssignment?.assignment_status === "ASSIGNED" ||
-                deptAssignment?.assignment_status === "COMPLETED")
+          : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
@@ -214,6 +215,11 @@ export async function GET(
           | "EQUAL",
         status: deptStatus,
         assignedStaff,
+        slaPercentAllocation: d.sla_percent_allocation
+          ? Number(d.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: d.allocated_duration_minutes || null,
+        executionOrder: d.execution_order || 1,
       };
     });
 
@@ -221,22 +227,49 @@ export async function GET(
     const myDeptRecord = rawDepartments.find(
       (d) => d.department_id === departmentId,
     );
+    const isDeptPending =
+      myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+      grievance.status === "SUBMITTED" ||
+      grievance.status === "ROUTED" ||
+      (grievance.status === "REOPENED" &&
+        myDeptRecord?.status === "PENDING_ASSIGNMENT");
+
     const primaryAssignment = myDeptRecord
-      ? allDeptAssignments.find(
-          (a) =>
-            a.grievance_department_id === myDeptRecord.grievance_department_id,
-        ) || null
-      : allDeptAssignments[0] || grievance.assignments?.[0] || null;
+      ? isDeptPending
+        ? null
+        : allDeptAssignments.find(
+            (a) =>
+              a.grievance_department_id ===
+                myDeptRecord.grievance_department_id &&
+              a.assignment_status === "ASSIGNED",
+          ) || null
+      : isDeptPending
+        ? null
+        : allDeptAssignments.find((a) => a.assignment_status === "ASSIGNED") ||
+          (grievance.assignments?.[0]?.assignment_status === "ASSIGNED"
+            ? grievance.assignments[0]
+            : null);
 
     const assignedUser = primaryAssignment?.users_assignments_staff_idTousers;
+    const isAssignedToHead = Boolean(
+      !isDeptPending &&
+        assignedUser &&
+        (assignedUser.roles?.role_name === "DEPARTMENT_HEAD" ||
+          (user?.user_id &&
+            assignedUser.user_id &&
+            BigInt(assignedUser.user_id) === BigInt(user.user_id))),
+    );
     const assignment = {
-      isAssigned: !!assignedUser,
-      staffId: assignedUser ? assignedUser.user_id.toString() : null,
-      staffName: assignedUser
-        ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
-        : myDeptRecord?.status === "BLOCKED"
-          ? "Blocked (Waiting for Prerequisite)"
-          : "Unassigned",
+      isAssigned: !isDeptPending && !!assignedUser,
+      isAssignedToHead,
+      staffId:
+        !isDeptPending && assignedUser ? assignedUser.user_id.toString() : null,
+      staffName:
+        !isDeptPending && assignedUser
+          ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
+          : myDeptRecord?.status === "BLOCKED"
+            ? "Blocked (Waiting for Prerequisite)"
+            : "Unassigned",
       designation: assignedUser?.roles?.role_name || "Investigating Officer",
       email: assignedUser?.email || null,
       assignedAt: primaryAssignment?.assigned_at
@@ -324,14 +357,48 @@ export async function GET(
 
     // 2. SLA calculations
     const now = new Date();
-    const createdAt = new Date(grievance.created_at);
-    const dueAt = grievance.due_at ? new Date(grievance.due_at) : null;
+    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
+    const deptAllocatedMins =
+      myDeptRecord?.allocated_duration_minutes ||
+      (grievance.due_at && grievance.created_at
+        ? Math.max(
+            1,
+            Math.round(
+              ((new Date(grievance.due_at).getTime() -
+                new Date(grievance.created_at).getTime()) *
+                (Number(myDeptRecord?.sla_percent_allocation || 100) / 100)) /
+                60000,
+            ),
+          )
+        : 1440);
+
+    const createdAt = myDeptRecord?.activated_at
+      ? new Date(myDeptRecord.activated_at)
+      : myDeptRecord?.assigned_at
+        ? new Date(myDeptRecord.assigned_at)
+        : new Date(grievance.created_at);
+
+    const dueAt = isDeptBlocked
+      ? null
+      : myDeptRecord?.due_at
+        ? new Date(myDeptRecord.due_at)
+        : grievance.due_at
+          ? new Date(grievance.due_at)
+          : null;
+
     let consumptionPercent = 0;
-    let timeRemainingStr = "N/A";
+    let timeRemainingStr = isDeptBlocked
+      ? "Pending Prerequisites (Blocked)"
+      : "N/A";
     let isBreached = false;
     let isApproaching = false;
 
-    if (dueAt) {
+    if (isDeptBlocked) {
+      consumptionPercent = 0;
+      timeRemainingStr = "Pending Prerequisites (Blocked)";
+      isBreached = false;
+      isApproaching = false;
+    } else if (dueAt) {
       if (isSlaExtensionActive && interventionLog) {
         // Calculate SLA consumption relative to the extension grace window
         const extensionStartTime = new Date(interventionLog.created_at);
@@ -400,10 +467,16 @@ export async function GET(
       }
     }
 
+    const dueAtLabel = isDeptBlocked
+      ? `${Math.round(deptAllocatedMins / 60)}h allocated (${Number(myDeptRecord?.sla_percent_allocation || 100)}%)`
+      : dueAt
+        ? formatFullDateTime(dueAt)
+        : "No Target Set";
+
     const sla = {
       consumptionPercent,
       timeRemaining: timeRemainingStr,
-      dueAt: dueAt ? formatFullDateTime(dueAt) : "No Target Set",
+      dueAt: dueAtLabel,
       state: isBreached
         ? "BREACHED"
         : isSlaExtensionActive
@@ -422,10 +495,13 @@ export async function GET(
           : isApproaching || grievance.sla_status === "AT_RISK"
             ? "SLA At Risk"
             : "Within SLA",
+      slaPercentAllocation: myDeptRecord?.sla_percent_allocation
+        ? Number(myDeptRecord.sla_percent_allocation)
+        : 100,
+      allocatedDurationMinutes: deptAllocatedMins,
     };
 
     // 3. Current Stage & Stepper (Department-Scoped)
-    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
     const rawPrereqs = Array.isArray(myDeptRecord?.prerequisite_department_ids)
       ? (
           myDeptRecord.prerequisite_department_ids as (
@@ -1112,6 +1188,7 @@ export async function GET(
           subcategory: grievance.subcategories?.subcategory_name || "General",
           priority: grievance.priority,
           status: grievance.status,
+          isAssignedToHead,
           createdAt: formatFullDateTime(grievance.created_at),
           submitterName:
             `${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim() ||
@@ -1183,6 +1260,30 @@ export async function GET(
                 submittedAt: formatRelativeTime(
                   grievance.resolutions[0].submitted_at,
                 ),
+                attachments: (
+                  (
+                    grievance.resolutions[0] as unknown as {
+                      attachments?: Array<{
+                        attachment_id: bigint | number;
+                        file_name: string;
+                        file_size?: bigint | number | null;
+                        file_type?: string | null;
+                        file_path: string;
+                        uploaded_at: Date;
+                      }>;
+                    }
+                  ).attachments || []
+                ).map((att) => ({
+                  id: att.attachment_id.toString(),
+                  name: att.file_name,
+                  size: att.file_size
+                    ? `${Math.round(Number(att.file_size) / 1024)} KB`
+                    : undefined,
+                  type: att.file_type || undefined,
+                  path: att.file_path,
+                  downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+                  uploadedAt: formatFullDateTime(att.uploaded_at),
+                })),
               }
             : null,
           hasProposedKb:

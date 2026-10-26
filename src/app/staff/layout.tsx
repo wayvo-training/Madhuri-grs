@@ -7,16 +7,9 @@ export default async function StaffLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requirePageRole(["STAFF", "ADMIN", "DEPARTMENT_HEAD"]);
+  const user = await requirePageRole("STAFF");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
   const deptName = user.departments?.department_name || "Operations";
-
-  const designation =
-    user.roles.role_name === "ADMIN"
-      ? "System Administrator"
-      : user.roles.role_name === "DEPARTMENT_HEAD"
-        ? "Department Head"
-        : "Grievance Staff";
 
   return (
     <DashboardShell
@@ -24,7 +17,7 @@ export default async function StaffLayout({
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
-      designation={designation}
+      designation="Grievance Staff"
       departmentName={deptName}
     >
       {children}

@@ -34,10 +34,20 @@ export async function POST(request: Request) {
     } = body;
 
     // 1. Validate rule_name
+    if (!rule_name || typeof rule_name !== "string" || !rule_name.trim()) {
+      return NextResponse.json(
+        { success: false, message: "Rule name is required." },
+        { status: 400 },
+      );
+    }
     const validatedRuleName = validateRuleName(rule_name);
     if (!validatedRuleName) {
       return NextResponse.json(
-        { success: false, message: "Rule name is required." },
+        {
+          success: false,
+          message:
+            "Rule name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+        },
         { status: 400 },
       );
     }
@@ -129,15 +139,26 @@ export async function POST(request: Request) {
 
       if (rawCatId) {
         if (rawCatId === "CUSTOM" && new_category_name) {
+          const trimmedCat = new_category_name.trim();
+          if (!/[a-zA-Z]/.test(trimmedCat)) {
+            return NextResponse.json(
+              {
+                success: false,
+                message:
+                  "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+              },
+              { status: 400 },
+            );
+          }
           const existingCat = await prisma.categories.findUnique({
-            where: { category_name: new_category_name.trim() },
+            where: { category_name: trimmedCat },
           });
           if (existingCat) {
             categoryRecord = existingCat;
           } else {
             const newCat = await prisma.categories.create({
               data: {
-                category_name: new_category_name.trim(),
+                category_name: trimmedCat,
                 status: "ACTIVE",
               },
             });
@@ -181,11 +202,22 @@ export async function POST(request: Request) {
 
       if (rawSubcatId && categoryRecord) {
         if (rawSubcatId === "CUSTOM" && new_subcategory_name) {
+          const trimmedSubcat = new_subcategory_name.trim();
+          if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+            return NextResponse.json(
+              {
+                success: false,
+                message:
+                  "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+              },
+              { status: 400 },
+            );
+          }
           const existingSub = await prisma.subcategories.findUnique({
             where: {
               category_id_subcategory_name: {
                 category_id: categoryRecord.category_id,
-                subcategory_name: new_subcategory_name.trim(),
+                subcategory_name: trimmedSubcat,
               },
             },
           });
@@ -195,7 +227,7 @@ export async function POST(request: Request) {
             const newSub = await prisma.subcategories.create({
               data: {
                 category_id: categoryRecord.category_id,
-                subcategory_name: new_subcategory_name.trim(),
+                subcategory_name: trimmedSubcat,
                 status: "ACTIVE",
               },
             });

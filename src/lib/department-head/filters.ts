@@ -7,6 +7,12 @@ import type {
 
 export function isResolutionSubmittedByHead(item: GrievanceItem): boolean {
   if (!item.submittedResolution) return false;
+  // A resolution only represents an active "submitted by Head awaiting citizen review" state
+  // when the grievance is actively in UNDER_REVIEW status.
+  // If the grievance was reopened or escalated, any past resolution belongs to a prior cycle.
+  if (item.status !== "UNDER_REVIEW") {
+    return false;
+  }
   const role = item.submittedResolution.submittedByRole;
   if (role === "DEPARTMENT_HEAD" || role === "ADMIN") {
     return true;
@@ -50,11 +56,19 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
   if (item.status === "UNDER_REVIEW" && isResolutionSubmittedByHead(item)) {
     return false;
   }
+  // If this department's stage is already completed in a multi-department case
+  if (item.myDepartmentStatus === "COMPLETED") {
+    return false;
+  }
   // 1. Department Head explicitly assumed resolution authority (and hasn't submitted yet)
   if (hasHeadResolutionAuthority(item)) {
     return true;
   }
-  // 2. Staff submitted a resolution pending Head review
+  // 2. Grievance is directly assigned to the Department Head (e.g. via Smart Assignment)
+  if (item.isAssignedToHead) {
+    return true;
+  }
+  // 3. Staff submitted a resolution pending Head review
   if (
     item.status === "UNDER_REVIEW" &&
     item.submittedResolution &&
@@ -205,6 +219,7 @@ export function computeAttentionRequiredList(
   return grievances
     .filter((g) => {
       if (g.status === "CLOSED" || g.status === "RESOLVED") return false;
+      const isStaffInactive = Boolean(g.isAssignedStaffInactive);
       const isBreached = g.slaStatus === "BREACHED" || g.status === "ESCALATED";
       const isAtRisk = g.slaStatus === "AT_RISK";
       const isUnassigned =
@@ -213,11 +228,17 @@ export function computeAttentionRequiredList(
       const isException =
         g.isReopened || g.status === "REOPENED" || g.isCrossDepartment;
       return (
-        isBreached || isAtRisk || isUnassigned || isPendingReview || isException
+        isStaffInactive ||
+        isBreached ||
+        isAtRisk ||
+        isUnassigned ||
+        isPendingReview ||
+        isException
       );
     })
     .sort((a, b) => {
       const getPriorityRank = (g: GrievanceItem) => {
+        if (g.isAssignedStaffInactive) return 5;
         if (g.slaStatus === "BREACHED" || g.status === "ESCALATED") return 4;
         if (g.slaStatus === "AT_RISK") return 3;
         if (!g.assignedStaffId) return 2;

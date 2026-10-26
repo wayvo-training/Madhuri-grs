@@ -6,9 +6,10 @@ import {
   formatRelativeTime,
   formatSlaTimeLeft,
 } from "@/lib/department-head";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import {
+  calculateDepartmentSlaConsumption,
   calculateSlaConsumption,
-  evaluateAllActiveGrievancesSla,
 } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
@@ -259,7 +260,9 @@ export async function fetchDepartmentHeadGrievances(
             assignments: {
               where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
               include: {
-                users_assignments_staff_idTousers: true,
+                users_assignments_staff_idTousers: {
+                  include: { roles: true },
+                },
               },
             },
           },
@@ -270,7 +273,9 @@ export async function fetchDepartmentHeadGrievances(
             grievance_departments: { department_id: departmentId },
           },
           include: {
-            users_assignments_staff_idTousers: true,
+            users_assignments_staff_idTousers: {
+              include: { roles: true },
+            },
           },
           orderBy: { assigned_at: "desc" },
           take: 1,
@@ -282,10 +287,10 @@ export async function fetchDepartmentHeadGrievances(
         },
         resolutions: {
           orderBy: { submitted_at: "desc" },
-          take: 1,
+          take: 5,
           include: {
             users: {
-              include: { roles: true },
+              include: { roles: true, departments: true },
             },
             knowledge_articles: {
               select: { article_id: true },
@@ -299,7 +304,7 @@ export async function fetchDepartmentHeadGrievances(
           include: {
             users: { include: { roles: true } },
           },
-          take: 50,
+          take: 15,
         },
       },
       orderBy: [{ priority: "desc" }, { created_at: "desc" }],
@@ -321,7 +326,9 @@ export async function fetchDepartmentHeadGrievances(
         assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
       },
       include: {
-        users_assignments_staff_idTousers: true,
+        users_assignments_staff_idTousers: {
+          include: { roles: true },
+        },
         grievance_departments: { include: { departments: true } },
       },
       orderBy: { assigned_at: "desc" },
@@ -342,18 +349,35 @@ export async function fetchDepartmentHeadGrievances(
         )
       : null;
 
+    const isDeptPendingAssignment =
+      myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+      g.status === "SUBMITTED" ||
+      g.status === "ROUTED" ||
+      (g.status === "REOPENED" &&
+        myDeptRecord?.status === "PENDING_ASSIGNMENT");
+
     const myDeptAssignment = departmentId
-      ? grievanceAssignments.find(
-          (a) =>
-            a.grievance_departments?.department_id &&
-            BigInt(a.grievance_departments.department_id) ===
-              BigInt(departmentId),
-        )
+      ? isDeptPendingAssignment
+        ? null
+        : grievanceAssignments.find(
+            (a) =>
+              a.grievance_departments?.department_id &&
+              BigInt(a.grievance_departments.department_id) ===
+                BigInt(departmentId) &&
+              a.assignment_status === "ASSIGNED",
+          ) || null
       : null;
 
     const activeAssignment = departmentId
       ? myDeptAssignment
-      : g.assignments[0] || grievanceAssignments[0] || null;
+      : isDeptPendingAssignment
+        ? null
+        : grievanceAssignments.find(
+            (a) => a.assignment_status === "ASSIGNED",
+          ) ||
+          (g.assignments && g.assignments[0]?.assignment_status === "ASSIGNED"
+            ? g.assignments[0]
+            : null);
     const assignedStaff =
       activeAssignment?.users_assignments_staff_idTousers || null;
 
@@ -362,12 +386,17 @@ export async function fetchDepartmentHeadGrievances(
 
     let resolvedAssignedStaffName: string | null = null;
     if (departmentId) {
-      if (myDeptAssignment) {
+      if (
+        myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+        isDeptPendingAssignment
+      ) {
+        resolvedAssignedStaffName = "Unassigned";
+      } else if (myDeptRecord?.status === "BLOCKED") {
+        resolvedAssignedStaffName = "Blocked";
+      } else if (myDeptAssignment) {
         const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
         resolvedAssignedStaffName =
           `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
-      } else if (myDeptRecord?.status === "BLOCKED") {
-        resolvedAssignedStaffName = "Blocked";
       } else if (
         ["CLOSED", "RESOLVED"].includes(g.status) &&
         (latestResolution?.users ||
@@ -391,15 +420,20 @@ export async function fetchDepartmentHeadGrievances(
         resolvedAssignedStaffName = "Unassigned";
       }
     } else {
-      if (grievanceAssignments.length > 0) {
+      if (isDeptPendingAssignment) {
+        resolvedAssignedStaffName = "Unassigned";
+      } else if (assignedStaff) {
+        resolvedAssignedStaffName =
+          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
+      } else if (
+        ["CLOSED", "RESOLVED"].includes(g.status) &&
+        grievanceAssignments.length > 0
+      ) {
         resolvedAssignedStaffName = grievanceAssignments
           .map((a) =>
             `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`.trim(),
           )
           .join(", ");
-      } else if (assignedStaff) {
-        resolvedAssignedStaffName =
-          `${assignedStaff.first_name} ${assignedStaff.last_name || ""}`.trim();
       } else {
         resolvedAssignedStaffName = "Unassigned";
       }
@@ -575,6 +609,50 @@ export async function fetchDepartmentHeadGrievances(
           timestamp: formatRelativeTime(l.created_at),
         };
       });
+
+    // Merge formal resolution submissions if not already represented in supportingFindings
+    for (const res of g.resolutions || []) {
+      const alreadyIncluded = supportingFindings.some(
+        (sf) =>
+          sf.id === `res-${res.resolution_id.toString()}` ||
+          (res.resolution_id && sf.id.includes(res.resolution_id.toString())),
+      );
+      if (!alreadyIncluded) {
+        const resUser = res.users;
+        const resAuthor = resUser
+          ? `${resUser.first_name} ${resUser.last_name || ""}`.trim()
+          : "Staff Member";
+        const resDeptName =
+          resUser?.departments?.department_name ||
+          g.grievance_departments?.find(
+            (gd) => gd.assignments?.staff_id === res.submitted_by,
+          )?.departments?.department_name ||
+          "Department";
+
+        const resAttList = (res.attachments || []).map((att) => ({
+          id: att.attachment_id.toString(),
+          name: att.file_name,
+          size: att.file_size
+            ? `${Math.round(Number(att.file_size) / 1024)} KB`
+            : undefined,
+          type: att.file_type || undefined,
+          path: att.file_path,
+          downloadUrl: `/api/attachments/${att.attachment_id}/download`,
+        }));
+
+        supportingFindings.push({
+          id: `res-${res.resolution_id.toString()}`,
+          departmentName: resDeptName,
+          submittedBy: resAuthor,
+          findings: res.findings || res.problem_summary || "",
+          actionTaken: res.action_taken || undefined,
+          notes: res.outcome || undefined,
+          attachments: resAttList.length > 0 ? resAttList : undefined,
+          createdAt: res.submitted_at.toISOString(),
+          timestamp: formatRelativeTime(res.submitted_at),
+        });
+      }
+    }
 
     const auditTrail = g.audit_logs
       .filter((l) => {
@@ -784,24 +862,17 @@ export async function fetchDepartmentHeadGrievances(
 
     const departmentsInvolved = relatedDepts.map((d) => {
       const deptAssignment = grievanceAssignments.find(
-        (a) => a.grievance_department_id === d.grievance_department_id,
+        (a) =>
+          a.grievance_department_id === d.grievance_department_id &&
+          a.assignment_status === "ASSIGNED",
       );
-      let deptStatus = d.status;
-      if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
-        if (deptStatus === "PENDING_ASSIGNMENT") {
-          deptStatus = "ASSIGNED";
-        }
-      } else if (!deptAssignment && deptStatus === "ASSIGNED") {
-        deptStatus = "PENDING_ASSIGNMENT";
-      }
+      const deptStatus = d.status;
 
       const staffUser = deptAssignment?.users_assignments_staff_idTousers;
       const assignedStaffUser =
-        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" || !deptAssignment
           ? null
-          : staffUser &&
-              (deptAssignment?.assignment_status === "ASSIGNED" ||
-                deptAssignment?.assignment_status === "COMPLETED")
+          : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
@@ -823,6 +894,11 @@ export async function fetchDepartmentHeadGrievances(
       myInvolvementType === "PRIMARY" ||
       myInvolvementType === "EQUAL" ||
       !departmentId;
+
+    const authResult = departmentId
+      ? canDepartmentSubmitFinalResolution(departmentId, relatedDepts)
+      : { canResolve: true, canSubmitFindings: false };
+    const canSubmitFinalResolution = authResult.canResolve;
 
     let resolvedStatus: GrievanceItem["status"] =
       g.status as GrievanceItem["status"];
@@ -851,17 +927,82 @@ export async function fetchDepartmentHeadGrievances(
       }
     }
 
-    const slaConsumption = calculateSlaConsumption(
-      g.created_at,
-      g.due_at,
-      g.priority,
-    );
-    const calculatedTimeLeft = formatSlaTimeLeft(
-      g.due_at,
-      g.sla_status,
-      g.priority,
-      g.created_at,
-    );
+    let resolvedSlaConsumptionPercent = 0;
+    let resolvedSlaTimeLeft = "N/A";
+    let resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+    let resolvedSlaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" =
+      (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") || "ON_TRACK";
+
+    if (myDeptRecord) {
+      if (myDeptRecord.status === "BLOCKED") {
+        resolvedSlaConsumptionPercent = 0;
+        resolvedSlaTimeLeft = "Pending Prerequisites (Blocked)";
+        resolvedSlaDeadline = myDeptRecord.allocated_duration_minutes
+          ? `${Math.round(myDeptRecord.allocated_duration_minutes / 60)}h allocated (${Number(myDeptRecord.sla_percent_allocation || 0)}%)`
+          : "Blocked";
+        resolvedSlaStatus = "ON_TRACK";
+      } else {
+        const deptAllocatedMins =
+          myDeptRecord.allocated_duration_minutes ||
+          (g.due_at && g.created_at
+            ? Math.max(
+                1,
+                Math.round(
+                  ((g.due_at.getTime() - g.created_at.getTime()) *
+                    (Number(myDeptRecord.sla_percent_allocation || 100) /
+                      100)) /
+                    60000,
+                ),
+              )
+            : 1440);
+
+        const deptStart =
+          myDeptRecord.activated_at || myDeptRecord.assigned_at || g.created_at;
+        const deptDue =
+          myDeptRecord.due_at ||
+          new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
+
+        const deptSlaResult = calculateDepartmentSlaConsumption(
+          deptStart,
+          deptDue,
+          deptAllocatedMins,
+          myDeptRecord.completed_at,
+        );
+
+        resolvedSlaConsumptionPercent = deptSlaResult.consumptionPercent;
+        resolvedSlaStatus =
+          (myDeptRecord.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
+          deptSlaResult.slaStatus;
+        resolvedSlaDeadline = formatFriendlyDate(deptDue);
+        resolvedSlaTimeLeft = formatSlaTimeLeft(
+          deptDue,
+          resolvedSlaStatus,
+          g.priority,
+          deptStart,
+        );
+      }
+    } else {
+      const slaConsumption = calculateSlaConsumption(
+        g.created_at,
+        g.due_at,
+        g.priority,
+      );
+      resolvedSlaConsumptionPercent = slaConsumption.consumptionPercent;
+      resolvedSlaStatus =
+        (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
+        (slaConsumption.consumptionPercent >= 100
+          ? "BREACHED"
+          : slaConsumption.consumptionPercent >= 75
+            ? "AT_RISK"
+            : "ON_TRACK");
+      resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+      resolvedSlaTimeLeft = formatSlaTimeLeft(
+        g.due_at,
+        g.sla_status,
+        g.priority,
+        g.created_at,
+      );
+    }
     const submitterFullName =
       `${g.users?.first_name || "Unknown"} ${g.users?.last_name || ""}`.trim();
 
@@ -879,27 +1020,36 @@ export async function fetchDepartmentHeadGrievances(
       submitterEmail: g.users?.email || "",
       priority: g.priority as GrievanceItem["priority"],
       status: resolvedStatus,
-      slaStatus:
-        (g.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
-        (slaConsumption.consumptionPercent >= 100
-          ? "BREACHED"
-          : slaConsumption.consumptionPercent >= 75
-            ? "AT_RISK"
-            : "ON_TRACK"),
-      slaDeadline: g.due_at ? formatFriendlyDate(g.due_at) : "N/A",
-      slaTimeLeft: calculatedTimeLeft,
-      slaConsumptionPercent: slaConsumption.consumptionPercent,
+      slaStatus: resolvedSlaStatus,
+      slaDeadline: resolvedSlaDeadline,
+      slaTimeLeft: resolvedSlaTimeLeft,
+      slaConsumptionPercent: resolvedSlaConsumptionPercent,
       assignedStaffId: departmentId
-        ? myDeptAssignment?.users_assignments_staff_idTousers?.user_id?.toString() ||
-          (["CLOSED", "RESOLVED"].includes(g.status)
-            ? latestResolution?.users?.user_id?.toString() ||
-              grievanceAssignments[0]?.users_assignments_staff_idTousers?.user_id?.toString() ||
-              null
-            : null)
+        ? isDeptPendingAssignment || !myDeptAssignment
+          ? null
+          : myDeptAssignment.users_assignments_staff_idTousers?.user_id?.toString() ||
+            (["CLOSED", "RESOLVED"].includes(g.status)
+              ? latestResolution?.users?.user_id?.toString() ||
+                grievanceAssignments[0]?.users_assignments_staff_idTousers?.user_id?.toString() ||
+                null
+              : null)
         : assignedStaff
           ? assignedStaff.user_id.toString()
           : null,
       assignedStaffName: resolvedAssignedStaffName,
+      assignedStaffStatus: assignedStaff?.status || null,
+      assignedStaffRole: assignedStaff?.roles?.role_name || null,
+      isAssignedStaffInactive: Boolean(
+        assignedStaff &&
+          (assignedStaff.status === "INACTIVE" ||
+            assignedStaff.status === "SUSPENDED"),
+      ),
+      isAssignedToHead: Boolean(
+        assignedStaff?.roles?.role_name === "DEPARTMENT_HEAD" ||
+          (user?.user_id &&
+            assignedStaff?.user_id &&
+            BigInt(assignedStaff.user_id) === BigInt(user.user_id)),
+      ),
       createdAt: formatFriendlyDate(g.created_at),
       isReopened: g.reopen_count > 0 || g.status === "REOPENED",
       reopenCount: g.reopen_count,
@@ -908,6 +1058,7 @@ export async function fetchDepartmentHeadGrievances(
       collaboratingDepartments: deptList,
       departmentsInvolved,
       isPrimaryDepartment,
+      canSubmitFinalResolution,
       myInvolvementType,
       myDepartmentStatus:
         myDeptRecord?.status ||
@@ -1059,11 +1210,6 @@ export async function fetchDepartmentHeadStaff(departmentId: bigint) {
 }
 
 export async function fetchDepartmentHeadOverview(departmentId: bigint) {
-  // Run SLA threshold evaluations non-blocking in background so HTTP response is not delayed
-  evaluateAllActiveGrievancesSla(departmentId).catch((err) => {
-    console.error("Background SLA evaluation error:", err);
-  });
-
   const deptGrievances = await prisma.grievance_departments.findMany({
     where: { department_id: departmentId },
     include: {

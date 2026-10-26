@@ -1,10 +1,9 @@
-import { AlertTriangle, FileText } from "lucide-react";
+import { FileText, Pencil, Power } from "lucide-react";
 import { useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -23,7 +22,7 @@ interface SlaPoliciesViewProps {
   statusFilter: string[];
   onEdit: (policy: SerializedSlaPolicy) => void;
   onToggleStatus: (policy: SerializedSlaPolicy) => void;
-  onDelete: (policy: SerializedSlaPolicy) => void;
+  onDelete?: (policy: SerializedSlaPolicy) => void;
 }
 
 export function SlaPoliciesView({
@@ -32,7 +31,6 @@ export function SlaPoliciesView({
   statusFilter,
   onEdit,
   onToggleStatus,
-  onDelete,
 }: SlaPoliciesViewProps) {
   const filtered = policies.filter((p) => {
     if (statusFilter.length > 0 && !statusFilter.includes(p.status))
@@ -246,25 +244,52 @@ export function SlaPoliciesView({
                                     </span>
                                   </TableCell>
                                   <TableCell className="w-[110px] px-3 py-3 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
-                                    <span
-                                      className={`font-medium ${p.status === "ACTIVE" ? "text-emerald-700" : "text-slate-500"}`}
+                                    <button
+                                      type="button"
+                                      onClick={() => onToggleStatus(p)}
+                                      title={
+                                        p.status === "ACTIVE"
+                                          ? "Click to deactivate"
+                                          : "Click to activate"
+                                      }
+                                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold cursor-pointer transition ${
+                                        p.status === "ACTIVE"
+                                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                      }`}
                                     >
+                                      <span
+                                        className={`h-1.5 w-1.5 rounded-full ${
+                                          p.status === "ACTIVE"
+                                            ? "bg-emerald-600 dark:bg-emerald-400"
+                                            : "bg-slate-400"
+                                        }`}
+                                      />
                                       {p.status === "ACTIVE"
                                         ? "Active"
                                         : "Inactive"}
-                                    </span>
+                                    </button>
                                   </TableCell>
                                   <TableCell className="w-[90px] py-3 pl-2 pr-4 text-right whitespace-nowrap overflow-hidden align-middle">
                                     <ActionMenu
-                                      widthClass="w-36"
+                                      widthClass="w-40"
                                       items={[
                                         {
-                                          label: "Delete Policy",
-                                          variant: "danger" as const,
+                                          label: "Edit Policy",
                                           icon: (
-                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                            <Pencil className="h-3.5 w-3.5" />
                                           ),
-                                          onClick: () => onDelete(p),
+                                          onClick: () => onEdit(p),
+                                        },
+                                        {
+                                          label:
+                                            p.status === "ACTIVE"
+                                              ? "Deactivate Policy"
+                                              : "Activate Policy",
+                                          icon: (
+                                            <Power className="h-3.5 w-3.5" />
+                                          ),
+                                          onClick: () => onToggleStatus(p),
                                         },
                                       ]}
                                     />

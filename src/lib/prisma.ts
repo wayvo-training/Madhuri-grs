@@ -8,7 +8,7 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-const POOL_VERSION = 5;
+const POOL_VERSION = 6;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -28,9 +28,10 @@ if (!globalForPrisma.pgPool || globalForPrisma.poolVersion !== POOL_VERSION) {
 
   const newPool = new Pool({
     connectionString,
-    max: 5,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 30000,
+    max: 20,
+    min: 2,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 15000,
     keepAlive: true,
     keepAliveInitialDelayMillis: 2000,
   });

@@ -7,7 +7,7 @@ interface PageProps {
 }
 
 export default async function StaffGrievanceDetailPage({ params }: PageProps) {
-  const user = await requirePageRole(["STAFF", "ADMIN", "DEPARTMENT_HEAD"]);
+  const user = await requirePageRole("STAFF");
   const fullName = `${user.first_name} ${user.last_name || ""}`.trim();
   const { id } = await params;
 

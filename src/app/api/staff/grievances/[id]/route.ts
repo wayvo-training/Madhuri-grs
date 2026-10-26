@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -117,12 +118,6 @@ export async function GET(
     } catch (slaErr) {
       console.error("SLA evaluation error:", slaErr);
     }
-
-    const slaCalc = calculateSlaStatus(
-      grievance.created_at,
-      grievance.due_at,
-      grievance.sla_status,
-    );
 
     const submitter = grievance.users;
     const submitterFullName = submitter
@@ -533,6 +528,11 @@ export async function GET(
         status: deptStatus,
         assignedStaff,
         isMyAssignment,
+        slaPercentAllocation: d.sla_percent_allocation
+          ? Number(d.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: d.allocated_duration_minutes || null,
+        executionOrder: d.execution_order || 1,
       };
     });
 
@@ -547,6 +547,51 @@ export async function GET(
     const isMyDeptCompleted =
       myDept?.status === "COMPLETED" ||
       currentAssignment?.assignment_status === "COMPLETED";
+
+    const myDeptRaw =
+      rawDepartments.find(
+        (d) =>
+          (currentAssignment?.grievance_department_id &&
+            d.grievance_department_id ===
+              currentAssignment.grievance_department_id) ||
+          (departmentId && d.department_id === departmentId),
+      ) || rawDepartments[0];
+
+    const isDeptBlocked = myDeptRaw?.status === "BLOCKED";
+    const deptAllocatedMins =
+      myDeptRaw?.allocated_duration_minutes ||
+      (grievance.due_at && grievance.created_at
+        ? Math.max(
+            1,
+            Math.round(
+              ((grievance.due_at.getTime() - grievance.created_at.getTime()) *
+                (Number(myDeptRaw?.sla_percent_allocation || 100) / 100)) /
+                60000,
+            ),
+          )
+        : null);
+
+    let slaCalc: ReturnType<typeof calculateSlaStatus>;
+    if (isDeptBlocked) {
+      slaCalc = {
+        state: "ON_TRACK",
+        stateLabel: "Pending Prerequisites (Blocked)",
+        consumptionPercent: 0,
+        timeRemaining: "Pending Prerequisites (Blocked)",
+      };
+    } else {
+      const deptStart =
+        myDeptRaw?.activated_at ||
+        myDeptRaw?.assigned_at ||
+        grievance.created_at;
+      const deptDue =
+        myDeptRaw?.due_at ||
+        (deptAllocatedMins
+          ? new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000)
+          : grievance.due_at);
+      const deptSlaStatus = myDeptRaw?.sla_status || grievance.sla_status;
+      slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+    }
 
     const activeDept = departmentsInvolved.find(
       (d) =>
@@ -570,6 +615,24 @@ export async function GET(
                 : grievance.status
     ) as StaffGrievanceItem["status"];
 
+    const targetDeptId =
+      myDeptRaw?.department_id ||
+      departmentId ||
+      rawDepartments[0]?.department_id;
+
+    const resolutionAuth = targetDeptId
+      ? canDepartmentSubmitFinalResolution(targetDeptId, rawDepartments)
+      : {
+          canResolve: isPrimaryOwner,
+          canSubmitFindings: !isMyDeptCompleted,
+          isFinalSequentialDept: false,
+        };
+
+    const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
+    const canSubmitFindings =
+      !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
+    const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -587,7 +650,17 @@ export async function GET(
       slaStatus: slaCalc.state,
       slaConsumptionPercent: slaCalc.consumptionPercent,
       slaTimeLeft: slaCalc.timeRemaining,
-      dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
+      dueAt: isDeptBlocked
+        ? null
+        : myDeptRaw?.due_at
+          ? myDeptRaw.due_at.toISOString()
+          : grievance.due_at
+            ? grievance.due_at.toISOString()
+            : null,
+      slaPercentAllocation: myDeptRaw?.sla_percent_allocation
+        ? Number(myDeptRaw.sla_percent_allocation)
+        : null,
+      allocatedDurationMinutes: deptAllocatedMins,
       submittedAt: formatRelativeTime(grievance.created_at),
       assignedAt: currentAssignment
         ? formatRelativeTime(currentAssignment.assigned_at)
@@ -613,6 +686,9 @@ export async function GET(
       isPrimaryOwner,
       myDepartmentStatus: myDept?.status || "ASSIGNED",
       isMyDepartmentCompleted: isMyDeptCompleted,
+      canSubmitFinalResolution,
+      canSubmitFindings,
+      isFinalSequentialDepartment,
       overallStatus: grievance.status,
       activeDepartmentName,
     };

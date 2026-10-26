@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { triggerFileDownload } from "@/lib/utils/download";
 import type {
   CaseDrawerTab,
+  DepartmentHeadInitialData,
   EscalationAuditRecord,
   EscalationInterventionType,
   GrievanceItem,
@@ -146,6 +147,7 @@ export function useDepartmentHead() {
 
 interface ProviderProps {
   children: React.ReactNode;
+  initialData?: DepartmentHeadInitialData;
   initialDepartmentName?: string;
   initialHodName?: string;
   initialHodEmail?: string;
@@ -154,19 +156,28 @@ interface ProviderProps {
 
 export function DepartmentHeadProvider({
   children,
+  initialData,
   initialDepartmentName = "Department Operations",
   initialHodName = "Department Head",
   initialHodEmail = "",
   initialEmployeeCode = "HOD-01",
 }: ProviderProps) {
-  const [grievances, setGrievances] = useState<GrievanceItem[]>([]);
-  const [staffList, setStaffList] = useState<StaffMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [grievances, setGrievances] = useState<GrievanceItem[]>(
+    initialData?.grievances || [],
+  );
+  const [staffList, setStaffList] = useState<StaffMember[]>(
+    initialData?.staffList || [],
+  );
+  const [isLoading, setIsLoading] = useState(
+    !initialData || initialData.grievances.length === 0,
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(
+    initialData?.selectedDeptId || "",
+  );
   const [availableDepartments, setAvailableDepartments] = useState<
     { id: string; name: string }[]
-  >([]);
+  >(initialData?.availableDepartments || []);
   const [currentDepartmentName, setCurrentDepartmentName] = useState(
     initialDepartmentName,
   );
@@ -244,7 +255,7 @@ export function DepartmentHeadProvider({
   const [escalationNote, setEscalationNote] = useState("");
   const [governanceAuditFeed, setGovernanceAuditFeed] = useState<
     EscalationAuditRecord[]
-  >([]);
+  >(initialData?.governanceAuditFeed || []);
   const [resolutionModalGrievance, setResolutionModalGrievance] =
     useState<GrievanceItem | null>(null);
   const [resolutionDecision, setResolutionDecision] = useState<
@@ -326,8 +337,24 @@ export function DepartmentHeadProvider({
   );
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!initialData) {
+      loadData();
+    }
+  }, [initialData, loadData]);
+
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.grievances) setGrievances(initialData.grievances);
+      if (initialData.staffList) setStaffList(initialData.staffList);
+      if (initialData.governanceAuditFeed)
+        setGovernanceAuditFeed(initialData.governanceAuditFeed);
+      if (initialData.availableDepartments)
+        setAvailableDepartments(initialData.availableDepartments);
+      if (initialData.selectedDeptId)
+        setSelectedDeptId(initialData.selectedDeptId);
+      setIsLoading(false);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -364,12 +391,22 @@ export function DepartmentHeadProvider({
   );
 
   const handleDownloadDocument = useCallback((doc: DocumentPreviewData) => {
-    const sampleText = `REPUBLIC OF INDIA / CENTRAL GRIEVANCE REDRESSAL SYSTEM\nOFFICIAL ATTACHMENT RECORD\n\nTicket Code: ${doc.grievanceNumber}\nFile Name: ${doc.name}\nSize: ${doc.size}\nCategory: ${doc.category}\nComplainant: ${doc.submitterName} (${doc.submitterRole})\nUploaded: ${doc.uploadedAt}\n\n--- DOCUMENT CONTENT EXTRACT ---\nThis official digital document was retrieved from the grievance case dossier.\nCryptographic Verification: SHA-256 Validated\nStatus: Certified Authentic Evidence\n`;
-    const blob = new Blob([sampleText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    triggerFileDownload(url, doc.name);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast.success(`Downloaded file: ${doc.name}`);
+    const dlUrl =
+      (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+      (doc.downloadUrl
+        ? `${doc.downloadUrl}${doc.downloadUrl.includes("?") ? "&" : "?"}download=true`
+        : "") ||
+      (doc.path?.startsWith("/api/attachments/")
+        ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
+        : doc.path);
+
+    if (dlUrl) {
+      triggerFileDownload(dlUrl, doc.name);
+      toast.success(`Downloading file: ${doc.name}`);
+      return;
+    }
+
+    toast.error(`File path unavailable for ${doc.name}`);
   }, []);
 
   const value = {

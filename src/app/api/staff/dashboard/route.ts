@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
+import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
 import {
@@ -63,16 +64,6 @@ export async function GET(request: Request) {
           email: true,
         },
       });
-    }
-
-    // Evaluate active grievances SLA thresholds
-    try {
-      const { evaluateAllActiveGrievancesSla } = await import(
-        "@/lib/engines/sla-engine"
-      );
-      await evaluateAllActiveGrievancesSla(departmentId ?? undefined);
-    } catch (slaErr) {
-      console.error("SLA evaluation error in staff dashboard:", slaErr);
     }
 
     const assignmentQuery = {
@@ -206,7 +197,24 @@ export async function GET(request: Request) {
         myInvolvementType === "EQUAL" ||
         isAdmin;
 
-      const slaCalc = calculateSlaStatus(g.created_at, g.due_at, g.sla_status);
+      let slaCalc: ReturnType<typeof calculateSlaStatus>;
+      if (a.grievance_departments?.status === "BLOCKED") {
+        slaCalc = {
+          consumptionPercent: 0,
+          timeRemaining: "Pending Prerequisites",
+          state: "ON_TRACK",
+          stateLabel: "Blocked",
+        };
+      } else {
+        const deptStart =
+          a.grievance_departments?.activated_at ||
+          a.grievance_departments?.assigned_at ||
+          g.created_at;
+        const deptDue = a.grievance_departments?.due_at || g.due_at;
+        const deptSlaStatus =
+          a.grievance_departments?.sla_status || g.sla_status;
+        slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+      }
 
       const latestResolution = g.resolutions?.[0];
       const latestReview = latestResolution?.resolution_reviews?.[0];
@@ -556,7 +564,23 @@ export async function GET(request: Request) {
           };
         });
 
-      const activeDept = g.grievance_departments?.find(
+      const rawDepts = g.grievance_departments || [];
+      const departmentsInvolved = rawDepts.map((d) => ({
+        id: d.grievance_department_id.toString(),
+        departmentName: d.departments?.department_name || "Unknown Department",
+        involvementType:
+          (d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+          "PRIMARY",
+        status: d.status,
+        slaPercentAllocation: d.sla_percent_allocation
+          ? Number(d.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: d.allocated_duration_minutes || null,
+        executionOrder: d.execution_order || 1,
+        isMyAssignment: a.grievance_department_id === d.grievance_department_id,
+      }));
+
+      const activeDept = rawDepts.find(
         (gd) =>
           gd.status === "IN_PROGRESS" ||
           gd.status === "ASSIGNED" ||
@@ -564,6 +588,27 @@ export async function GET(request: Request) {
       );
       const activeDepartmentName =
         activeDept?.departments?.department_name || undefined;
+
+      const myDeptId = a.grievance_departments?.department_id || departmentId;
+      const resolutionAuth = myDeptId
+        ? canDepartmentSubmitFinalResolution(myDeptId, rawDepts)
+        : {
+            canResolve: isPrimaryOwner,
+            canSubmitFindings: !(
+              a.grievance_departments?.status === "COMPLETED" ||
+              a.assignment_status === "COMPLETED"
+            ),
+            isFinalSequentialDept: false,
+          };
+
+      const isMyDeptCompleted =
+        a.grievance_departments?.status === "COMPLETED" ||
+        a.assignment_status === "COMPLETED";
+
+      const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
+      const canSubmitFindings =
+        !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
+      const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
 
       return {
         id: g.grievance_id.toString(),
@@ -577,8 +622,7 @@ export async function GET(request: Request) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : a.grievance_departments?.status === "COMPLETED" ||
-                a.assignment_status === "COMPLETED"
+            : isMyDeptCompleted
               ? "COMPLETED"
               : a.grievance_departments?.status === "ASSIGNED"
                 ? "ASSIGNED"
@@ -608,12 +652,14 @@ export async function GET(request: Request) {
         internalNotes,
         supportingFindings,
         auditTrail,
+        departmentsInvolved,
         myInvolvementType,
         isPrimaryOwner,
         myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
-        isMyDepartmentCompleted:
-          a.grievance_departments?.status === "COMPLETED" ||
-          a.assignment_status === "COMPLETED",
+        isMyDepartmentCompleted: isMyDeptCompleted,
+        canSubmitFinalResolution,
+        canSubmitFindings,
+        isFinalSequentialDepartment,
         overallStatus: g.status,
         activeDepartmentName,
       };

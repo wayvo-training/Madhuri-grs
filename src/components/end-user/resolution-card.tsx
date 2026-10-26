@@ -2,6 +2,7 @@ import {
   Check,
   CheckCircle2,
   Clock,
+  Download,
   Eye,
   FileText,
   ShieldCheck,
@@ -164,21 +165,37 @@ export function ResolutionCard({
                     )}
                   </div>
                 </div>
-                <Link
-                  href={att.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0"
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 rounded-lg"
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href={att.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <Eye className="h-3 w-3 mr-1" />
-                    View
-                  </Button>
-                </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 rounded-lg cursor-pointer"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                  </Link>
+                  <a
+                    href={`${att.path}${att.path.includes("?") ? "&" : "?"}download=true`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2.5 text-xs text-slate-700 border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 rounded-lg cursor-pointer"
+                      title="Download Document"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Download
+                    </Button>
+                  </a>
+                </div>
               </div>
             ))}
           </div>

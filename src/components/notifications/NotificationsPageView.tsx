@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   AlertTriangle,
@@ -15,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { UserRole } from "@/components/dashboard/navigation";
 import {
   AdvancedTableSearch,
@@ -270,10 +271,30 @@ export function NotificationsPageView({
     searchParams.get("grievanceId") ||
     "";
 
-  const [notifications, setNotifications] = useState<DetailedNotification[]>(
-    [],
-  );
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const {
+    data: notifications = [],
+    isLoading,
+    refetch: _fetchNotifications,
+  } = useQuery<DetailedNotification[]>({
+    queryKey: ["notifications", currentUserId || "me"],
+    queryFn: async () => {
+      const headers: HeadersInit = currentUserId
+        ? { "x-user-id": currentUserId }
+        : {};
+      const res = await fetch("/api/notifications", { headers });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.notifications)) {
+        return data.notifications;
+      }
+      return [];
+    },
+    staleTime: 5 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchInterval: 10 * 1000,
+    refetchIntervalInBackground: true,
+  });
 
   // Filter States
   const [activeTab, setActiveTab] = useState<
@@ -286,29 +307,11 @@ export function NotificationsPageView({
   >([]);
   const [advancedMode, setAdvancedMode] = useState<FilterMode>("AND");
 
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const headers: HeadersInit = currentUserId
-        ? { "x-user-id": currentUserId }
-        : {};
-      const res = await fetch("/api/notifications", { headers });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.notifications)) {
-        setNotifications(data.notifications);
-      }
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentUserId]);
-
   useEffect(() => {
-    fetchNotifications();
-
     const handleNotificationsChanged = () => {
-      fetchNotifications();
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", currentUserId || "me"],
+      });
     };
     if (typeof window !== "undefined") {
       window.addEventListener(
@@ -324,7 +327,7 @@ export function NotificationsPageView({
         );
       }
     };
-  }, [fetchNotifications]);
+  }, [queryClient, currentUserId]);
 
   useEffect(() => {
     const g =
@@ -339,19 +342,26 @@ export function NotificationsPageView({
   const markAsRead = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id
-            ? {
-                ...n,
-                isRead: true,
-                status: "READ",
-                readAt: new Date().toISOString(),
-              }
-            : n,
-        ),
+      queryClient.setQueryData<DetailedNotification[]>(
+        ["notifications", currentUserId || "me"],
+        (old) =>
+          old
+            ? old.map((n) =>
+                n.id === id
+                  ? {
+                      ...n,
+                      isRead: true,
+                      status: "READ",
+                      readAt: new Date().toISOString(),
+                    }
+                  : n,
+              )
+            : [],
       );
       await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", currentUserId || "me"],
+      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("notifications-changed"));
       }
@@ -363,14 +373,21 @@ export function NotificationsPageView({
   const markAsUnread = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     try {
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id
-            ? { ...n, isRead: false, status: "PENDING", readAt: null }
-            : n,
-        ),
+      queryClient.setQueryData<DetailedNotification[]>(
+        ["notifications", currentUserId || "me"],
+        (old) =>
+          old
+            ? old.map((n) =>
+                n.id === id
+                  ? { ...n, isRead: false, status: "PENDING", readAt: null }
+                  : n,
+              )
+            : [],
       );
       await fetch(`/api/notifications/${id}/unread`, { method: "PATCH" });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", currentUserId || "me"],
+      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("notifications-changed"));
       }
@@ -381,15 +398,22 @@ export function NotificationsPageView({
 
   const markAllAsRead = async () => {
     try {
-      setNotifications((prev) =>
-        prev.map((n) => ({
-          ...n,
-          isRead: true,
-          status: "READ",
-          readAt: new Date().toISOString(),
-        })),
+      queryClient.setQueryData<DetailedNotification[]>(
+        ["notifications", currentUserId || "me"],
+        (old) =>
+          old
+            ? old.map((n) => ({
+                ...n,
+                isRead: true,
+                status: "READ",
+                readAt: new Date().toISOString(),
+              }))
+            : [],
       );
       await fetch("/api/notifications/read-all", { method: "PATCH" });
+      queryClient.invalidateQueries({
+        queryKey: ["notifications", currentUserId || "me"],
+      });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("notifications-changed"));
       }

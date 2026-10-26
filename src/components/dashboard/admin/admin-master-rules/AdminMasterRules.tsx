@@ -495,11 +495,19 @@ export function AdminMasterRules({
               );
               if (matchedCat) {
                 setSelectedCatId(matchedCat.category_id);
-                const matchedSub = matchedCat.subcategories?.find(
-                  (s) => s.subcategory_name === r.subcategory_name,
-                );
-                if (matchedSub)
-                  setSelectedRoutingSubcatId(matchedSub.subcategory_id);
+                if (
+                  !r.subcategory_name ||
+                  r.subcategory_name === "All Subcategories"
+                ) {
+                  setSelectedRoutingSubcatId("ALL");
+                } else {
+                  const matchedSub = matchedCat.subcategories?.find(
+                    (s) => s.subcategory_name === r.subcategory_name,
+                  );
+                  if (matchedSub) {
+                    setSelectedRoutingSubcatId(matchedSub.subcategory_id);
+                  }
+                }
               }
 
               if (r.supporting_departments) {

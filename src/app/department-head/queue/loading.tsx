@@ -17,7 +17,7 @@ export default function DepartmentHeadQueueLoading() {
 
       {/* 2. Grievance Queue Table Skeleton (11 Columns matching QueueView) */}
       <div className="flex-1 min-h-0 overflow-x-auto custom-scrollbar flex flex-col">
-        <div className="min-w-[1550px] flex-1 min-h-0 flex flex-col">
+        <div className="min-w-[1950px] flex-1 min-h-0 flex flex-col">
           <div className="h-11 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shrink-0">
             <Skeleton className="h-3.5 w-20" />
             <Skeleton className="h-3.5 w-48" />

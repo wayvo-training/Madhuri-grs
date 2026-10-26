@@ -9,10 +9,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/ui/logo";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +44,14 @@ export default function ForgotPasswordPage() {
         return;
       }
 
+      if (data.resetToken) {
+        router.push(`/reset-password?token=${data.resetToken}`);
+        return;
+      }
+
       setSuccessMessage(
         data.message ||
-          "If an account exists for this email, a password reset link has been sent.",
+          "If an account exists for this email, a password reset link has been generated.",
       );
     } catch (err) {
       console.error("Forgot password failed:", err);

@@ -15,88 +15,123 @@ import type {
 export default async function AdminDashboardPage() {
   await requirePageRole("ADMIN");
 
-  // 1. Fetch real database metrics and overview records
-  const [routingExceptionsCount, departments, recentGrievances, allGrievances] =
-    await Promise.all([
-      prisma.grievances.count({
-        where: {
-          status: "SUBMITTED",
-          grievance_departments: { none: {} },
+  // 1. Fetch real database metrics and overview records with database-level aggregations
+  const [
+    routingExceptionsCount,
+    departments,
+    recentGrievances,
+    statusGroups,
+    priorityGroups,
+    slaGroups,
+  ] = await Promise.all([
+    prisma.grievances.count({
+      where: {
+        status: "SUBMITTED",
+        grievance_departments: { none: {} },
+      },
+    }),
+    prisma.departments.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        department_id: true,
+        department_name: true,
+        status: true,
+        _count: {
+          select: { grievance_departments: true, users: true },
         },
-      }),
-      prisma.departments.findMany({
-        where: { status: "ACTIVE" },
-        select: {
-          department_id: true,
-          department_name: true,
-          status: true,
-          _count: {
-            select: { grievance_departments: true, users: true },
+      },
+      orderBy: { department_name: "asc" },
+    }),
+    prisma.grievances.findMany({
+      take: 50,
+      orderBy: { created_at: "desc" },
+      select: {
+        grievance_id: true,
+        grievance_number: true,
+        title: true,
+        priority: true,
+        status: true,
+        created_at: true,
+        categories: {
+          select: { category_name: true },
+        },
+        users: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
           },
         },
-        orderBy: { department_name: "asc" },
-      }),
-      prisma.grievances.findMany({
-        take: 50,
-        orderBy: { created_at: "desc" },
-        include: {
-          categories: true,
-          subcategories: true,
-          users: {
-            select: {
-              first_name: true,
-              last_name: true,
-              email: true,
+        grievance_departments: {
+          where: { involvement_type: "PRIMARY" },
+          select: {
+            involvement_type: true,
+            departments: {
+              select: {
+                department_name: true,
+              },
             },
           },
-          grievance_departments: {
-            where: { involvement_type: "PRIMARY" },
-            include: {
-              departments: true,
-            },
-          },
         },
-      }),
-      prisma.grievances.findMany({
-        select: {
-          status: true,
-          priority: true,
-          sla_status: true,
-        },
-      }),
-    ]);
+      },
+    }),
+    prisma.grievances.groupBy({
+      by: ["status"],
+      where: {
+        status: { notIn: ["CLOSED", "RESOLVED"] },
+      },
+      _count: { _all: true },
+    }),
+    prisma.grievances.groupBy({
+      by: ["priority"],
+      where: {
+        status: { notIn: ["CLOSED", "RESOLVED"] },
+      },
+      _count: { _all: true },
+    }),
+    prisma.grievances.groupBy({
+      by: ["sla_status"],
+      where: {
+        status: { notIn: ["CLOSED", "RESOLVED"] },
+      },
+      _count: { _all: true },
+    }),
+  ]);
 
   let inProgress = 0,
     assigned = 0,
     unassigned = 0,
     reopened = 0;
+  for (const sg of statusGroups) {
+    const count = sg._count._all;
+    if (sg.status === "SUBMITTED" || sg.status === "ROUTED")
+      unassigned += count;
+    else if (sg.status === "ASSIGNED") assigned += count;
+    else if (sg.status === "REOPENED" || sg.status === "REOPEN_REVIEW")
+      reopened += count;
+    else inProgress += count;
+  }
+
   let critical = 0,
     high = 0,
     medium = 0,
     low = 0;
+  for (const pg of priorityGroups) {
+    const count = pg._count._all;
+    if (pg.priority === "CRITICAL") critical += count;
+    else if (pg.priority === "HIGH") high += count;
+    else if (pg.priority === "MEDIUM") medium += count;
+    else low += count;
+  }
+
   let onTrack = 0,
     atRisk = 0,
     breached = 0;
-
-  for (const g of allGrievances) {
-    if (g.status === "CLOSED" || g.status === "RESOLVED") continue;
-
-    // Status Breakdown (Active only)
-    if (g.status === "SUBMITTED" || g.status === "ROUTED") unassigned++;
-    else if (g.status === "ASSIGNED") assigned++;
-    else if (g.status === "REOPENED" || g.status === "REOPEN_REVIEW")
-      reopened++;
-    else inProgress++;
-
-    // Priority and SLA (only for active)
-    if (g.priority === "CRITICAL") critical++;
-    else if (g.priority === "HIGH") high++;
-    else if (g.priority === "MEDIUM") medium++;
-    else low++;
-
-    if (g.sla_status === "BREACHED") breached++;
-    else if (g.sla_status === "AT_RISK") atRisk++;
-    else onTrack++;
+  for (const slg of slaGroups) {
+    const count = slg._count._all;
+    if (slg.sla_status === "BREACHED") breached += count;
+    else if (slg.sla_status === "AT_RISK") atRisk += count;
+    else onTrack += count;
   }
 
   const pieCharts = {

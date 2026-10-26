@@ -6,7 +6,11 @@ import {
 } from "@/lib/attachments/access-control";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getAttachmentUrl, SUPABASE_BUCKET } from "@/lib/supabase";
+import {
+  getAttachmentUrl,
+  SUPABASE_BUCKET,
+  supabaseAdmin,
+} from "@/lib/supabase";
 
 export async function GET(
   request: NextRequest,
@@ -143,12 +147,42 @@ export async function GET(
 
     if (!isDownload && isOfficeDoc) {
       // Browsers lack native rendering support for Microsoft Office files (.docx, .xlsx, etc.).
-      // Route through Google Docs Viewer so the user can view the document directly in the browser without downloading it.
+      // Route through Google Docs Viewer for inline browser preview.
       const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(signedUrl)}`;
       return NextResponse.redirect(viewerUrl);
     }
 
-    // Direct browser navigation redirect
+    // Direct binary stream with 200 OK to guarantee downloads without 307 cross-origin redirect blocks
+    try {
+      const { data: fileBlob, error: downloadError } =
+        await supabaseAdmin.storage
+          .from(SUPABASE_BUCKET)
+          .download(normalized.storagePath);
+
+      if (!downloadError && fileBlob) {
+        const arrayBuffer = await fileBlob.arrayBuffer();
+        const contentType =
+          attachment.file_type || fileBlob.type || "application/octet-stream";
+        const disposition = isDownload ? "attachment" : "inline";
+
+        return new NextResponse(arrayBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Content-Disposition": `${disposition}; filename="${encodeURIComponent(attachment.file_name)}"`,
+            "Content-Length": String(arrayBuffer.byteLength),
+            "Cache-Control": "private, no-cache, no-store, must-revalidate",
+          },
+        });
+      }
+    } catch (streamErr) {
+      console.warn(
+        "Direct binary streaming fallback to signedUrl redirect:",
+        streamErr,
+      );
+    }
+
+    // Direct signed URL redirect fallback
     return NextResponse.redirect(signedUrl);
   } catch (error: unknown) {
     console.error("Error in GET /api/attachments/[id]/download:", error);

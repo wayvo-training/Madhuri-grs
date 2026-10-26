@@ -1,4 +1,11 @@
 import { ChevronDown, Sliders } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { DepartmentOption, MainTab } from "@/types/admin/master-rules";
 
 export interface RulesFilterPopoverProps {
@@ -85,20 +92,36 @@ export function RulesFilterPopover({
               >
                 Department
               </label>
-              <select
-                id="filter-popover-dept"
-                aria-label="Filter by department"
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+              <Select
+                value={deptFilter || "ALL"}
+                onValueChange={(val) => {
+                  if (val) setDeptFilter(val);
+                }}
               >
-                <option value="ALL">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d.department_id} value={d.department_name}>
-                    {d.department_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="filter-popover-dept"
+                  aria-label="Filter by department"
+                  className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+                >
+                  <SelectValue placeholder="All Departments">
+                    {deptFilter === "ALL" ? "All Departments" : deptFilter}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-70 bg-white border border-slate-200 shadow-xl max-h-56">
+                  <SelectItem value="ALL" className="text-xs cursor-pointer">
+                    All Departments
+                  </SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem
+                      key={d.department_id}
+                      value={d.department_name}
+                      className="text-xs cursor-pointer"
+                    >
+                      {d.department_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -110,20 +133,36 @@ export function RulesFilterPopover({
               >
                 Category
               </label>
-              <select
-                id="filter-popover-cat"
-                aria-label="Filter by category"
-                value={catFilter}
-                onChange={(e) => setCatFilter(e.target.value)}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+              <Select
+                value={catFilter || "ALL"}
+                onValueChange={(val) => {
+                  if (val) setCatFilter(val);
+                }}
               >
-                <option value="ALL">All Categories</option>
-                {categoryOptions.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="filter-popover-cat"
+                  aria-label="Filter by category"
+                  className="h-8 w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none transition focus:border-emerald-600 focus:bg-white cursor-pointer"
+                >
+                  <SelectValue placeholder="All Categories">
+                    {catFilter === "ALL" ? "All Categories" : catFilter}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-70 bg-white border border-slate-200 shadow-xl max-h-56">
+                  <SelectItem value="ALL" className="text-xs cursor-pointer">
+                    All Categories
+                  </SelectItem>
+                  {categoryOptions.map((cat) => (
+                    <SelectItem
+                      key={cat}
+                      value={cat}
+                      className="text-xs cursor-pointer"
+                    >
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

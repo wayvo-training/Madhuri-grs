@@ -160,7 +160,7 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
         },
         {
           title: "My Grievances",
-          href: "/staff/grievances",
+          href: "/staff/dashboard#queue",
           icon: FileText,
         },
         {

@@ -25,6 +25,17 @@ export async function POST(request: Request) {
     }
 
     const trimmedName = policy_name.trim();
+
+    if (!/[a-zA-Z]/.test(trimmedName)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+        },
+        { status: 400 },
+      );
+    }
     const requestedStatus = body.status === "INACTIVE" ? "INACTIVE" : "ACTIVE";
 
     // 1. Check duplicate policy name (case-insensitive)
@@ -50,21 +61,79 @@ export async function POST(request: Request) {
     const maxReopen = Number(max_reopen_count) || 2;
     const maxReviews = Number(max_manual_review_count) || 1;
 
+    if (windowHours !== null) {
+      if (
+        Number.isNaN(windowHours) ||
+        windowHours < 24 ||
+        windowHours > 720 ||
+        windowHours % 24 !== 0
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Reopen window must be between 1 and 30 days (24 to 720 hours).",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (
+      Number.isNaN(maxReopen) ||
+      maxReopen < 1 ||
+      maxReopen > 10 ||
+      !Number.isInteger(maxReopen)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Max reopen count must be between 1 and 10.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      Number.isNaN(maxReviews) ||
+      maxReviews < 1 ||
+      maxReviews > 10 ||
+      !Number.isInteger(maxReviews)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Manual review count must be between 1 and 10.",
+        },
+        { status: 400 },
+      );
+    }
+
     // Optional: resolve custom categories if provided
     const finalCondition = body.applicable_condition || null;
     if (finalCondition) {
       if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
+        const trimmedCat = body.new_category_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedCat)) {
+          return NextResponse.json(
+            {
+              error:
+                "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         let cat = await prisma.categories.findFirst({
           where: {
             category_name: {
-              equals: body.new_category_name,
+              equals: trimmedCat,
               mode: "insensitive",
             },
           },
         });
         if (!cat) {
           cat = await prisma.categories.create({
-            data: { category_name: body.new_category_name },
+            data: { category_name: trimmedCat },
           });
         }
         finalCondition.category_id = cat.category_id.toString();
@@ -75,10 +144,20 @@ export async function POST(request: Request) {
         finalCondition.subcategory_id === "CUSTOM" &&
         finalCondition.category_id
       ) {
+        const trimmedSubcat = body.new_subcategory_name.trim();
+        if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+          return NextResponse.json(
+            {
+              error:
+                "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+            },
+            { status: 400 },
+          );
+        }
         let subcat = await prisma.subcategories.findFirst({
           where: {
             subcategory_name: {
-              equals: body.new_subcategory_name,
+              equals: trimmedSubcat,
               mode: "insensitive",
             },
             category_id: BigInt(finalCondition.category_id),
@@ -87,7 +166,7 @@ export async function POST(request: Request) {
         if (!subcat) {
           subcat = await prisma.subcategories.create({
             data: {
-              subcategory_name: body.new_subcategory_name,
+              subcategory_name: trimmedSubcat,
               category_id: BigInt(finalCondition.category_id),
             },
           });
@@ -163,17 +242,232 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const { reopen_policy_id, status } = body;
 
-    if (!reopen_policy_id || !status) {
+    if (!reopen_policy_id) {
       return NextResponse.json(
-        { success: false, message: "Policy ID and status are required." },
+        { success: false, message: "Policy ID is required." },
         { status: 400 },
       );
     }
 
     const policyId = BigInt(reopen_policy_id);
 
-    if (status === "ACTIVE") {
-      // Allow multiple active policies now since they can apply to specific categories.
+    // If this is a full policy update (editing all fields)
+    if (body.policy_name) {
+      const {
+        policy_name,
+        reopen_window_hours,
+        max_reopen_count,
+        max_manual_review_count,
+      } = body;
+
+      const trimmedName = policy_name?.trim();
+      if (!trimmedName) {
+        return NextResponse.json(
+          { success: false, message: "Policy name is required." },
+          { status: 400 },
+        );
+      }
+
+      if (!/[a-zA-Z]/.test(trimmedName)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Policy name cannot consist of only numbers. It must include letters or an alphanumeric combination.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const nameConflict = await prisma.reopen_policies.findFirst({
+        where: {
+          policy_name: { equals: trimmedName, mode: "insensitive" },
+          NOT: { reopen_policy_id: policyId },
+        },
+      });
+
+      if (nameConflict) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A reopen policy named "${trimmedName}" already exists.`,
+          },
+          { status: 409 },
+        );
+      }
+
+      const windowHours = reopen_window_hours
+        ? Number(reopen_window_hours)
+        : null;
+      const maxReopen = Number(max_reopen_count) || 2;
+      const maxReviews = Number(max_manual_review_count) || 1;
+
+      if (windowHours !== null) {
+        if (
+          Number.isNaN(windowHours) ||
+          windowHours < 24 ||
+          windowHours > 720 ||
+          windowHours % 24 !== 0
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Reopen window must be between 1 and 30 days (24 to 720 hours).",
+            },
+            { status: 400 },
+          );
+        }
+      }
+
+      if (
+        Number.isNaN(maxReopen) ||
+        maxReopen < 1 ||
+        maxReopen > 10 ||
+        !Number.isInteger(maxReopen)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Max reopen count must be between 1 and 10.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        Number.isNaN(maxReviews) ||
+        maxReviews < 1 ||
+        maxReviews > 10 ||
+        !Number.isInteger(maxReviews)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Manual review count must be between 1 and 10.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const finalCondition = body.applicable_condition || null;
+      if (finalCondition) {
+        if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
+          const trimmedCat = body.new_category_name.trim();
+          if (!/[a-zA-Z]/.test(trimmedCat)) {
+            return NextResponse.json(
+              {
+                error:
+                  "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+              },
+              { status: 400 },
+            );
+          }
+          let cat = await prisma.categories.findFirst({
+            where: {
+              category_name: {
+                equals: trimmedCat,
+                mode: "insensitive",
+              },
+            },
+          });
+          if (!cat) {
+            cat = await prisma.categories.create({
+              data: { category_name: trimmedCat },
+            });
+          }
+          finalCondition.category_id = cat.category_id.toString();
+          finalCondition.category = cat.category_name;
+        }
+        if (
+          body.new_subcategory_name &&
+          finalCondition.subcategory_id === "CUSTOM" &&
+          finalCondition.category_id
+        ) {
+          const trimmedSubcat = body.new_subcategory_name.trim();
+          if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+            return NextResponse.json(
+              {
+                error:
+                  "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+              },
+              { status: 400 },
+            );
+          }
+          let subcat = await prisma.subcategories.findFirst({
+            where: {
+              subcategory_name: {
+                equals: trimmedSubcat,
+                mode: "insensitive",
+              },
+              category_id: BigInt(finalCondition.category_id),
+            },
+          });
+          if (!subcat) {
+            subcat = await prisma.subcategories.create({
+              data: {
+                subcategory_name: trimmedSubcat,
+                category_id: BigInt(finalCondition.category_id),
+              },
+            });
+          }
+          finalCondition.subcategory_id = subcat.subcategory_id.toString();
+          finalCondition.subcategory = subcat.subcategory_name;
+        }
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const policy = await tx.reopen_policies.update({
+          where: { reopen_policy_id: policyId },
+          data: {
+            policy_name: trimmedName,
+            reopen_window_hours: windowHours,
+            max_reopen_count: maxReopen,
+            max_manual_review_count: maxReviews,
+            applicable_condition: finalCondition
+              ? (finalCondition as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+            ...(status ? { status } : {}),
+          },
+        });
+
+        await tx.audit_logs.create({
+          data: {
+            user_id: user.user_id,
+            action: "UPDATE_REOPEN_POLICY",
+            entity_type: "REOPEN_POLICY",
+            entity_id: policy.reopen_policy_id,
+            new_value: {
+              policy_name: policy.policy_name,
+              reopen_window_hours: policy.reopen_window_hours,
+              max_reopen_count: policy.max_reopen_count,
+            },
+          },
+        });
+
+        return policy;
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Reopen policy updated successfully.",
+        policy: {
+          reopen_policy_id: updated.reopen_policy_id.toString(),
+          policy_name: updated.policy_name,
+          reopen_window_hours: updated.reopen_window_hours,
+          max_reopen_count: updated.max_reopen_count,
+          max_manual_review_count: updated.max_manual_review_count,
+          applicable_condition: updated.applicable_condition,
+          status: updated.status,
+        },
+      });
+    }
+
+    if (!status) {
+      return NextResponse.json(
+        { success: false, message: "Status is required." },
+        { status: 400 },
+      );
     }
 
     const updated = await prisma.$transaction(async (tx) => {

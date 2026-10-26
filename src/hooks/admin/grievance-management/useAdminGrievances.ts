@@ -184,7 +184,15 @@ export function useAdminGrievances(
         if (sla.length > 0) params.append("sla_status", sla.join(","));
 
         const res = await fetch(`/api/admin/grievances?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch grievances");
+        if (!res.ok) {
+          const errData = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          throw new Error(
+            errData?.message ||
+              `Failed to fetch grievances (HTTP ${res.status})`,
+          );
+        }
         const data = await res.json();
         if (data.success) {
           const unique = Array.from(

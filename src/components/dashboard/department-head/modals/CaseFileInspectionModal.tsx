@@ -1,5 +1,6 @@
 "use client";
 
+import { AlertTriangle, UserCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   CaseNotesSkeleton,
@@ -131,6 +132,17 @@ export function CaseFileInspectionModal({
             ...(json.data.supportingFindings
               ? { supportingFindings: json.data.supportingFindings }
               : {}),
+            ...(json.data.grievance?.isAssignedToHead !== undefined
+              ? { isAssignedToHead: json.data.grievance.isAssignedToHead }
+              : json.data.assignment?.isAssignedToHead !== undefined
+                ? { isAssignedToHead: json.data.assignment.isAssignedToHead }
+                : {}),
+            ...(json.data.assignment?.staffName
+              ? { assignedStaffName: json.data.assignment.staffName }
+              : {}),
+            ...(json.data.assignment?.staffId
+              ? { assignedStaffId: json.data.assignment.staffId }
+              : {}),
           }));
         }
       })
@@ -147,17 +159,21 @@ export function CaseFileInspectionModal({
 
   const handleDocumentClick = useCallback(
     (file: {
+      id?: string;
       name: string;
       size: string;
       type: string;
       path?: string;
+      downloadUrl?: string;
       uploadedAt?: string;
     }) => {
       onOpenDocumentPreview({
+        id: file.id,
         name: file.name,
         size: file.size,
         type: file.type || "Document",
         path: file.path,
+        downloadUrl: file.downloadUrl,
         uploadedAt: file.uploadedAt || currentGrievance.createdAt || "Recent",
         grievanceNumber: currentGrievance.ticketCode || "GRS-2026",
         category: `${currentGrievance.category || "General"} / ${currentGrievance.subcategory || "General"}`,
@@ -206,6 +222,35 @@ export function CaseFileInspectionModal({
           }
           onClose={onClose}
         />
+
+        {currentGrievance.isAssignedStaffInactive && (
+          <div className="mx-6 mt-3 rounded-xl border border-rose-200 bg-rose-50/90 p-3 text-xs flex items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2 text-rose-900 min-w-0">
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+              <div>
+                <strong className="font-semibold">
+                  Staff Member Deactivated:
+                </strong>{" "}
+                The assigned staff member (
+                <span className="font-medium underline">
+                  {currentGrievance.assignedStaffName || "Staff Member"}
+                </span>
+                ) was deactivated by Admin. Please reassign this case to an
+                active staff member to avoid SLA breach.
+              </div>
+            </div>
+            {onAssignClick && (
+              <button
+                type="button"
+                onClick={() => onAssignClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 font-semibold text-white hover:bg-rose-700 transition shrink-0 cursor-pointer shadow-xs"
+              >
+                <UserCheck className="h-3.5 w-3.5" />
+                <span>Change Assignment</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0 overflow-x-auto custom-scrollbar">

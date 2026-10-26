@@ -10,14 +10,43 @@ export default async function UserDashboardPage() {
 
   const userGrievances = await prisma.grievances.findMany({
     where: { submitted_by: user.user_id },
-    include: {
-      categories: true,
-      subcategories: true,
-      attachments: true,
+    take: 50,
+    select: {
+      grievance_id: true,
+      grievance_number: true,
+      title: true,
+      description: true,
+      priority: true,
+      status: true,
+      created_at: true,
+      due_at: true,
+      submitted_by: true,
+      categories: {
+        select: { category_name: true },
+      },
+      subcategories: {
+        select: { subcategory_name: true },
+      },
+      attachments: {
+        select: {
+          attachment_id: true,
+          file_name: true,
+          file_size: true,
+          file_type: true,
+          file_path: true,
+          resolution_id: true,
+          grievance_department_id: true,
+          uploaded_by: true,
+        },
+      },
       audit_logs: {
         where: { action: "ADDITIONAL_INFO_REQUESTED" },
         orderBy: { created_at: "desc" },
         take: 1,
+        select: {
+          new_value: true,
+          created_at: true,
+        },
       },
     },
     orderBy: { created_at: "desc" },

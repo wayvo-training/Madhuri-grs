@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertOctagon, LogIn, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -53,12 +54,38 @@ export function StaffDashboard({
   initialTab = "all",
 }: StaffDashboardProps) {
   const router = useRouter();
-  const [data, setData] = useState<StaffDashboardData | null>(
-    initialData || null,
-  );
-  const [isLoading, setIsLoading] = useState(!initialData);
-  const [_isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const {
+    data = null,
+    isLoading,
+    isFetching: _isRefreshing,
+    error: queryError,
+    refetch,
+  } = useQuery<StaffDashboardData>({
+    queryKey: ["staff-dashboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/staff/dashboard");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        if (res.status === 403 || res.status === 401) {
+          throw new Error(
+            errJson?.message ||
+              "Access restricted: Your current account does not have permission to access the staff workspace. Please switch to a Staff or Department Head account.",
+          );
+        }
+        throw new Error(
+          errJson?.message || `Failed to load staff dashboard (${res.status})`,
+        );
+      }
+      return res.json();
+    },
+    initialData: initialData || undefined,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const error = queryError instanceof Error ? queryError.message : null;
 
   // Synchronized Hash Navigation
   const { activeView: internalActiveView, switchView: rawSwitchView } =
@@ -116,47 +143,27 @@ export function StaffDashboard({
     useState<DocumentPreviewData | null>(null);
 
   const handleDownloadDocument = (doc: DocumentPreviewData) => {
-    if (doc.path) {
-      triggerFileDownload(doc.path, doc.name);
+    const dlUrl =
+      (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "") ||
+      (doc.downloadUrl
+        ? `${doc.downloadUrl}${doc.downloadUrl.includes("?") ? "&" : "?"}download=true`
+        : "") ||
+      (doc.path?.startsWith("/api/attachments/")
+        ? `${doc.path}${doc.path.includes("?") ? "&" : "?"}download=true`
+        : doc.path);
+    if (dlUrl) {
+      triggerFileDownload(dlUrl, doc.name);
     }
   };
 
-  // Fetch Dashboard Data from API
-  const fetchDashboardData = useCallback(async (quiet = false) => {
-    if (!quiet) setIsLoading(true);
-    else setIsRefreshing(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/staff/dashboard");
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        if (res.status === 403 || res.status === 401) {
-          throw new Error(
-            errJson?.message ||
-              "Access restricted: Your current account does not have permission to access the staff workspace. Please switch to a Staff or Department Head account.",
-          );
-        }
-        throw new Error(
-          errJson?.message || `Failed to load staff dashboard (${res.status})`,
-        );
-      }
-      const json: StaffDashboardData = await res.json();
-      setData(json);
-    } catch (err) {
-      console.error("Staff dashboard fetch error:", err);
-      setError(err instanceof Error ? err.message : "Error loading dashboard");
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!initialData) {
-      fetchDashboardData();
-    }
-  }, [initialData, fetchDashboardData]);
+  // Refresh Dashboard Data via TanStack Query cache invalidation
+  const fetchDashboardData = useCallback(
+    async (_quiet = false) => {
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
+      await refetch();
+    },
+    [queryClient, refetch],
+  );
 
   // Handle note addition in details modal
   const handleAddNote = async (

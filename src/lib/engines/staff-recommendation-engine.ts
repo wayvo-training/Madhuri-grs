@@ -254,8 +254,8 @@ export async function calculateStaffRecommendations(
           matchedSkills.push(rawSkillName);
         }
       } else {
-        // Baseline competency for department member having any registered skill
-        matchWeight = 8 * mult;
+        // No match with grievance category, subcategory, or content
+        matchWeight = 0;
       }
 
       skillScore = Math.max(skillScore, matchWeight);
@@ -323,6 +323,8 @@ export async function calculateStaffRecommendations(
       }
     }
 
+    const totalRelevantPast = pastSubcategoryCases + pastCategoryCases;
+
     let experienceScore = 0;
     if (
       pastSubcategoryCases >= 2 ||
@@ -335,12 +337,8 @@ export async function calculateStaffRecommendations(
       experienceScore = 20;
     } else if (pastCategoryCases >= 1) {
       experienceScore = 15;
-    } else if (
-      staff.user_skills.some((us) => (Number(us.experience_years) || 0) >= 3)
-    ) {
-      experienceScore = 12;
     } else {
-      experienceScore = 8;
+      experienceScore = 0;
     }
 
     // --- Factor 3: Current Workload (20%) ---
@@ -376,29 +374,38 @@ export async function calculateStaffRecommendations(
     let slaScore = 0;
     const isHighPriority = priority === "CRITICAL" || priority === "HIGH";
 
+    const hasExpertSkill = staff.user_skills.some(
+      (us) =>
+        us.proficiency_level === "EXPERT" ||
+        us.proficiency_level === "ADVANCED",
+    );
+    const hasRelevantQualifications =
+      matchedSkills.length > 0 || hasExpertSkill || totalRelevantPast > 0;
+
     if (isHighPriority) {
-      // High priority demands experienced staff with low current load
-      const hasExpertSkill = staff.user_skills.some(
-        (us) =>
-          us.proficiency_level === "EXPERT" ||
-          us.proficiency_level === "ADVANCED",
-      );
-      if (hasExpertSkill && activeWorkload <= 2) {
-        slaScore = 10;
-      } else if (hasExpertSkill && activeWorkload <= 4) {
-        slaScore = 8;
-      } else if (activeWorkload <= 5) {
-        slaScore = 5;
+      // High priority demands demonstrated expertise or category experience, plus available capacity
+      if (hasRelevantQualifications) {
+        if (activeWorkload <= 2) slaScore = 10;
+        else if (activeWorkload <= 4) slaScore = 7;
+        else if (activeWorkload <= 6) slaScore = 4;
+        else slaScore = 0;
       } else {
-        slaScore = 2;
+        // No relevant skills or experience for CRITICAL / HIGH priority - no baseline defaults
+        slaScore = 0;
       }
     } else {
       // Normal/Medium priority
-      if (activeWorkload <= 2) slaScore = 10;
-      else if (activeWorkload <= 4) slaScore = 8;
-      else if (activeWorkload <= 6) slaScore = 6;
-      else if (activeWorkload <= 8) slaScore = 4;
-      else slaScore = 2;
+      if (hasRelevantQualifications) {
+        if (activeWorkload <= 2) slaScore = 10;
+        else if (activeWorkload <= 4) slaScore = 8;
+        else if (activeWorkload <= 6) slaScore = 6;
+        else slaScore = 2;
+      } else {
+        // Staff without direct domain match but available on active duty
+        if (activeWorkload <= 2) slaScore = 5;
+        else if (activeWorkload <= 5) slaScore = 3;
+        else slaScore = 0;
+      }
     }
 
     // Total Score (0 - 100): natural range without artificial floor, capped at 100
@@ -420,16 +427,15 @@ export async function calculateStaffRecommendations(
     } else if (matchedSkills.length > 0) {
       bulletReasons.push(`Relevant skills: ${matchedSkills[0]}`);
     } else {
-      bulletReasons.push("General departmental competency");
+      bulletReasons.push("No direct skill match for this category");
     }
 
-    const totalRelevantPast = pastSubcategoryCases + pastCategoryCases;
     if (totalRelevantPast > 0) {
       bulletReasons.push(
         `Relevant previous experience (${totalRelevantPast} similar case${totalRelevantPast > 1 ? "s" : ""} handled)`,
       );
     } else {
-      bulletReasons.push("Qualified for category procedures");
+      bulletReasons.push("No previous cases resolved in this category");
     }
 
     if (availabilityStatus === "AVAILABLE" && activeWorkload < maxCapacity) {
@@ -463,19 +469,25 @@ export async function calculateStaffRecommendations(
       }
     }
 
-    if (isHighPriority) {
-      bulletReasons.push(`Suitable for ${priority} priority SLA turnaround`);
+    if (slaScore >= 8) {
+      bulletReasons.push(
+        `High suitability for ${priority} priority SLA turnaround`,
+      );
+    } else if (slaScore >= 4) {
+      bulletReasons.push(
+        `Moderate alignment for ${priority} priority SLA resolution`,
+      );
     } else {
-      bulletReasons.push("Suitable for standard SLA resolution");
+      bulletReasons.push(`Low alignment for ${priority} priority requirements`);
     }
 
     const rawWorkload: "LOW" | "MEDIUM" | "HIGH" =
       activeWorkload <= 2 ? "LOW" : activeWorkload <= 5 ? "MEDIUM" : "HIGH";
 
     const rawSlaRisk: "LOW" | "MEDIUM" | "HIGH" =
-      isHighPriority && activeWorkload >= 5
+      isHighPriority && (activeWorkload >= 5 || slaScore < 4)
         ? "HIGH"
-        : isHighPriority
+        : isHighPriority || activeWorkload >= 6
           ? "MEDIUM"
           : "LOW";
 
