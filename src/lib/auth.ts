@@ -45,12 +45,27 @@ if (typeof setInterval !== "undefined") {
   }
 }
 
-export function invalidateUserSessionCache(sessionToken?: string) {
-  if (sessionToken) {
-    userSessionCache.delete(sessionToken);
-  } else {
+export function invalidateUserSessionCache(
+  sessionTokenOrUserId?: string | bigint | number,
+) {
+  if (!sessionTokenOrUserId) {
     userSessionCache.clear();
+    return;
   }
+  if (
+    typeof sessionTokenOrUserId === "bigint" ||
+    typeof sessionTokenOrUserId === "number" ||
+    /^\d+$/.test(sessionTokenOrUserId)
+  ) {
+    const targetUserId = BigInt(sessionTokenOrUserId);
+    for (const [token, item] of userSessionCache.entries()) {
+      if (BigInt(item.user.user_id) === targetUserId) {
+        userSessionCache.delete(token);
+      }
+    }
+    return;
+  }
+  userSessionCache.delete(sessionTokenOrUserId);
 }
 
 export const getCurrentUser = cache(
@@ -93,7 +108,7 @@ export const getCurrentUser = cache(
         },
       });
 
-      if (!session || session.users.status !== "ACTIVE") {
+      if (session?.users?.status !== "ACTIVE") {
         userSessionCache.delete(sessionToken);
         return null;
       }

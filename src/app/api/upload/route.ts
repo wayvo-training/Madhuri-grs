@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { validateUploadedFile } from "@/lib/attachments/file-validation";
 import { getCurrentUser } from "@/lib/auth";
 import { uploadToSupabase } from "@/lib/supabase";
 
@@ -22,6 +23,12 @@ export async function POST(req: NextRequest) {
         { error: "No valid file provided" },
         { status: 400 },
       );
+    }
+
+    // Validate file using shared security validator
+    const check = validateUploadedFile(file.name, file.type, file.size);
+    if (!check.valid) {
+      return NextResponse.json({ error: check.error }, { status: 400 });
     }
 
     // Generate safe unique filename

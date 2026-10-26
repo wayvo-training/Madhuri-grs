@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { invalidateUserSessionCache } from "@/lib/auth";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -73,6 +74,8 @@ export async function POST(request: Request) {
         },
       });
     });
+
+    invalidateUserSessionCache(targetUserId);
 
     return NextResponse.json({
       success: true,

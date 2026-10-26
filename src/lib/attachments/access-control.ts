@@ -130,13 +130,13 @@ export function checkAttachmentAccess(
     };
   }
 
-  // 3. Resolution attachments and departmental supportive findings/evidence are accessible to all grievance case participants & the citizen
-  const isResolutionOrFindingsAttachment =
+  // 3. Formal Resolution attachments are accessible to all grievance case participants & the citizen submitter
+  const isResolutionAttachment =
     (attachment.resolution_id !== null &&
       attachment.resolution_id !== undefined) ||
-    attachment.file_path?.includes("resolutions/") ||
-    (attachment.grievance_department_id !== null &&
-      attachment.grievance_department_id !== undefined);
+    Boolean(
+      attachment.file_path && /(^|\/)resolutions\//.test(attachment.file_path),
+    );
 
   // Identify user's department involvement
   const userDeptRecord = userDeptId
@@ -156,8 +156,8 @@ export function checkAttachmentAccess(
         a.assignment_status === "COMPLETED"),
   );
 
-  // If this is a resolution or departmental finding attachment, any participating department or assigned officer can view it
-  if (isResolutionOrFindingsAttachment) {
+  // Formal resolution attachments are visible to all participating departments, assigned officers, and the citizen owner
+  if (isResolutionAttachment) {
     if (
       isUserDeptParticipant ||
       isUserAssignedStaff ||
@@ -166,7 +166,7 @@ export function checkAttachmentAccess(
       return {
         allowed: true,
         reason:
-          "Resolution and departmental findings evidence are accessible to all case participants and the citizen.",
+          "Formal resolution attachments are accessible to all case participants and the citizen submitter.",
       };
     }
   }

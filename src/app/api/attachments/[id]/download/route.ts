@@ -115,16 +115,105 @@ export async function GET(
       );
     }
 
+    // Safe MIME types permitted to be rendered inline in the browser
+    const SAFE_INLINE_MIME_TYPES = new Set([
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "text/plain",
+      "text/csv",
+    ]);
+
+    // Extensions permitted for inline rendering
+    const SAFE_INLINE_EXTENSIONS = new Set([
+      "pdf",
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "webp",
+      "txt",
+      "csv",
+    ]);
+
+    // Dangerous MIME types that must NEVER be served inline under any circumstances
+    const DANGEROUS_MIME_TYPES = new Set([
+      "text/html",
+      "image/svg+xml",
+      "application/xhtml+xml",
+      "text/xml",
+      "application/xml",
+      "application/javascript",
+      "text/javascript",
+    ]);
+
+    const DANGEROUS_EXTENSIONS = new Set([
+      "html",
+      "htm",
+      "svg",
+      "xhtml",
+      "xml",
+      "js",
+      "mjs",
+      "ts",
+      "tsx",
+      "php",
+      "sh",
+      "bat",
+      "cmd",
+      "exe",
+    ]);
+
+    function buildContentDisposition(
+      disposition: "inline" | "attachment",
+      rawFileName: string,
+    ): string {
+      const safeBaseName = rawFileName || "download";
+      // RFC 2616 fallback for legacy HTTP clients: ASCII only, remove quotes and control chars
+      const asciiFallback = safeBaseName
+        .replace(/["\r\n\\]/g, "_")
+        .replace(/[^\x20-\x7E]/g, "_");
+      // RFC 5987 UTF-8 encoded filename for modern browsers
+      const rfc5987Encoded = encodeURIComponent(safeBaseName)
+        .replace(
+          /['()]/g,
+          (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+        )
+        .replace(/\*/g, "%2A");
+
+      return `${disposition}; filename="${asciiFallback}"; filename*=UTF-8''${rfc5987Encoded}`;
+    }
+
     const isDownload =
       request.nextUrl.searchParams.get("download") === "true" ||
       request.nextUrl.searchParams.has("download");
+
+    const ext = attachment.file_name.split(".").pop()?.toLowerCase() || "";
+    const rawType = (attachment.file_type || "")
+      .toLowerCase()
+      .split(";")[0]
+      .trim();
+
+    const isDangerous =
+      DANGEROUS_MIME_TYPES.has(rawType) || DANGEROUS_EXTENSIONS.has(ext);
+
+    const canRenderInline =
+      !isDownload &&
+      !isDangerous &&
+      SAFE_INLINE_MIME_TYPES.has(rawType) &&
+      SAFE_INLINE_EXTENSIONS.has(ext);
+
+    // If download is requested OR file is not safe for inline viewing, force attachment
+    const shouldForceAttachment = isDownload || !canRenderInline;
 
     // Generate time-limited signed URL (valid for 5 minutes / 300 seconds)
     const signedUrl = await getAttachmentUrl(
       normalized.storagePath,
       300,
       true,
-      isDownload ? attachment.file_name : undefined,
+      shouldForceAttachment ? attachment.file_name : undefined,
     );
 
     const isJsonRequest =
@@ -140,9 +229,8 @@ export async function GET(
       });
     }
 
-    const ext = attachment.file_name.split(".").pop()?.toLowerCase();
     const isOfficeDoc = ["docx", "doc", "xlsx", "xls", "pptx", "ppt"].includes(
-      ext || "",
+      ext,
     );
 
     if (!isDownload && isOfficeDoc) {
@@ -161,17 +249,38 @@ export async function GET(
 
       if (!downloadError && fileBlob) {
         const arrayBuffer = await fileBlob.arrayBuffer();
-        const contentType =
-          attachment.file_type || fileBlob.type || "application/octet-stream";
-        const disposition = isDownload ? "attachment" : "inline";
+        const effectiveBlobType = (fileBlob.type || "")
+          .toLowerCase()
+          .split(";")[0]
+          .trim();
+
+        // Check if the underlying blob reports a dangerous type
+        const blobIsDangerous = DANGEROUS_MIME_TYPES.has(effectiveBlobType);
+        const isStreamDangerous = isDangerous || blobIsDangerous;
+
+        const isStreamSafeInline =
+          canRenderInline &&
+          !blobIsDangerous &&
+          (effectiveBlobType === "" ||
+            SAFE_INLINE_MIME_TYPES.has(effectiveBlobType));
+
+        const disposition = isStreamSafeInline ? "inline" : "attachment";
+        const effectiveContentType = isStreamDangerous
+          ? "application/octet-stream"
+          : attachment.file_type || fileBlob.type || "application/octet-stream";
 
         return new NextResponse(arrayBuffer, {
           status: 200,
           headers: {
-            "Content-Type": contentType,
-            "Content-Disposition": `${disposition}; filename="${encodeURIComponent(attachment.file_name)}"`,
+            "Content-Type": effectiveContentType,
+            "Content-Disposition": buildContentDisposition(
+              disposition,
+              attachment.file_name,
+            ),
             "Content-Length": String(arrayBuffer.byteLength),
             "Cache-Control": "private, no-cache, no-store, must-revalidate",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
           },
         });
       }

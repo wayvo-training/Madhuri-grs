@@ -1,6 +1,10 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import {
+  MAX_ATTACHMENTS_PER_GRIEVANCE,
+  validateUploadedFile,
+} from "@/lib/attachments/file-validation";
 import { getCurrentUser } from "@/lib/auth";
 import { DEFAULT_ROUTING_CONFIG } from "@/lib/constants/routing";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
@@ -34,6 +38,24 @@ export async function POST(request: Request) {
         ? problemStatement.substring(0, 195).trim()
         : problemStatement);
     const files = formData.getAll("files") as File[];
+
+    if (files.length > MAX_ATTACHMENTS_PER_GRIEVANCE) {
+      return NextResponse.json(
+        {
+          error: `A maximum of ${MAX_ATTACHMENTS_PER_GRIEVANCE} file attachments are allowed per grievance.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    for (const file of files) {
+      if (file && typeof file === "object" && "name" in file) {
+        const check = validateUploadedFile(file.name, file.type, file.size);
+        if (!check.valid) {
+          return NextResponse.json({ error: check.error }, { status: 400 });
+        }
+      }
+    }
 
     const cleanTitle = title.trim();
     const cleanDesc = problemStatement.trim();

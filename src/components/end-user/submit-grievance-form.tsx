@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
-  ChevronDown,
   Copy,
   File as FileIcon,
   FileText,
@@ -29,6 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  MAX_ATTACHMENTS_PER_GRIEVANCE,
+  validateUploadedFile,
+} from "@/lib/attachments/file-validation";
 
 interface Category {
   category_id: bigint | string;
@@ -125,16 +128,26 @@ export function SubmitGrievanceForm({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files).filter((f) => {
-        if (f.size > 5 * 1024 * 1024) {
-          toast.error(
-            `File "${f.name}" exceeds the 5 MB limit and was not added.`,
-          );
+      const incomingFiles = Array.from(e.target.files);
+
+      if (files.length + incomingFiles.length > MAX_ATTACHMENTS_PER_GRIEVANCE) {
+        toast.error(
+          `You can attach a maximum of ${MAX_ATTACHMENTS_PER_GRIEVANCE} files per grievance. You already have ${files.length} attached.`,
+        );
+        e.target.value = "";
+        return;
+      }
+
+      const newFiles = incomingFiles.filter((f) => {
+        const check = validateUploadedFile(f.name, f.type, f.size);
+        if (!check.valid) {
+          toast.error(check.error || `File "${f.name}" is not supported.`);
           return false;
         }
         return true;
       });
       setFiles((prev) => [...prev, ...newFiles]);
+      e.target.value = "";
     }
   };
 
@@ -593,7 +606,7 @@ export function SubmitGrievanceForm({
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Upload supportive files such as screenshots, emails, or
-                    receipts (Optional, Max 5 MB each).
+                    receipts (Optional, Max 5 files, up to 5 MB each).
                   </p>
                 </div>
 
@@ -610,7 +623,7 @@ export function SubmitGrievanceForm({
                       Drag and drop files here, or click to browse
                     </span>
                     <span className="text-xs text-slate-400 mt-1">
-                      PDF, JPG, PNG, DOC, DOCX up to 5 MB
+                      PDF, JPG, PNG, DOC, DOCX up to 5 MB (Max 5 files)
                     </span>
                   </div>
                   <input
