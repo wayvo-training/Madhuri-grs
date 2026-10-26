@@ -61,47 +61,14 @@ export async function extractTextFromFileBuffer(
   // 3. Word Documents (.docx)
   if (lowerName.endsWith(".docx") || lowerType.includes("wordprocessingml")) {
     try {
-      const zlib = await import("node:zlib");
-      let offset = 0;
-      while (offset < buffer.length - 30) {
-        if (
-          buffer[offset] === 0x50 &&
-          buffer[offset + 1] === 0x4b &&
-          buffer[offset + 2] === 0x03 &&
-          buffer[offset + 3] === 0x04
-        ) {
-          const compressionMethod = buffer.readUInt16LE(offset + 8);
-          const compressedSize = buffer.readUInt32LE(offset + 18);
-          const fileNameLength = buffer.readUInt16LE(offset + 26);
-          const extraFieldLength = buffer.readUInt16LE(offset + 28);
-          const zipEntryName = buffer.toString(
-            "utf-8",
-            offset + 30,
-            offset + 30 + fileNameLength,
-          );
-          const dataOffset = offset + 30 + fileNameLength + extraFieldLength;
-
-          if (zipEntryName === "word/document.xml") {
-            const compressedData = buffer.subarray(
-              dataOffset,
-              dataOffset + compressedSize,
-            );
-            let xmlContent = "";
-            if (compressionMethod === 8) {
-              xmlContent = zlib
-                .inflateRawSync(compressedData)
-                .toString("utf-8");
-            } else if (compressionMethod === 0) {
-              xmlContent = compressedData.toString("utf-8");
-            }
-            if (xmlContent) {
-              const stripped = xmlContent.replace(/<[^>]+>/g, " ");
-              return cleanExtractedText(stripped);
-            }
-          }
-          offset = dataOffset + compressedSize;
-        } else {
-          offset++;
+      const JSZip = (await import("jszip")).default;
+      const zip = await JSZip.loadAsync(buffer);
+      const documentXmlFile = zip.file("word/document.xml");
+      if (documentXmlFile) {
+        const xmlContent = await documentXmlFile.async("string");
+        if (xmlContent) {
+          const stripped = xmlContent.replace(/<[^>]+>/g, " ");
+          return cleanExtractedText(stripped);
         }
       }
     } catch (err) {

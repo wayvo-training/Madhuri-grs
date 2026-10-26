@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { invalidateUserSessionCache } from "@/lib/auth";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import {
@@ -565,6 +566,8 @@ export async function PATCH(request: Request) {
 
       return updated;
     });
+
+    invalidateUserSessionCache(targetUserId);
 
     const serialized: SerializedUser = {
       user_id: updatedUser.user_id.toString(),
