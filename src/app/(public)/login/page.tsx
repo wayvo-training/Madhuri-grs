@@ -244,21 +244,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Remember Me */}
-                <div className="flex items-center gap-2">
-                  <input
-                    id="remember"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-[#0F766E] accent-[#0F766E] focus:ring-[#0F766E] cursor-pointer"
-                  />
-                  <label
-                    htmlFor="remember"
-                    className="text-xs sm:text-sm text-slate-600 select-none cursor-pointer"
-                  >
-                    Remember me on this device
-                  </label>
-                </div>
-
                 {/* Submit Button */}
                 <button
                   type="submit"

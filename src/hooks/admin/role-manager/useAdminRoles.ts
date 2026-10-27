@@ -12,9 +12,7 @@ export function useAdminRoles(
   availablePermissions: SerializedPermission[],
 ) {
   const router = useRouter();
-  const [roles, setRoles] = useState<SerializedRole[]>(() =>
-    initialRoles.filter((r) => r.role_name !== "ADMIN"),
-  );
+  const [roles, setRoles] = useState<SerializedRole[]>(initialRoles);
   const [permissionsList, setPermissionsList] =
     useState<SerializedPermission[]>(availablePermissions);
 

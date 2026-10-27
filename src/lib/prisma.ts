@@ -8,46 +8,31 @@ if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-const POOL_VERSION = 6;
-
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
   pgPool?: Pool;
-  poolVersion?: number;
 };
 
 // Singleton connection pool across hot reloads and server route invocations
-if (!globalForPrisma.pgPool || globalForPrisma.poolVersion !== POOL_VERSION) {
-  if (globalForPrisma.pgPool) {
-    try {
-      globalForPrisma.pgPool.end();
-    } catch {
-      // ignore
-    }
-  }
-
-  const newPool = new Pool({
+if (!globalForPrisma.pgPool) {
+  globalForPrisma.pgPool = new Pool({
     connectionString,
-    max: 20,
-    min: 2,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 15000,
-    keepAlive: true,
-    keepAliveInitialDelayMillis: 2000,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   });
 
-  newPool.on("error", (err) => {
-    console.error("Unexpected error on pg client pool:", err);
+  globalForPrisma.pgPool.on("error", (err) => {
+    console.warn("Recoverable pg pool connection event:", err.message);
   });
+}
 
-  globalForPrisma.pgPool = newPool;
-  globalForPrisma.poolVersion = POOL_VERSION;
-
-  const adapter = new PrismaPg(newPool);
+if (!globalForPrisma.prisma) {
+  const adapter = new PrismaPg(globalForPrisma.pgPool);
   globalForPrisma.prisma = new PrismaClient({
     adapter,
   });
 }
 
-export const pool = globalForPrisma.pgPool as Pool;
-export const prisma = globalForPrisma.prisma as PrismaClient;
+export const pool = globalForPrisma.pgPool;
+export const prisma = globalForPrisma.prisma;

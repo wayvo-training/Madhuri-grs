@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { invalidateUserSessionCache } from "@/lib/auth";
 import { CACHE_TAGS, serverCache } from "@/lib/cache";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -10,11 +11,6 @@ export async function GET() {
   try {
     const [roles, permissions] = await Promise.all([
       prisma.roles.findMany({
-        where: {
-          role_name: {
-            not: "ADMIN",
-          },
-        },
         orderBy: { role_id: "asc" },
         include: {
           _count: { select: { users: true } },
@@ -284,6 +280,7 @@ export async function PATCH(request: Request) {
     });
 
     serverCache.invalidateTags([CACHE_TAGS.ROLES]);
+    invalidateUserSessionCache();
 
     return NextResponse.json({
       success: true,

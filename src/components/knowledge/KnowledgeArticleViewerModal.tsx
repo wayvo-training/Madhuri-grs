@@ -63,6 +63,7 @@ export interface KnowledgeArticleData {
   departmentId?: string | null;
   departmentName?: string | null;
   canApprove?: boolean;
+  matchScore?: number;
 }
 
 interface KnowledgeArticleViewerModalProps {
@@ -72,6 +73,7 @@ interface KnowledgeArticleViewerModalProps {
   onApprove?: (article: KnowledgeArticleData) => Promise<void>;
   onReject?: (article: KnowledgeArticleData) => void;
   isApprover?: boolean;
+  isSubmitting?: boolean;
 }
 
 export function KnowledgeArticleViewerModal({
@@ -81,6 +83,7 @@ export function KnowledgeArticleViewerModal({
   onApprove,
   onReject,
   isApprover = false,
+  isSubmitting = false,
 }: KnowledgeArticleViewerModalProps) {
   if (!isOpen || !article) return null;
 
@@ -88,7 +91,7 @@ export function KnowledgeArticleViewerModal({
   const keyPointsText = article.keyPoints || article.considerations || "";
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-80 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl max-h-[88vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
@@ -189,19 +192,19 @@ export function KnowledgeArticleViewerModal({
                   </span>
                 </div>
 
-                {article.duplicateCheck.highestClassification !==
-                  "NO_SIGNIFICANT_MATCH" && (
-                  <span
-                    className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
-                      article.duplicateCheck.highestClassification ===
-                      "LIKELY_DUPLICATE"
-                        ? "bg-rose-200/80 text-rose-900"
-                        : "bg-amber-200/80 text-amber-900"
-                    }`}
-                  >
-                    Similarity Score: {article.duplicateCheck.highestScore}%
-                  </span>
-                )}
+                <span
+                  className={`px-2 py-0.5 rounded-full font-bold text-[11px] ${
+                    article.duplicateCheck.highestClassification ===
+                    "LIKELY_DUPLICATE"
+                      ? "bg-rose-200/80 text-rose-900"
+                      : article.duplicateCheck.highestClassification ===
+                          "SIMILAR"
+                        ? "bg-amber-200/80 text-amber-900"
+                        : "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                  }`}
+                >
+                  Similarity Score: {article.duplicateCheck.highestScore}%
+                </span>
               </div>
 
               {article.duplicateCheck.highestClassification !==
@@ -337,7 +340,8 @@ export function KnowledgeArticleViewerModal({
                   <button
                     type="button"
                     onClick={() => onReject(article)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer disabled:opacity-50"
                   >
                     <FileX className="h-3.5 w-3.5 text-rose-600" />
                     <span>Reject</span>
@@ -345,7 +349,8 @@ export function KnowledgeArticleViewerModal({
                   <button
                     type="button"
                     onClick={() => onApprove(article)}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#0F766E] text-white text-xs font-semibold shadow-xs hover:bg-[#115E59] transition cursor-pointer disabled:opacity-50"
                   >
                     <FileCheck2 className="h-3.5 w-3.5" />
                     <span>Approve</span>
