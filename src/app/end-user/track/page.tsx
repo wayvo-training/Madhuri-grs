@@ -4,7 +4,10 @@ import { StatusBadge } from "@/components/dashboard/badges";
 import { TrackSearch } from "@/components/end-user/track-search";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
-import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
+import {
+  getActiveDepartment,
+  getPrimaryDepartment,
+} from "@/lib/utils/grievance-departments";
 
 interface PageProps {
   searchParams: Promise<{
@@ -43,6 +46,8 @@ const mapStatusToStage = (status: string) => {
 interface GrievanceWithDept {
   grievance_departments?: Array<{
     involvement_type?: string;
+    status?: string;
+    execution_order?: number;
     departments?: {
       department_name?: string;
     };
@@ -68,16 +73,45 @@ const getStageInfo = (id: string, grievance: GrievanceWithDept | null) => {
     case "SUBMITTED":
       return { label: "Submitted", desc: "Grievance submitted successfully." };
     case "ROUTED": {
+      const depts = grievance?.grievance_departments || [];
+      if (depts.length > 1) {
+        const deptNames = depts
+          .map(
+            (d) =>
+              `${d.departments?.department_name || "Department"}${d.involvement_type === "PRIMARY" ? " (Lead)" : ""}`,
+          )
+          .join(", ");
+        return {
+          label: "Routed",
+          desc: `Routed to ${deptNames}.`,
+        };
+      }
       const primaryGDept = getPrimaryDepartment(grievance);
       return {
         label: "Routed",
         desc: `Routed to ${primaryGDept?.departments?.department_name || "department"}.`,
       };
     }
-    case "ASSIGNED":
-      return { label: "Assigned", desc: "Assigned for investigation." };
-    case "IN_PROGRESS":
-      return { label: "In Progress", desc: "Investigation is in progress." };
+    case "ASSIGNED": {
+      const activeDept = getActiveDepartment(grievance);
+      const activeName = activeDept?.departments?.department_name;
+      return {
+        label: "Assigned",
+        desc: activeName
+          ? `Assigned for investigation in ${activeName}.`
+          : "Assigned for investigation.",
+      };
+    }
+    case "IN_PROGRESS": {
+      const activeDept = getActiveDepartment(grievance);
+      const activeName = activeDept?.departments?.department_name;
+      return {
+        label: "In Progress",
+        desc: activeName
+          ? `Investigation in progress by ${activeName}.`
+          : "Investigation is in progress.",
+      };
+    }
     case "HEAD_REVIEW":
       return {
         label: "Head Review",
@@ -122,6 +156,7 @@ export default async function EndUserTrackPage(props: PageProps) {
           include: {
             departments: true,
           },
+          orderBy: { execution_order: "asc" },
         },
         resolutions: {
           include: {

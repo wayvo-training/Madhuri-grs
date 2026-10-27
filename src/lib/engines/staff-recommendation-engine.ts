@@ -169,12 +169,9 @@ export async function calculateStaffRecommendations(
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
     // Workload calculation:
-    // Only active assigned cases, strictly excluding:
-    // 1. The current grievance being viewed/assigned
-    // 2. Resolved, under-review, or closed cases
+    // Actual active assigned cases for this staff member (excluding resolved, under-review, or closed cases)
     const activeAssignments =
       staff.assignments_assignments_staff_idTousers.filter((a) => {
-        if (a.grievance_id === grievanceId) return false;
         if (a.assignment_status !== "ASSIGNED") return false;
         const gStatus = a.grievances?.status || "";
         return !DEFAULT_ASSIGNMENT_CONFIG.INACTIVE_WORKLOAD_STATUSES.includes(

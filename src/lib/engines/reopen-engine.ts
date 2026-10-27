@@ -127,14 +127,22 @@ export async function evaluateReopenPolicy(input: {
 }
 
 /**
+ * Calculates total reopens allowed dynamically (Normal Staff Reopens + Head Manual Reviews).
+ */
+export function getTotalAllowedReopens(
+  policy: ReopenPolicyMatchResult,
+): number {
+  return policy.maxReopenCount + policy.maxManualReviewCount;
+}
+
+/**
  * Checks whether a given reopen count requires Department Head manual review or escalation.
+ * A reopen triggers Head manual review when normal staff reopens have been exhausted
+ * (i.e. reopenCount > policy.maxReopenCount).
  */
 export function requiresHeadManualReview(
   reopenCount: number,
   policy: ReopenPolicyMatchResult,
 ): boolean {
-  return (
-    reopenCount >= policy.maxManualReviewCount ||
-    reopenCount >= policy.maxReopenCount
-  );
+  return reopenCount > policy.maxReopenCount && policy.maxManualReviewCount > 0;
 }

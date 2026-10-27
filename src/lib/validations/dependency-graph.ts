@@ -78,16 +78,12 @@ export function deriveTopologicalOrder(
     const custom = depMap.get(lower);
 
     let rawPrereqs: string[] = [];
-    if (
-      custom &&
-      Array.isArray(custom.prerequisites) &&
-      custom.prerequisites.length > 0
-    ) {
+    if (custom && Array.isArray(custom.prerequisites)) {
       rawPrereqs = custom.prerequisites
         .map((p) => p.trim())
         .filter((p) => p.length > 0);
-    } else if (!dept.isPrimary) {
-      // In sequential mode, if no custom prerequisites were explicitly provided,
+    } else if (!custom && !dept.isPrimary) {
+      // In sequential mode, if no custom dependency node was provided for this department,
       // fallback to depending on the primary lead department
       const primaryDept = allDepartments.find((d) => d.isPrimary);
       rawPrereqs = primaryDept ? [primaryDept.name] : [];
@@ -459,6 +455,8 @@ export function validateRoutingPolicy(
         allocated_duration_minutes: custom?.allocated_duration_minutes ?? null,
       });
     }
+
+    normalizedDeps.sort((a, b) => a.execution_order - b.execution_order);
   }
 
   // Validate SLA allocations: reject negative values, invalid ranges, and totals exceeding 100%

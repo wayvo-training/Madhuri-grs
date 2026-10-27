@@ -129,8 +129,34 @@ export function RoutingRuleModal({
         )
       : undefined;
 
-    // 1. Only populate if initialLeadDeptId exists or there are supporting departments
+    // 1. If sequentialDependencies already exists with ordered nodes, populate in that exact execution order
     if (
+      isMulti &&
+      sequentialDependencies &&
+      sequentialDependencies.length > 0
+    ) {
+      const sortedDeps = [...sequentialDependencies].sort(
+        (a, b) => (a.execution_order ?? 1) - (b.execution_order ?? 1),
+      );
+      sortedDeps.forEach((depNode, idx) => {
+        const dObj = departments.find(
+          (d) =>
+            d.department_name?.toLowerCase() ===
+            depNode.department_name?.toLowerCase(),
+        );
+        rows.push({
+          rowId: `row-dep-${idx}-${depNode.department_name}`,
+          department_id: depNode.department_id || dObj?.department_id || "",
+          department_name: depNode.department_name,
+          involvement_type:
+            depNode.involvement_type === "PRIMARY" ? "PRIMARY" : "SUPPORT",
+          prerequisites: depNode.prerequisites || [],
+          sla_percent_allocation: depNode.sla_percent_allocation,
+          allocated_duration_minutes:
+            depNode.allocated_duration_minutes ?? null,
+        });
+      });
+    } else if (
       initialLeadDeptId ||
       (selectedSupportingDepts && selectedSupportingDepts.length > 0)
     ) {
@@ -320,7 +346,18 @@ export function RoutingRuleModal({
     syncRowsToParent(updated);
   };
 
-  const syncRowsToParent = (updatedRows: ParticipatingDepartmentRow[]) => {
+  const syncRowsToParent = (rawUpdatedRows: ParticipatingDepartmentRow[]) => {
+    // In sequential mode, automatically recalculate each row's prerequisites based on its new position in the sequence
+    const updatedRows = rawUpdatedRows.map((r, idx) => ({
+      ...r,
+      prerequisites:
+        dependencyType === "SEQUENTIAL"
+          ? idx > 0 && rawUpdatedRows[idx - 1]?.department_name
+            ? [rawUpdatedRows[idx - 1].department_name]
+            : []
+          : [],
+    }));
+
     setParticipatingRows(updatedRows);
 
     const primaryRow = updatedRows.find(
@@ -346,12 +383,7 @@ export function RoutingRuleModal({
           department_name: r.department_name,
           execution_order: idx + 1,
           stage: idx + 1,
-          prerequisites:
-            r.prerequisites && r.prerequisites.length > 0
-              ? r.prerequisites
-              : dependencyType === "SEQUENTIAL" && idx > 0
-                ? [updatedRows[idx - 1].department_name]
-                : [],
+          prerequisites: r.prerequisites,
           involvement_type: r.involvement_type,
           sla_percent_allocation: r.sla_percent_allocation,
           allocated_duration_minutes: r.allocated_duration_minutes ?? null,
@@ -376,6 +408,8 @@ export function RoutingRuleModal({
           sla_percent_allocation: idx === 0 ? baseShare + remainder : baseShare,
         }));
         syncRowsToParent(updated);
+      } else {
+        syncRowsToParent(participatingRows);
       }
     } else {
       const updated = participatingRows.map((r) => ({

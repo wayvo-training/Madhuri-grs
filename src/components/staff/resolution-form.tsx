@@ -284,8 +284,8 @@ export function ResolutionForm({
       }
 
       localStorage.removeItem(`draft_resolution_${grievance.id}`);
-      onResolutionSuccess?.(grievance.id);
       onClose();
+      onResolutionSuccess?.(grievance.id);
     } catch (err) {
       setErrorMsg(
         err instanceof Error
@@ -715,7 +715,12 @@ export function ResolutionForm({
                     return;
                   }
                   setErrorMsg(null);
-                  setShowConfirmModal(true);
+                  if (!isResolving) {
+                    // Direct submission for department findings - avoids redundant double modal popup
+                    submitForm(false);
+                  } else {
+                    setShowConfirmModal(true);
+                  }
                 }}
                 disabled={isSubmitting || !isFormValid}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
@@ -724,16 +729,23 @@ export function ResolutionForm({
                     : "bg-[#0F766E] hover:bg-[#115E59]"
                 }`}
               >
-                <Send className="h-3.5 w-3.5" />
-                <span>
-                  {isSubmitting
-                    ? "Submitting..."
-                    : !isResolving
-                      ? "Submit Department Findings"
-                      : grievance.reopenCount >= 3
-                        ? "Submit for Review"
-                        : "Resolve Grievance"}
-                </span>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>
+                      {!isResolving
+                        ? "Submit Department Findings"
+                        : grievance.reopenCount >= 3
+                          ? "Submit for Review"
+                          : "Resolve Grievance"}
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           );

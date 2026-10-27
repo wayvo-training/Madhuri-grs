@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { validateReopenReason } from "@/lib/constants/reopen";
 import {
   evaluateReopenPolicy,
+  getTotalAllowedReopens,
   requiresHeadManualReview,
 } from "@/lib/engines/reopen-engine";
 import { prisma } from "@/lib/prisma";
@@ -56,14 +57,14 @@ export async function POST(
       priority: grievance.priority,
     });
 
-    const maxReopens = reopenPolicy.maxReopenCount;
+    const totalAllowedReopens = getTotalAllowedReopens(reopenPolicy);
     const windowHours = reopenPolicy.reopenWindowHours;
 
-    if (grievance.reopen_count >= maxReopens) {
+    if (grievance.reopen_count >= totalAllowedReopens) {
       return NextResponse.json(
         {
           success: false,
-          message: `Maximum reopen limit of ${maxReopens} reached for this grievance.`,
+          message: `Maximum reopen limit reached (${totalAllowedReopens} total: ${reopenPolicy.maxReopenCount} standard reopens and ${reopenPolicy.maxManualReviewCount} head manual reviews).`,
         },
         { status: 400 },
       );
@@ -170,6 +171,7 @@ export async function POST(
         data: {
           status: newStatus,
           reopen_count: { increment: 1 },
+          ...(isEscalated ? { manual_review_count: { increment: 1 } } : {}),
         },
       });
 
@@ -263,7 +265,7 @@ export async function POST(
               grievance_id: grievanceId,
               escalated_to: hod.user_id,
               escalation_level: 1,
-              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (reached review threshold of ${reopenPolicy.maxManualReviewCount}). Reason: ${reason}`,
+              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (standard reopens completed, entering Head Manual Review). Reason: ${reason}`,
               status: "OPEN",
             },
           });
@@ -308,12 +310,12 @@ export async function POST(
             : "GRIEVANCE_REOPENED",
         title: isLeadHead
           ? isEscalated
-            ? "Max Reopen Limit Reached — Head Manual Review Required"
+            ? `Standard Reopen Limit Reached — Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens})`
             : "Grievance Reopened by Employee"
           : `Collaborating Grievance Reopened: ${grievance.grievance_number}`,
         message: isLeadHead
           ? isEscalated
-            ? `Grievance ${grievance.grievance_number} has reached the maximum reopen count (${newReopenCount} reopens) and requires head manual review. Employee reason: ${reason}. As Lead Department Head, you can solve this grievance directly or assign it to another person.`
+            ? `Grievance ${grievance.grievance_number} has completed all ${reopenPolicy.maxReopenCount} standard reopens and requires Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens}). Employee reason: ${reason}. As Lead Department Head, you can solve this grievance directly or assign it to staff.`
             : `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}. Please assign staff for re-investigation.`
           : `Grievance ${grievance.grievance_number} involving your department (${deptName}) has been reopened by the employee. Reason: ${reason}. The lead department is initiating re-investigation.`,
       });
@@ -326,9 +328,9 @@ export async function POST(
         grievanceId: grievanceId,
         type: isEscalated ? "GRIEVANCE_ESCALATED" : "GRIEVANCE_REOPENED",
         title: isEscalated
-          ? "Max Reopen Limit Reached — Head Manual Review Required"
+          ? `Standard Reopen Limit Reached — Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens})`
           : "Grievance Reopened by Employee",
-        message: `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}`,
+        message: `Grievance ${grievance.grievance_number} has completed standard reopens and entered Head Manual Review. Reason provided: ${reason}`,
       });
     }
 

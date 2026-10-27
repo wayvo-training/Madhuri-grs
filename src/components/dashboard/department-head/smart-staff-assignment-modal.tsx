@@ -1013,7 +1013,25 @@ export function SmartStaffAssignmentModal({
                         id="available-staff-select"
                         className="w-full h-9 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-emerald-600 focus:outline-none cursor-pointer"
                       >
-                        <SelectValue placeholder="Select another available staff (Ranked by Score)" />
+                        <SelectValue placeholder="Select another available staff (Ranked by Score)">
+                          {(() => {
+                            if (
+                              !selectedStaffId ||
+                              (topCandidate &&
+                                selectedStaffId === topCandidate.staffId)
+                            ) {
+                              return "Select another available staff (Ranked by Score)";
+                            }
+                            const matched =
+                              recommendations.find(
+                                (r) => r.staffId === selectedStaffId,
+                              ) ||
+                              staffList.find((s) => s.id === selectedStaffId);
+                            return matched
+                              ? matched.name
+                              : "Select another available staff (Ranked by Score)";
+                          })()}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-60">
                         {manualCandidates.map((candidate) => {

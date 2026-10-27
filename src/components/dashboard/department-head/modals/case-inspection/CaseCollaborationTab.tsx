@@ -99,7 +99,7 @@ export function CaseCollaborationTab({
       : (currentGrievance.collaboratingDepartments || []).map((name, idx) => ({
           id: `dept-${idx}`,
           departmentName: name,
-          involvementType: idx === 0 ? "PRIMARY" : "SUPPORTING",
+          involvementType: "SUPPORTING" as const,
           status: "IN_PROGRESS",
           assignedStaff: null,
         }));

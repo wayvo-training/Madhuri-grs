@@ -1167,7 +1167,7 @@ export async function fetchDepartmentHeadStaff(departmentId: bigint) {
         where: {
           assignment_status: "ASSIGNED",
           grievances: {
-            status: { notIn: ["CLOSED"] },
+            status: { notIn: ["CLOSED", "RESOLVED"] },
           },
         },
         select: {
