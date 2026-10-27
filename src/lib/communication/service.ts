@@ -711,12 +711,14 @@ export async function getGrievanceCommunicationThread(
 
     const actor = log.users;
     const dbRole = actor?.roles?.role_name || "STAFF";
-    const actorRole: "Staff" | "Department Head" | "End User" =
-      dbRole === "DEPARTMENT_HEAD"
-        ? "Department Head"
-        : dbRole === "STAFF"
-          ? "Staff"
-          : "End User";
+    const actorRole: "Staff" | "Department Head" | "End User" | "Admin" =
+      dbRole === "ADMIN"
+        ? "Admin"
+        : dbRole === "DEPARTMENT_HEAD"
+          ? "Department Head"
+          : dbRole === "STAFF"
+            ? "Staff"
+            : "End User";
 
     const actorName = actor
       ? `${actor.first_name} ${actor.last_name || ""}`.trim()
@@ -889,9 +891,15 @@ export async function getGrievanceCommunicationThread(
     closureNote =
       "This grievance is closed. Historical communication remains available for reference.";
   } else if (isAdmin) {
-    canSend = false;
-    closureNote =
-      "You have governance read-only visibility for this grievance communication.";
+    const hasSendCommunication =
+      user.permissions?.includes("SEND_COMMUNICATION");
+    if (hasSendCommunication) {
+      canSend = true;
+    } else {
+      canSend = false;
+      closureNote =
+        "You have governance read-only visibility for this grievance communication. The System Admin can grant 'Send Grievance Communication' permission when required.";
+    }
   } else if (userRole === "END_USER") {
     // End user can communicate and attach additional documents right from grievance submission, as long as the grievance is not closed
     canSend = true;

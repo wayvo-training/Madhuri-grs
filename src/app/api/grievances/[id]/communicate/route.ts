@@ -124,18 +124,27 @@ export async function POST(
       ? involvedDepts.some((gd) => gd.department_id === deptId)
       : false;
 
-    if (userRole === "ADMIN") {
+    const isAdmin = userRole === "ADMIN";
+    const hasSendCommunication =
+      user.permissions?.includes("SEND_COMMUNICATION");
+
+    if (isAdmin && !hasSendCommunication) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Admin accounts have read-only visibility for grievance communication.",
+            "Admin accounts have read-only visibility for grievance communication. The System Admin can grant the 'Send Grievance Communication' permission when required.",
         },
         { status: 403 },
       );
     }
 
-    if (!isSubmitter && !isAssignedStaff && !isInvolvedDepartment) {
+    if (
+      !isSubmitter &&
+      !isAssignedStaff &&
+      !isInvolvedDepartment &&
+      !(isAdmin && hasSendCommunication)
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -346,8 +355,9 @@ export async function POST(
         message: `Your message on grievance ${grievance.grievance_number} was sent successfully.`,
       });
     } else {
-      // Staff or Department Head messaging
+      // Staff, Department Head, or Admin messaging
       const isStaff = userRole === "STAFF";
+      const isAdminSender = userRole === "ADMIN";
       const actionType = isStaff
         ? "ADDITIONAL_INFO_REQUESTED"
         : "COMMUNICATION_MESSAGE";
@@ -362,7 +372,11 @@ export async function POST(
           new_value: {
             message: messageText,
             author: senderFullName,
-            role: isStaff ? "Staff" : "Department Head",
+            role: isAdminSender
+              ? "System Admin"
+              : isStaff
+                ? "Staff"
+                : "Department Head",
             requestedDocs: fileNames,
           },
         },
