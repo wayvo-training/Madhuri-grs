@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { KnowledgeSimilarityService } from "@/lib/knowledge/similarity-service";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
@@ -193,6 +194,64 @@ export async function POST(request: Request) {
       }
     }
 
+    let finalDuplicateCheck = duplicateCheckResult as {
+      highestScore?: number;
+      highestClassification?: string;
+      matchedArticleId?: string;
+      matchedArticleTitle?: string;
+      matchedArticleStatus?: string;
+      titleSimilarity?: number;
+      descriptionSimilarity?: number;
+      problemSimilarity?: number;
+      resolutionSimilarity?: number;
+      metadataScore?: number;
+    } | null;
+
+    if (!finalDuplicateCheck) {
+      try {
+        const dupCheck = await KnowledgeSimilarityService.checkDuplicates({
+          title: title.trim(),
+          description: finalProblem,
+          problem: finalProblem,
+          resolution: finalResolution,
+          categoryId: catId,
+          subcategoryId: subCatId,
+          categoryName: category?.trim(),
+          subcategoryName: subcategory?.trim(),
+        });
+        if (dupCheck.highestMatch) {
+          finalDuplicateCheck = {
+            highestScore: dupCheck.highestMatch.finalScore,
+            highestClassification: dupCheck.highestClassification,
+            matchedArticleId: dupCheck.highestMatch.articleId,
+            matchedArticleTitle: dupCheck.highestMatch.articleTitle,
+            matchedArticleStatus: dupCheck.highestMatch.status,
+            titleSimilarity: dupCheck.highestMatch.titleSimilarity,
+            descriptionSimilarity: dupCheck.highestMatch.descriptionSimilarity,
+            problemSimilarity: dupCheck.highestMatch.problemSimilarity,
+            resolutionSimilarity: dupCheck.highestMatch.resolutionSimilarity,
+            metadataScore: dupCheck.highestMatch.metadataScore,
+          };
+        }
+      } catch (err) {
+        console.warn("Backend duplicate check fallback error:", err);
+      }
+    }
+
+    if (
+      finalDuplicateCheck &&
+      finalDuplicateCheck.highestClassification === "LIKELY_DUPLICATE" &&
+      !duplicateJustification?.trim()
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `A duplicate knowledge article already exists (${finalDuplicateCheck.highestScore ?? 90}% match). A justification reason is required to submit.`,
+        },
+        { status: 400 },
+      );
+    }
+
     // Format content as structured JSON
     const structuredContent = JSON.stringify({
       description: finalProblem,
@@ -203,7 +262,7 @@ export async function POST(request: Request) {
       considerations: finalKeyPoints || null, // backwards compatibility
       references: references?.trim() || null,
       duplicateJustification: duplicateJustification?.trim() || null,
-      duplicateCheck: duplicateCheckResult || null,
+      duplicateCheck: finalDuplicateCheck || null,
     });
 
     const article = await prisma.knowledge_articles.create({

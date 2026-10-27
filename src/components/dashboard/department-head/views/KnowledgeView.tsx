@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, CheckCircle2, FileX, X } from "lucide-react";
+import { BookOpen, FileX, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { KnowledgeArticleCardSkeleton } from "@/components/common/skeletons";
@@ -20,7 +20,6 @@ export function KnowledgeView() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("PENDING_REVIEW");
   const [searchQuery, setSearchQuery] = useState("");
-  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   // Viewer Modal
   const [viewingArticle, setViewingArticle] =
@@ -85,11 +84,14 @@ export function KnowledgeView() {
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to publish article");
       }
-      setActionSuccessMsg(
-        `Knowledge article "${article.title}" published successfully!`,
-      );
+      const dupScore = article.duplicateCheck?.highestScore;
+      const dupInfo =
+        typeof dupScore === "number" && dupScore >= 75
+          ? ` (Note: ${dupScore}% duplicate similarity acknowledged)`
+          : "";
       toast.success("Knowledge Article Published", {
-        description: `"${article.title}" has been published to the Knowledge Base.`,
+        id: `kb-publish-${article.id}`,
+        description: `"${article.title}" has been published to the Knowledge Base.${dupInfo}`,
       });
       queryClient.invalidateQueries({
         queryKey: ["department-head-knowledge"],
@@ -97,7 +99,10 @@ export function KnowledgeView() {
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to publish article";
-      toast.error("Failed to publish article", { description: msg });
+      toast.error("Failed to publish article", {
+        id: `kb-publish-err-${article.id}`,
+        description: msg,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -122,10 +127,8 @@ export function KnowledgeView() {
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Failed to reject article");
       }
-      setActionSuccessMsg(
-        `Article "${rejectingArticle.title}" rejected with feedback.`,
-      );
       toast.success("Article Rejected", {
+        id: `kb-reject-${rejectingArticle.id}`,
         description: `Feedback sent for "${rejectingArticle.title}".`,
       });
       setRejectingArticle(null);
@@ -136,7 +139,10 @@ export function KnowledgeView() {
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Failed to reject article";
-      toast.error("Failed to reject article", { description: msg });
+      toast.error("Failed to reject article", {
+        id: `kb-reject-err-${rejectingArticle.id}`,
+        description: msg,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -156,23 +162,6 @@ export function KnowledgeView() {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-3">
-      {/* Success Notification */}
-      {actionSuccessMsg && (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in shrink-0">
-          <div className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>{actionSuccessMsg}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setActionSuccessMsg(null)}
-            className="text-emerald-700 hover:text-emerald-950 font-semibold cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Header & Filter Controls */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
@@ -345,6 +334,7 @@ export function KnowledgeView() {
         onClose={() => setViewingArticle(null)}
         article={viewingArticle}
         isApprover={Boolean(viewingArticle?.canApprove)}
+        isSubmitting={isSubmitting}
         onApprove={async (art) => {
           setViewingArticle(null);
           await handlePublish(art);

@@ -59,8 +59,10 @@ export function KnowledgeArticleCard({
                 "LIKELY_DUPLICATE"
                   ? `⚠️ Likely Duplicate (${article.duplicateCheck.highestScore}%)`
                   : article.duplicateCheck.highestClassification === "SIMILAR"
-                    ? `Similar Article Found (${article.duplicateCheck.highestScore}%)`
-                    : "✓ No Duplicate"}
+                    ? `⚠️ Similar Article Found (${article.duplicateCheck.highestScore}%)`
+                    : article.duplicateCheck.highestScore > 0
+                      ? `✓ Low Match (${article.duplicateCheck.highestScore}%)`
+                      : "✓ No Duplicate (0%)"}
               </span>
             )}
           </div>

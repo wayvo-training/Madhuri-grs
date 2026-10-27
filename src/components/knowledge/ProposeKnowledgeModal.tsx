@@ -244,6 +244,34 @@ export function ProposeKnowledgeModal({
       };
 
       setDupState(nextState);
+
+      const score = data.highestMatch?.finalScore ?? 0;
+      const matchedTitle =
+        data.highestMatch?.articleTitle || "Existing article";
+
+      if (data.highestClassification === "LIKELY_DUPLICATE") {
+        toast.error(`Duplicate Found (${score}%)`, {
+          description: `A highly similar article exists: "${matchedTitle}" (${score}% match). You must provide a justification reason to continue.`,
+          duration: 6000,
+        });
+      } else if (data.highestClassification === "SIMILAR") {
+        toast.warning(`Similar Knowledge Found (${score}%)`, {
+          description: `An existing article matches: "${matchedTitle}" (${score}% match). Please review before continuing.`,
+          duration: 6000,
+        });
+      } else if (data.highestMatch && score > 0) {
+        toast.info(`Duplicate Check Passed (${score}% match)`, {
+          description: `Highest similarity is ${score}% (below 75% threshold). No duplicate conflict detected.`,
+          duration: 4000,
+        });
+      } else {
+        toast.success("No Duplicates Found (0% match)", {
+          description:
+            "No similar knowledge articles found. You may proceed to submit your proposal.",
+          duration: 4000,
+        });
+      }
+
       return nextState;
     } catch (err) {
       const msg =
@@ -342,9 +370,9 @@ export function ProposeKnowledgeModal({
   /**
    * Primary form submit:
    * 1. Validates required fields.
-   * 2. Runs duplicate detection if not yet checked.
-   * 3. If NO_SIGNIFICANT_MATCH, completes proposal.
-   * 4. If SIMILAR or LIKELY_DUPLICATE, shows match details for review first.
+   * 2. Enforces duplicate detection if not yet checked (blocks submission until user reviews check).
+   * 3. If LIKELY_DUPLICATE, requires justification reason.
+   * 4. Otherwise completes proposal submission.
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -361,22 +389,21 @@ export function ProposeKnowledgeModal({
       return;
     }
 
-    // Step 1: If duplicate check hasn't run yet, run it first
+    // Step 1: Duplicate check is strictly enforced before submission
     if (!dupState.hasChecked) {
-      const result = await runDuplicateCheck();
-      if (result.classification === "NO_SIGNIFICANT_MATCH") {
-        // No match -> directly proceed with submission
-        await executeSubmit();
-      }
-      // If SIMILAR or LIKELY_DUPLICATE, stop here and show duplicate check UI
+      toast.warning("Duplicate Check Required", {
+        description:
+          "Checking for duplicates... Please review the result before submitting.",
+      });
+      await runDuplicateCheck();
       return;
     }
 
-    // Step 2: If LIKELY_DUPLICATE, require justification reason
+    // Step 2: If LIKELY_DUPLICATE, require justification reason with match percentage
     if (dupState.classification === "LIKELY_DUPLICATE") {
       if (!duplicateJustification.trim()) {
-        const msg =
-          "A highly similar knowledge article already exists. Please provide a justification reason to continue.";
+        const score = dupState.highestMatch?.finalScore ?? 90;
+        const msg = `A duplicate knowledge article already exists (${score}% match). Please provide a justification reason to continue.`;
         setErrorMsg(msg);
         toast.error("Reason required", { description: msg });
         return;
@@ -408,7 +435,7 @@ export function ProposeKnowledgeModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="fixed inset-0 z-70 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
         <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
@@ -599,13 +626,52 @@ export function ProposeKnowledgeModal({
               </div>
             )}
 
+            {!dupState.isChecking && !dupState.hasChecked && (
+              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 flex items-center justify-between gap-3 text-teal-950 animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <Search className="h-4 w-4 text-teal-700 shrink-0" />
+                  <div>
+                    <span className="font-bold text-xs block text-teal-900">
+                      Duplicate Check Mandatory
+                    </span>
+                    <span className="text-[11px] text-teal-800">
+                      You must run the duplicate check to verify existing SOPs
+                      before submitting.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={runDuplicateCheck}
+                  disabled={
+                    dupState.isChecking ||
+                    !title.trim() ||
+                    !problemScenario.trim() ||
+                    !resolutionApproach.trim()
+                  }
+                  className="px-3 py-1.5 rounded-lg bg-[#0F766E] text-white font-semibold text-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer shrink-0 shadow-2xs"
+                >
+                  {dupState.isChecking ? "Checking..." : "Check Now"}
+                </button>
+              </div>
+            )}
+
             {!dupState.isChecking &&
               dupState.hasChecked &&
               dupState.classification === "NO_SIGNIFICANT_MATCH" && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 flex items-center gap-2 text-emerald-900 animate-in fade-in">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium text-xs">
-                    ✓ No significant duplicate found.
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 flex items-center justify-between gap-2 text-emerald-900 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium text-xs">
+                      ✓ Duplicate check passed. No conflicting knowledge article
+                      found.
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                    {dupState.highestMatch &&
+                    dupState.highestMatch.finalScore > 0
+                      ? `${dupState.highestMatch.finalScore}% Match (Passed)`
+                      : "0% Match"}
                   </span>
                 </div>
               )}
@@ -818,18 +884,26 @@ export function ProposeKnowledgeModal({
 
             {/* Footer Buttons */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              {/* Optional Manual Duplicate Check button */}
-              <button
-                type="button"
-                onClick={runDuplicateCheck}
-                disabled={dupState.isChecking || isSubmitting}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
-              >
-                <Search className="h-3.5 w-3.5 text-slate-500" />
-                <span>
-                  {dupState.isChecking ? "Checking..." : "Check for Duplicates"}
-                </span>
-              </button>
+              {dupState.hasChecked ? (
+                <button
+                  type="button"
+                  onClick={runDuplicateCheck}
+                  disabled={dupState.isChecking || isSubmitting}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-xs font-semibold hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
+                >
+                  <Search className="h-3.5 w-3.5 text-slate-500" />
+                  <span>
+                    {dupState.isChecking
+                      ? "Checking..."
+                      : "Re-check Duplicates"}
+                  </span>
+                </button>
+              ) : (
+                <div className="text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  <span>Duplicate check required before submitting</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-2.5">
                 <button
@@ -839,8 +913,33 @@ export function ProposeKnowledgeModal({
                 >
                   Cancel
                 </button>
-                {(!dupState.hasChecked ||
-                  dupState.classification === "NO_SIGNIFICANT_MATCH") && (
+
+                {!dupState.hasChecked ? (
+                  <button
+                    type="button"
+                    onClick={runDuplicateCheck}
+                    disabled={
+                      dupState.isChecking ||
+                      isSubmitting ||
+                      !title.trim() ||
+                      !problemScenario.trim() ||
+                      !resolutionApproach.trim()
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {dupState.isChecking ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Checking Duplicates...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-3.5 w-3.5" />
+                        <span>Check for Duplicates (Required)</span>
+                      </>
+                    )}
+                  </button>
+                ) : dupState.classification === "NO_SIGNIFICANT_MATCH" ? (
                   <button
                     type="submit"
                     disabled={isSubmitting || dupState.isChecking}
@@ -855,7 +954,7 @@ export function ProposeKnowledgeModal({
                           : "Submit for Review"}
                     </span>
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
           </form>

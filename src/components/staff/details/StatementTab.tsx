@@ -101,14 +101,27 @@ export function StatementTab({
           grievance.subcategoryId ||
           (grievance as unknown as Record<string, unknown>).subcategory_id ||
           "";
-        const catName = encodeURIComponent(grievance.category || "");
-        const subCatName = encodeURIComponent(grievance.subcategory || "");
-        const res = await fetch(
-          `/api/staff/knowledge/recommendations?categoryId=${catId}&subcategoryId=${subCatId}&category=${catName}&subcategory=${subCatName}`,
-        );
+        const res = await fetch("/api/staff/knowledge/recommendations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            categoryId: String(catId || ""),
+            subcategoryId: String(subCatId || ""),
+            category: grievance.category || "",
+            subcategory: grievance.subcategory || "",
+            title: grievance.title || "",
+            description: grievance.description || "",
+          }),
+        });
+        if (!res.ok) return;
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) return;
         const data = await res.json();
-        if (res.ok && data.success && Array.isArray(data.articles)) {
-          setKbRecommendations(data.articles);
+        if (data?.success && Array.isArray(data.articles)) {
+          const qualified = data.articles.filter(
+            (art: KnowledgeArticleData) => (art.matchScore ?? 0) >= 75,
+          );
+          setKbRecommendations(qualified);
         }
       } catch (err) {
         console.warn("Failed to fetch KB recommendations:", err);
@@ -260,7 +273,7 @@ export function StatementTab({
                 </Link>
                 <Link
                   href={`/staff/messages/${grievance.id}`}
-                  className="font-medium text-[#0F766E] hover:underline inline-flex items-center gap-1 text-xs block"
+                  className="font-medium text-[#0F766E] hover:underline inline-flex items-center gap-1 text-xs"
                 >
                   <MessageSquare className="h-3 w-3" />
                   <span>In-App Messages Thread</span>
@@ -389,7 +402,7 @@ export function StatementTab({
 
           {/* Interactive Request Additional Info Modal */}
           {isRequestInfoOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
               <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-xl sticky top-0 z-10">
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -717,9 +730,25 @@ export function StatementTab({
                     <div className="font-bold text-slate-900 truncate">
                       {art.title}
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      Published &bull; Relevant to {art.category} /{" "}
-                      {art.subcategory}
+                    <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span>
+                        Published &bull; Relevant to {art.category} /{" "}
+                        {art.subcategory}
+                      </span>
+                      {typeof art.matchScore === "number" &&
+                        art.matchScore > 0 && (
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              art.matchScore >= 75
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                : art.matchScore >= 40
+                                  ? "bg-teal-100 text-teal-800 border border-teal-200"
+                                  : "bg-slate-100 text-slate-600 border border-slate-200"
+                            }`}
+                          >
+                            {art.matchScore}% Match
+                          </span>
+                        )}
                     </div>
                   </div>
                   <button
@@ -738,8 +767,8 @@ export function StatementTab({
             </div>
 
             <div className="text-[11px] text-teal-800 italic pt-0.5 leading-relaxed">
-              Note: Recommendations are informational reference material. The
-              system does not automatically resolve or modify this grievance.
+              Note: Guidance is referred only when relevance matches 75% or
+              higher. Recommendations are informational reference material.
             </div>
           </div>
         )}
