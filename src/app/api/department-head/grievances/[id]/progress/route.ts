@@ -115,7 +115,11 @@ export async function GET(
             departments: true,
           },
         },
-        attachments: true,
+        attachments: {
+          include: {
+            attachment_department_grants: true,
+          },
+        },
         resolutions: {
           orderBy: { submitted_at: "desc" },
           take: 1,
@@ -1224,6 +1228,15 @@ export async function GET(
               grievance_department_id: a.grievance_department_id,
               assignment_status: a.assignment_status,
             })),
+            (grievance.attachments || []).flatMap((att) =>
+              (att.attachment_department_grants || []).map((gr) => ({
+                grant_id: gr.grant_id,
+                attachment_id: gr.attachment_id,
+                department_id: gr.department_id,
+                granted_by: gr.granted_by,
+                granted_at: gr.granted_at,
+              })),
+            ),
           ).map((a) => ({
             id: a.attachment_id.toString(),
             name: a.file_name,

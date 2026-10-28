@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 /**
  * Triggers a client-side file download safely in Next.js browser context.
  * Resolves API redirects and fetches files directly as Blob to guarantee
@@ -23,13 +25,32 @@ export async function triggerFileDownload(
       const res = await fetch(jsonEndpoint, {
         headers: { Accept: "application/json" },
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.downloadUrl) {
-          directUrl = data.downloadUrl;
-          if (!filename && data.fileName) {
-            filename = data.fileName;
-          }
+
+      if (!res.ok) {
+        if (res.status === 403 || res.status === 401) {
+          const errData = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          toast.error("Access Restricted", {
+            description:
+              errData?.message || "You don't have access to this document.",
+          });
+          return;
+        }
+        toast.error("Download Failed", {
+          description: "Unable to download this file at this time.",
+        });
+        return;
+      }
+
+      const data = (await res.json()) as {
+        downloadUrl?: string;
+        fileName?: string;
+      };
+      if (data.downloadUrl) {
+        directUrl = data.downloadUrl;
+        if (!filename && data.fileName) {
+          filename = data.fileName;
         }
       }
     }
@@ -50,6 +71,17 @@ export async function triggerFileDownload(
       setTimeout(() => window.URL.revokeObjectURL(objectUrl), 10000);
       return;
     }
+
+    if (fileResponse.status === 403 || fileResponse.status === 401) {
+      const errData = (await fileResponse.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+      toast.error("Access Restricted", {
+        description:
+          errData?.message || "You don't have access to this document.",
+      });
+      return;
+    }
   } catch (err) {
     console.warn(
       "Direct blob download failed, falling back to window navigation",
@@ -57,6 +89,8 @@ export async function triggerFileDownload(
     );
   }
 
-  // 3. Fallback: window location navigation
-  window.location.assign(downloadParamUrl);
+  // 3. Fallback: window location navigation (only for non-attachment or unhandled errors)
+  if (!downloadParamUrl.startsWith("/api/attachments/")) {
+    window.location.assign(downloadParamUrl);
+  }
 }

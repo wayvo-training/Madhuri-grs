@@ -4,7 +4,9 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  Download,
   ExternalLink,
+  Eye,
   Info,
   MessageSquare,
   Paperclip,
@@ -12,8 +14,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
+import {
+  type DocumentPreviewData,
+  DocumentViewerModal,
+} from "@/components/dashboard/department-head/document-viewer-modal";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import type { GrievanceCommunicationThreadData } from "@/lib/communication/service";
+import { triggerFileDownload } from "@/lib/utils/download";
 import { GrievanceCommunicationComposer } from "./GrievanceCommunicationComposer";
 
 interface GrievanceCommunicationWorkspaceProps {
@@ -24,6 +32,9 @@ export function GrievanceCommunicationWorkspace({
   data,
 }: GrievanceCommunicationWorkspaceProps) {
   const [isParticipantsExpanded, setIsParticipantsExpanded] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocumentPreviewData | null>(
+    null,
+  );
 
   const isClosed = data.isClosed || data.status === "CLOSED";
 
@@ -187,7 +198,6 @@ export function GrievanceCommunicationWorkspace({
         ) : (
           <div className="space-y-2.5">
             {data.timeline.map((msg) => {
-              const isStaff = msg.isStaffOrHead;
               const formattedTime = new Date(msg.timestamp).toLocaleTimeString(
                 "en-IN",
                 {
@@ -343,25 +353,162 @@ export function GrievanceCommunicationWorkspace({
                           Attachments ({msg.attachments.length}):
                         </span>
                         <ul className="flex flex-wrap gap-1.5 pt-0.5">
-                          {msg.attachments.map((att) => (
-                            <li
-                              key={`${msg.id}-${att.path || att.name}`}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${
-                                isSender
-                                  ? "bg-white/15 text-white border border-white/20"
-                                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
-                              }`}
-                            >
-                              <Paperclip
-                                className={`h-3 w-3 ${
-                                  isSender ? "text-teal-100" : "text-slate-400"
+                          {msg.attachments.map((att) => {
+                            const hasValidTarget = Boolean(
+                              att.downloadUrl || att.id || att.path,
+                            );
+                            const downloadTarget =
+                              att.downloadUrl ||
+                              (att.id
+                                ? `/api/attachments/${att.id}/download`
+                                : att.path || "");
+
+                            const handlePreviewAttachment = async () => {
+                              if (!hasValidTarget) {
+                                toast.error("Access Restricted", {
+                                  description:
+                                    "You don't have access to this document.",
+                                });
+                                return;
+                              }
+
+                              if (
+                                downloadTarget.startsWith("/api/attachments/")
+                              ) {
+                                try {
+                                  const checkRes = await fetch(
+                                    `${downloadTarget}${downloadTarget.includes("?") ? "&" : "?"}format=json`,
+                                    {
+                                      headers: { Accept: "application/json" },
+                                    },
+                                  );
+                                  if (
+                                    !checkRes.ok &&
+                                    (checkRes.status === 403 ||
+                                      checkRes.status === 401)
+                                  ) {
+                                    const errData = (await checkRes
+                                      .json()
+                                      .catch(() => null)) as {
+                                      message?: string;
+                                    } | null;
+                                    toast.error("Access Restricted", {
+                                      description:
+                                        errData?.message ||
+                                        "You don't have access to view this document.",
+                                    });
+                                    return;
+                                  }
+                                } catch {
+                                  // Fallback to preview modal
+                                }
+                              }
+
+                              setPreviewDoc({
+                                id: att.id,
+                                name: att.name,
+                                path: att.path,
+                                downloadUrl: downloadTarget,
+                                size: att.size || "Unknown size",
+                                type:
+                                  att.type ||
+                                  (att.name.endsWith(".pdf")
+                                    ? "application/pdf"
+                                    : "application/octet-stream"),
+                                grievanceNumber: data.grievanceNumber,
+                                title: data.title,
+                                category: data.categoryName,
+                                submitterName: msg.author,
+                                submitterRole: msg.role,
+                                uploadedAt: msg.timestamp,
+                              });
+                            };
+
+                            return (
+                              <li
+                                key={`${msg.id}-${att.id || att.path || att.name}`}
+                                tabIndex={hasValidTarget ? 0 : undefined}
+                                role={hasValidTarget ? "button" : undefined}
+                                className={`group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                                  hasValidTarget
+                                    ? "cursor-pointer"
+                                    : "cursor-default opacity-85"
+                                } ${
+                                  isSender
+                                    ? "bg-white/15 hover:bg-white/25 text-white border border-white/20"
+                                    : "bg-slate-100 dark:bg-slate-700/80 hover:bg-teal-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-600 hover:border-teal-300 dark:hover:border-teal-500"
                                 }`}
-                              />
-                              <span className="truncate max-w-[220px]">
-                                {att.name}
-                              </span>
-                            </li>
-                          ))}
+                                onKeyDown={(e) => {
+                                  if (
+                                    hasValidTarget &&
+                                    (e.key === "Enter" || e.key === " ")
+                                  ) {
+                                    e.preventDefault();
+                                    handlePreviewAttachment();
+                                  }
+                                }}
+                                onClick={handlePreviewAttachment}
+                                title={
+                                  hasValidTarget
+                                    ? `Click to view or download ${att.name}`
+                                    : att.name
+                                }
+                              >
+                                <Paperclip
+                                  className={`h-3 w-3 shrink-0 ${
+                                    isSender
+                                      ? "text-teal-100"
+                                      : "text-slate-400 group-hover:text-[#0F766E] dark:group-hover:text-teal-400"
+                                  }`}
+                                />
+                                <span className="truncate max-w-[200px] underline-offset-2 group-hover:underline">
+                                  {att.name}
+                                </span>
+                                {att.size && (
+                                  <span
+                                    className={`text-[10px] ${
+                                      isSender
+                                        ? "text-white/70"
+                                        : "text-slate-400"
+                                    }`}
+                                  >
+                                    ({att.size})
+                                  </span>
+                                )}
+                                {hasValidTarget && (
+                                  <div className="flex items-center gap-1 ml-0.5 shrink-0">
+                                    <Eye
+                                      className={`h-3 w-3 opacity-0 group-hover:opacity-100 transition ${
+                                        isSender
+                                          ? "text-white"
+                                          : "text-[#0F766E] dark:text-teal-400"
+                                      }`}
+                                    />
+                                    <button
+                                      type="button"
+                                      title="Download attachment"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (downloadTarget) {
+                                          triggerFileDownload(
+                                            downloadTarget,
+                                            att.name,
+                                          );
+                                        }
+                                      }}
+                                      className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition cursor-pointer ${
+                                        isSender
+                                          ? "text-white/90 hover:text-white"
+                                          : "text-slate-500 hover:text-[#0F766E] dark:hover:text-teal-400"
+                                      }`}
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     )}
@@ -386,6 +533,20 @@ export function GrievanceCommunicationWorkspace({
             </span>
           </div>
         </div>
+      )}
+
+      {/* 4. DOCUMENT PREVIEW MODAL */}
+      {previewDoc && (
+        <DocumentViewerModal
+          document={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+          onDownload={(doc) => {
+            const dl =
+              doc.downloadUrl ||
+              (doc.id ? `/api/attachments/${doc.id}/download` : doc.path);
+            if (dl) triggerFileDownload(dl, doc.name);
+          }}
+        />
       )}
     </div>
   );

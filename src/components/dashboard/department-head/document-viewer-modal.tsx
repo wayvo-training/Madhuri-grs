@@ -6,9 +6,12 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
+  Lock,
   ShieldCheck,
   X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { triggerFileDownload } from "@/lib/utils/download";
 
 export interface DocumentPreviewData {
@@ -38,6 +41,54 @@ export function DocumentViewerModal({
   onClose,
   onDownload,
 }: DocumentViewerModalProps) {
+  const targetUrl =
+    document?.downloadUrl ||
+    (document?.path?.startsWith("/api/attachments/")
+      ? document.path
+      : document?.id
+        ? `/api/attachments/${document.id}/download`
+        : document?.path?.startsWith("http")
+          ? document.path
+          : null);
+
+  const [accessDenied, setAccessDenied] = useState<{
+    denied: boolean;
+    message?: string;
+  }>({ denied: false });
+
+  useEffect(() => {
+    if (!targetUrl || !targetUrl.startsWith("/api/attachments/")) {
+      setAccessDenied({ denied: false });
+      return;
+    }
+
+    let isMounted = true;
+    fetch(`${targetUrl}${targetUrl.includes("?") ? "&" : "?"}format=json`, {
+      headers: { Accept: "application/json" },
+    })
+      .then(async (res) => {
+        if (!isMounted) return;
+        if (!res.ok && (res.status === 403 || res.status === 401)) {
+          const data = (await res.json().catch(() => null)) as {
+            message?: string;
+          } | null;
+          const msg =
+            data?.message || "You don't have access to this document.";
+          setAccessDenied({ denied: true, message: msg });
+          toast.error("Access Restricted", {
+            description: msg,
+          });
+        } else {
+          setAccessDenied({ denied: false });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [targetUrl]);
+
   if (!document) return null;
 
   const fn = document.name.toLowerCase();
@@ -50,16 +101,6 @@ export function DocumentViewerModal({
   const isPdf = fn.endsWith(".pdf");
   const isExcel =
     fn.endsWith(".xlsx") || fn.endsWith(".xls") || fn.endsWith(".csv");
-
-  const targetUrl =
-    document.downloadUrl ||
-    (document.path?.startsWith("/api/attachments/")
-      ? document.path
-      : document.id
-        ? `/api/attachments/${document.id}/download`
-        : document.path?.startsWith("http")
-          ? document.path
-          : null);
 
   const handleDownloadClick = () => {
     const dlUrl =
@@ -172,7 +213,29 @@ export function DocumentViewerModal({
         </div>
 
         {/* Document Body */}
-        {targetUrl ? (
+        {accessDenied.denied ? (
+          <div className="flex-1 w-full min-h-0 bg-slate-50 flex flex-col items-center justify-center p-6 text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shadow-2xs">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h3 className="text-base font-bold text-slate-800">
+                Access Restricted
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                {accessDenied.message ||
+                  "You do not have permission to view or download this document."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+            >
+              Close Preview
+            </button>
+          </div>
+        ) : targetUrl ? (
           <div className="flex-1 w-full min-h-0 bg-slate-100 flex flex-col items-center justify-center overflow-hidden">
             {isImage ? (
               <div className="w-full h-full flex items-center justify-center p-4 overflow-auto bg-slate-950/80">

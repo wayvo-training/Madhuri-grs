@@ -6,6 +6,7 @@ import {
 } from "@/lib/attachments/access-control";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { NotificationService } from "@/lib/services/notification.service";
 
 export async function GET(
   _request: NextRequest,
@@ -218,6 +219,30 @@ export async function POST(
       },
     });
 
+    // Notify Department Head and Staff of the granted department
+    try {
+      const targetDeptUsers = await prisma.users.findMany({
+        where: {
+          department_id: targetDeptId,
+          roles: { role_name: { in: ["DEPARTMENT_HEAD", "STAFF"] } },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+
+      for (const u of targetDeptUsers) {
+        await NotificationService.send({
+          userId: u.user_id,
+          grievanceId: grievance.grievance_id,
+          type: "SYSTEM",
+          title: "Document Access Granted",
+          message: `Your department has been granted access to document "${attachment.file_name}" for grievance ${grievance.grievance_number}.`,
+        });
+      }
+    } catch (notifErr) {
+      console.warn("Failed to send access grant notification:", notifErr);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -335,6 +360,30 @@ export async function DELETE(
         }),
       },
     });
+
+    // Notify Department Head and Staff of the revoked department
+    try {
+      const targetDeptUsers = await prisma.users.findMany({
+        where: {
+          department_id: targetDeptId,
+          roles: { role_name: { in: ["DEPARTMENT_HEAD", "STAFF"] } },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+
+      for (const u of targetDeptUsers) {
+        await NotificationService.send({
+          userId: u.user_id,
+          grievanceId: grievance.grievance_id,
+          type: "SYSTEM",
+          title: "Document Access Revoked",
+          message: `Access to document "${attachment.file_name}" for grievance ${grievance.grievance_number} has been revoked from your department.`,
+        });
+      }
+    } catch (notifErr) {
+      console.warn("Failed to send access revoke notification:", notifErr);
+    }
 
     return NextResponse.json({
       success: true,

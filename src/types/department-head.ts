@@ -147,10 +147,12 @@ export interface GrievanceItem {
   auditTrail?: EscalationAuditRecord[];
   description?: string;
   attachments?: {
+    id?: string;
     name: string;
     size: string;
     type: string;
     path?: string;
+    downloadUrl?: string;
     uploadedAt?: string;
   }[];
   internalNotes?: InternalNoteItem[];

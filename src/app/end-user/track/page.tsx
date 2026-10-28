@@ -135,134 +135,139 @@ export default async function EndUserTrackPage(props: PageProps) {
 
   const searchParams = await props.searchParams;
   const trackId = searchParams.id;
+  const trimmed = trackId?.trim() || "";
+  const isNumeric = /^\d+$/.test(trimmed);
 
-  let grievance = null;
+  const grievance = trimmed
+    ? await prisma.grievances.findFirst({
+        where: {
+          OR: [
+            { grievance_number: { equals: trimmed, mode: "insensitive" } },
+            ...(isNumeric ? [{ grievance_id: BigInt(trimmed) }] : []),
+          ],
+          submitted_by: user.user_id,
+        },
+        include: {
+          grievance_departments: {
+            include: {
+              departments: true,
+            },
+            orderBy: { execution_order: "asc" },
+          },
+          resolutions: {
+            include: {
+              attachments: true,
+            },
+            orderBy: { submitted_at: "desc" },
+            take: 1,
+          },
+        },
+      })
+    : null;
+
   let rawEvents: RawTimelineEvent[] = [];
-
-  if (trackId) {
-    const trimmed = trackId.trim();
-    const isNumeric = /^\d+$/.test(trimmed);
-
-    grievance = await prisma.grievances.findFirst({
-      where: {
-        OR: [
-          { grievance_number: { equals: trimmed, mode: "insensitive" } },
-          ...(isNumeric ? [{ grievance_id: BigInt(trimmed) }] : []),
-        ],
-        submitted_by: user.user_id,
-      },
-      include: {
-        grievance_departments: {
-          include: {
-            departments: true,
-          },
-          orderBy: { execution_order: "asc" },
-        },
-        resolutions: {
-          include: {
-            attachments: true,
-          },
-          orderBy: { submitted_at: "desc" },
-          take: 1,
-        },
-      },
-    });
-
-    if (grievance) {
-      const history = await prisma.grievance_status_history.findMany({
-        where: { grievance_id: grievance.grievance_id },
-        orderBy: { changed_at: "asc" },
-      });
-
-      // Fallback: If current status is not the last history event, append it manually
-      // so the UI never falls out of sync with the actual db status.
-      const lastEvent = history[history.length - 1];
-      if (!lastEvent || lastEvent.new_status !== grievance.status) {
-        history.push({
-          history_id: "current_injected",
-          new_status: grievance.status,
-          changed_at: new Date(),
-        } as unknown as (typeof history)[0]);
-      }
-
-      rawEvents = [
-        {
-          history_id: "submission",
-          new_status: "SUBMITTED",
-          changed_at: grievance.created_at,
-        },
-        ...history,
-      ];
-    }
-  }
-
   const timelineNodes: TimelineNode[] = [];
-  const seen = new Set<string>();
 
   if (grievance) {
-    // 1. Add historical stages
+    const history = await prisma.grievance_status_history.findMany({
+      where: { grievance_id: grievance.grievance_id },
+      orderBy: { changed_at: "asc" },
+    });
+
+    // Fallback: If current status is not the last history event, append it manually
+    // so the UI never falls out of sync with the actual db status.
+    const lastEvent = history[history.length - 1];
+    if (!lastEvent || lastEvent.new_status !== grievance.status) {
+      history.push({
+        history_id: "current_injected",
+        new_status: grievance.status,
+        changed_at: new Date(),
+      } as unknown as (typeof history)[0]);
+    }
+
+    rawEvents = [
+      {
+        history_id: "submission",
+        new_status: "SUBMITTED",
+        changed_at: grievance.created_at,
+      },
+      ...history,
+    ];
+
+    const stageDateMap = new Map<string, Date>();
+    const hasReopened =
+      grievance.status === "REOPENED" ||
+      history.some((h) => h.new_status === "REOPENED");
+
     rawEvents.forEach((evt) => {
-      const stageId = mapStatusToStage(evt.new_status);
-      if (stageId && !seen.has(stageId)) {
-        seen.add(stageId);
-        timelineNodes.push({
-          id: stageId,
-          date: evt.changed_at,
-          isCompleted: true,
-          isCurrent: false,
-          isFuture: false,
-        });
+      const stage = mapStatusToStage(evt.new_status);
+      if (stage && !stageDateMap.has(stage)) {
+        stageDateMap.set(stage, evt.changed_at);
       }
     });
 
-    // 2. Set current stage
-    if (timelineNodes.length > 0) {
-      timelineNodes[timelineNodes.length - 1].isCurrent = true;
-      timelineNodes[timelineNodes.length - 1].isCompleted = false;
-      if (timelineNodes[timelineNodes.length - 1].id === "CLOSED") {
-        timelineNodes[timelineNodes.length - 1].isCompleted = true;
-      }
-    }
-
-    // 3. Add future stages
-    const standardFlow = [
+    const standardFlow: string[] = [
       "SUBMITTED",
       "ROUTED",
       "ASSIGNED",
       "IN_PROGRESS",
+      ...(hasReopened ? ["REOPENED"] : []),
       "RESOLUTION",
-      "EMPLOYEE_REVIEW",
       "CLOSED",
     ];
-    const lastNode = timelineNodes[timelineNodes.length - 1];
 
-    if (lastNode && lastNode.id !== "CLOSED") {
-      let lastIndex = standardFlow.indexOf(lastNode.id);
+    const currentStage = mapStatusToStage(grievance.status) || "SUBMITTED";
+    const currentIndex = standardFlow.indexOf(currentStage);
+    const effectiveCurrentIndex =
+      currentIndex !== -1 ? currentIndex : standardFlow.indexOf("IN_PROGRESS");
 
-      // If we are currently at HEAD_REVIEW, skip to CLOSED
-      if (lastNode.id === "HEAD_REVIEW") {
-        lastIndex = standardFlow.indexOf("EMPLOYEE_REVIEW");
+    const isCaseClosed = grievance.status === "CLOSED";
+
+    standardFlow.forEach((stageId, idx) => {
+      const recordedDate = stageDateMap.get(stageId);
+
+      if (isCaseClosed) {
+        timelineNodes.push({
+          id: stageId,
+          date:
+            recordedDate ||
+            (stageId === "SUBMITTED"
+              ? grievance?.created_at
+              : stageId === "CLOSED"
+                ? grievance?.updated_at
+                : undefined),
+          isCompleted: true,
+          isCurrent: false,
+          isFuture: false,
+        });
+      } else if (idx < effectiveCurrentIndex) {
+        timelineNodes.push({
+          id: stageId,
+          date:
+            recordedDate ||
+            (stageId === "SUBMITTED" ? grievance?.created_at : undefined),
+          isCompleted: true,
+          isCurrent: false,
+          isFuture: false,
+        });
+      } else if (idx === effectiveCurrentIndex) {
+        timelineNodes.push({
+          id: stageId,
+          date: recordedDate || new Date(),
+          isCompleted: false,
+          isCurrent: true,
+          isFuture: false,
+        });
+      } else {
+        timelineNodes.push({
+          id: stageId,
+          date: undefined,
+          isCompleted: false,
+          isCurrent: false,
+          isFuture: true,
+        });
       }
-      // If the last recognized step is REOPENED (missing from flow)
-      else if (lastNode.id === "REOPENED") {
-        lastIndex = standardFlow.indexOf("ASSIGNED");
-      }
-
-      const startIndex =
-        lastIndex !== -1 ? lastIndex + 1 : standardFlow.indexOf("IN_PROGRESS");
-
-      for (let i = startIndex; i < standardFlow.length; i++) {
-        const futureId = standardFlow[i];
-        if (!seen.has(futureId)) {
-          timelineNodes.push({
-            id: futureId,
-            isCompleted: false,
-            isCurrent: false,
-            isFuture: true,
-          });
-        }
-      }
-    }
+    });
   }
 
   return (

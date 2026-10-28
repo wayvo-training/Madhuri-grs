@@ -21,9 +21,12 @@ export interface CommunicationMessageItem {
   timestamp: string;
   message: string;
   attachments: {
+    id?: string;
     name: string;
     path?: string;
+    downloadUrl?: string;
     size?: string;
+    type?: string;
   }[];
   isStaffOrHead: boolean;
   type:
@@ -569,6 +572,7 @@ export async function getGrievanceCommunicationThread(
           file_name: true,
           file_path: true,
           file_size: true,
+          file_type: true,
           uploaded_by: true,
         },
       },
@@ -738,15 +742,122 @@ export async function getGrievanceCommunicationThread(
 
     if (!rawMessage.trim()) continue;
 
-    const attachmentsList: { name: string; path?: string }[] = [];
-    if (val?.uploadedFiles && Array.isArray(val.uploadedFiles)) {
-      for (const f of val.uploadedFiles) {
-        attachmentsList.push({ name: f });
+    const attachmentsList: {
+      id?: string;
+      name: string;
+      path?: string;
+      downloadUrl?: string;
+      size?: string;
+      type?: string;
+    }[] = [];
+
+    const findAttachment = (nameOrId: string) => {
+      const trimmed = nameOrId.trim().toLowerCase();
+      return (
+        grievance.attachments.find(
+          (a) =>
+            a.attachment_id.toString() === nameOrId.trim() ||
+            a.file_name.toLowerCase() === trimmed ||
+            a.file_name.toLowerCase().includes(trimmed) ||
+            trimmed.includes(a.file_name.toLowerCase()),
+        ) || null
+      );
+    };
+
+    const valObj = val as {
+      message?: string;
+      response?: string;
+      author?: string;
+      requestedDocs?: string[];
+      uploadedFiles?: string[];
+      attachments?: Array<{
+        id?: string;
+        name?: string;
+        fileName?: string;
+        path?: string;
+        filePath?: string;
+        downloadUrl?: string;
+        size?: string | number;
+        type?: string;
+        fileType?: string;
+      }>;
+    } | null;
+
+    if (valObj?.attachments && Array.isArray(valObj.attachments)) {
+      for (const item of valObj.attachments) {
+        if (typeof item === "object" && item !== null) {
+          const name = item.name || item.fileName || "Attachment";
+          const match = item.id
+            ? grievance.attachments.find(
+                (a) => a.attachment_id.toString() === String(item.id),
+              )
+            : findAttachment(name);
+          const attId = match ? match.attachment_id.toString() : item.id;
+          attachmentsList.push({
+            id: attId,
+            name: match?.file_name || name,
+            path: match?.file_path || item.path || item.filePath,
+            downloadUrl: attId
+              ? `/api/attachments/${attId}/download`
+              : item.downloadUrl,
+            size: match?.file_size
+              ? `${Math.round(Number(match.file_size) / 1024)} KB`
+              : typeof item.size === "number"
+                ? `${Math.round(item.size / 1024)} KB`
+                : item.size,
+            type: match?.file_type || item.type || item.fileType,
+          });
+        }
+      }
+    } else if (valObj?.uploadedFiles && Array.isArray(valObj.uploadedFiles)) {
+      for (const f of valObj.uploadedFiles) {
+        const fileName =
+          typeof f === "string"
+            ? f
+            : (f as { name?: string; fileName?: string }).name ||
+              (f as { name?: string; fileName?: string }).fileName ||
+              "Attachment";
+        const match = findAttachment(fileName);
+        if (match) {
+          attachmentsList.push({
+            id: match.attachment_id.toString(),
+            name: match.file_name,
+            path: match.file_path,
+            downloadUrl: `/api/attachments/${match.attachment_id}/download`,
+            size: match.file_size
+              ? `${Math.round(Number(match.file_size) / 1024)} KB`
+              : undefined,
+            type: match.file_type || undefined,
+          });
+        } else {
+          attachmentsList.push({
+            name: fileName,
+          });
+        }
       }
     }
-    if (val?.requestedDocs && Array.isArray(val.requestedDocs)) {
-      for (const d of val.requestedDocs) {
-        attachmentsList.push({ name: d });
+
+    if (valObj?.requestedDocs && Array.isArray(valObj.requestedDocs)) {
+      for (const d of valObj.requestedDocs) {
+        if (
+          !attachmentsList.some((a) => a.name.toLowerCase() === d.toLowerCase())
+        ) {
+          const match = findAttachment(d);
+          if (match) {
+            attachmentsList.push({
+              id: match.attachment_id.toString(),
+              name: match.file_name,
+              path: match.file_path,
+              downloadUrl: `/api/attachments/${match.attachment_id}/download`,
+              size: match.file_size
+                ? `${Math.round(Number(match.file_size) / 1024)} KB`
+                : undefined,
+              type: match.file_type || undefined,
+            });
+          } else {
+            attachmentsList.push({ name: d });
+          }
+        }
       }
     }
 

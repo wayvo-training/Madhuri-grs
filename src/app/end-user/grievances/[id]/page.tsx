@@ -19,12 +19,16 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
   const user = await requirePageRole("END_USER");
   const { id } = await params;
 
-  const grievanceId = parseInt(id, 10);
-  if (Number.isNaN(grievanceId)) return notFound();
+  const trimmed = id?.trim() || "";
+  if (!trimmed) return notFound();
+  const isNumeric = /^\d+$/.test(trimmed);
 
-  const grievance = await prisma.grievances.findUnique({
+  const grievance = await prisma.grievances.findFirst({
     where: {
-      grievance_id: grievanceId,
+      OR: [
+        { grievance_number: { equals: trimmed, mode: "insensitive" } },
+        ...(isNumeric ? [{ grievance_id: BigInt(trimmed) }] : []),
+      ],
       submitted_by: user.user_id, // Ensure user can only see their own
     },
     include: {

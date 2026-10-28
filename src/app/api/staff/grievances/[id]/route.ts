@@ -52,7 +52,11 @@ export async function GET(
             roles: true,
           },
         },
-        attachments: true,
+        attachments: {
+          include: {
+            attachment_department_grants: true,
+          },
+        },
         assignments: {
           where: {
             assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
@@ -202,6 +206,15 @@ export async function GET(
       },
       deptContext,
       assignmentContext,
+      (grievance.attachments || []).flatMap((att) =>
+        (att.attachment_department_grants || []).map((gr) => ({
+          grant_id: gr.grant_id,
+          attachment_id: gr.attachment_id,
+          department_id: gr.department_id,
+          granted_by: gr.granted_by,
+          granted_at: gr.granted_at,
+        })),
+      ),
     );
 
     const attachments = authorizedDossierAttachments.map((att) => ({

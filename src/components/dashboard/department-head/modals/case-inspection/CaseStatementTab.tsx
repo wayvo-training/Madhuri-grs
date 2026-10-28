@@ -7,14 +7,17 @@ import {
   FileText,
   Image as ImageIcon,
   Paperclip,
+  Share2,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { buildGmailComposeUrl } from "@/lib/email";
 import type {
   DocumentPreviewData,
   GrievanceItem,
 } from "@/types/department-head";
+import { ManageAttachmentAccessModal } from "../ManageAttachmentAccessModal";
 
 interface CaseStatementTabProps {
   currentGrievance: GrievanceItem;
@@ -41,6 +44,20 @@ export function CaseStatementTab({
   onDownloadDocument,
   onAssignClick,
 }: CaseStatementTabProps) {
+  const [accessModalFile, setAccessModalFile] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const hasSupportingDepts =
+    (currentGrievance.departmentsInvolved || []).some(
+      (d) => d.involvementType === "SUPPORTING",
+    ) ||
+    Boolean(
+      currentGrievance.collaboratingDepartments &&
+        currentGrievance.collaboratingDepartments.length > 0,
+    );
+
   return (
     <>
       {/* Complainant Profile */}
@@ -165,6 +182,22 @@ export function CaseStatementTab({
                     <Eye className="h-3 w-3" />
                     <span>View Document</span>
                   </button>
+                  {file.id && hasSupportingDepts && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAccessModalFile({
+                          id: String(file.id),
+                          name: file.name,
+                        })
+                      }
+                      className="inline-flex items-center gap-1 rounded-lg border border-teal-200/80 bg-teal-50/80 px-2.5 py-1.5 text-2.75 font-semibold text-teal-800 hover:bg-teal-100 transition shadow-2xs cursor-pointer"
+                      title="Manage Access for Supporting Departments"
+                    >
+                      <Share2 className="h-3 w-3" />
+                      <span>Share Access</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() =>
@@ -349,6 +382,15 @@ export function CaseStatementTab({
           </div>
         )}
       </div>
+
+      {accessModalFile && (
+        <ManageAttachmentAccessModal
+          attachmentId={accessModalFile.id}
+          fileName={accessModalFile.name}
+          isOpen={Boolean(accessModalFile)}
+          onClose={() => setAccessModalFile(null)}
+        />
+      )}
     </>
   );
 }

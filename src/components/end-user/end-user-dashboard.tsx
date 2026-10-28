@@ -199,8 +199,11 @@ export function EndUserPortal({
   };
 
   const handleTrack = () => {
-    if (trackSearchId.trim()) {
-      router.push(`/end-user/track?id=${trackSearchId.trim()}`);
+    const query = trackSearchId.trim();
+    if (query) {
+      router.push(
+        `/end-user/grievances/${encodeURIComponent(query)}?tab=tracking`,
+      );
     }
   };
 
