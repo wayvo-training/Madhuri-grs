@@ -517,11 +517,23 @@ export function EndUserPortal({
                       <StatusBadge status={g.status} />
                     </td>
                     <td className="py-2.5 px-2 text-slate-500 dark:text-slate-400 whitespace-nowrap align-middle text-xs">
-                      {new Date(g.createdAt).toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      <div>
+                        {new Date(g.createdAt).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </div>
+                      {g.dueAt && (
+                        <div className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">
+                          Due:{" "}
+                          {new Date(g.dueAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2.5 px-4 text-right whitespace-nowrap align-middle">
                       <ActionMenu

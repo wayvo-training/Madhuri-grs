@@ -76,12 +76,6 @@ export interface GrievanceCommunicationThreadData {
   isMultiDepartment?: boolean;
 }
 
-const TEST_MESSAGE_REGEX = /^(hi|hello|hey|test|testing|asdf|qwerty)$/i;
-
-function isTestMessage(text: string): boolean {
-  return TEST_MESSAGE_REGEX.test(text.trim());
-}
-
 /**
  * Fetches all grievance conversations accessible by the logged-in user.
  */
@@ -367,9 +361,8 @@ function formatAuditEvent(
       type: "AUDIT" as const,
       timestamp: audit.created_at,
       sender: actorName,
-      preview: isTestMessage(rawMsg)
-        ? "Requested additional supporting details for verification."
-        : rawMsg,
+      preview:
+        rawMsg || "Requested additional supporting details for verification.",
       communicationState:
         grievanceStatus === "CLOSED" ? "Case Closed" : "Action Required",
       filterCategory: "ACTION_REQUIRED" as const,
@@ -388,9 +381,8 @@ function formatAuditEvent(
       type: "AUDIT" as const,
       timestamp: audit.created_at,
       sender: endUserName,
-      preview: isTestMessage(rawMsg)
-        ? "Clarifications and documents submitted for case review."
-        : rawMsg,
+      preview:
+        rawMsg || "Clarifications and documents submitted for case review.",
       communicationState: "Response Submitted",
       filterCategory: "RESPONSES" as const,
       hasAttachments: (val?.uploadedFiles?.length ?? 0) > 0,
@@ -404,9 +396,7 @@ function formatAuditEvent(
       type: "AUDIT" as const,
       timestamp: audit.created_at,
       sender: actorName,
-      preview: isTestMessage(rawMsg)
-        ? "Update posted regarding this grievance."
-        : rawMsg,
+      preview: rawMsg || "Update posted regarding this grievance.",
       communicationState: "Update Posted",
       filterCategory: "UPDATES" as const,
       hasAttachments: false,
@@ -730,13 +720,14 @@ export async function getGrievanceCommunicationThread(
         (log.action === "USER_INFO_SUBMITTED" ? endUserName : "Staff Member");
 
     let rawMessage = val?.message || val?.response || "";
-    if (isTestMessage(rawMessage)) {
-      if (log.action === "ADDITIONAL_INFO_REQUESTED") {
-        rawMessage = "Requested clarifying information and relevant documents.";
-      } else if (log.action === "USER_INFO_SUBMITTED") {
+    if (!rawMessage.trim()) {
+      if (
+        log.action === "USER_INFO_SUBMITTED" ||
+        log.action === "USER_ADDITIONAL_INFO_PROVIDED"
+      ) {
         rawMessage = "Clarifications and documents submitted for case review.";
-      } else {
-        continue;
+      } else if (log.action === "ADDITIONAL_INFO_REQUESTED") {
+        rawMessage = "Requested clarifying information and relevant documents.";
       }
     }
 

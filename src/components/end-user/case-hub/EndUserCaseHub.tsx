@@ -88,6 +88,7 @@ export interface CaseHubGrievance {
   status: string;
   priority: string;
   createdAt: string;
+  dueAt?: string | null;
   categoryName: string;
   subcategoryName: string;
   departmentName: string;
@@ -519,6 +520,23 @@ export function EndUserCaseHub({
               </h2>
               <StatusBadge status={grievance.status} />
               <PriorityBadge priority={grievance.priority} />
+              {grievance.dueAt && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                  <Clock className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>
+                    Est. Resolution:{" "}
+                    <strong className="text-slate-900 dark:text-slate-100">
+                      {new Date(grievance.dueAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </strong>
+                  </span>
+                </div>
+              )}
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">

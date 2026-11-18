@@ -322,6 +322,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     status: grievance.status,
     priority: grievance.priority,
     createdAt: grievance.created_at.toISOString(),
+    dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
     categoryName: grievance.categories?.category_name || "General",
     subcategoryName: grievance.subcategories?.subcategory_name || "General",
     departmentName: primaryDept,

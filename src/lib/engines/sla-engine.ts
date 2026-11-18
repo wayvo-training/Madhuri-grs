@@ -345,9 +345,15 @@ export async function evaluateGrievanceSla(
     const activatedAt =
       deptRec.activated_at || deptRec.assigned_at || grievance.created_at;
 
+    const isSequentialDept =
+      deptRec.dependency_type === "SEQUENTIAL" ||
+      (typeof deptRec.execution_order === "number" &&
+        deptRec.execution_order > 1);
+
     const deptDueAt =
-      deptRec.due_at ||
-      new Date(activatedAt.getTime() + deptAllocatedMinutes * 60 * 1000);
+      deptRec.due_at && (!isSequentialDept || deptRec.due_at > activatedAt)
+        ? deptRec.due_at
+        : new Date(activatedAt.getTime() + deptAllocatedMinutes * 60 * 1000);
 
     const deptSlaResult = calculateDepartmentSlaConsumption(
       activatedAt,
