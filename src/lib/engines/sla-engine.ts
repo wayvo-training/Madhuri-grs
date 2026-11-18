@@ -865,27 +865,27 @@ export async function evaluateGrievanceSla(
     updatedStatus = grievance.status;
 
     await prisma.$transaction(async (tx) => {
-      // 1. Update grievance status to ESCALATED and sla_status to BREACHED
-      const isEligibleForEscalation =
-        grievance.status !== "ESCALATED" &&
-        grievance.status !== "CLOSED" &&
-        grievance.status !== "RESOLVED" &&
-        grievance.status !== "UNDER_REVIEW";
-
-      if (isEligibleForEscalation || grievance.sla_status !== "BREACHED") {
+      // 1. Update sla_status to BREACHED on grievance and sla_tracking (do NOT overwrite lifecycle status, per HLD/LLD)
+      if (grievance.sla_status !== "BREACHED") {
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
           data: {
             sla_status: "BREACHED",
-            ...(isEligibleForEscalation ? { status: "ESCALATED" } : {}),
             updated_at: evaluationDate,
           },
         });
       }
 
+      if (activeTracking && activeTracking.status !== "BREACHED") {
+        await tx.sla_tracking.update({
+          where: { sla_tracking_id: activeTracking.sla_tracking_id },
+          data: { status: "BREACHED" },
+        });
+      }
+
       // 2. Create escalation record if not exists
       const existingEscalation = await tx.escalations.findFirst({
-        where: { grievance_id: grievanceId },
+        where: { grievance_id: grievanceId, status: "OPEN" },
       });
 
       let escalationTargetUser = primaryDeptHead;
@@ -920,20 +920,6 @@ export async function evaluateGrievanceSla(
           },
         });
         didEscalate = true;
-      }
-
-      // 3. Status history update
-      if (grievance.status !== "ESCALATED") {
-        await tx.grievance_status_history.create({
-          data: {
-            grievance_id: grievanceId,
-            old_status: grievance.status,
-            new_status: "ESCALATED",
-            changed_by: escalationTargetUser?.user_id || grievance.submitted_by,
-            remarks: `Automated SLA Breach (${breachThreshold}% consumed). Moved to ESCALATED status for HOD intervention.`,
-            changed_at: evaluationDate,
-          },
-        });
       }
 
       // 4. Send Breach Notification to designated escalation recipients
@@ -991,7 +977,8 @@ export async function evaluateGrievanceSla(
               consumptionPercent,
               threshold: `${breachThreshold}%`,
               slaStatus: "BREACHED",
-              status: "ESCALATED",
+              status: grievance.status,
+              escalationStatus: "OPEN",
               escalatedTo: primaryDeptHead
                 ? `${primaryDeptHead.first_name} ${primaryDeptHead.last_name || ""}`.trim()
                 : "Department Head",
@@ -1010,10 +997,10 @@ export async function evaluateGrievanceSla(
       consumptionPercent,
       threshold: "AT_BREACH",
       slaStatus: "BREACHED",
-      status: "ESCALATED",
+      status: grievance.status,
       notificationsSent,
       escalated: didEscalate,
-      message: `${breachThreshold}% SLA threshold breached (${consumptionPercent}%). Marked BREACHED and moved to ESCALATED status.`,
+      message: `${breachThreshold}% SLA threshold breached (${consumptionPercent}%). Marked BREACHED for HOD intervention.`,
     };
   }
 

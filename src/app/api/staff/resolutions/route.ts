@@ -324,7 +324,7 @@ export async function POST(request: Request) {
     await prisma.grievances.update({
       where: { grievance_id: gId },
       data: {
-        status: requiresHeadReview ? "UNDER_REVIEW" : "RESOLVED",
+        status: requiresHeadReview ? "RESOLUTION_PENDING_APPROVAL" : "RESOLVED",
       },
     });
 
@@ -443,7 +443,9 @@ export async function POST(request: Request) {
       data: {
         grievance_id: gId,
         old_status: grievance.status,
-        new_status: requiresHeadReview ? "UNDER_REVIEW" : "RESOLVED",
+        new_status: requiresHeadReview
+          ? "RESOLUTION_PENDING_APPROVAL"
+          : "RESOLVED",
         changed_by: staffId,
         remarks: "Resolution submitted",
       },

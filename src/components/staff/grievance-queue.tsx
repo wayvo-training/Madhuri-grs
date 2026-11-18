@@ -127,31 +127,39 @@ export function GrievanceQueue({
           g.status !== "COMPLETED" &&
           (g.status === "IN_PROGRESS" ||
             g.status === "ASSIGNED" ||
-            g.status === "WAITING_ON_USER"),
+            g.status === "AWAITING_INFORMATION" ||
+            g.status === "WAITING_ON_USER" ||
+            g.status === "REWORK"),
       ).length,
       at_risk: grievances.filter(
         (g) =>
           g.slaStatus === "AT_RISK" &&
           g.status !== "CLOSED" &&
+          g.status !== "RESOLVED" &&
           g.status !== "COMPLETED" &&
           !g.isMyDepartmentCompleted,
       ).length,
       breached: grievances.filter(
         (g) =>
-          g.slaStatus === "BREACHED" &&
+          (g.slaStatus === "BREACHED" || g.status === "ESCALATED") &&
           g.status !== "CLOSED" &&
+          g.status !== "RESOLVED" &&
           g.status !== "COMPLETED" &&
           !g.isMyDepartmentCompleted,
       ).length,
       reopened: grievances.filter(
         (g) =>
-          (g.reopenCount > 0 || g.status === "REOPENED") &&
-          g.status !== "CLOSED",
+          (g.reopenCount > 0 ||
+            g.status === "REOPENED" ||
+            g.status === "REWORK") &&
+          g.status !== "CLOSED" &&
+          g.status !== "RESOLVED",
       ).length,
       completed: grievances.filter(
         (g) =>
           g.status === "CLOSED" ||
           g.status === "RESOLVED" ||
+          g.status === "RESOLUTION_PENDING_APPROVAL" ||
           g.status === "UNDER_REVIEW" ||
           g.status === "COMPLETED" ||
           g.isMyDepartmentCompleted,
@@ -215,9 +223,13 @@ export function GrievanceQueue({
       { value: "ALL", label: "All Statuses" },
       { value: "ASSIGNED", label: "Assigned" },
       { value: "IN_PROGRESS", label: "In Progress" },
-      { value: "WAITING_ON_USER", label: "Waiting on User" },
+      { value: "AWAITING_INFORMATION", label: "Awaiting Information" },
+      { value: "REWORK", label: "Rework" },
+      {
+        value: "RESOLUTION_PENDING_APPROVAL",
+        label: "Resolution Pending Approval",
+      },
       { value: "REOPENED", label: "Reopened" },
-      { value: "UNDER_REVIEW", label: "Resolution Pending Review" },
       { value: "RESOLVED", label: "Resolved" },
       { value: "CLOSED", label: "Closed" },
     ],

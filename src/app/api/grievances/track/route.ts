@@ -53,13 +53,23 @@ export async function GET(req: NextRequest) {
     let currentStage = 1;
     const statusUpper = grievance.status.toUpperCase();
 
-    if (statusUpper === "ASSIGNED") {
+    if (
+      statusUpper === "ROUTED" ||
+      statusUpper === "AWAITING_ROUTING" ||
+      statusUpper === "AWAITING_ASSIGNMENT" ||
+      statusUpper === "ASSIGNED"
+    ) {
       currentStage = 2;
     } else if (
       [
         "UNDER_INVESTIGATION",
         "IN_PROGRESS",
+        "AWAITING_INFORMATION",
         "WAITING_ON_USER",
+        "REWORK",
+        "RESOLUTION_PENDING_APPROVAL",
+        "UNDER_REVIEW",
+        "REOPENED",
         "ESCALATED",
       ].includes(statusUpper)
     ) {
@@ -80,7 +90,11 @@ export async function GET(req: NextRequest) {
       [
         "IN_PROGRESS",
         "UNDER_INVESTIGATION",
+        "AWAITING_INFORMATION",
         "WAITING_ON_USER",
+        "REWORK",
+        "RESOLUTION_PENDING_APPROVAL",
+        "UNDER_REVIEW",
         "ESCALATED",
       ].includes(h.new_status),
     );

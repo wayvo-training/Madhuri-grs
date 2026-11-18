@@ -186,6 +186,7 @@ export async function POST(
 
       // If waiting on user because staff requested documents, enforce at least 1 document attachment
       if (
+        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE"
       ) {
@@ -319,6 +320,7 @@ export async function POST(
 
       // If waiting on user, advance back to IN_PROGRESS and resume SLA tracking
       if (
+        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE"
       ) {
@@ -457,9 +459,10 @@ export async function POST(
         },
       });
 
-      // Update grievance status to WAITING_ON_USER and pause SLA tracking
+      // Update grievance status to AWAITING_INFORMATION and pause SLA tracking
       await prisma.$transaction(async (tx) => {
         if (
+          grievance.status !== "AWAITING_INFORMATION" &&
           grievance.status !== "WAITING_ON_USER" &&
           grievance.status !== "CLOSED" &&
           grievance.status !== "RESOLVED"
@@ -467,7 +470,7 @@ export async function POST(
           await tx.grievances.update({
             where: { grievance_id: grievanceId },
             data: {
-              status: "WAITING_ON_USER",
+              status: "AWAITING_INFORMATION",
               updated_at: new Date(),
             },
           });
@@ -476,7 +479,7 @@ export async function POST(
             data: {
               grievance_id: grievanceId,
               old_status: grievance.status,
-              new_status: "WAITING_ON_USER",
+              new_status: "AWAITING_INFORMATION",
               changed_by: userId,
               remarks: `${senderFullName} (${userRole}) requested information/documents via Communication Message: "${messageText.slice(0, 100)}"`,
             },
@@ -484,7 +487,7 @@ export async function POST(
 
           await pauseSlaTracking({
             grievanceId,
-            pauseReason: "WAITING_ON_USER",
+            pauseReason: "AWAITING_INFORMATION",
             pausedBy: userId,
             tx,
           });

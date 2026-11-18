@@ -54,15 +54,21 @@ export interface GrievanceItem {
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   status:
     | "SUBMITTED"
-    | "ROUTED"
+    | "AWAITING_ROUTING"
+    | "AWAITING_ASSIGNMENT"
     | "ASSIGNED"
     | "IN_PROGRESS"
+    | "AWAITING_INFORMATION"
+    | "RESOLVED"
+    | "REWORK"
+    | "RESOLUTION_PENDING_APPROVAL"
+    | "REOPENED"
+    | "CLOSED"
+    // Legacy aliases & departmental stage statuses
+    | "ROUTED"
     | "WAITING_ON_USER"
     | "UNDER_REVIEW"
-    | "REOPENED"
     | "ESCALATED"
-    | "CLOSED"
-    | "RESOLVED"
     | "BLOCKED"
     | "PENDING_ASSIGNMENT"
     | "COMPLETED";

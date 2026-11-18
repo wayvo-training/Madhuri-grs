@@ -206,12 +206,16 @@ export async function fetchDepartmentHeadGrievances(
           },
         },
         { status: "SUBMITTED" },
+        { status: "AWAITING_ROUTING" },
+        { status: "AWAITING_ASSIGNMENT" },
         { status: "ROUTED" },
       ],
     });
   } else if (tab === "IN_PROGRESS") {
     conditions.push({
-      status: { in: ["ASSIGNED", "IN_PROGRESS"] },
+      status: {
+        in: ["ASSIGNED", "IN_PROGRESS", "AWAITING_INFORMATION", "REWORK"],
+      },
     });
   } else if (tab === "HIGH_CRITICAL") {
     conditions.push({
@@ -224,18 +228,22 @@ export async function fetchDepartmentHeadGrievances(
     });
   } else if (tab === "ESCALATED") {
     conditions.push({
-      status: "ESCALATED",
+      OR: [
+        { status: "ESCALATED" },
+        { sla_status: "BREACHED" },
+        { escalations: { some: { status: "OPEN" } } },
+      ],
     });
   } else if (tab === "REOPENED") {
     conditions.push({
       OR: [
         { reopen_count: { gt: 0 } },
-        { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+        { status: { in: ["REOPENED", "REWORK", "REOPEN_REVIEW"] } },
       ],
     });
   } else if (tab === "RESOLUTION_REVIEW") {
     conditions.push({
-      status: "UNDER_REVIEW",
+      status: { in: ["RESOLUTION_PENDING_APPROVAL", "UNDER_REVIEW"] },
     });
   } else if (tab === "CLOSED") {
     conditions.push({
@@ -360,6 +368,8 @@ export async function fetchDepartmentHeadGrievances(
     const isDeptPendingAssignment =
       myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
       g.status === "SUBMITTED" ||
+      g.status === "AWAITING_ROUTING" ||
+      g.status === "AWAITING_ASSIGNMENT" ||
       g.status === "ROUTED" ||
       (g.status === "REOPENED" &&
         myDeptRecord?.status === "PENDING_ASSIGNMENT");
@@ -914,13 +924,21 @@ export async function fetchDepartmentHeadGrievances(
       if (g.status === "CLOSED" || g.status === "RESOLVED") {
         resolvedStatus = g.status as GrievanceItem["status"];
       } else if (
+        g.status === "AWAITING_INFORMATION" ||
         g.status === "WAITING_ON_USER" ||
         g.status === "WAITING_ON_EMPLOYEE"
       ) {
-        resolvedStatus = "WAITING_ON_USER";
-      } else if (g.status === "UNDER_REVIEW") {
-        resolvedStatus = "UNDER_REVIEW";
-      } else if (g.status === "REOPENED" || g.status === "REOPEN_REVIEW") {
+        resolvedStatus = "AWAITING_INFORMATION";
+      } else if (
+        g.status === "RESOLUTION_PENDING_APPROVAL" ||
+        g.status === "UNDER_REVIEW"
+      ) {
+        resolvedStatus = "RESOLUTION_PENDING_APPROVAL";
+      } else if (
+        g.status === "REWORK" ||
+        g.status === "REOPENED" ||
+        g.status === "REOPEN_REVIEW"
+      ) {
         resolvedStatus = g.status as GrievanceItem["status"];
       } else if (myDeptRecord.status === "COMPLETED") {
         resolvedStatus = "COMPLETED";
@@ -932,7 +950,12 @@ export async function fetchDepartmentHeadGrievances(
         myDeptRecord.status === "PENDING_ASSIGNMENT" ||
         !myDeptAssignment
       ) {
-        resolvedStatus = "PENDING_ASSIGNMENT";
+        resolvedStatus =
+          g.status === "AWAITING_ROUTING"
+            ? "AWAITING_ROUTING"
+            : g.status === "AWAITING_ASSIGNMENT"
+              ? "AWAITING_ASSIGNMENT"
+              : "AWAITING_ASSIGNMENT";
       } else if (myDeptRecord.status === "ASSIGNED") {
         resolvedStatus = "ASSIGNED";
       } else if (myDeptRecord.status === "IN_PROGRESS") {
@@ -972,8 +995,10 @@ export async function fetchDepartmentHeadGrievances(
         const activeSla = g.sla_tracking?.[0];
         const isPaused = Boolean(
           activeSla?.paused_at ||
+            g.status === "AWAITING_INFORMATION" ||
             g.status === "WAITING_ON_USER" ||
             g.status === "WAITING_ON_EMPLOYEE" ||
+            g.status === "RESOLUTION_PENDING_APPROVAL" ||
             g.status === "UNDER_REVIEW",
         );
         const pausedAt = isPaused
@@ -1018,8 +1043,10 @@ export async function fetchDepartmentHeadGrievances(
       const activeSla = g.sla_tracking?.[0];
       const isPaused = Boolean(
         activeSla?.paused_at ||
+          g.status === "AWAITING_INFORMATION" ||
           g.status === "WAITING_ON_USER" ||
           g.status === "WAITING_ON_EMPLOYEE" ||
+          g.status === "RESOLUTION_PENDING_APPROVAL" ||
           g.status === "UNDER_REVIEW",
       );
       const pausedAt = isPaused
@@ -1119,9 +1146,10 @@ export async function fetchDepartmentHeadGrievances(
       escalationReason: latestEscalation?.reason || undefined,
       escalationLevel: latestEscalation?.escalation_level || undefined,
       escalationStage:
-        g.status === "ESCALATED"
+        g.status === "ESCALATED" || g.sla_status === "BREACHED"
           ? ("GRIEVANCE_ESCALATED" as const)
-          : g.status === "UNDER_REVIEW"
+          : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+              g.status === "UNDER_REVIEW"
             ? ("RESOLUTION_SUBMITTED" as const)
             : g.status === "CLOSED"
               ? ("ESCALATION_CLEARED" as const)

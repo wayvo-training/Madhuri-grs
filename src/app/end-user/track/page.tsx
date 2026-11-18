@@ -20,15 +20,20 @@ const mapStatusToStage = (status: string) => {
     case "PENDING":
     case "SUBMITTED":
       return "SUBMITTED";
+    case "AWAITING_ROUTING":
+    case "AWAITING_ASSIGNMENT":
     case "ROUTED":
       return "ROUTED";
     case "ASSIGNED":
       return "ASSIGNED";
     case "IN_PROGRESS":
+    case "AWAITING_INFORMATION":
+    case "REWORK":
     case "ESCALATED":
       return "IN_PROGRESS";
     case "REOPENED":
       return "REOPENED";
+    case "RESOLUTION_PENDING_APPROVAL":
     case "UNDER_REVIEW":
       return "HEAD_REVIEW";
     case "RESOLVED":

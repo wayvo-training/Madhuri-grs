@@ -177,11 +177,11 @@ export async function POST(
 
       isPrimaryBlocked = popResult.blockedDeptIds.includes(primaryDepartmentId);
 
-      // Update grievance status to ROUTED and increment manual review counter
+      // Update grievance status to AWAITING_ASSIGNMENT and increment manual review counter
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
-          status: "ROUTED",
+          status: "AWAITING_ASSIGNMENT",
           manual_review_count: { increment: 1 },
           updated_at: new Date(),
         },
@@ -197,7 +197,7 @@ export async function POST(
         data: {
           grievance_id: grievanceId,
           old_status: grievance.status,
-          new_status: "ROUTED",
+          new_status: "AWAITING_ASSIGNMENT",
           changed_by: user.user_id,
           remarks: `Manual routing exception handled by Admin to Primary: ${primaryDept.department_name}${suppText}`,
         },

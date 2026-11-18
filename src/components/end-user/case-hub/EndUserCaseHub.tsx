@@ -161,10 +161,13 @@ export function EndUserCaseHub({
   const isResolvedOrClosed =
     Boolean(resolution) ||
     grievance.status === "RESOLVED" ||
+    grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
     grievance.status === "UNDER_REVIEW" ||
     grievance.status === "CLOSED";
   const needsCitizenReview =
-    grievance.status === "RESOLVED" || grievance.status === "UNDER_REVIEW";
+    grievance.status === "RESOLVED" ||
+    grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+    grievance.status === "UNDER_REVIEW";
 
   // Build timeline nodes for the Tracking tab
   const timelineNodes = useMemo(() => {
@@ -317,11 +320,25 @@ export function EndUserCaseHub({
 
     grievance.statusHistory.forEach((h) => {
       const s = h.status.toUpperCase();
-      if (s === "ROUTED") historyDates.ROUTED = h.changedAt;
+      if (
+        s === "ROUTED" ||
+        s === "AWAITING_ASSIGNMENT" ||
+        s === "AWAITING_ROUTING"
+      )
+        historyDates.ROUTED = h.changedAt;
       if (s === "ASSIGNED") historyDates.ASSIGNED = h.changedAt;
-      if (s === "IN_PROGRESS" || s === "ESCALATED")
+      if (
+        s === "IN_PROGRESS" ||
+        s === "AWAITING_INFORMATION" ||
+        s === "REWORK" ||
+        s === "ESCALATED"
+      )
         historyDates.IN_PROGRESS = h.changedAt;
-      if (s === "UNDER_REVIEW" || s === "RESOLVED") {
+      if (
+        s === "UNDER_REVIEW" ||
+        s === "RESOLUTION_PENDING_APPROVAL" ||
+        s === "RESOLVED"
+      ) {
         historyDates.RESOLUTION = historyDates.RESOLUTION || h.changedAt;
         historyDates.UNDER_REVIEW = h.changedAt;
       }
@@ -348,8 +365,11 @@ export function EndUserCaseHub({
       !historyDates.ASSIGNED &&
       [
         "IN_PROGRESS",
+        "AWAITING_INFORMATION",
+        "REWORK",
         "ESCALATED",
         "UNDER_REVIEW",
+        "RESOLUTION_PENDING_APPROVAL",
         "RESOLVED",
         "CLOSED",
         "REOPENED",
@@ -360,18 +380,26 @@ export function EndUserCaseHub({
     }
     if (
       !historyDates.IN_PROGRESS &&
-      ["UNDER_REVIEW", "RESOLVED", "CLOSED", "REOPENED"].includes(
-        grievance.status,
-      )
+      [
+        "UNDER_REVIEW",
+        "RESOLUTION_PENDING_APPROVAL",
+        "RESOLVED",
+        "CLOSED",
+        "REOPENED",
+      ].includes(grievance.status)
     ) {
       historyDates.IN_PROGRESS =
         historyDates.RESOLUTION || historyDates.ASSIGNED || grievance.createdAt;
     }
     if (
       !historyDates.RESOLUTION &&
-      ["UNDER_REVIEW", "RESOLVED", "CLOSED", "REOPENED"].includes(
-        grievance.status,
-      )
+      [
+        "UNDER_REVIEW",
+        "RESOLUTION_PENDING_APPROVAL",
+        "RESOLVED",
+        "CLOSED",
+        "REOPENED",
+      ].includes(grievance.status)
     ) {
       historyDates.RESOLUTION =
         resolution?.submittedAt ||
@@ -396,6 +424,7 @@ export function EndUserCaseHub({
       if (isCaseClosed) return s.id === "CLOSED";
       if (
         grievance.status === "RESOLVED" ||
+        grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
         grievance.status === "UNDER_REVIEW"
       ) {
         return s.id === "UNDER_REVIEW";
@@ -406,6 +435,8 @@ export function EndUserCaseHub({
         }
         if (
           grievance.status === "IN_PROGRESS" ||
+          grievance.status === "REWORK" ||
+          grievance.status === "AWAITING_INFORMATION" ||
           grievance.status === "ESCALATED"
         ) {
           return s.id === "RE_INVESTIGATION";
@@ -413,12 +444,19 @@ export function EndUserCaseHub({
       }
       if (
         grievance.status === "IN_PROGRESS" ||
+        grievance.status === "REWORK" ||
+        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "ESCALATED"
       ) {
         return s.id === "IN_PROGRESS";
       }
       if (grievance.status === "ASSIGNED") return s.id === "ASSIGNED";
-      if (grievance.status === "ROUTED") return s.id === "ROUTED";
+      if (
+        grievance.status === "ROUTED" ||
+        grievance.status === "AWAITING_ASSIGNMENT" ||
+        grievance.status === "AWAITING_ROUTING"
+      )
+        return s.id === "ROUTED";
       return s.id === "SUBMITTED";
     });
 

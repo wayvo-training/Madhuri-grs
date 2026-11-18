@@ -884,10 +884,10 @@ export async function PATCH(
       const requestedDocs = body.requestedDocs || [];
 
       await prisma.$transaction(async (tx) => {
-        // 1. Change status from active (IN_PROGRESS) to WAITING_ON_USER
+        // 1. Change status from active (IN_PROGRESS) to AWAITING_INFORMATION
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
-          data: { status: "WAITING_ON_USER" },
+          data: { status: "AWAITING_INFORMATION" },
         });
 
         // 2. Add to status history
@@ -895,7 +895,7 @@ export async function PATCH(
           data: {
             grievance_id: grievanceId,
             old_status: grievance.status,
-            new_status: "WAITING_ON_USER",
+            new_status: "AWAITING_INFORMATION",
             changed_by: staffId,
             remarks: `Staff requested additional information via ${channels.join(", ")}. Subject: ${subject}`,
           },
@@ -922,11 +922,11 @@ export async function PATCH(
           },
         });
 
-        // 4. Pause SLA tracking during WAITING_ON_USER
+        // 4. Pause SLA tracking during AWAITING_INFORMATION
         const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
         await pauseSlaTracking({
           grievanceId,
-          pauseReason: "WAITING_ON_USER",
+          pauseReason: "AWAITING_INFORMATION",
           pausedBy: staffId,
           tx,
         });
@@ -972,14 +972,14 @@ export async function PATCH(
         type: "SYSTEM",
         channel: "IN_APP",
         title: `Information Requested (${grievance.grievance_number})`,
-        message: `You successfully requested additional information from the complainant. The grievance is now Waiting on User.`,
+        message: `You successfully requested additional information from the complainant. The grievance is now Awaiting Information.`,
       });
 
       return NextResponse.json({
         success: true,
         message:
-          "Additional information requested successfully. Status set to Waiting on User.",
-        status: "WAITING_ON_USER",
+          "Additional information requested successfully. Status set to Awaiting Information.",
+        status: "AWAITING_INFORMATION",
       });
     } else if (body.action === "RESUME_INVESTIGATION") {
       await prisma.$transaction(async (tx) => {

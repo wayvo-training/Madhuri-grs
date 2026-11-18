@@ -26,8 +26,10 @@ export function calculateSlaStatus(
 
   const isPaused = Boolean(
     pausedAt ||
+      grievanceStatus === "AWAITING_INFORMATION" ||
       grievanceStatus === "WAITING_ON_USER" ||
       grievanceStatus === "WAITING_ON_EMPLOYEE" ||
+      grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
       grievanceStatus === "UNDER_REVIEW",
   );
 
@@ -94,11 +96,13 @@ export function calculateSlaStatus(
   if (isPaused) {
     timeRemaining = `${timeRemaining} (Paused)`;
     const pauseLabel =
+      grievanceStatus === "AWAITING_INFORMATION" ||
       grievanceStatus === "WAITING_ON_USER" ||
       grievanceStatus === "WAITING_ON_EMPLOYEE"
-        ? "Waiting on User"
-        : grievanceStatus === "UNDER_REVIEW"
-          ? "Under Review"
+        ? "Awaiting Information"
+        : grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+            grievanceStatus === "UNDER_REVIEW"
+          ? "Resolution Pending Approval"
           : "Paused";
 
     return {

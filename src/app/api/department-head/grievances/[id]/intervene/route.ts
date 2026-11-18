@@ -355,12 +355,12 @@ export async function POST(
           },
         });
 
-        // Record status transition to WAITING_ON_USER and pause SLA tracking
+        // Record status transition to AWAITING_INFORMATION and pause SLA tracking
         await tx.grievance_status_history.create({
           data: {
             grievance_id: grievanceId,
             old_status: grievance.status,
-            new_status: "WAITING_ON_USER",
+            new_status: "AWAITING_INFORMATION",
             changed_by: user.user_id,
             remarks: `Department Head requested additional information: ${note || "Additional documentation required."}`,
           },
@@ -368,7 +368,7 @@ export async function POST(
 
         await pauseSlaTracking({
           grievanceId,
-          pauseReason: "WAITING_ON_USER",
+          pauseReason: "AWAITING_INFORMATION",
           pausedBy: user.user_id,
           tx,
         });
@@ -616,7 +616,7 @@ export async function POST(
       // - If EXTEND_SLA, update due_at and sla_status
       const nextStatus =
         interventionType === "REQUEST_ADDITIONAL_INFO"
-          ? "WAITING_ON_USER"
+          ? "AWAITING_INFORMATION"
           : isAssumingAuthority
             ? grievance.status
             : "IN_PROGRESS";

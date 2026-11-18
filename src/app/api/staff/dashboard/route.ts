@@ -647,18 +647,22 @@ export async function GET(request: Request) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : g.status === "WAITING_ON_USER" ||
+            : g.status === "AWAITING_INFORMATION" ||
+                g.status === "WAITING_ON_USER" ||
                 g.status === "WAITING_ON_EMPLOYEE"
-              ? "WAITING_ON_USER"
-              : g.status === "UNDER_REVIEW"
-                ? "UNDER_REVIEW"
-                : isMyDeptCompleted
-                  ? "COMPLETED"
-                  : a.grievance_departments?.status === "ASSIGNED"
-                    ? "ASSIGNED"
-                    : a.grievance_departments?.status === "IN_PROGRESS"
-                      ? "IN_PROGRESS"
-                      : g.status) as StaffGrievanceItem["status"],
+              ? "AWAITING_INFORMATION"
+              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  g.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : g.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : a.grievance_departments?.status === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : a.grievance_departments?.status === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : g.status) as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,

@@ -239,6 +239,8 @@ export async function GET(
       myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
       grievance.status === "SUBMITTED" ||
       grievance.status === "ROUTED" ||
+      grievance.status === "AWAITING_ROUTING" ||
+      grievance.status === "AWAITING_ASSIGNMENT" ||
       (grievance.status === "REOPENED" &&
         myDeptRecord?.status === "PENDING_ASSIGNMENT");
 
@@ -397,9 +399,12 @@ export async function GET(
     const activeSla = grievance.sla_tracking?.[0];
     const isPaused = Boolean(
       activeSla?.paused_at ||
+        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE" ||
-        grievance.status === "UNDER_REVIEW",
+        grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+        grievance.status === "UNDER_REVIEW" ||
+        grievance.status === "RESOLVED",
     );
     const effectiveNow = isPaused
       ? activeSla?.paused_at
@@ -513,12 +518,16 @@ export async function GET(
         : "No Target Set";
 
     const pauseLabel =
+      grievance.status === "AWAITING_INFORMATION" ||
       grievance.status === "WAITING_ON_USER" ||
       grievance.status === "WAITING_ON_EMPLOYEE"
         ? "Waiting on User"
-        : grievance.status === "UNDER_REVIEW"
+        : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+            grievance.status === "UNDER_REVIEW"
           ? "Under Review"
-          : "Paused";
+          : grievance.status === "RESOLVED"
+            ? "Awaiting Citizen Confirmation"
+            : "Paused";
 
     const sla = {
       consumptionPercent,

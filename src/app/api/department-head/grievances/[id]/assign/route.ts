@@ -228,9 +228,12 @@ export async function POST(
         },
       });
 
-      // Update grievance status to ASSIGNED if SUBMITTED or ROUTED
+      // Update grievance status to ASSIGNED if unassigned
       const newStatus =
-        grievance.status === "SUBMITTED" || grievance.status === "ROUTED"
+        grievance.status === "SUBMITTED" ||
+        grievance.status === "ROUTED" ||
+        grievance.status === "AWAITING_ASSIGNMENT" ||
+        grievance.status === "AWAITING_ROUTING"
           ? "ASSIGNED"
           : grievance.status;
 

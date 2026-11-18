@@ -135,7 +135,8 @@ export async function POST(
       : [];
 
     if (
-      (grievance.status === "WAITING_ON_USER" ||
+      (grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE") &&
       requestedDocs.length > 0 &&
       incomingFiles.length === 0

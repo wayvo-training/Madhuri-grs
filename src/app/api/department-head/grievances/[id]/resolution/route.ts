@@ -90,7 +90,8 @@ export async function POST(
     const isDirectResolution =
       requiresHeadReview ||
       grievance.status === "ESCALATED" ||
-      grievance.status !== "UNDER_REVIEW" ||
+      (grievance.status !== "UNDER_REVIEW" &&
+        grievance.status !== "RESOLUTION_PENDING_APPROVAL") ||
       !latestResolution;
 
     // Server-side authorization check for Direct Resolution by Department Head:
@@ -313,13 +314,12 @@ export async function POST(
         const newOverallStatus =
           isSupportingContributor && otherIncompleteDepts > 0
             ? grievance.status
-            : "UNDER_REVIEW";
+            : "RESOLVED";
 
-        // IMPORTANT BUSINESS RULE:
+        // IMPORTANT BUSINESS RULE (LLD Table 77):
         // When Department Head submits resolution:
-        // DO NOT directly close the grievance!
-        // Move to UNDER_REVIEW for Employee Review (or keep in progress if supporting dept):
-        // Head submits resolution -> UNDER_REVIEW / Employee Review -> Employee reviews -> Accept -> CLOSED
+        // Set status to RESOLVED (with resolutionStatus: PENDING_CONFIRMATION) and pause SLA.
+        // Citizen can accept -> CLOSED, or reject -> REWORK.
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
           data: {
@@ -338,17 +338,17 @@ export async function POST(
               new_status: newOverallStatus,
               changed_by: user.user_id,
               remarks:
-                "Department Head submitted resolution. Grievance placed in Employee Review.",
+                "Department Head submitted resolution. Grievance placed in RESOLVED awaiting Employee confirmation.",
             },
           });
         }
 
-        // Pause active SLA timer during Employee Review
-        if (newOverallStatus === "UNDER_REVIEW") {
+        // Pause active SLA timer during Employee Confirmation
+        if (newOverallStatus === "RESOLVED") {
           const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
           await pauseSlaTracking({
             grievanceId,
-            pauseReason: "EMPLOYEE_REVIEW",
+            pauseReason: "RESOLUTION_PENDING_CONFIRMATION",
             pausedBy: user.user_id,
             tx,
           });
@@ -440,11 +440,11 @@ export async function POST(
         });
 
         if (isApproved) {
-          // Head approved staff's resolution -> Move to UNDER_REVIEW for Employee Review (or CLOSED if already reviewed)
+          // Head approved staff's resolution -> Move to RESOLVED for Employee Confirmation
           await tx.grievances.update({
             where: { grievance_id: grievanceId },
             data: {
-              status: "UNDER_REVIEW",
+              status: "RESOLVED",
               updated_at: new Date(),
             },
           });
@@ -453,10 +453,10 @@ export async function POST(
             data: {
               grievance_id: grievanceId,
               old_status: grievance.status,
-              new_status: "UNDER_REVIEW",
+              new_status: "RESOLVED",
               changed_by: user.user_id,
               remarks:
-                "Department Head approved resolution. Awaiting Employee Review.",
+                "Department Head approved resolution. Awaiting Employee Confirmation.",
             },
           });
 

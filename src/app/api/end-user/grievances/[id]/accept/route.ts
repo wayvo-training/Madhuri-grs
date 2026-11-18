@@ -39,7 +39,8 @@ export async function POST(
 
     if (
       grievance.status !== "RESOLVED" &&
-      grievance.status !== "UNDER_REVIEW"
+      grievance.status !== "UNDER_REVIEW" &&
+      grievance.status !== "RESOLUTION_PENDING_APPROVAL"
     ) {
       return NextResponse.json(
         {

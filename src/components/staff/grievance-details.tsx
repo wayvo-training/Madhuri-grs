@@ -117,13 +117,17 @@ export function GrievanceDetails({
 
   const isCompleted =
     grievance.status === "CLOSED" ||
+    grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
     grievance.status === "UNDER_REVIEW" ||
     grievance.status === "RESOLVED" ||
     grievance.status === "COMPLETED" ||
     grievance.overallStatus === "CLOSED" ||
     grievance.overallStatus === "RESOLVED";
-  const isWaitingOnUser = grievance.status === "WAITING_ON_USER";
-  const isInProgress = grievance.status === "IN_PROGRESS";
+  const isWaitingOnUser =
+    grievance.status === "AWAITING_INFORMATION" ||
+    grievance.status === "WAITING_ON_USER";
+  const isInProgress =
+    grievance.status === "IN_PROGRESS" || grievance.status === "REWORK";
 
   const inquiryUrl = buildGmailComposeUrl(
     buildStaffComplainantInquiryEmail({

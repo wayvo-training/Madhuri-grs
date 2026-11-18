@@ -9,15 +9,21 @@ export type StaffPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export type StaffGrievanceStatus =
   | "SUBMITTED"
-  | "ROUTED"
+  | "AWAITING_ROUTING"
+  | "AWAITING_ASSIGNMENT"
   | "ASSIGNED"
   | "IN_PROGRESS"
+  | "AWAITING_INFORMATION"
+  | "RESOLVED"
+  | "REWORK"
+  | "RESOLUTION_PENDING_APPROVAL"
+  | "REOPENED"
+  | "CLOSED"
+  // Legacy aliases for backward compatibility
+  | "ROUTED"
   | "WAITING_ON_USER"
   | "UNDER_REVIEW"
-  | "REOPENED"
   | "REOPEN_REVIEW"
-  | "CLOSED"
-  | "RESOLVED"
   | "ESCALATED"
   | "COMPLETED";
 

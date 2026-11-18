@@ -298,7 +298,7 @@ export function StaffDashboard({
       });
       setSelectedGrievance((prev) =>
         prev && prev.id === grievanceId
-          ? { ...prev, status: "WAITING_ON_USER" }
+          ? { ...prev, status: "AWAITING_INFORMATION" }
           : prev,
       );
       toast.success(
@@ -485,10 +485,16 @@ export function StaffDashboard({
     (g) =>
       g.status === "IN_PROGRESS" ||
       g.status === "ASSIGNED" ||
-      g.status === "WAITING_ON_USER",
+      g.status === "AWAITING_INFORMATION" ||
+      g.status === "WAITING_ON_USER" ||
+      g.status === "REWORK",
   ).length;
   const _resolutionCount = assignedItems.filter(
-    (g) => g.hasResolution || g.status === "UNDER_REVIEW",
+    (g) =>
+      g.hasResolution ||
+      g.status === "RESOLUTION_PENDING_APPROVAL" ||
+      g.status === "UNDER_REVIEW" ||
+      g.status === "RESOLVED",
   ).length;
 
   return (

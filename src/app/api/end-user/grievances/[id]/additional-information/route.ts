@@ -100,10 +100,14 @@ export async function POST(
       "PENDING",
       "SUBMITTED",
       "ROUTED",
+      "AWAITING_ROUTING",
+      "AWAITING_ASSIGNMENT",
       "ASSIGNED",
       "IN_PROGRESS",
+      "AWAITING_INFORMATION",
       "WAITING_ON_USER",
       "WAITING_ON_EMPLOYEE",
+      "REWORK",
       "REOPENED",
     ];
     if (!eligibleStatuses.includes(grievance.status)) {
@@ -146,7 +150,8 @@ export async function POST(
       : [];
 
     if (
-      (grievance.status === "WAITING_ON_USER" ||
+      (grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE") &&
       requestedDocs.length > 0 &&
       incomingFiles.length === 0
@@ -167,6 +172,7 @@ export async function POST(
     await prisma.$transaction(async (tx) => {
       // 1. Resume status to IN_PROGRESS if waiting on user
       const isWaiting =
+        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE";
 

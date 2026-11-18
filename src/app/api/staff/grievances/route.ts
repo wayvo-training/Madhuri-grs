@@ -179,17 +179,21 @@ export async function GET(req: NextRequest) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : g.status === "WAITING_ON_USER"
-              ? "WAITING_ON_USER"
-              : g.status === "UNDER_REVIEW"
-                ? "UNDER_REVIEW"
-                : isMyDeptCompleted
-                  ? "COMPLETED"
-                  : myDeptStatus === "ASSIGNED"
-                    ? "ASSIGNED"
-                    : myDeptStatus === "IN_PROGRESS"
-                      ? "IN_PROGRESS"
-                      : g.status
+            : g.status === "AWAITING_INFORMATION" ||
+                g.status === "WAITING_ON_USER"
+              ? "AWAITING_INFORMATION"
+              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  g.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : g.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : myDeptStatus === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : myDeptStatus === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : g.status
       ) as StaffGrievanceItem["status"];
 
       const rawDepts = g.grievance_departments || [];

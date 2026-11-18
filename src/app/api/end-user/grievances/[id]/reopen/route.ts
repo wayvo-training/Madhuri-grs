@@ -39,12 +39,19 @@ export async function POST(
       );
     }
 
-    if (!["RESOLVED", "UNDER_REVIEW", "CLOSED"].includes(grievance.status)) {
+    if (
+      ![
+        "RESOLVED",
+        "UNDER_REVIEW",
+        "RESOLUTION_PENDING_APPROVAL",
+        "CLOSED",
+      ].includes(grievance.status)
+    ) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Only resolved, under-review, or closed grievances can be reopened",
+            "Only resolved, review-pending, or closed grievances can be reopened",
         },
         { status: 400 },
       );
@@ -102,7 +109,20 @@ export async function POST(
     const newReopenCount = grievance.reopen_count + 1;
     // Escalate on reaching manual review threshold or max allowed count
     const isEscalated = requiresHeadManualReview(newReopenCount, reopenPolicy);
-    const newStatus = isEscalated ? "ESCALATED" : "REOPENED";
+    // In accordance with LLD Table 77:
+    // If grievance was in RESOLVED (citizen rejects proposed resolution before closure):
+    // -> Target status is REWORK
+    // If grievance was in CLOSED:
+    // -> If requiresHeadManualReview -> RESOLUTION_PENDING_APPROVAL
+    // -> Otherwise -> REOPENED
+    let newStatus: string;
+    if (grievance.status === "RESOLVED") {
+      newStatus = "REWORK";
+    } else if (isEscalated) {
+      newStatus = "RESOLUTION_PENDING_APPROVAL";
+    } else {
+      newStatus = "REOPENED";
+    }
 
     // Resolve all participating departments and their Department Heads
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
