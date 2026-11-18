@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export interface SlaEvaluationResult {
@@ -24,12 +25,15 @@ import {
 
 /**
  * Calculates the exact SLA consumption percentage for a grievance.
+ * Accounts for accumulated paused minutes and freezes elapsed time when currently paused.
  */
 export function calculateSlaConsumption(
   createdAt: Date | string,
   dueAt: Date | string | null,
   priority: string = "MEDIUM",
   now: Date = new Date(),
+  accumulatedPausedMinutes: number = 0,
+  pausedAt?: Date | string | null,
 ): {
   totalDurationMinutes: number;
   elapsedMinutes: number;
@@ -37,6 +41,12 @@ export function calculateSlaConsumption(
 } {
   const created = createdAt instanceof Date ? createdAt : new Date(createdAt);
   const nowTime = now instanceof Date ? now : new Date(now);
+  const effectiveNow = pausedAt
+    ? pausedAt instanceof Date
+      ? pausedAt
+      : new Date(pausedAt)
+    : nowTime;
+
   let effectiveDue = dueAt
     ? dueAt instanceof Date
       ? dueAt
@@ -50,7 +60,9 @@ export function calculateSlaConsumption(
     effectiveDue = new Date(created.getTime() + mins * 60 * 1000);
   }
 
-  const totalMs = effectiveDue.getTime() - created.getTime();
+  const rawTotalMs = effectiveDue.getTime() - created.getTime();
+  const pausedMs = Math.max(0, (accumulatedPausedMinutes || 0) * 60 * 1000);
+  const totalMs = Math.max(1, rawTotalMs - pausedMs);
   if (totalMs <= 0) {
     return {
       totalDurationMinutes: 0,
@@ -59,10 +71,12 @@ export function calculateSlaConsumption(
     };
   }
 
-  const elapsedMs = Math.max(0, nowTime.getTime() - created.getTime());
+  const rawElapsedMs = Math.max(0, effectiveNow.getTime() - created.getTime());
+  const activeElapsedMs = Math.max(0, rawElapsedMs - pausedMs);
+
   const totalDurationMinutes = Math.round(totalMs / (60 * 1000));
-  const elapsedMinutes = Math.round(elapsedMs / (60 * 1000));
-  const rawPercent = (elapsedMs / totalMs) * 100;
+  const elapsedMinutes = Math.round(activeElapsedMs / (60 * 1000));
+  const rawPercent = (activeElapsedMs / totalMs) * 100;
   const consumptionPercent = Math.min(Math.round(rawPercent * 10) / 10, 999);
 
   return { totalDurationMinutes, elapsedMinutes, consumptionPercent };
@@ -167,11 +181,22 @@ export async function evaluateGrievanceSla(
     };
   }
 
+  const activeTracking = grievance.sla_tracking?.[0];
+  const accPaused = activeTracking?.accumulated_paused_minutes || 0;
+  const isPaused =
+    activeTracking?.paused_at ||
+    (grievance.status === "WAITING_ON_USER" ||
+    grievance.status === "WAITING_ON_EMPLOYEE"
+      ? evaluationDate
+      : null);
+
   const { consumptionPercent } = calculateSlaConsumption(
     grievance.created_at,
     grievance.due_at,
     grievance.priority,
     evaluationDate,
+    accPaused,
+    isPaused,
   );
 
   const existingNotifications = grievance.notifications;
@@ -334,6 +359,8 @@ export async function evaluateGrievanceSla(
         grievance.due_at,
         grievance.priority || "MEDIUM",
         evaluationDate,
+        accPaused,
+        isPaused,
       ).totalDurationMinutes || 1440;
 
     const deptAllocatedMinutes =
@@ -361,6 +388,8 @@ export async function evaluateGrievanceSla(
       deptAllocatedMinutes,
       deptRec.completed_at,
       evaluationDate,
+      accPaused,
+      isPaused,
     );
 
     const deptConsumptionPercent = deptSlaResult.consumptionPercent;
@@ -1056,7 +1085,8 @@ export async function evaluateAllActiveGrievancesSla(
 /**
  * Calculates SLA consumption for an individual grievance department.
  * Blocked departments return 0% consumption and ON_TRACK.
- * Elapsed time is measured strictly from activated_at (or frozen at completedAt).
+ * Elapsed time is measured strictly from activated_at (or frozen at completedAt / pausedAt).
+ * Deducts accumulatedPausedMinutes to ensure paused periods do not penalize the department.
  */
 export function calculateDepartmentSlaConsumption(
   activatedAt: Date | null,
@@ -1064,6 +1094,8 @@ export function calculateDepartmentSlaConsumption(
   allocatedDurationMinutes: number,
   completedAt?: Date | null,
   now: Date = new Date(),
+  accumulatedPausedMinutes: number = 0,
+  pausedAt?: Date | null,
 ): {
   totalDurationMinutes: number;
   elapsedMinutes: number;
@@ -1079,16 +1111,22 @@ export function calculateDepartmentSlaConsumption(
     };
   }
 
-  const effectiveEnd = completedAt || now;
-  const elapsedMs = Math.max(0, effectiveEnd.getTime() - activatedAt.getTime());
-  const elapsedMinutes = Math.round(elapsedMs / (60 * 1000));
+  const effectiveEnd = completedAt || (pausedAt ?? now);
+  const pausedMs = Math.max(0, (accumulatedPausedMinutes || 0) * 60 * 1000);
+  const rawElapsedMs = Math.max(
+    0,
+    effectiveEnd.getTime() - activatedAt.getTime(),
+  );
+  const activeElapsedMs = Math.max(0, rawElapsedMs - pausedMs);
+  const elapsedMinutes = Math.round(activeElapsedMs / (60 * 1000));
 
   let totalDuration = allocatedDurationMinutes;
   if (dueAt) {
-    const diff = Math.round(
+    const rawDiff = Math.round(
       (dueAt.getTime() - activatedAt.getTime()) / (60 * 1000),
     );
-    if (diff > 0) totalDuration = diff;
+    const netDiff = Math.max(1, rawDiff - (accumulatedPausedMinutes || 0));
+    if (netDiff > 0) totalDuration = netDiff;
   }
 
   if (totalDuration <= 0) {
@@ -1100,13 +1138,13 @@ export function calculateDepartmentSlaConsumption(
     };
   }
 
-  const rawPercent = (elapsedMinutes / totalDuration) * 100;
+  const rawPercent = (activeElapsedMs / (totalDuration * 60 * 1000)) * 100;
   const consumptionPercent = Math.min(Math.round(rawPercent * 10) / 10, 999);
 
   let slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" = "ON_TRACK";
   if (
     consumptionPercent >= DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT ||
-    (dueAt && effectiveEnd > dueAt)
+    (dueAt && effectiveEnd > dueAt && !pausedAt)
   ) {
     slaStatus = "BREACHED";
   } else if (consumptionPercent >= DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT) {
@@ -1119,4 +1157,240 @@ export function calculateDepartmentSlaConsumption(
     consumptionPercent,
     slaStatus,
   };
+}
+
+export interface PauseSlaOptions {
+  grievanceId: bigint | number | string;
+  pauseReason: string;
+  pausedBy: bigint | number | string;
+  tx?: Prisma.TransactionClient;
+}
+
+export interface ResumeSlaOptions {
+  grievanceId: bigint | number | string;
+  resumedBy?: bigint | number | string | null;
+  tx?: Prisma.TransactionClient;
+}
+
+/**
+ * Pauses SLA tracking for an active grievance.
+ * Used when waiting on user info, or during supervisor/citizen resolution confirmation.
+ */
+export async function pauseSlaTracking(
+  options: PauseSlaOptions,
+): Promise<boolean> {
+  const gId = BigInt(options.grievanceId);
+  const pBy = BigInt(options.pausedBy);
+  const client = options.tx || prisma;
+  const now = new Date();
+
+  // Find latest active SLA tracking record for this grievance
+  const activeTracking = await client.sla_tracking.findFirst({
+    where: {
+      grievance_id: gId,
+      status: { in: ["ON_TRACK", "AT_RISK", "BREACHED"] },
+    },
+    orderBy: { cycle_number: "desc" },
+  });
+
+  if (!activeTracking) {
+    return false;
+  }
+
+  // Already paused? Don't overwrite paused_at
+  if (activeTracking.paused_at) {
+    return true;
+  }
+
+  await client.sla_tracking.update({
+    where: { sla_tracking_id: activeTracking.sla_tracking_id },
+    data: {
+      paused_at: now,
+    },
+  });
+
+  try {
+    if (
+      "sla_pause_logs" in client &&
+      typeof (client as { sla_pause_logs?: { create?: unknown } })
+        .sla_pause_logs?.create === "function"
+    ) {
+      await client.sla_pause_logs.create({
+        data: {
+          sla_tracking_id: activeTracking.sla_tracking_id,
+          pause_reason: options.pauseReason,
+          paused_at: now,
+          paused_by: pBy,
+        },
+      });
+    }
+  } catch (logErr) {
+    console.warn("Non-fatal: failed to insert into sla_pause_logs:", logErr);
+  }
+
+  return true;
+}
+
+/**
+ * Resumes SLA tracking for a paused grievance.
+ * Calculates paused duration, increments accumulated_paused_minutes,
+ * and extends due_at dates on grievance, sla_tracking, and active grievance_departments.
+ */
+export async function resumeSlaTracking(options: ResumeSlaOptions): Promise<{
+  resumed: boolean;
+  pausedDurationMinutes: number;
+  newDueAt: Date | null;
+}> {
+  const gId = BigInt(options.grievanceId);
+  const rBy = options.resumedBy ? BigInt(options.resumedBy) : null;
+  const client = options.tx || prisma;
+  const now = new Date();
+
+  const activeTracking = await client.sla_tracking.findFirst({
+    where: {
+      grievance_id: gId,
+      status: { in: ["ON_TRACK", "AT_RISK", "BREACHED"] },
+    },
+    orderBy: { cycle_number: "desc" },
+  });
+
+  if (!activeTracking || !activeTracking.paused_at) {
+    return { resumed: false, pausedDurationMinutes: 0, newDueAt: null };
+  }
+
+  const pausedAt = activeTracking.paused_at;
+  const diffMs = Math.max(0, now.getTime() - pausedAt.getTime());
+  const pausedMinutes = Math.max(1, Math.round(diffMs / (60 * 1000)));
+
+  // 1. Close open sla_pause_logs record (safely)
+  try {
+    if (
+      "sla_pause_logs" in client &&
+      typeof (client as { sla_pause_logs?: { findFirst?: unknown } })
+        .sla_pause_logs?.findFirst === "function"
+    ) {
+      const openLog = await client.sla_pause_logs.findFirst({
+        where: {
+          sla_tracking_id: activeTracking.sla_tracking_id,
+          resumed_at: null,
+        },
+        orderBy: { paused_at: "desc" },
+      });
+
+      if (openLog) {
+        await client.sla_pause_logs.update({
+          where: { id: openLog.id },
+          data: {
+            resumed_at: now,
+            duration_minutes: pausedMinutes,
+            resumed_by: rBy,
+          },
+        });
+      }
+    }
+  } catch (logErr) {
+    console.warn(
+      "Non-fatal: failed to update sla_pause_logs on resume:",
+      logErr,
+    );
+  }
+
+  // 2. Extend sla_tracking due_at and update accumulated_paused_minutes
+  const newSlaDueAt = new Date(
+    activeTracking.due_at.getTime() + pausedMinutes * 60 * 1000,
+  );
+  await client.sla_tracking.update({
+    where: { sla_tracking_id: activeTracking.sla_tracking_id },
+    data: {
+      paused_at: null,
+      resumed_at: now,
+      accumulated_paused_minutes:
+        (activeTracking.accumulated_paused_minutes || 0) + pausedMinutes,
+      due_at: newSlaDueAt,
+      status: "ON_TRACK",
+    },
+  });
+
+  // 3. Extend grievances master due_at
+  const grievance = await client.grievances.findUnique({
+    where: { grievance_id: gId },
+    select: { due_at: true },
+  });
+
+  let newGrievanceDueAt: Date | null = null;
+  if (grievance?.due_at) {
+    newGrievanceDueAt = new Date(
+      grievance.due_at.getTime() + pausedMinutes * 60 * 1000,
+    );
+    await client.grievances.update({
+      where: { grievance_id: gId },
+      data: {
+        due_at: newGrievanceDueAt,
+        sla_status: "ON_TRACK",
+      },
+    });
+  }
+
+  // 4. Extend active grievance_departments due_at
+  const activeDepts = await client.grievance_departments.findMany({
+    where: {
+      grievance_id: gId,
+      status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED", "BLOCKED"] },
+      due_at: { not: null },
+    },
+  });
+
+  for (const dept of activeDepts) {
+    if (dept.due_at) {
+      const newDeptDueAt = new Date(
+        dept.due_at.getTime() + pausedMinutes * 60 * 1000,
+      );
+      await client.grievance_departments.update({
+        where: { grievance_department_id: dept.grievance_department_id },
+        data: {
+          due_at: newDeptDueAt,
+          sla_status: "ON_TRACK",
+        },
+      });
+    }
+  }
+
+  return {
+    resumed: true,
+    pausedDurationMinutes: pausedMinutes,
+    newDueAt: newGrievanceDueAt || newSlaDueAt,
+  };
+}
+
+/**
+ * Completes SLA tracking for a finalized/closed grievance.
+ */
+export async function completeSlaTracking(
+  grievanceId: bigint | number | string,
+  tx?: Prisma.TransactionClient,
+): Promise<boolean> {
+  const gId = BigInt(grievanceId);
+  const client = tx || prisma;
+  const now = new Date();
+
+  const activeTracking = await client.sla_tracking.findFirst({
+    where: {
+      grievance_id: gId,
+      status: { in: ["ON_TRACK", "AT_RISK", "BREACHED"] },
+    },
+    orderBy: { cycle_number: "desc" },
+  });
+
+  if (!activeTracking) return false;
+
+  await client.sla_tracking.update({
+    where: { sla_tracking_id: activeTracking.sla_tracking_id },
+    data: {
+      completed_at: now,
+      status: "COMPLETED",
+      paused_at: null,
+    },
+  });
+
+  return true;
 }

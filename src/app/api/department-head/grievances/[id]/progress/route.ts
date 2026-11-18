@@ -133,6 +133,10 @@ export async function GET(
             attachments: true,
           },
         },
+        sla_tracking: {
+          orderBy: { sla_tracking_id: "desc" },
+          take: 1,
+        },
       },
     });
 
@@ -390,6 +394,23 @@ export async function GET(
           ? new Date(grievance.due_at)
           : null;
 
+    const activeSla = grievance.sla_tracking?.[0];
+    const isPaused = Boolean(
+      activeSla?.paused_at ||
+        grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE" ||
+        grievance.status === "UNDER_REVIEW",
+    );
+    const effectiveNow = isPaused
+      ? activeSla?.paused_at
+        ? new Date(activeSla.paused_at)
+        : now
+      : now;
+    const accumulatedPausedMs = Math.max(
+      0,
+      (activeSla?.accumulated_paused_minutes || 0) * 60 * 1000,
+    );
+
     let consumptionPercent = 0;
     let timeRemainingStr = isDeptBlocked
       ? "Pending Prerequisites (Blocked)"
@@ -412,10 +433,12 @@ export async function GET(
         );
         const elapsedSinceExtensionMs = Math.max(
           0,
-          now.getTime() - extensionStartTime.getTime(),
+          effectiveNow.getTime() -
+            extensionStartTime.getTime() -
+            accumulatedPausedMs,
         );
 
-        if (now > dueAt) {
+        if (!isPaused && now > dueAt) {
           isBreached = true;
           consumptionPercent = 100;
           const diffMs = now.getTime() - dueAt.getTime();
@@ -433,24 +456,34 @@ export async function GET(
               Math.round((elapsedSinceExtensionMs / extensionWindowMs) * 100),
             ),
           );
-          const diffMs = dueAt.getTime() - now.getTime();
+          const diffMs = Math.max(0, dueAt.getTime() - effectiveNow.getTime());
           const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
           const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-          timeRemainingStr = `${diffHours}h ${diffMins}m remaining`;
+          timeRemainingStr = isPaused
+            ? `${diffHours}h ${diffMins}m remaining (Paused)`
+            : `${diffHours}h ${diffMins}m remaining`;
           if (consumptionPercent >= 75) {
             isApproaching = true;
           }
         }
       } else {
-        const totalDuration = dueAt.getTime() - createdAt.getTime();
-        const elapsedDuration = now.getTime() - createdAt.getTime();
+        const rawTotalDuration = dueAt.getTime() - createdAt.getTime();
+        const totalDuration = Math.max(
+          1,
+          rawTotalDuration - accumulatedPausedMs,
+        );
+        const rawElapsed = Math.max(
+          0,
+          effectiveNow.getTime() - createdAt.getTime(),
+        );
+        const activeElapsed = Math.max(0, rawElapsed - accumulatedPausedMs);
         if (totalDuration > 0) {
           consumptionPercent = Math.min(
-            Math.max(Math.round((elapsedDuration / totalDuration) * 100), 0),
+            Math.max(Math.round((activeElapsed / totalDuration) * 100), 0),
             100,
           );
         }
-        if (now > dueAt) {
+        if (!isPaused && now > dueAt) {
           isBreached = true;
           const diffMs = now.getTime() - dueAt.getTime();
           const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -460,10 +493,12 @@ export async function GET(
               ? `Breached ${diffDays}d ago`
               : `Breached ${diffHours}h ago`;
         } else {
-          const diffMs = dueAt.getTime() - now.getTime();
+          const diffMs = Math.max(0, dueAt.getTime() - effectiveNow.getTime());
           const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
           const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-          timeRemainingStr = `${diffHours}h ${diffMins}m remaining`;
+          timeRemainingStr = isPaused
+            ? `${diffHours}h ${diffMins}m remaining (Paused)`
+            : `${diffHours}h ${diffMins}m remaining`;
           if (consumptionPercent >= 75) {
             isApproaching = true;
           }
@@ -477,28 +512,40 @@ export async function GET(
         ? formatFullDateTime(dueAt)
         : "No Target Set";
 
+    const pauseLabel =
+      grievance.status === "WAITING_ON_USER" ||
+      grievance.status === "WAITING_ON_EMPLOYEE"
+        ? "Waiting on User"
+        : grievance.status === "UNDER_REVIEW"
+          ? "Under Review"
+          : "Paused";
+
     const sla = {
       consumptionPercent,
       timeRemaining: timeRemainingStr,
       dueAt: dueAtLabel,
       state: isBreached
         ? "BREACHED"
-        : isSlaExtensionActive
-          ? isApproaching
-            ? "SLA_AT_RISK"
-            : "ON_TRACK"
-          : isApproaching || grievance.sla_status === "AT_RISK"
-            ? "SLA_AT_RISK"
-            : "ON_TRACK",
+        : isPaused
+          ? "PAUSED"
+          : isSlaExtensionActive
+            ? isApproaching
+              ? "SLA_AT_RISK"
+              : "ON_TRACK"
+            : isApproaching || grievance.sla_status === "AT_RISK"
+              ? "SLA_AT_RISK"
+              : "ON_TRACK",
       stateLabel: isBreached
         ? "SLA Breached"
-        : isSlaExtensionActive
-          ? isApproaching
-            ? "Approaching Extended SLA"
-            : "Within Extended SLA"
-          : isApproaching || grievance.sla_status === "AT_RISK"
-            ? "SLA At Risk"
-            : "Within SLA",
+        : isPaused
+          ? `SLA Paused (${pauseLabel})`
+          : isSlaExtensionActive
+            ? isApproaching
+              ? "Approaching Extended SLA"
+              : "Within Extended SLA"
+            : isApproaching || grievance.sla_status === "AT_RISK"
+              ? "SLA At Risk"
+              : "Within SLA",
       slaPercentAllocation: myDeptRecord?.sla_percent_allocation
         ? Number(myDeptRecord.sla_percent_allocation)
         : 100,

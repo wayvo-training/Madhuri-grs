@@ -328,6 +328,16 @@ export async function POST(request: Request) {
       },
     });
 
+    // Pause active SLA timer while pending supervisor or citizen resolution review
+    const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
+    await pauseSlaTracking({
+      grievanceId: gId,
+      pauseReason: requiresHeadReview
+        ? "SUPERVISOR_REVIEW"
+        : "RESOLUTION_PENDING_CONFIRMATION",
+      pausedBy: staffId,
+    });
+
     // 2.5 Mark staff assignment as COMPLETED
     await prisma.assignments.updateMany({
       where: {

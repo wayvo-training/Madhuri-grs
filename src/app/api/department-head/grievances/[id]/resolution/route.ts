@@ -343,6 +343,17 @@ export async function POST(
           });
         }
 
+        // Pause active SLA timer during Employee Review
+        if (newOverallStatus === "UNDER_REVIEW") {
+          const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
+          await pauseSlaTracking({
+            grievanceId,
+            pauseReason: "EMPLOYEE_REVIEW",
+            pausedBy: user.user_id,
+            tx,
+          });
+        }
+
         // Audit log
         await tx.audit_logs.create({
           data: {
@@ -484,6 +495,16 @@ export async function POST(
               status: "IN_PROGRESS",
               updated_at: new Date(),
             },
+          });
+
+          // Resume SLA tracking for rework
+          const { resumeSlaTracking } = await import(
+            "@/lib/engines/sla-engine"
+          );
+          await resumeSlaTracking({
+            grievanceId,
+            resumedBy: user.user_id,
+            tx,
           });
 
           await tx.grievance_status_history.create({

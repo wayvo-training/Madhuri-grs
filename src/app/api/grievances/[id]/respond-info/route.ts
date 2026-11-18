@@ -167,6 +167,14 @@ export async function POST(
         },
       });
 
+      // Resume SLA tracking and extend deadlines by paused duration
+      const { resumeSlaTracking } = await import("@/lib/engines/sla-engine");
+      await resumeSlaTracking({
+        grievanceId: targetGrievanceId,
+        resumedBy: user ? user.user_id : submitterId,
+        tx,
+      });
+
       // 3. Save any uploaded attachments
       for (const file of incomingFiles) {
         if (file.fileName) {

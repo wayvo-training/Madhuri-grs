@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import { getCurrentUser } from "@/lib/auth";
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
+import { pauseSlaTracking, resumeSlaTracking } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { SUPABASE_BUCKET } from "@/lib/supabase";
@@ -316,14 +317,35 @@ export async function POST(
         },
       });
 
-      // If waiting on user, advance back to IN_PROGRESS
-      if (grievance.status === "WAITING_ON_USER") {
-        await prisma.grievances.update({
-          where: { grievance_id: grievanceId },
-          data: {
-            status: "IN_PROGRESS",
-            updated_at: new Date(),
-          },
+      // If waiting on user, advance back to IN_PROGRESS and resume SLA tracking
+      if (
+        grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE"
+      ) {
+        await prisma.$transaction(async (tx) => {
+          await tx.grievances.update({
+            where: { grievance_id: grievanceId },
+            data: {
+              status: "IN_PROGRESS",
+              updated_at: new Date(),
+            },
+          });
+
+          await tx.grievance_status_history.create({
+            data: {
+              grievance_id: grievanceId,
+              old_status: grievance.status,
+              new_status: "IN_PROGRESS",
+              changed_by: userId,
+              remarks: `Employee submitted response/documents via Communication Message`,
+            },
+          });
+
+          await resumeSlaTracking({
+            grievanceId,
+            resumedBy: userId,
+            tx,
+          });
         });
       } else {
         await prisma.grievances.update({
@@ -332,14 +354,68 @@ export async function POST(
         });
       }
 
-      // Notify assigned staff
-      for (const a of grievance.assignments) {
+      // Collect all involved recipients who need to be notified when employee responds:
+      const recipientUserIds = new Set<string>();
+
+      // 1. The user who requested additional info/documents (Staff, Department Head, or Admin)
+      const latestRequestLog = await prisma.audit_logs.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          action: {
+            in: ["ADDITIONAL_INFO_REQUESTED", "COMMUNICATION_MESSAGE"],
+          },
+          user_id: { not: userId },
+        },
+        orderBy: { created_at: "desc" },
+        select: { user_id: true },
+      });
+      if (latestRequestLog?.user_id) {
+        recipientUserIds.add(latestRequestLog.user_id.toString());
+      }
+
+      // 2. All assigned staff across all departments
+      const allAssignments = await prisma.assignments.findMany({
+        where: {
+          grievance_id: grievanceId,
+          assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        },
+        select: { staff_id: true },
+      });
+      for (const a of allAssignments) {
+        if (a.staff_id) {
+          recipientUserIds.add(a.staff_id.toString());
+        }
+      }
+
+      // 3. Department Heads of all involved departments
+      const deptHeads = await prisma.users.findMany({
+        where: {
+          departments: {
+            grievance_departments: {
+              some: { grievance_id: grievanceId },
+            },
+          },
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true },
+      });
+      for (const dh of deptHeads) {
+        recipientUserIds.add(dh.user_id.toString());
+      }
+
+      // Never notify the complainant in this loop
+      recipientUserIds.delete(userId.toString());
+
+      // Send notification to all involved parties
+      for (const targetId of recipientUserIds) {
         await NotificationService.send({
-          userId: a.staff_id,
-          grievanceId: grievanceId,
+          userId: BigInt(targetId),
+          grievanceId,
           type: "ADDITIONAL_INFO_SUBMITTED",
-          title: `Communication Received: ${grievance.grievance_number}`,
-          message: `${senderFullName} replied to the grievance communication thread.`,
+          channel: "IN_APP",
+          title: `Information Submitted: ${grievance.grievance_number}`,
+          message: `${senderFullName} submitted the requested information/documents for grievance ${grievance.grievance_number}. Investigation has resumed.`,
         });
       }
 
@@ -348,7 +424,8 @@ export async function POST(
         userId,
         grievanceId,
         type: "ADDITIONAL_INFO_SUBMITTED",
-        title: `Communication Sent: ${grievance.grievance_number}`,
+        channel: "IN_APP",
+        title: `Information Submitted: ${grievance.grievance_number}`,
         message: `Your message on grievance ${grievance.grievance_number} was sent successfully.`,
       });
     } else {
@@ -380,10 +457,43 @@ export async function POST(
         },
       });
 
-      // Update grievance timestamp
-      await prisma.grievances.update({
-        where: { grievance_id: grievanceId },
-        data: { updated_at: new Date() },
+      // Update grievance status to WAITING_ON_USER and pause SLA tracking
+      await prisma.$transaction(async (tx) => {
+        if (
+          grievance.status !== "WAITING_ON_USER" &&
+          grievance.status !== "CLOSED" &&
+          grievance.status !== "RESOLVED"
+        ) {
+          await tx.grievances.update({
+            where: { grievance_id: grievanceId },
+            data: {
+              status: "WAITING_ON_USER",
+              updated_at: new Date(),
+            },
+          });
+
+          await tx.grievance_status_history.create({
+            data: {
+              grievance_id: grievanceId,
+              old_status: grievance.status,
+              new_status: "WAITING_ON_USER",
+              changed_by: userId,
+              remarks: `${senderFullName} (${userRole}) requested information/documents via Communication Message: "${messageText.slice(0, 100)}"`,
+            },
+          });
+
+          await pauseSlaTracking({
+            grievanceId,
+            pauseReason: "WAITING_ON_USER",
+            pausedBy: userId,
+            tx,
+          });
+        } else {
+          await tx.grievances.update({
+            where: { grievance_id: grievanceId },
+            data: { updated_at: new Date() },
+          });
+        }
       });
 
       // Notify End User

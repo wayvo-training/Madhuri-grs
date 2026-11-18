@@ -122,6 +122,10 @@ export async function GET(request: Request) {
                 },
               },
             },
+            sla_tracking: {
+              orderBy: { sla_tracking_id: "desc" as const },
+              take: 1,
+            },
           },
         },
       },
@@ -217,7 +221,15 @@ export async function GET(request: Request) {
         const deptDue = a.grievance_departments?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
-        slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+        const activeSla = g.sla_tracking?.[0];
+        slaCalc = calculateSlaStatus(
+          deptStart,
+          deptDue,
+          deptSlaStatus,
+          activeSla?.accumulated_paused_minutes || 0,
+          activeSla?.paused_at,
+          g.status,
+        );
       }
 
       const latestResolution = g.resolutions?.[0];
@@ -635,13 +647,18 @@ export async function GET(request: Request) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : isMyDeptCompleted
-              ? "COMPLETED"
-              : a.grievance_departments?.status === "ASSIGNED"
-                ? "ASSIGNED"
-                : a.grievance_departments?.status === "IN_PROGRESS"
-                  ? "IN_PROGRESS"
-                  : g.status) as StaffGrievanceItem["status"],
+            : g.status === "WAITING_ON_USER" ||
+                g.status === "WAITING_ON_EMPLOYEE"
+              ? "WAITING_ON_USER"
+              : g.status === "UNDER_REVIEW"
+                ? "UNDER_REVIEW"
+                : isMyDeptCompleted
+                  ? "COMPLETED"
+                  : a.grievance_departments?.status === "ASSIGNED"
+                    ? "ASSIGNED"
+                    : a.grievance_departments?.status === "IN_PROGRESS"
+                      ? "IN_PROGRESS"
+                      : g.status) as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,

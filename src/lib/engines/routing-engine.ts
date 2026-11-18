@@ -1124,33 +1124,17 @@ export async function activateNextSequentialDepartments(
 
       // Dispatch activation notifications asynchronously to prevent holding or expiring the transaction
       try {
-        const deptHeads = await client.users.findMany({
-          where: {
-            department_id: blocked.department_id,
-            roles: { role_name: "DEPARTMENT_HEAD" },
-            status: "ACTIVE",
-          },
-          select: { user_id: true },
-        });
-
-        const activeAssignment = await client.assignments.findFirst({
-          where: {
-            grievance_department_id: blocked.grievance_department_id,
-            assignment_status: "ASSIGNED",
-          },
-          select: { staff_id: true },
-        });
-
         const deptName = blocked.departments.department_name;
-
-        const primaryDeptRec = allDepts.find(
-          (d) => d.involvement_type === "PRIMARY",
-        );
+        const submitterId = blocked.grievances?.submitted_by;
+        const allInvolvedDeptIds = allDepts.map((d) => d.department_id);
 
         const notifDispatch = async () => {
           try {
             const { NotificationService } = await import(
               "@/lib/services/notification.service"
+            );
+            const { invalidateUserNotificationsCache } = await import(
+              "@/app/api/notifications/route"
             );
 
             const formattedDeadline = newDueAt
@@ -1163,31 +1147,103 @@ export async function activateNextSequentialDepartments(
                 })
               : "scheduled timeline";
 
-            // 1. Notify Activated Department Heads
-            for (const head of deptHeads) {
+            // 1. Fetch all Department Heads across all involved departments (Lead + Activated + Predecessors)
+            const allDeptHeads = await prisma.users.findMany({
+              where: {
+                department_id: { in: allInvolvedDeptIds },
+                roles: { role_name: "DEPARTMENT_HEAD" },
+                status: "ACTIVE",
+              },
+              select: { user_id: true, department_id: true },
+            });
+
+            // 2. Fetch all Staff currently or previously assigned to this grievance
+            const caseAssignments = await prisma.assignments.findMany({
+              where: {
+                grievance_id: gId,
+                assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+              },
+              select: { staff_id: true, grievance_department_id: true },
+            });
+
+            // Track notified user IDs to prevent duplicates
+            const notifiedUserIds = new Set<string>();
+
+            // A. Notify Activated Department Heads (Action item: Assign staff + New deadline)
+            const activatedDeptHeads = allDeptHeads.filter(
+              (h) =>
+                h.department_id &&
+                BigInt(h.department_id) === BigInt(blocked.department_id),
+            );
+            for (const head of activatedDeptHeads) {
+              const uIdStr = head.user_id.toString();
+              notifiedUserIds.add(uIdStr);
               await NotificationService.send({
                 userId: head.user_id,
                 grievanceId: gId,
                 type: "ASSIGNMENT",
-                title: `[${activePriority}] Department Stage Activated: ${deptName}`,
-                message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active for ${deptName}. Department deadline: ${formattedDeadline}.`,
+                title: `[${activePriority}] Action Required: Assign Staff for ${deptName}`,
+                message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active in your department queue. Department deadline: ${formattedDeadline}. Please assign an officer to begin investigation.`,
               });
-            }
-
-            // 2. Notify Activated Department Assigned Staff (if pre-assigned)
-            if (activeAssignment?.staff_id) {
               await NotificationService.send({
-                userId: activeAssignment.staff_id,
+                userId: head.user_id,
                 grievanceId: gId,
-                type: "ASSIGNMENT",
-                title: `[${activePriority}] Stage Activated: ${deptName}`,
-                message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active for your department (${deptName}). Department deadline: ${formattedDeadline}. You may begin investigation.`,
+                type: "SLA_EXTENDED",
+                title: `Resolution Timeline Updated: ${deptName} Active`,
+                message: `Case ${grievanceNumber} deadline is now set to ${formattedDeadline}.`,
               });
             }
 
-            // 3. Notify Employee / Complainant of the updated resolution target
-            const submitterId = blocked.grievances?.submitted_by;
-            if (submitterId) {
+            // B. Notify All Other Involved Department Heads (Lead Head, Predecessor Heads)
+            const otherDeptHeads = allDeptHeads.filter(
+              (h) =>
+                !h.department_id ||
+                BigInt(h.department_id) !== BigInt(blocked.department_id),
+            );
+            for (const head of otherDeptHeads) {
+              const uIdStr = head.user_id.toString();
+              if (notifiedUserIds.has(uIdStr)) continue;
+              notifiedUserIds.add(uIdStr);
+              await NotificationService.send({
+                userId: head.user_id,
+                grievanceId: gId,
+                type: "SLA_EXTENDED",
+                title: `Resolution Timeline Updated: ${deptName} Active`,
+                message: `Case ${grievanceNumber} has progressed to sequential stage ${deptName}. Target resolution deadline: ${formattedDeadline}.`,
+              });
+            }
+
+            // C. Notify All Assigned Staff on the case (including completed Department A staff and any pre-assigned staff)
+            for (const asgn of caseAssignments) {
+              const uIdStr = asgn.staff_id.toString();
+              if (notifiedUserIds.has(uIdStr)) continue;
+              notifiedUserIds.add(uIdStr);
+
+              const isForActivatedDept =
+                BigInt(asgn.grievance_department_id) ===
+                BigInt(blocked.grievance_department_id);
+
+              if (isForActivatedDept) {
+                await NotificationService.send({
+                  userId: asgn.staff_id,
+                  grievanceId: gId,
+                  type: "ASSIGNMENT",
+                  title: `[${activePriority}] Stage Activated: ${deptName}`,
+                  message: `[${activePriority} Priority] Prerequisite departments have completed for case ${grievanceNumber}. Grievance is now active for your department (${deptName}). Department deadline: ${formattedDeadline}. You may begin investigation.`,
+                });
+              } else {
+                await NotificationService.send({
+                  userId: asgn.staff_id,
+                  grievanceId: gId,
+                  type: "SLA_EXTENDED",
+                  title: `Resolution Timeline Updated: ${deptName} Active`,
+                  message: `Case ${grievanceNumber} has progressed to sequential stage ${deptName}. Updated target resolution deadline: ${formattedDeadline}.`,
+                });
+              }
+            }
+
+            // D. Notify Employee / Complainant of the updated resolution target
+            if (submitterId && !notifiedUserIds.has(submitterId.toString())) {
               await NotificationService.send({
                 userId: submitterId,
                 grievanceId: gId,
@@ -1197,29 +1253,8 @@ export async function activateNextSequentialDepartments(
               });
             }
 
-            // 4. Notify Lead Department Head (if different from Dept B)
-            if (
-              primaryDeptRec &&
-              primaryDeptRec.department_id !== blocked.department_id
-            ) {
-              const leadHeads = await client.users.findMany({
-                where: {
-                  department_id: primaryDeptRec.department_id,
-                  roles: { role_name: "DEPARTMENT_HEAD" },
-                  status: "ACTIVE",
-                },
-                select: { user_id: true },
-              });
-              for (const lHead of leadHeads) {
-                await NotificationService.send({
-                  userId: lHead.user_id,
-                  grievanceId: gId,
-                  type: "ASSIGNMENT",
-                  title: `Sequential Stage Progressed: ${deptName} Active`,
-                  message: `Case ${grievanceNumber} has progressed to sequential stage ${deptName}. Target resolution deadline: ${formattedDeadline}.`,
-                });
-              }
-            }
+            // E. Invalidate notifications cache for real-time visibility
+            invalidateUserNotificationsCache();
           } catch (err) {
             console.error(
               "Non-fatal: Failed to send activation notification:",

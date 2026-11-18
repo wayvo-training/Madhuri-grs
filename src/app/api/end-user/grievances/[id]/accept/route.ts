@@ -83,6 +83,10 @@ export async function POST(
       },
     });
 
+    // Mark SLA tracking as COMPLETED
+    const { completeSlaTracking } = await import("@/lib/engines/sla-engine");
+    await completeSlaTracking(grievanceId);
+
     // Log the event
     await prisma.audit_logs.create({
       data: {

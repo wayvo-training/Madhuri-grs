@@ -93,6 +93,10 @@ export async function GET(
             },
           },
         },
+        sla_tracking: {
+          orderBy: { sla_tracking_id: "desc" },
+          take: 1,
+        },
       },
     });
 
@@ -602,8 +606,16 @@ export async function GET(
         (deptAllocatedMins
           ? new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000)
           : grievance.due_at);
+      const activeSla = grievance.sla_tracking?.[0];
       const deptSlaStatus = myDeptRaw?.sla_status || grievance.sla_status;
-      slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+      slaCalc = calculateSlaStatus(
+        deptStart,
+        deptDue,
+        deptSlaStatus,
+        activeSla?.accumulated_paused_minutes || 0,
+        activeSla?.paused_at,
+        grievance.status,
+      );
     }
 
     const activeDept = departmentsInvolved.find(
@@ -909,6 +921,15 @@ export async function PATCH(
             },
           },
         });
+
+        // 4. Pause SLA tracking during WAITING_ON_USER
+        const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
+        await pauseSlaTracking({
+          grievanceId,
+          pauseReason: "WAITING_ON_USER",
+          pausedBy: staffId,
+          tx,
+        });
       });
 
       // 4. Send Notifications to Complainant
@@ -988,6 +1009,14 @@ export async function PATCH(
               details: `Investigation resumed to In Progress by staff on grievance ${grievance.grievance_number}`,
             },
           },
+        });
+
+        // Resume SLA tracking and extend deadlines by the paused duration
+        const { resumeSlaTracking } = await import("@/lib/engines/sla-engine");
+        await resumeSlaTracking({
+          grievanceId,
+          resumedBy: staffId,
+          tx,
         });
       });
 

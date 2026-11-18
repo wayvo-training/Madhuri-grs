@@ -3,6 +3,7 @@ import { DEFAULT_ROUTING_CONFIG } from "@/lib/constants/routing";
 import { DEFAULT_SLA_DURATIONS_MINUTES } from "@/lib/constants/sla";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { buildDepartmentMdiData } from "@/lib/engines/routing-engine";
+import { pauseSlaTracking } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -353,6 +354,24 @@ export async function POST(
             },
           },
         });
+
+        // Record status transition to WAITING_ON_USER and pause SLA tracking
+        await tx.grievance_status_history.create({
+          data: {
+            grievance_id: grievanceId,
+            old_status: grievance.status,
+            new_status: "WAITING_ON_USER",
+            changed_by: user.user_id,
+            remarks: `Department Head requested additional information: ${note || "Additional documentation required."}`,
+          },
+        });
+
+        await pauseSlaTracking({
+          grievanceId,
+          pauseReason: "WAITING_ON_USER",
+          pausedBy: user.user_id,
+          tx,
+        });
       }
 
       // 4. Handle REASSIGN intervention
@@ -595,10 +614,17 @@ export async function POST(
       // - DO NOT reset SLA clock when assuming resolution authority
       // - Preserve original SLA breach information
       // - If EXTEND_SLA, update due_at and sla_status
+      const nextStatus =
+        interventionType === "REQUEST_ADDITIONAL_INFO"
+          ? "WAITING_ON_USER"
+          : isAssumingAuthority
+            ? grievance.status
+            : "IN_PROGRESS";
+
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
-          status: isAssumingAuthority ? grievance.status : "IN_PROGRESS",
+          status: nextStatus,
           ...(interventionType === "EXTEND_SLA" && newExtendedDueAt
             ? { due_at: newExtendedDueAt, sla_status: "ON_TRACK" }
             : {}),

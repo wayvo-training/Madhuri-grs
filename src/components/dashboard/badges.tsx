@@ -247,6 +247,18 @@ export function SlaBadge({
           At Risk
         </span>
       );
+    case "PAUSED":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+          Paused
+        </span>
+      );
     default:
       return (
         <span

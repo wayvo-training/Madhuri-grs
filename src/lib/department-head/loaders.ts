@@ -310,6 +310,10 @@ export async function fetchDepartmentHeadGrievances(
           },
           take: 15,
         },
+        sla_tracking: {
+          orderBy: { sla_tracking_id: "desc" },
+          take: 1,
+        },
       },
       orderBy: [{ priority: "desc" }, { created_at: "desc" }],
       ...(skip !== undefined ? { skip } : {}),
@@ -909,6 +913,11 @@ export async function fetchDepartmentHeadGrievances(
     if (myDeptRecord) {
       if (g.status === "CLOSED" || g.status === "RESOLVED") {
         resolvedStatus = g.status as GrievanceItem["status"];
+      } else if (
+        g.status === "WAITING_ON_USER" ||
+        g.status === "WAITING_ON_EMPLOYEE"
+      ) {
+        resolvedStatus = "WAITING_ON_USER";
       } else if (g.status === "UNDER_REVIEW") {
         resolvedStatus = "UNDER_REVIEW";
       } else if (g.status === "REOPENED" || g.status === "REOPEN_REVIEW") {
@@ -960,6 +969,21 @@ export async function fetchDepartmentHeadGrievances(
               )
             : 1440);
 
+        const activeSla = g.sla_tracking?.[0];
+        const isPaused = Boolean(
+          activeSla?.paused_at ||
+            g.status === "WAITING_ON_USER" ||
+            g.status === "WAITING_ON_EMPLOYEE" ||
+            g.status === "UNDER_REVIEW",
+        );
+        const pausedAt = isPaused
+          ? activeSla?.paused_at
+            ? new Date(activeSla.paused_at)
+            : new Date()
+          : null;
+        const accumulatedPausedMins =
+          activeSla?.accumulated_paused_minutes || 0;
+
         const deptStart =
           myDeptRecord.activated_at || myDeptRecord.assigned_at || g.created_at;
         const deptDue =
@@ -971,6 +995,9 @@ export async function fetchDepartmentHeadGrievances(
           deptDue,
           deptAllocatedMins,
           myDeptRecord.completed_at,
+          new Date(),
+          accumulatedPausedMins,
+          pausedAt,
         );
 
         resolvedSlaConsumptionPercent = deptSlaResult.consumptionPercent;
@@ -983,13 +1010,32 @@ export async function fetchDepartmentHeadGrievances(
           resolvedSlaStatus,
           g.priority,
           deptStart,
+          isPaused,
+          pausedAt,
         );
       }
     } else {
+      const activeSla = g.sla_tracking?.[0];
+      const isPaused = Boolean(
+        activeSla?.paused_at ||
+          g.status === "WAITING_ON_USER" ||
+          g.status === "WAITING_ON_EMPLOYEE" ||
+          g.status === "UNDER_REVIEW",
+      );
+      const pausedAt = isPaused
+        ? activeSla?.paused_at
+          ? new Date(activeSla.paused_at)
+          : new Date()
+        : null;
+      const accumulatedPausedMins = activeSla?.accumulated_paused_minutes || 0;
+
       const slaConsumption = calculateSlaConsumption(
         g.created_at,
         g.due_at,
         g.priority,
+        new Date(),
+        accumulatedPausedMins,
+        pausedAt,
       );
       resolvedSlaConsumptionPercent = slaConsumption.consumptionPercent;
       resolvedSlaStatus =
@@ -1005,6 +1051,8 @@ export async function fetchDepartmentHeadGrievances(
         g.sla_status,
         g.priority,
         g.created_at,
+        isPaused,
+        pausedAt,
       );
     }
     const submitterFullName =

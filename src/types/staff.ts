@@ -21,7 +21,7 @@ export type StaffGrievanceStatus =
   | "ESCALATED"
   | "COMPLETED";
 
-export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
+export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED" | "PAUSED";
 
 export type StaffView = "overview" | "queue" | "profile" | "activity";
 

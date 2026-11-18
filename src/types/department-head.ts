@@ -57,6 +57,7 @@ export interface GrievanceItem {
     | "ROUTED"
     | "ASSIGNED"
     | "IN_PROGRESS"
+    | "WAITING_ON_USER"
     | "UNDER_REVIEW"
     | "REOPENED"
     | "ESCALATED"
@@ -65,7 +66,7 @@ export interface GrievanceItem {
     | "BLOCKED"
     | "PENDING_ASSIGNMENT"
     | "COMPLETED";
-  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
+  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" | "PAUSED";
   slaDeadline: string;
   slaTimeLeft: string;
   slaConsumptionPercent?: number;
