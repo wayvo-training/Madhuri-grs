@@ -55,6 +55,14 @@ export async function GET(req: NextRequest) {
                 },
               },
             },
+            sla_tracking: {
+              orderBy: { sla_tracking_id: "desc" as const },
+              take: 1,
+            },
+            sla_extensions: {
+              orderBy: { created_at: "desc" as const },
+              take: 1,
+            },
           },
         },
         grievance_departments: {
@@ -139,14 +147,24 @@ export async function GET(req: NextRequest) {
           stateLabel: "Blocked",
         };
       } else {
+        const activeSla = g.sla_tracking?.[0];
         const deptStart =
           a.grievance_departments?.activated_at ||
           a.grievance_departments?.assigned_at ||
+          activeSla?.started_at ||
           g.created_at;
-        const deptDue = a.grievance_departments?.due_at || g.due_at;
+        const deptDue =
+          a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
-        slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+        slaCalc = calculateSlaStatus(
+          deptStart,
+          deptDue,
+          deptSlaStatus,
+          activeSla?.accumulated_paused_minutes || 0,
+          activeSla?.paused_at,
+          g.status,
+        );
       }
 
       const myDeptStatus = a.grievance_departments?.status || "ASSIGNED";
@@ -167,13 +185,21 @@ export async function GET(req: NextRequest) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : isMyDeptCompleted
-              ? "COMPLETED"
-              : myDeptStatus === "ASSIGNED"
-                ? "ASSIGNED"
-                : myDeptStatus === "IN_PROGRESS"
-                  ? "IN_PROGRESS"
-                  : g.status
+            : g.status === "AWAITING_INFORMATION" ||
+                g.status === "WAITING_ON_USER"
+              ? "AWAITING_INFORMATION"
+              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  g.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : g.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : myDeptStatus === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : myDeptStatus === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : g.status
       ) as StaffGrievanceItem["status"];
 
       const rawDepts = g.grievance_departments || [];
@@ -258,6 +284,19 @@ export async function GET(req: NextRequest) {
         departmentsInvolved,
         isCrossDepartment,
         collaboratingDepartments,
+        latestExtension: g.sla_extensions?.[0]
+          ? {
+              id: g.sla_extensions[0].extension_id.toString(),
+              status: g.sla_extensions[0].status as
+                | "PENDING"
+                | "APPROVED"
+                | "REJECTED",
+              requestedMinutes: g.sla_extensions[0].requested_duration_minutes,
+              grantedMinutes: g.sla_extensions[0].granted_duration_minutes,
+              reason: g.sla_extensions[0].reason,
+              createdAt: g.sla_extensions[0].created_at.toISOString(),
+            }
+          : null,
       };
     });
 

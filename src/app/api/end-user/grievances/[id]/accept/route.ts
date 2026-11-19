@@ -5,11 +5,11 @@ import { NotificationService } from "@/lib/services/notification.service";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
-  if (!user || user.roles?.role_name !== "END_USER") {
+  if (user?.roles?.role_name !== "END_USER") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -39,7 +39,8 @@ export async function POST(
 
     if (
       grievance.status !== "RESOLVED" &&
-      grievance.status !== "UNDER_REVIEW"
+      grievance.status !== "UNDER_REVIEW" &&
+      grievance.status !== "RESOLUTION_PENDING_APPROVAL"
     ) {
       return NextResponse.json(
         {
@@ -50,12 +51,13 @@ export async function POST(
       );
     }
 
-    // Update grievance to CLOSED
+    // Update grievance to CLOSED with closure_reason
     await prisma.grievances.update({
       where: { grievance_id: grievanceId },
       data: {
         status: "CLOSED",
         closed_at: new Date(),
+        closure_reason: "EMPLOYEE_ACCEPTED",
       },
     });
 
@@ -83,7 +85,31 @@ export async function POST(
       },
     });
 
-    // Log the event
+    // Mark SLA tracking as permanently completed
+    const { completeSlaTracking, calculateSlaConsumption } = await import(
+      "@/lib/engines/sla-engine"
+    );
+    await completeSlaTracking(grievanceId);
+
+    const activeTracking = await prisma.sla_tracking.findFirst({
+      where: { grievance_id: grievanceId },
+      orderBy: { cycle_number: "desc" },
+    });
+    const now = new Date();
+    const slaMetrics = calculateSlaConsumption(
+      activeTracking?.started_at || grievance.created_at,
+      activeTracking?.due_at || grievance.due_at,
+      grievance.priority,
+      now,
+      activeTracking?.accumulated_paused_minutes || 0,
+      activeTracking?.paused_at,
+    );
+    const remainingMinutes = Math.max(
+      0,
+      slaMetrics.totalDurationMinutes - slaMetrics.elapsedMinutes,
+    );
+
+    // Log the event with SLA duration and closure reason retained
     await prisma.audit_logs.create({
       data: {
         grievance_id: grievanceId,
@@ -92,7 +118,17 @@ export async function POST(
         entity_type: "GRIEVANCE",
         entity_id: grievanceId,
         new_value: {
-          details: "Grievance resolution accepted and closed by the end user.",
+          closureReason: "EMPLOYEE_ACCEPTED",
+          elapsedDurationMinutes: slaMetrics.elapsedMinutes,
+          remainingDurationMinutes: remainingMinutes,
+          totalDurationMinutes: slaMetrics.totalDurationMinutes,
+          accumulatedPausedMinutes:
+            activeTracking?.accumulated_paused_minutes || 0,
+          pausedAt: activeTracking?.paused_at,
+          cycleNumber: activeTracking?.cycle_number || 1,
+          cycleType: activeTracking?.cycle_type || "INITIAL",
+          details:
+            "Grievance resolution accepted and closed by the end user. SLA remains permanently paused.",
         },
       },
     });

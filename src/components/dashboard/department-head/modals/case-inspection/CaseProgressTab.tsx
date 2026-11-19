@@ -441,7 +441,20 @@ export function CaseProgressTab({
                 </span>
               )}
             </span>
-            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase">
+            <span
+              className={`text-xs font-bold uppercase ${
+                slaState === "PAUSED"
+                  ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 flex items-center gap-1 normal-case tracking-normal"
+                  : slaState === "BREACHED"
+                    ? "text-rose-600 dark:text-rose-400"
+                    : slaState === "SLA_AT_RISK"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-emerald-700 dark:text-emerald-400"
+              }`}
+            >
+              {slaState === "PAUSED" && (
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              )}
               {slaStateLabel}
             </span>
           </div>

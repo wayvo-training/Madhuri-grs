@@ -197,7 +197,9 @@ export async function POST(request: Request) {
     const dueAt = new Date(now.getTime() + targetMinutes * 60 * 1000);
 
     const isAutoRouted = Boolean(routingResult);
-    const initialStatus = isAutoRouted ? "ROUTED" : "SUBMITTED";
+    const initialStatus = isAutoRouted
+      ? "AWAITING_ASSIGNMENT"
+      : "AWAITING_ROUTING";
 
     // Create the grievance with status ROUTED (if rule matched) or SUBMITTED (if manual routing needed), priority, calculated due_at, and sla_status
     let newGrievance: Awaited<
@@ -291,7 +293,7 @@ export async function POST(request: Request) {
         data: {
           grievance_id: newGrievance.grievance_id,
           old_status: "SUBMITTED",
-          new_status: "ROUTED",
+          new_status: "AWAITING_ASSIGNMENT",
           changed_by: user.user_id,
           remarks: `Auto-routed to ${routingResult.departmentName || "Primary Department"}`,
         },

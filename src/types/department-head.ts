@@ -54,18 +54,25 @@ export interface GrievanceItem {
   priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   status:
     | "SUBMITTED"
-    | "ROUTED"
+    | "AWAITING_ROUTING"
+    | "AWAITING_ASSIGNMENT"
     | "ASSIGNED"
     | "IN_PROGRESS"
-    | "UNDER_REVIEW"
-    | "REOPENED"
-    | "ESCALATED"
-    | "CLOSED"
+    | "AWAITING_INFORMATION"
     | "RESOLVED"
+    | "REWORK"
+    | "RESOLUTION_PENDING_APPROVAL"
+    | "REOPENED"
+    | "CLOSED"
+    // Legacy aliases & departmental stage statuses
+    | "ROUTED"
+    | "WAITING_ON_USER"
+    | "UNDER_REVIEW"
+    | "ESCALATED"
     | "BLOCKED"
     | "PENDING_ASSIGNMENT"
     | "COMPLETED";
-  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
+  slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" | "PAUSED";
   slaDeadline: string;
   slaTimeLeft: string;
   slaConsumptionPercent?: number;
@@ -78,6 +85,7 @@ export interface GrievanceItem {
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;
+  rejectionCount?: number;
   reopenReason?: string;
   hasProposedKb?: boolean;
   isCrossDepartment?: boolean;
@@ -89,6 +97,16 @@ export interface GrievanceItem {
   isBlocked?: boolean;
   escalationReason?: string;
   escalationLevel?: number;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+    requestedByName?: string;
+  } | null;
+  hasPendingExtension?: boolean;
   // 11-Step SLA Escalation & Resolution Lifecycle
   escalationStage?:
     | "SLA_THRESHOLD_REACHED"
@@ -315,6 +333,15 @@ export interface CaseProgressData {
     allocatedDurationMinutes?: number | null;
   };
   latestActivity?: string;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+    requestedByName?: string;
+  } | null;
   timeline?: {
     id: string;
     timestamp: string;

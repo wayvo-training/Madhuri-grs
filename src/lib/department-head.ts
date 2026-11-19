@@ -102,6 +102,8 @@ export function formatSlaTimeLeft(
   slaStatus: string | null,
   priority?: string,
   createdAt?: Date | null,
+  isPaused: boolean = false,
+  pausedAt?: Date | null,
 ): string {
   let effectiveDue = dueAt;
   if (!effectiveDue && createdAt && priority) {
@@ -113,9 +115,10 @@ export function formatSlaTimeLeft(
 
   if (!effectiveDue) return "Within SLA";
   const now = new Date();
-  const diffMs = effectiveDue.getTime() - now.getTime();
+  const effectiveNow = isPaused ? (pausedAt ? new Date(pausedAt) : now) : now;
+  const diffMs = effectiveDue.getTime() - effectiveNow.getTime();
 
-  if (diffMs <= 0 || slaStatus === "BREACHED") {
+  if (!isPaused && (diffMs <= 0 || slaStatus === "BREACHED")) {
     const elapsedMinutes = Math.abs(Math.floor(diffMs / (1000 * 60)));
     const hours = Math.floor(elapsedMinutes / 60);
     const days = Math.floor(hours / 24);
@@ -124,21 +127,25 @@ export function formatSlaTimeLeft(
     return `Breached ${elapsedMinutes}m ago`;
   }
 
-  const remainingMinutes = Math.floor(diffMs / (1000 * 60));
+  const remainingMinutes = Math.max(0, Math.floor(diffMs / (1000 * 60)));
   const remainingHours = Math.floor(remainingMinutes / 60);
   const remainingDays = Math.floor(remainingHours / 24);
 
+  let formatted = "";
   if (remainingDays > 0) {
     const remHours = remainingHours % 24;
-    return remHours > 0
-      ? `${remainingDays}d ${remHours}h left`
-      : `${remainingDays}d left`;
-  }
-  if (remainingHours > 0) {
+    formatted =
+      remHours > 0
+        ? `${remainingDays}d ${remHours}h left`
+        : `${remainingDays}d left`;
+  } else if (remainingHours > 0) {
     const remMins = remainingMinutes % 60;
-    return `${remainingHours}h ${remMins}m left`;
+    formatted = `${remainingHours}h ${remMins}m left`;
+  } else {
+    formatted = `${remainingMinutes}m left`;
   }
-  return `${remainingMinutes}m left`;
+
+  return isPaused ? `${formatted} (Paused)` : formatted;
 }
 
 /**

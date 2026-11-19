@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, UserCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  RotateCcw,
+  Shield,
+  UserCheck,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   CaseNotesSkeleton,
@@ -24,6 +31,7 @@ import {
   CaseProgressTab,
   CaseStatementTab,
 } from "./case-inspection";
+import { ReviewGracePeriodModal } from "./ReviewGracePeriodModal";
 
 export interface CaseFileInspectionModalProps {
   grievance: GrievanceItem;
@@ -37,6 +45,8 @@ export interface CaseFileInspectionModalProps {
   onOpenDocumentPreview: (doc: DocumentPreviewData) => void;
   onDownloadDocument: (doc: DocumentPreviewData) => void;
   onAssignClick: (item: GrievanceItem) => void;
+  onDirectInterveneClick?: (item: GrievanceItem) => void;
+  onDeclineRequestClick?: (item: GrievanceItem) => void;
   onEscalateClick?: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
   onProposeKbClick?: (item: GrievanceItem) => void;
@@ -66,6 +76,8 @@ export function CaseFileInspectionModal({
   onOpenDocumentPreview,
   onDownloadDocument,
   onAssignClick,
+  onDirectInterveneClick,
+  onDeclineRequestClick,
   onEscalateClick,
   onReviewResolutionClick,
   onProposeKbClick,
@@ -143,6 +155,13 @@ export function CaseFileInspectionModal({
             ...(json.data.assignment?.staffId
               ? { assignedStaffId: json.data.assignment.staffId }
               : {}),
+            ...(json.data.latestExtension !== undefined
+              ? {
+                  latestExtension: json.data.latestExtension,
+                  hasPendingExtension:
+                    json.data.latestExtension?.status === "PENDING",
+                }
+              : {}),
           }));
         }
       })
@@ -156,6 +175,37 @@ export function CaseFileInspectionModal({
       isMounted = false;
     };
   }, [currentGrievance.id]);
+
+  const [isGracePeriodModalOpen, setIsGracePeriodModalOpen] = useState(false);
+
+  const handleGracePeriodReviewed = async (newDueAt?: string) => {
+    try {
+      const pRes = await fetch(
+        `/api/department-head/grievances/${currentGrievance.id}/progress`,
+      );
+      if (pRes.ok) {
+        const pData = (await pRes.json()) as {
+          success?: boolean;
+          data?: CaseProgressData;
+        };
+        if (pData.success && pData.data) {
+          setCaseProgressData(pData.data);
+          setCurrentGrievance((prev) => ({
+            ...prev,
+            latestExtension: pData.data?.latestExtension,
+            hasPendingExtension: false,
+            slaDeadline: newDueAt || pData.data?.sla?.dueAt || prev.slaDeadline,
+            slaTimeLeft: pData.data?.sla?.timeRemaining || prev.slaTimeLeft,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn(
+        "Failed to refresh case progress after grace period review:",
+        err,
+      );
+    }
+  };
 
   const handleDocumentClick = useCallback(
     (file: {
@@ -223,6 +273,71 @@ export function CaseFileInspectionModal({
           onClose={onClose}
         />
 
+        {/* Staff Grace Period Request Banner */}
+        {(() => {
+          const ext =
+            currentGrievance.latestExtension?.status === "PENDING"
+              ? currentGrievance.latestExtension
+              : caseProgressData?.latestExtension?.status === "PENDING"
+                ? caseProgressData.latestExtension
+                : null;
+          if (!ext) return null;
+
+          return (
+            <div className="mx-6 mt-3 rounded-xl border border-teal-300 bg-teal-50/90 p-3.5 text-xs shadow-2xs animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <div className="p-1.5 bg-teal-100 rounded-lg text-teal-800 shrink-0 mt-0.5">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-teal-950 uppercase tracking-wider">
+                        Staff Grace Period Request Awaiting Your Action
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full font-bold text-[10px] bg-teal-200/80 text-teal-900 border border-teal-300">
+                        +{Math.round(ext.requestedMinutes / 60)}h Requested
+                      </span>
+                    </div>
+                    <p className="text-xs text-teal-900 mt-1 leading-relaxed">
+                      Staff member{" "}
+                      <strong>
+                        {ext.requestedByName ||
+                          currentGrievance.assignedStaffName ||
+                          "Assigned Staff"}
+                      </strong>{" "}
+                      requested an extension:
+                    </p>
+                    <p className="text-xs italic text-teal-950 mt-1 bg-white/80 px-3 py-1.5 rounded-lg border border-teal-200 font-serif">
+                      &ldquo;{ext.reason}&rdquo;
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsGracePeriodModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <span>Review Details</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsGracePeriodModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>
+                      Review & Decide (+{Math.round(ext.requestedMinutes / 60)}
+                      h)
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {currentGrievance.isAssignedStaffInactive && (
           <div className="mx-6 mt-3 rounded-xl border border-rose-200 bg-rose-50/90 p-3 text-xs flex items-center justify-between gap-3 shadow-2xs">
             <div className="flex items-center gap-2 text-rose-900 min-w-0">
@@ -249,6 +364,60 @@ export function CaseFileInspectionModal({
                 <span>Change Assignment</span>
               </button>
             )}
+          </div>
+        )}
+
+        {currentGrievance.status === "REWORK" && (
+          <div className="mx-6 mt-3 rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0 mt-0.5">
+                  <RotateCcw className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+                    Citizen Rework Request Awaiting Your Action
+                  </h4>
+                  <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                    The citizen was unsatisfied with the initial resolution.
+                    Please choose to assign an officer for re-investigation,
+                    intervene directly to resolve personally, or decline the
+                    request.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                {onDeclineRequestClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDeclineRequestClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <span>Decline Rework</span>
+                  </button>
+                )}
+                {onAssignClick && (
+                  <button
+                    type="button"
+                    onClick={() => onAssignClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <UserCheck className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Assign Staff</span>
+                  </button>
+                )}
+                {onDirectInterveneClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDirectInterveneClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
+                  >
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Intervene Directly</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -438,12 +607,24 @@ export function CaseFileInspectionModal({
           hodEmail={hodEmail}
           onClose={onClose}
           onAssignClick={onAssignClick}
+          onDirectInterveneClick={onDirectInterveneClick}
+          onDeclineRequestClick={onDeclineRequestClick}
           onEscalateClick={onEscalateClick}
           onReviewResolutionClick={onReviewResolutionClick}
           onProposeKbClick={onProposeKbClick}
           onAddInternalNote={onAddInternalNote}
+          onReviewGracePeriodClick={() => setIsGracePeriodModalOpen(true)}
         />
       </div>
+
+      {/* Review Grace Period Modal */}
+      <ReviewGracePeriodModal
+        isOpen={isGracePeriodModalOpen}
+        onClose={() => setIsGracePeriodModalOpen(false)}
+        grievance={currentGrievance}
+        caseProgressData={caseProgressData}
+        onSuccess={handleGracePeriodReviewed}
+      />
     </div>
   );
 }

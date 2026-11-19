@@ -122,6 +122,14 @@ export async function GET(request: Request) {
                 },
               },
             },
+            sla_tracking: {
+              orderBy: { sla_tracking_id: "desc" as const },
+              take: 1,
+            },
+            sla_extensions: {
+              orderBy: { created_at: "desc" as const },
+              take: 1,
+            },
           },
         },
       },
@@ -210,14 +218,24 @@ export async function GET(request: Request) {
           stateLabel: "Blocked",
         };
       } else {
+        const activeSla = g.sla_tracking?.[0];
         const deptStart =
           a.grievance_departments?.activated_at ||
           a.grievance_departments?.assigned_at ||
+          activeSla?.started_at ||
           g.created_at;
-        const deptDue = a.grievance_departments?.due_at || g.due_at;
+        const deptDue =
+          a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
-        slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+        slaCalc = calculateSlaStatus(
+          deptStart,
+          deptDue,
+          deptSlaStatus,
+          activeSla?.accumulated_paused_minutes || 0,
+          activeSla?.paused_at,
+          g.status,
+        );
       }
 
       const latestResolution = g.resolutions?.[0];
@@ -623,6 +641,18 @@ export async function GET(request: Request) {
         !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
       const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
 
+      const latestExt = g.sla_extensions?.[0];
+      const latestExtension = latestExt
+        ? {
+            id: latestExt.extension_id.toString(),
+            status: latestExt.status as "PENDING" | "APPROVED" | "REJECTED",
+            requestedMinutes: latestExt.requested_duration_minutes,
+            grantedMinutes: latestExt.granted_duration_minutes,
+            reason: latestExt.reason,
+            createdAt: latestExt.created_at.toISOString(),
+          }
+        : null;
+
       return {
         id: g.grievance_id.toString(),
         grievanceNumber: g.grievance_number,
@@ -635,13 +665,22 @@ export async function GET(request: Request) {
           ? "CLOSED"
           : g.status === "RESOLVED"
             ? "RESOLVED"
-            : isMyDeptCompleted
-              ? "COMPLETED"
-              : a.grievance_departments?.status === "ASSIGNED"
-                ? "ASSIGNED"
-                : a.grievance_departments?.status === "IN_PROGRESS"
-                  ? "IN_PROGRESS"
-                  : g.status) as StaffGrievanceItem["status"],
+            : g.status === "AWAITING_INFORMATION" ||
+                g.status === "WAITING_ON_USER" ||
+                g.status === "WAITING_ON_EMPLOYEE"
+              ? "AWAITING_INFORMATION"
+              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  g.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : g.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : a.grievance_departments?.status === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : a.grievance_departments?.status === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : g.status) as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,
@@ -675,6 +714,7 @@ export async function GET(request: Request) {
         isFinalSequentialDepartment,
         overallStatus: g.status,
         activeDepartmentName,
+        latestExtension,
       };
     });
 

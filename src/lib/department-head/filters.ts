@@ -8,9 +8,12 @@ import type {
 export function isResolutionSubmittedByHead(item: GrievanceItem): boolean {
   if (!item.submittedResolution) return false;
   // A resolution only represents an active "submitted by Head awaiting citizen review" state
-  // when the grievance is actively in UNDER_REVIEW status.
+  // when the grievance is actively in RESOLUTION_PENDING_APPROVAL or legacy UNDER_REVIEW status.
   // If the grievance was reopened or escalated, any past resolution belongs to a prior cycle.
-  if (item.status !== "UNDER_REVIEW") {
+  if (
+    item.status !== "UNDER_REVIEW" &&
+    item.status !== "RESOLUTION_PENDING_APPROVAL"
+  ) {
     return false;
   }
   const role = item.submittedResolution.submittedByRole;
@@ -32,6 +35,7 @@ export function hasHeadResolutionAuthority(item: GrievanceItem): boolean {
     item.status === "CLOSED" ||
     item.status === "RESOLVED" ||
     item.status === "COMPLETED" ||
+    item.status === "REWORK" ||
     isResolutionSubmittedByHead(item)
   ) {
     return false;
@@ -48,12 +52,17 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
     item.status === "CLOSED" ||
     item.status === "RESOLVED" ||
     item.status === "COMPLETED" ||
+    item.status === "REWORK" ||
     isResolutionSubmittedByHead(item)
   ) {
     return false;
   }
   // If resolution is already submitted by Department Head and awaiting employee acceptance, head cannot submit again
-  if (item.status === "UNDER_REVIEW" && isResolutionSubmittedByHead(item)) {
+  if (
+    (item.status === "UNDER_REVIEW" ||
+      item.status === "RESOLUTION_PENDING_APPROVAL") &&
+    isResolutionSubmittedByHead(item)
+  ) {
     return false;
   }
   // If this department's stage is already completed in a multi-department case
@@ -70,7 +79,8 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
   }
   // 3. Staff submitted a resolution pending Head review
   if (
-    item.status === "UNDER_REVIEW" &&
+    (item.status === "UNDER_REVIEW" ||
+      item.status === "RESOLUTION_PENDING_APPROVAL") &&
     item.submittedResolution &&
     !isResolutionSubmittedByHead(item)
   ) {
@@ -106,7 +116,14 @@ export function computeDepartmentMetrics(
   staffList: StaffMember[],
 ): DepartmentMetricsSummary {
   const unassignedCount = grievances.filter(
-    (g) => !g.assignedStaffId && g.status !== "CLOSED",
+    (g) =>
+      (!g.assignedStaffId ||
+        g.status === "SUBMITTED" ||
+        g.status === "AWAITING_ROUTING" ||
+        g.status === "AWAITING_ASSIGNMENT" ||
+        g.status === "ROUTED") &&
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED",
   ).length;
 
   const inProgressCount = grievances.filter(
@@ -115,6 +132,8 @@ export function computeDepartmentMetrics(
       g.status !== "RESOLVED" &&
       (g.status === "IN_PROGRESS" ||
         g.status === "ASSIGNED" ||
+        g.status === "AWAITING_INFORMATION" ||
+        g.status === "REWORK" ||
         g.myDepartmentStatus === "IN_PROGRESS" ||
         g.myDepartmentStatus === "ASSIGNED"),
   ).length;
@@ -124,18 +143,27 @@ export function computeDepartmentMetrics(
     (g) =>
       g.slaStatus === "AT_RISK" &&
       g.status !== "ESCALATED" &&
-      g.status !== "CLOSED",
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED",
   ).length;
 
-  // Escalated = Active grievances currently in ESCALATED status requiring HOD intervention
+  // Escalated = Active grievances requiring HOD intervention (escalated or SLA breached)
   const escalatedCount = grievances.filter(
-    (g) => g.status === "ESCALATED",
+    (g) =>
+      (g.status === "ESCALATED" ||
+        g.slaStatus === "BREACHED" ||
+        Boolean(g.escalationReason || g.hodIntervention)) &&
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED",
   ).length;
 
   const atRiskCount = slaAtRiskCount;
 
   const reopenedCount = grievances.filter(
-    (g) => (g.isReopened || g.status === "REOPENED") && g.status !== "CLOSED",
+    (g) =>
+      (g.isReopened || g.status === "REOPENED" || g.status === "REWORK") &&
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED",
   ).length;
 
   const crossDeptCount = grievances.filter(
@@ -160,17 +188,24 @@ export function computeDepartmentMetrics(
     (g) =>
       (!g.assignedStaffId ||
         g.status === "SUBMITTED" ||
+        g.status === "AWAITING_ROUTING" ||
+        g.status === "AWAITING_ASSIGNMENT" ||
+        g.status === "ROUTED" ||
         g.isReopened ||
         g.status === "REOPENED" ||
+        g.status === "REWORK" ||
         g.isCrossDepartment ||
-        g.slaStatus === "BREACHED") &&
+        g.slaStatus === "BREACHED" ||
+        Boolean(g.escalationReason || g.hodIntervention)) &&
       g.status !== "CLOSED" &&
       g.status !== "RESOLVED",
   ).length;
 
   const slaCriticalCount = grievances.filter(
     (g) =>
-      (g.slaStatus === "BREACHED" || g.status === "ESCALATED") &&
+      (g.slaStatus === "BREACHED" ||
+        g.status === "ESCALATED" ||
+        Boolean(g.escalationReason || g.hodIntervention)) &&
       g.status !== "CLOSED" &&
       g.status !== "RESOLVED",
   ).length;
@@ -220,15 +255,29 @@ export function computeAttentionRequiredList(
     .filter((g) => {
       if (g.status === "CLOSED" || g.status === "RESOLVED") return false;
       const isStaffInactive = Boolean(g.isAssignedStaffInactive);
-      const isBreached = g.slaStatus === "BREACHED" || g.status === "ESCALATED";
+      const isBreached =
+        g.slaStatus === "BREACHED" ||
+        g.status === "ESCALATED" ||
+        Boolean(g.escalationReason || g.hodIntervention);
       const isAtRisk = g.slaStatus === "AT_RISK";
       const isUnassigned =
-        !g.assignedStaffId || g.status === "SUBMITTED" || g.status === "ROUTED";
+        !g.assignedStaffId ||
+        g.status === "SUBMITTED" ||
+        g.status === "AWAITING_ROUTING" ||
+        g.status === "AWAITING_ASSIGNMENT" ||
+        g.status === "ROUTED";
       const isPendingReview = requiresHeadResolutionReview(g);
+      const isPendingGracePeriod = Boolean(
+        g.hasPendingExtension || g.latestExtension?.status === "PENDING",
+      );
       const isException =
-        g.isReopened || g.status === "REOPENED" || g.isCrossDepartment;
+        g.isReopened ||
+        g.status === "REOPENED" ||
+        g.status === "REWORK" ||
+        g.isCrossDepartment;
       return (
         isStaffInactive ||
+        isPendingGracePeriod ||
         isBreached ||
         isAtRisk ||
         isUnassigned ||
@@ -239,7 +288,15 @@ export function computeAttentionRequiredList(
     .sort((a, b) => {
       const getPriorityRank = (g: GrievanceItem) => {
         if (g.isAssignedStaffInactive) return 5;
-        if (g.slaStatus === "BREACHED" || g.status === "ESCALATED") return 4;
+        if (g.hasPendingExtension || g.latestExtension?.status === "PENDING")
+          return 4.5;
+        if (
+          g.slaStatus === "BREACHED" ||
+          g.status === "ESCALATED" ||
+          g.escalationReason ||
+          g.hodIntervention
+        )
+          return 4;
         if (g.slaStatus === "AT_RISK") return 3;
         if (!g.assignedStaffId) return 2;
         return 1;
@@ -287,18 +344,34 @@ export function filterDepartmentGrievances(
       const isException =
         !g.assignedStaffId ||
         g.status === "SUBMITTED" ||
+        g.status === "AWAITING_ROUTING" ||
+        g.status === "AWAITING_ASSIGNMENT" ||
+        g.status === "ROUTED" ||
         g.isReopened ||
         g.status === "REOPENED" ||
+        g.status === "REWORK" ||
         g.isCrossDepartment ||
-        g.slaStatus === "BREACHED";
+        g.slaStatus === "BREACHED" ||
+        Boolean(g.escalationReason || g.hodIntervention);
       if (!isException) return false;
     }
-    if (selectedTab === "UNASSIGNED" && g.assignedStaffId) return false;
+    if (selectedTab === "UNASSIGNED") {
+      const isUnassigned =
+        !g.assignedStaffId ||
+        g.status === "SUBMITTED" ||
+        g.status === "AWAITING_ROUTING" ||
+        g.status === "AWAITING_ASSIGNMENT" ||
+        g.status === "ROUTED" ||
+        g.status === "PENDING_ASSIGNMENT";
+      if (!isUnassigned) return false;
+    }
     if (selectedTab === "IN_PROGRESS") {
       const isInProgress =
         !["CLOSED", "RESOLVED"].includes(g.status) &&
         (g.status === "IN_PROGRESS" ||
           g.status === "ASSIGNED" ||
+          g.status === "AWAITING_INFORMATION" ||
+          g.status === "REWORK" ||
           g.myDepartmentStatus === "IN_PROGRESS" ||
           g.myDepartmentStatus === "ASSIGNED");
       if (!isInProgress) return false;
@@ -319,15 +392,25 @@ export function filterDepartmentGrievances(
     }
     if (selectedTab === "SLA_CRITICAL") {
       const isCritical =
-        (g.slaStatus === "BREACHED" || g.status === "ESCALATED") &&
+        (g.slaStatus === "BREACHED" ||
+          g.status === "ESCALATED" ||
+          Boolean(g.escalationReason || g.hodIntervention)) &&
         !["CLOSED", "RESOLVED"].includes(g.status);
       if (!isCritical) return false;
     }
-    if (selectedTab === "ESCALATED" && g.status !== "ESCALATED") return false;
+    if (
+      selectedTab === "ESCALATED" &&
+      g.status !== "ESCALATED" &&
+      g.slaStatus !== "BREACHED" &&
+      !g.escalationReason &&
+      !g.hodIntervention
+    )
+      return false;
     if (
       selectedTab === "REOPENED" &&
       !g.isReopened &&
-      g.status !== "REOPENED"
+      g.status !== "REOPENED" &&
+      g.status !== "REWORK"
     ) {
       return false;
     }
@@ -343,7 +426,14 @@ export function filterDepartmentGrievances(
       if (statusFilter === "RESOLVED") {
         if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
       } else if (statusFilter === "IN_PROGRESS") {
-        if (["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(g.status))
+        if (
+          [
+            "CLOSED",
+            "RESOLVED",
+            "UNDER_REVIEW",
+            "RESOLUTION_PENDING_APPROVAL",
+          ].includes(g.status)
+        )
           return false;
         if (g.isReopened || g.status === "REOPENED") return false;
         const isUnassigned =
@@ -351,12 +441,21 @@ export function filterDepartmentGrievances(
           !g.assignedStaffName ||
           g.assignedStaffName === "Unassigned" ||
           g.status === "SUBMITTED" ||
+          g.status === "AWAITING_ROUTING" ||
+          g.status === "AWAITING_ASSIGNMENT" ||
           g.status === "ROUTED" ||
           g.status === "PENDING_ASSIGNMENT" ||
           g.myDepartmentStatus === "PENDING_ASSIGNMENT";
         if (isUnassigned) return false;
-      } else if (statusFilter === "UNDER_REVIEW") {
-        if (g.status !== "UNDER_REVIEW") return false;
+      } else if (
+        statusFilter === "UNDER_REVIEW" ||
+        statusFilter === "RESOLUTION_PENDING_APPROVAL"
+      ) {
+        if (
+          g.status !== "UNDER_REVIEW" &&
+          g.status !== "RESOLUTION_PENDING_APPROVAL"
+        )
+          return false;
       } else if (statusFilter === "ASSIGNED") {
         if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
           return false;
@@ -366,12 +465,15 @@ export function filterDepartmentGrievances(
           !g.assignedStaffName ||
           g.assignedStaffName === "Unassigned" ||
           g.status === "SUBMITTED" ||
+          g.status === "AWAITING_ROUTING" ||
+          g.status === "AWAITING_ASSIGNMENT" ||
           g.status === "ROUTED" ||
           g.status === "PENDING_ASSIGNMENT" ||
           g.myDepartmentStatus === "PENDING_ASSIGNMENT";
         if (!isUnassigned) return false;
       } else if (statusFilter === "REOPENED") {
-        if (!g.isReopened && g.status !== "REOPENED") return false;
+        if (!g.isReopened && g.status !== "REOPENED" && g.status !== "REWORK")
+          return false;
       } else if (g.status !== statusFilter) {
         return false;
       }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import { getCurrentUser } from "@/lib/auth";
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
+import { resumeSlaTracking } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { SUPABASE_BUCKET } from "@/lib/supabase";
@@ -99,10 +100,14 @@ export async function POST(
       "PENDING",
       "SUBMITTED",
       "ROUTED",
+      "AWAITING_ROUTING",
+      "AWAITING_ASSIGNMENT",
       "ASSIGNED",
       "IN_PROGRESS",
+      "AWAITING_INFORMATION",
       "WAITING_ON_USER",
       "WAITING_ON_EMPLOYEE",
+      "REWORK",
       "REOPENED",
     ];
     if (!eligibleStatuses.includes(grievance.status)) {
@@ -145,7 +150,8 @@ export async function POST(
       : [];
 
     if (
-      (grievance.status === "WAITING_ON_USER" ||
+      (grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE") &&
       requestedDocs.length > 0 &&
       incomingFiles.length === 0
@@ -164,7 +170,38 @@ export async function POST(
       `${grievance.users?.first_name} ${grievance.users?.last_name || ""}`.trim();
 
     await prisma.$transaction(async (tx) => {
-      // 1. Save attachments
+      // 1. Resume status to IN_PROGRESS if waiting on user
+      const isWaiting =
+        grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE";
+
+      if (isWaiting) {
+        await tx.grievances.update({
+          where: { grievance_id: targetGrievanceId },
+          data: { status: "IN_PROGRESS" },
+        });
+
+        await tx.grievance_status_history.create({
+          data: {
+            grievance_id: targetGrievanceId,
+            old_status: grievance.status,
+            new_status: "IN_PROGRESS",
+            changed_by: user.user_id,
+            remarks:
+              "Employee provided additional information/documents. Investigation resumed.",
+          },
+        });
+
+        // Resume SLA tracking and extend deadlines by paused duration
+        await resumeSlaTracking({
+          grievanceId: targetGrievanceId,
+          resumedBy: user.user_id,
+          tx,
+        });
+      }
+
+      // 2. Save attachments
       for (const file of incomingFiles) {
         if (file.fileName) {
           const raw = file.filePath || `grievances/${file.fileName}`;
@@ -183,7 +220,7 @@ export async function POST(
         }
       }
 
-      // 2. Audit log (serves as the message in timeline)
+      // 3. Audit log (serves as the message in timeline)
       await tx.audit_logs.create({
         data: {
           grievance_id: targetGrievanceId,
@@ -201,18 +238,66 @@ export async function POST(
       });
     });
 
-    // Notify assigned staff if any
-    const activeAssignment = grievance.assignments?.[0];
-    const assignedStaff = activeAssignment?.users_assignments_staff_idTousers;
+    // Collect all involved recipients who need to be notified when employee responds:
+    const recipientUserIds = new Set<string>();
 
-    if (assignedStaff) {
+    // 1. The user who requested additional info/documents (Staff, Department Head, or Admin)
+    const latestRequestLog = await prisma.audit_logs.findFirst({
+      where: {
+        grievance_id: targetGrievanceId,
+        action: { in: ["ADDITIONAL_INFO_REQUESTED", "COMMUNICATION_MESSAGE"] },
+        user_id: { not: user.user_id },
+      },
+      orderBy: { created_at: "desc" },
+      select: { user_id: true },
+    });
+    if (latestRequestLog?.user_id) {
+      recipientUserIds.add(latestRequestLog.user_id.toString());
+    }
+
+    // 2. All assigned staff across all departments
+    const allAssignments = await prisma.assignments.findMany({
+      where: {
+        grievance_id: targetGrievanceId,
+        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+      },
+      select: { staff_id: true },
+    });
+    for (const a of allAssignments) {
+      if (a.staff_id) {
+        recipientUserIds.add(a.staff_id.toString());
+      }
+    }
+
+    // 3. Department Heads of all involved departments
+    const deptHeads = await prisma.users.findMany({
+      where: {
+        departments: {
+          grievance_departments: {
+            some: { grievance_id: targetGrievanceId },
+          },
+        },
+        roles: { role_name: "DEPARTMENT_HEAD" },
+        status: "ACTIVE",
+      },
+      select: { user_id: true },
+    });
+    for (const dh of deptHeads) {
+      recipientUserIds.add(dh.user_id.toString());
+    }
+
+    // Never notify the complainant in this loop
+    recipientUserIds.delete(user.user_id.toString());
+
+    // Send notification to all involved parties
+    for (const targetId of recipientUserIds) {
       await NotificationService.send({
-        userId: assignedStaff.user_id,
+        userId: BigInt(targetId),
         grievanceId: targetGrievanceId,
         type: "ADDITIONAL_INFO_SUBMITTED",
         channel: "IN_APP",
-        title: `Additional Information: ${grievance.grievance_number}`,
-        message: `${complainantName} has provided additional information/documents voluntarily.`,
+        title: `Information Submitted: ${grievance.grievance_number}`,
+        message: `${complainantName} submitted the requested information/documents for grievance ${grievance.grievance_number}. Investigation has resumed.`,
       });
     }
 

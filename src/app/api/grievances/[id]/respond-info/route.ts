@@ -135,7 +135,8 @@ export async function POST(
       : [];
 
     if (
-      (grievance.status === "WAITING_ON_USER" ||
+      (grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
         grievance.status === "WAITING_ON_EMPLOYEE") &&
       requestedDocs.length > 0 &&
       incomingFiles.length === 0
@@ -165,6 +166,14 @@ export async function POST(
           changed_by: user ? user.user_id : submitterId,
           remarks: `Complainant provided requested clarification and uploaded ${incomingFiles.length} file(s). Investigation resumed.`,
         },
+      });
+
+      // Resume SLA tracking and extend deadlines by paused duration
+      const { resumeSlaTracking } = await import("@/lib/engines/sla-engine");
+      await resumeSlaTracking({
+        grievanceId: targetGrievanceId,
+        resumedBy: user ? user.user_id : submitterId,
+        tx,
       });
 
       // 3. Save any uploaded attachments

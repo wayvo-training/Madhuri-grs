@@ -93,6 +93,14 @@ export async function GET(
             },
           },
         },
+        sla_tracking: {
+          orderBy: { sla_tracking_id: "desc" },
+          take: 1,
+        },
+        sla_extensions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+        },
       },
     });
 
@@ -593,17 +601,26 @@ export async function GET(
         timeRemaining: "Pending Prerequisites (Blocked)",
       };
     } else {
+      const activeSla = grievance.sla_tracking?.[0];
       const deptStart =
         myDeptRaw?.activated_at ||
         myDeptRaw?.assigned_at ||
+        activeSla?.started_at ||
         grievance.created_at;
       const deptDue =
         myDeptRaw?.due_at ||
         (deptAllocatedMins
           ? new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000)
-          : grievance.due_at);
+          : activeSla?.due_at || grievance.due_at);
       const deptSlaStatus = myDeptRaw?.sla_status || grievance.sla_status;
-      slaCalc = calculateSlaStatus(deptStart, deptDue, deptSlaStatus);
+      slaCalc = calculateSlaStatus(
+        deptStart,
+        deptDue,
+        deptSlaStatus,
+        activeSla?.accumulated_paused_minutes || 0,
+        activeSla?.paused_at,
+        grievance.status,
+      );
     }
 
     const activeDept = departmentsInvolved.find(
@@ -645,6 +662,18 @@ export async function GET(
     const canSubmitFindings =
       !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
     const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
+
+    const latestExt = grievance.sla_extensions?.[0];
+    const latestExtension = latestExt
+      ? {
+          id: latestExt.extension_id.toString(),
+          status: latestExt.status as "PENDING" | "APPROVED" | "REJECTED",
+          requestedMinutes: latestExt.requested_duration_minutes,
+          grantedMinutes: latestExt.granted_duration_minutes,
+          reason: latestExt.reason,
+          createdAt: latestExt.created_at.toISOString(),
+        }
+      : null;
 
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
@@ -703,6 +732,7 @@ export async function GET(
       canSubmitFindings,
       isFinalSequentialDepartment,
       overallStatus: grievance.status,
+      latestExtension,
       activeDepartmentName,
     };
 
@@ -805,6 +835,7 @@ export async function PATCH(
       const canStart =
         grievance.status === "ASSIGNED" ||
         grievance.status === "REOPENED" ||
+        grievance.status === "REWORK" ||
         grievance.status === "IN_PROGRESS" ||
         activeAssignment?.grievance_departments?.status === "ASSIGNED" ||
         activeAssignment?.assignment_status === "ASSIGNED";
@@ -825,6 +856,21 @@ export async function PATCH(
                 changed_by: staffId,
                 remarks: "Investigation initiated by assigned staff",
               },
+            });
+          }
+
+          // If grievance was in REWORK or SLA was paused, resume SLA tracking with previously remaining duration
+          if (
+            grievance.status === "REWORK" ||
+            grievance.status === "AWAITING_INFORMATION"
+          ) {
+            const { resumeSlaTracking } = await import(
+              "@/lib/engines/sla-engine"
+            );
+            await resumeSlaTracking({
+              grievanceId,
+              resumedBy: staffId,
+              tx,
             });
           }
 
@@ -872,10 +918,10 @@ export async function PATCH(
       const requestedDocs = body.requestedDocs || [];
 
       await prisma.$transaction(async (tx) => {
-        // 1. Change status from active (IN_PROGRESS) to WAITING_ON_USER
+        // 1. Change status from active (IN_PROGRESS) to AWAITING_INFORMATION
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
-          data: { status: "WAITING_ON_USER" },
+          data: { status: "AWAITING_INFORMATION" },
         });
 
         // 2. Add to status history
@@ -883,7 +929,7 @@ export async function PATCH(
           data: {
             grievance_id: grievanceId,
             old_status: grievance.status,
-            new_status: "WAITING_ON_USER",
+            new_status: "AWAITING_INFORMATION",
             changed_by: staffId,
             remarks: `Staff requested additional information via ${channels.join(", ")}. Subject: ${subject}`,
           },
@@ -908,6 +954,15 @@ export async function PATCH(
               note: `[Information Requested from Complainant]\nSubject: ${subject}\nDetails: ${message}${requestedDocs.length > 0 ? `\nRequested Proofs: ${requestedDocs.join(", ")}` : ""}`,
             },
           },
+        });
+
+        // 4. Pause SLA tracking during AWAITING_INFORMATION
+        const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
+        await pauseSlaTracking({
+          grievanceId,
+          pauseReason: "AWAITING_INFORMATION",
+          pausedBy: staffId,
+          tx,
         });
       });
 
@@ -951,14 +1006,14 @@ export async function PATCH(
         type: "SYSTEM",
         channel: "IN_APP",
         title: `Information Requested (${grievance.grievance_number})`,
-        message: `You successfully requested additional information from the complainant. The grievance is now Waiting on User.`,
+        message: `You successfully requested additional information from the complainant. The grievance is now Awaiting Information.`,
       });
 
       return NextResponse.json({
         success: true,
         message:
-          "Additional information requested successfully. Status set to Waiting on User.",
-        status: "WAITING_ON_USER",
+          "Additional information requested successfully. Status set to Awaiting Information.",
+        status: "AWAITING_INFORMATION",
       });
     } else if (body.action === "RESUME_INVESTIGATION") {
       await prisma.$transaction(async (tx) => {
@@ -988,6 +1043,14 @@ export async function PATCH(
               details: `Investigation resumed to In Progress by staff on grievance ${grievance.grievance_number}`,
             },
           },
+        });
+
+        // Resume SLA tracking and extend deadlines by the paused duration
+        const { resumeSlaTracking } = await import("@/lib/engines/sla-engine");
+        await resumeSlaTracking({
+          grievanceId,
+          resumedBy: staffId,
+          tx,
         });
       });
 

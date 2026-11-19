@@ -228,19 +228,60 @@ export async function POST(
         },
       });
 
-      // Update grievance status to ASSIGNED if SUBMITTED or ROUTED
-      const newStatus =
-        grievance.status === "SUBMITTED" || grievance.status === "ROUTED"
-          ? "ASSIGNED"
-          : grievance.status;
+      // Update grievance status to ASSIGNED if unassigned, or progress REWORK/REOPENED workflows
+      let newStatus = grievance.status;
+      let shouldIncrementReopenCount = false;
+      let shouldStartReworkCycle = false;
+      let shouldStartReopenedCycle = false;
+
+      if (
+        grievance.status === "SUBMITTED" ||
+        grievance.status === "ROUTED" ||
+        grievance.status === "AWAITING_ASSIGNMENT" ||
+        grievance.status === "AWAITING_ROUTING"
+      ) {
+        newStatus = "ASSIGNED";
+      } else if (grievance.status === "REWORK") {
+        newStatus = "IN_PROGRESS";
+        shouldIncrementReopenCount = true;
+        shouldStartReworkCycle = true;
+      } else if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
+        const hasBeenClosed =
+          Boolean(grievance.closed_at) ||
+          Boolean(
+            await tx.grievance_status_history.findFirst({
+              where: { grievance_id: grievanceId, old_status: "CLOSED" },
+            }),
+          );
+        if (hasBeenClosed) {
+          newStatus = "REOPENED";
+          shouldIncrementReopenCount = true;
+          shouldStartReopenedCycle = true;
+        }
+      }
 
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
           status: newStatus,
           updated_at: new Date(),
+          ...(shouldIncrementReopenCount
+            ? { reopen_count: { increment: 1 } }
+            : {}),
         },
       });
+
+      if (shouldStartReworkCycle) {
+        const { initiateReworkSlaCycle } = await import(
+          "@/lib/engines/sla-engine"
+        );
+        await initiateReworkSlaCycle(grievanceId, grievance.priority, tx);
+      } else if (shouldStartReopenedCycle) {
+        const { initiateReopenedSlaCycle } = await import(
+          "@/lib/engines/sla-engine"
+        );
+        await initiateReopenedSlaCycle(grievanceId, grievance.priority, tx);
+      }
 
       // Record audit log
       await tx.audit_logs.create({

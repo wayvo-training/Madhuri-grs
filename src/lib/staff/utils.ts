@@ -10,15 +10,30 @@ export interface SlaCalculationResult {
 
 /**
  * Calculates dynamic SLA consumption percent and remaining time from database timestamps.
+ * Properly factors in paused states (e.g. WAITING_ON_USER, UNDER_REVIEW) and accumulated pause duration.
  */
 export function calculateSlaStatus(
   createdAt: Date | string,
   dueAt: Date | string | null,
   overrideStatus?: string | null,
+  accumulatedPausedMinutes: number = 0,
+  pausedAt?: Date | string | null,
+  grievanceStatus?: string | null,
 ): SlaCalculationResult {
   const now = new Date();
   const created = new Date(createdAt);
   const due = dueAt ? new Date(dueAt) : null;
+
+  const isPaused = Boolean(
+    pausedAt ||
+      grievanceStatus === "AWAITING_INFORMATION" ||
+      grievanceStatus === "WAITING_ON_USER" ||
+      grievanceStatus === "WAITING_ON_EMPLOYEE" ||
+      grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+      grievanceStatus === "UNDER_REVIEW",
+  );
+
+  const effectiveNow = isPaused ? (pausedAt ? new Date(pausedAt) : now) : now;
 
   if (overrideStatus === "BREACHED") {
     return {
@@ -38,18 +53,21 @@ export function calculateSlaStatus(
     };
   }
 
-  const totalDuration = due.getTime() - created.getTime();
-  const elapsedDuration = now.getTime() - created.getTime();
+  const rawTotalDuration = due.getTime() - created.getTime();
+  const pausedMs = Math.max(0, (accumulatedPausedMinutes || 0) * 60 * 1000);
+  const totalDuration = Math.max(1, rawTotalDuration - pausedMs);
+  const rawElapsed = Math.max(0, effectiveNow.getTime() - created.getTime());
+  const activeElapsed = Math.max(0, rawElapsed - pausedMs);
 
   let consumptionPercent = 0;
   if (totalDuration > 0) {
     consumptionPercent = Math.min(
-      Math.max(Math.round((elapsedDuration / totalDuration) * 100), 0),
+      Math.max(Math.round((activeElapsed / totalDuration) * 100), 0),
       100,
     );
   }
 
-  if (now > due) {
+  if (!isPaused && now > due) {
     const diffMs = now.getTime() - due.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
@@ -64,15 +82,36 @@ export function calculateSlaStatus(
     };
   }
 
-  const diffMs = due.getTime() - now.getTime();
+  // Freeze remaining time calculation at effectiveNow when paused
+  const diffMs = Math.max(0, due.getTime() - effectiveNow.getTime());
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
   const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
 
-  const timeRemaining =
+  let timeRemaining =
     diffDays > 0
       ? `${diffDays}d ${diffHours}h remaining`
       : `${diffHours}h ${diffMins}m remaining`;
+
+  if (isPaused) {
+    timeRemaining = `${timeRemaining} (Paused)`;
+    const pauseLabel =
+      grievanceStatus === "AWAITING_INFORMATION" ||
+      grievanceStatus === "WAITING_ON_USER" ||
+      grievanceStatus === "WAITING_ON_EMPLOYEE"
+        ? "Awaiting Information"
+        : grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+            grievanceStatus === "UNDER_REVIEW"
+          ? "Resolution Pending Approval"
+          : "Paused";
+
+    return {
+      consumptionPercent,
+      timeRemaining,
+      state: "PAUSED",
+      stateLabel: `SLA Paused (${pauseLabel})`,
+    };
+  }
 
   const isAtRisk =
     consumptionPercent >= DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT ||

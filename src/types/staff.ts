@@ -9,19 +9,25 @@ export type StaffPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export type StaffGrievanceStatus =
   | "SUBMITTED"
-  | "ROUTED"
+  | "AWAITING_ROUTING"
+  | "AWAITING_ASSIGNMENT"
   | "ASSIGNED"
   | "IN_PROGRESS"
+  | "AWAITING_INFORMATION"
+  | "RESOLVED"
+  | "REWORK"
+  | "RESOLUTION_PENDING_APPROVAL"
+  | "REOPENED"
+  | "CLOSED"
+  // Legacy aliases for backward compatibility
+  | "ROUTED"
   | "WAITING_ON_USER"
   | "UNDER_REVIEW"
-  | "REOPENED"
   | "REOPEN_REVIEW"
-  | "CLOSED"
-  | "RESOLVED"
   | "ESCALATED"
   | "COMPLETED";
 
-export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED";
+export type StaffSlaState = "ON_TRACK" | "AT_RISK" | "BREACHED" | "PAUSED";
 
 export type StaffView = "overview" | "queue" | "profile" | "activity";
 
@@ -158,6 +164,14 @@ export interface StaffGrievanceItem {
   isFinalSequentialDepartment?: boolean;
   overallStatus?: string;
   activeDepartmentName?: string;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+  } | null;
 }
 
 export interface StaffMemberProfile {

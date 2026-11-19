@@ -20,22 +20,26 @@ const mapStatusToStage = (status: string) => {
     case "PENDING":
     case "SUBMITTED":
       return "SUBMITTED";
+    case "AWAITING_ROUTING":
+    case "AWAITING_ASSIGNMENT":
     case "ROUTED":
       return "ROUTED";
     case "ASSIGNED":
       return "ASSIGNED";
     case "IN_PROGRESS":
+    case "AWAITING_INFORMATION":
     case "ESCALATED":
       return "IN_PROGRESS";
+    case "REWORK":
+      return "REWORK";
     case "REOPENED":
       return "REOPENED";
+    case "RESOLUTION_PENDING_APPROVAL":
     case "UNDER_REVIEW":
-      return "HEAD_REVIEW";
     case "RESOLVED":
     case "RESOLUTION":
-      return "RESOLUTION";
     case "EMPLOYEE_REVIEW":
-      return "EMPLOYEE_REVIEW";
+      return "RESOLUTION";
     case "CLOSED":
       return "CLOSED";
     default:
@@ -121,6 +125,11 @@ const getStageInfo = (id: string, grievance: GrievanceWithDept | null) => {
       return { label: "Resolution", desc: "Resolution proposed." };
     case "EMPLOYEE_REVIEW":
       return { label: "Employee Review", desc: "Awaiting your review." };
+    case "REWORK":
+      return {
+        label: "Rework Requested",
+        desc: "Resolution rework requested by Complainant.",
+      };
     case "REOPENED":
       return { label: "Reopened", desc: "Grievance has been reopened." };
     case "CLOSED":
@@ -195,6 +204,9 @@ export default async function EndUserTrackPage(props: PageProps) {
     ];
 
     const stageDateMap = new Map<string, Date>();
+    const hasRework =
+      grievance.status === "REWORK" ||
+      history.some((h) => h.new_status === "REWORK");
     const hasReopened =
       grievance.status === "REOPENED" ||
       history.some((h) => h.new_status === "REOPENED");
@@ -211,8 +223,9 @@ export default async function EndUserTrackPage(props: PageProps) {
       "ROUTED",
       "ASSIGNED",
       "IN_PROGRESS",
-      ...(hasReopened ? ["REOPENED"] : []),
       "RESOLUTION",
+      ...(hasRework ? ["REWORK"] : []),
+      ...(hasReopened ? ["REOPENED"] : []),
       "CLOSED",
     ];
 

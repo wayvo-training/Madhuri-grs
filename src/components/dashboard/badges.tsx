@@ -4,14 +4,21 @@ export type GrievancePriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export type GrievanceStatus =
   | "SUBMITTED"
-  | "ROUTED"
+  | "AWAITING_ROUTING"
+  | "AWAITING_ASSIGNMENT"
   | "ASSIGNED"
   | "IN_PROGRESS"
+  | "AWAITING_INFORMATION"
+  | "RESOLVED"
+  | "REWORK"
+  | "RESOLUTION_PENDING_APPROVAL"
+  | "REOPENED"
+  | "CLOSED"
+  // Legacy aliases
+  | "ROUTED"
   | "WAITING_ON_USER"
   | "UNDER_REVIEW"
-  | "REOPENED"
   | "REOPEN_REVIEW"
-  | "CLOSED"
   | "ESCALATED"
   | "BLOCKED"
   | "PENDING_ASSIGNMENT"
@@ -68,6 +75,79 @@ export function StatusBadge({
           Escalated
         </span>
       );
+    case "RESOLVED":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+          Resolved
+        </span>
+      );
+    case "REWORK":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-orange-300 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-800 shadow-2xs dark:bg-orange-500/20 dark:border-orange-500/30 dark:text-orange-400",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-500 dark:bg-orange-400 animate-pulse" />
+          Rework
+        </span>
+      );
+    case "RESOLUTION_PENDING_APPROVAL":
+    case "UNDER_REVIEW":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-indigo-200 bg-indigo-50/90 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-700/30 dark:border-indigo-600 dark:text-indigo-300",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />
+          Resolution Pending Approval
+        </span>
+      );
+    case "AWAITING_INFORMATION":
+    case "WAITING_ON_USER":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+          Awaiting Information
+        </span>
+      );
+    case "AWAITING_ROUTING":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center whitespace-nowrap rounded-md border border-amber-200 bg-amber-50/70 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-700/30 dark:border-amber-600 dark:text-amber-300",
+            className,
+          )}
+        >
+          Awaiting Routing
+        </span>
+      );
+    case "AWAITING_ASSIGNMENT":
+    case "PENDING_ASSIGNMENT":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center whitespace-nowrap rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300",
+            className,
+          )}
+        >
+          Awaiting Assignment
+        </span>
+      );
     case "CLOSED":
       return (
         <span
@@ -102,30 +182,6 @@ export function StatusBadge({
           )}
         >
           In Progress
-        </span>
-      );
-    case "WAITING_ON_USER":
-      return (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400",
-            className,
-          )}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
-          Waiting on User
-        </span>
-      );
-    case "UNDER_REVIEW":
-      return (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-slate-200 bg-slate-100/90 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300",
-            className,
-          )}
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-slate-500 dark:bg-slate-400" />
-          Under Review
         </span>
       );
     case "ASSIGNED":
@@ -185,17 +241,6 @@ export function StatusBadge({
           Blocked
         </span>
       );
-    case "PENDING_ASSIGNMENT":
-      return (
-        <span
-          className={cn(
-            "inline-flex items-center whitespace-nowrap rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300",
-            className,
-          )}
-        >
-          Pending Assignment
-        </span>
-      );
     default:
       return (
         <span
@@ -245,6 +290,18 @@ export function SlaBadge({
         >
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
           At Risk
+        </span>
+      );
+    case "PAUSED":
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400",
+            className,
+          )}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+          Paused
         </span>
       );
     default:

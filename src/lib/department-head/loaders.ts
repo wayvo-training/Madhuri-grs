@@ -206,12 +206,16 @@ export async function fetchDepartmentHeadGrievances(
           },
         },
         { status: "SUBMITTED" },
+        { status: "AWAITING_ROUTING" },
+        { status: "AWAITING_ASSIGNMENT" },
         { status: "ROUTED" },
       ],
     });
   } else if (tab === "IN_PROGRESS") {
     conditions.push({
-      status: { in: ["ASSIGNED", "IN_PROGRESS"] },
+      status: {
+        in: ["ASSIGNED", "IN_PROGRESS", "AWAITING_INFORMATION", "REWORK"],
+      },
     });
   } else if (tab === "HIGH_CRITICAL") {
     conditions.push({
@@ -224,18 +228,22 @@ export async function fetchDepartmentHeadGrievances(
     });
   } else if (tab === "ESCALATED") {
     conditions.push({
-      status: "ESCALATED",
+      OR: [
+        { status: "ESCALATED" },
+        { sla_status: "BREACHED" },
+        { escalations: { some: { status: "OPEN" } } },
+      ],
     });
   } else if (tab === "REOPENED") {
     conditions.push({
       OR: [
         { reopen_count: { gt: 0 } },
-        { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+        { status: { in: ["REOPENED", "REWORK", "REOPEN_REVIEW"] } },
       ],
     });
   } else if (tab === "RESOLUTION_REVIEW") {
     conditions.push({
-      status: "UNDER_REVIEW",
+      status: { in: ["RESOLUTION_PENDING_APPROVAL", "UNDER_REVIEW"] },
     });
   } else if (tab === "CLOSED") {
     conditions.push({
@@ -310,6 +318,23 @@ export async function fetchDepartmentHeadGrievances(
           },
           take: 15,
         },
+        sla_tracking: {
+          orderBy: { sla_tracking_id: "desc" },
+          take: 1,
+        },
+        sla_extensions: {
+          orderBy: { extension_id: "desc" },
+          take: 1,
+          include: {
+            users_requested_by: {
+              select: {
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ priority: "desc" }, { created_at: "desc" }],
       ...(skip !== undefined ? { skip } : {}),
@@ -356,6 +381,8 @@ export async function fetchDepartmentHeadGrievances(
     const isDeptPendingAssignment =
       myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
       g.status === "SUBMITTED" ||
+      g.status === "AWAITING_ROUTING" ||
+      g.status === "AWAITING_ASSIGNMENT" ||
       g.status === "ROUTED" ||
       (g.status === "REOPENED" &&
         myDeptRecord?.status === "PENDING_ASSIGNMENT");
@@ -909,9 +936,22 @@ export async function fetchDepartmentHeadGrievances(
     if (myDeptRecord) {
       if (g.status === "CLOSED" || g.status === "RESOLVED") {
         resolvedStatus = g.status as GrievanceItem["status"];
-      } else if (g.status === "UNDER_REVIEW") {
-        resolvedStatus = "UNDER_REVIEW";
-      } else if (g.status === "REOPENED" || g.status === "REOPEN_REVIEW") {
+      } else if (
+        g.status === "AWAITING_INFORMATION" ||
+        g.status === "WAITING_ON_USER" ||
+        g.status === "WAITING_ON_EMPLOYEE"
+      ) {
+        resolvedStatus = "AWAITING_INFORMATION";
+      } else if (
+        g.status === "RESOLUTION_PENDING_APPROVAL" ||
+        g.status === "UNDER_REVIEW"
+      ) {
+        resolvedStatus = "RESOLUTION_PENDING_APPROVAL";
+      } else if (
+        g.status === "REWORK" ||
+        g.status === "REOPENED" ||
+        g.status === "REOPEN_REVIEW"
+      ) {
         resolvedStatus = g.status as GrievanceItem["status"];
       } else if (myDeptRecord.status === "COMPLETED") {
         resolvedStatus = "COMPLETED";
@@ -923,7 +963,12 @@ export async function fetchDepartmentHeadGrievances(
         myDeptRecord.status === "PENDING_ASSIGNMENT" ||
         !myDeptAssignment
       ) {
-        resolvedStatus = "PENDING_ASSIGNMENT";
+        resolvedStatus =
+          g.status === "AWAITING_ROUTING"
+            ? "AWAITING_ROUTING"
+            : g.status === "AWAITING_ASSIGNMENT"
+              ? "AWAITING_ASSIGNMENT"
+              : "AWAITING_ASSIGNMENT";
       } else if (myDeptRecord.status === "ASSIGNED") {
         resolvedStatus = "ASSIGNED";
       } else if (myDeptRecord.status === "IN_PROGRESS") {
@@ -946,31 +991,64 @@ export async function fetchDepartmentHeadGrievances(
           : "Blocked";
         resolvedSlaStatus = "ON_TRACK";
       } else {
+        const activeSla = g.sla_tracking?.[0];
         const deptAllocatedMins =
-          myDeptRecord.allocated_duration_minutes ||
-          (g.due_at && g.created_at
+          activeSla?.due_at && activeSla?.started_at
             ? Math.max(
                 1,
                 Math.round(
-                  ((g.due_at.getTime() - g.created_at.getTime()) *
-                    (Number(myDeptRecord.sla_percent_allocation || 100) /
-                      100)) /
+                  (new Date(activeSla.due_at).getTime() -
+                    new Date(activeSla.started_at).getTime()) /
                     60000,
                 ),
               )
-            : 1440);
+            : myDeptRecord.allocated_duration_minutes ||
+              (g.due_at && g.created_at
+                ? Math.max(
+                    1,
+                    Math.round(
+                      ((g.due_at.getTime() - g.created_at.getTime()) *
+                        (Number(myDeptRecord.sla_percent_allocation || 100) /
+                          100)) /
+                        60000,
+                    ),
+                  )
+                : 1440);
 
-        const deptStart =
-          myDeptRecord.activated_at || myDeptRecord.assigned_at || g.created_at;
-        const deptDue =
-          myDeptRecord.due_at ||
-          new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
+        const isPaused = Boolean(
+          activeSla?.paused_at ||
+            g.status === "AWAITING_INFORMATION" ||
+            g.status === "WAITING_ON_USER" ||
+            g.status === "WAITING_ON_EMPLOYEE" ||
+            g.status === "RESOLUTION_PENDING_APPROVAL" ||
+            g.status === "UNDER_REVIEW",
+        );
+        const pausedAt = isPaused
+          ? activeSla?.paused_at
+            ? new Date(activeSla.paused_at)
+            : new Date()
+          : null;
+        const accumulatedPausedMins =
+          activeSla?.accumulated_paused_minutes || 0;
+
+        const deptStart = activeSla?.started_at
+          ? new Date(activeSla.started_at)
+          : myDeptRecord.activated_at ||
+            myDeptRecord.assigned_at ||
+            g.created_at;
+        const deptDue = activeSla?.due_at
+          ? new Date(activeSla.due_at)
+          : myDeptRecord.due_at ||
+            new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
 
         const deptSlaResult = calculateDepartmentSlaConsumption(
           deptStart,
           deptDue,
           deptAllocatedMins,
           myDeptRecord.completed_at,
+          new Date(),
+          accumulatedPausedMins,
+          pausedAt,
         );
 
         resolvedSlaConsumptionPercent = deptSlaResult.consumptionPercent;
@@ -983,13 +1061,41 @@ export async function fetchDepartmentHeadGrievances(
           resolvedSlaStatus,
           g.priority,
           deptStart,
+          isPaused,
+          pausedAt,
         );
       }
     } else {
+      const activeSla = g.sla_tracking?.[0];
+      const isPaused = Boolean(
+        activeSla?.paused_at ||
+          g.status === "AWAITING_INFORMATION" ||
+          g.status === "WAITING_ON_USER" ||
+          g.status === "WAITING_ON_EMPLOYEE" ||
+          g.status === "RESOLUTION_PENDING_APPROVAL" ||
+          g.status === "UNDER_REVIEW",
+      );
+      const pausedAt = isPaused
+        ? activeSla?.paused_at
+          ? new Date(activeSla.paused_at)
+          : new Date()
+        : null;
+      const accumulatedPausedMins = activeSla?.accumulated_paused_minutes || 0;
+
+      const effectiveStart = activeSla?.started_at
+        ? new Date(activeSla.started_at)
+        : g.created_at;
+      const effectiveDue = activeSla?.due_at
+        ? new Date(activeSla.due_at)
+        : g.due_at;
+
       const slaConsumption = calculateSlaConsumption(
-        g.created_at,
-        g.due_at,
+        effectiveStart,
+        effectiveDue,
         g.priority,
+        new Date(),
+        accumulatedPausedMins,
+        pausedAt,
       );
       resolvedSlaConsumptionPercent = slaConsumption.consumptionPercent;
       resolvedSlaStatus =
@@ -999,12 +1105,16 @@ export async function fetchDepartmentHeadGrievances(
           : slaConsumption.consumptionPercent >= 75
             ? "AT_RISK"
             : "ON_TRACK");
-      resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+      resolvedSlaDeadline = effectiveDue
+        ? formatFriendlyDate(effectiveDue)
+        : "N/A";
       resolvedSlaTimeLeft = formatSlaTimeLeft(
-        g.due_at,
-        g.sla_status,
+        effectiveDue,
+        resolvedSlaStatus,
         g.priority,
-        g.created_at,
+        effectiveStart,
+        isPaused,
+        pausedAt,
       );
     }
     const submitterFullName =
@@ -1057,7 +1167,31 @@ export async function fetchDepartmentHeadGrievances(
       createdAt: formatFriendlyDate(g.created_at),
       isReopened: g.reopen_count > 0 || g.status === "REOPENED",
       reopenCount: g.reopen_count,
+      rejectionCount: (g.audit_logs || []).filter(
+        (l) =>
+          l.action === "REWORK_REJECTED" ||
+          l.action === "REOPEN_REJECTED" ||
+          l.action === "REWORK_REJECTED_FINAL" ||
+          l.action === "REOPEN_REJECTED_FINAL",
+      ).length,
       hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
+      latestExtension: g.sla_extensions?.[0]
+        ? {
+            id: g.sla_extensions[0].extension_id.toString(),
+            status: g.sla_extensions[0].status as
+              | "PENDING"
+              | "APPROVED"
+              | "REJECTED",
+            requestedMinutes: g.sla_extensions[0].requested_duration_minutes,
+            grantedMinutes: g.sla_extensions[0].granted_duration_minutes,
+            reason: g.sla_extensions[0].reason,
+            createdAt: g.sla_extensions[0].created_at.toISOString(),
+            requestedByName: g.sla_extensions[0].users_requested_by
+              ? `${g.sla_extensions[0].users_requested_by.first_name} ${g.sla_extensions[0].users_requested_by.last_name || ""}`.trim()
+              : "Staff Member",
+          }
+        : null,
+      hasPendingExtension: g.sla_extensions?.[0]?.status === "PENDING",
       isCrossDepartment,
       collaboratingDepartments: deptList,
       departmentsInvolved,
@@ -1071,9 +1205,10 @@ export async function fetchDepartmentHeadGrievances(
       escalationReason: latestEscalation?.reason || undefined,
       escalationLevel: latestEscalation?.escalation_level || undefined,
       escalationStage:
-        g.status === "ESCALATED"
+        g.status === "ESCALATED" || g.sla_status === "BREACHED"
           ? ("GRIEVANCE_ESCALATED" as const)
-          : g.status === "UNDER_REVIEW"
+          : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+              g.status === "UNDER_REVIEW"
             ? ("RESOLUTION_SUBMITTED" as const)
             : g.status === "CLOSED"
               ? ("ESCALATION_CLEARED" as const)

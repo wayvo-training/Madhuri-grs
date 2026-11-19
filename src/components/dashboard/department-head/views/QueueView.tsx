@@ -5,7 +5,7 @@ import {
   BookOpen,
   CheckCircle2,
   Eye,
-  GitBranch,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   User,
@@ -77,6 +77,8 @@ export interface QueueViewProps {
   onInspect: (item: GrievanceItem, tab?: CaseDrawerTab) => void;
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
   onIntervene: (item: GrievanceItem) => void;
+  onDirectIntervene?: (item: GrievanceItem) => void;
+  onRejectRequest?: (item: GrievanceItem) => void;
   onReviewResolution: (item: GrievanceItem) => void;
   onProposeKb?: (item: GrievanceItem) => void;
 }
@@ -94,7 +96,7 @@ export function QueueView({
   staffFilter = "ALL",
   setStaffFilter: _setStaffFilter,
   statusFilter = "ALL",
-  setStatusFilter,
+  setStatusFilter: _setStatusFilter,
   departmentFilter: _departmentFilter = "ALL",
   setDepartmentFilter: _setDepartmentFilter,
   slaFilter: _slaFilter = "ALL",
@@ -107,11 +109,13 @@ export function QueueView({
   selectedDeptId: _selectedDeptId,
   onDepartmentChange: _onDepartmentChange,
   resetFilters,
-  metrics,
+  metrics: _metrics,
   isLoading = false,
   onInspect,
   onAssign,
   onIntervene,
+  onDirectIntervene,
+  onRejectRequest,
   onReviewResolution,
   onProposeKb,
 }: QueueViewProps) {
@@ -172,6 +176,8 @@ export function QueueView({
           !g.assignedStaffName ||
           g.assignedStaffName === "Unassigned" ||
           g.status === "SUBMITTED" ||
+          g.status === "AWAITING_ROUTING" ||
+          g.status === "AWAITING_ASSIGNMENT" ||
           g.status === "ROUTED" ||
           g.status === "PENDING_ASSIGNMENT" ||
           g.myDepartmentStatus === "PENDING_ASSIGNMENT";
@@ -181,11 +187,17 @@ export function QueueView({
         const isInProgress =
           g.status === "IN_PROGRESS" ||
           g.status === "ASSIGNED" ||
+          g.status === "AWAITING_INFORMATION" ||
+          g.status === "REWORK" ||
           g.myDepartmentStatus === "IN_PROGRESS" ||
           g.myDepartmentStatus === "ASSIGNED";
         if (!isInProgress) return false;
       } else if (selectedTab === "RESOLUTION_REVIEW") {
-        if (g.status !== "UNDER_REVIEW" && !canHeadSubmitResolution(g)) {
+        if (
+          g.status !== "UNDER_REVIEW" &&
+          g.status !== "RESOLUTION_PENDING_APPROVAL" &&
+          !canHeadSubmitResolution(g)
+        ) {
           return false;
         }
       } else if (selectedTab === "CLOSED") {
@@ -201,12 +213,21 @@ export function QueueView({
             !g.assignedStaffName ||
             g.assignedStaffName === "Unassigned" ||
             g.status === "SUBMITTED" ||
+            g.status === "AWAITING_ROUTING" ||
+            g.status === "AWAITING_ASSIGNMENT" ||
             g.status === "ROUTED" ||
             g.status === "PENDING_ASSIGNMENT" ||
             g.myDepartmentStatus === "PENDING_ASSIGNMENT";
           if (!isUnassigned) return false;
         } else if (statusFilter === "IN_PROGRESS") {
-          if (["CLOSED", "RESOLVED", "UNDER_REVIEW"].includes(g.status))
+          if (
+            [
+              "CLOSED",
+              "RESOLVED",
+              "UNDER_REVIEW",
+              "RESOLUTION_PENDING_APPROVAL",
+            ].includes(g.status)
+          )
             return false;
           if (g.isReopened || g.status === "REOPENED") return false;
           const isUnassigned =
@@ -214,17 +235,27 @@ export function QueueView({
             !g.assignedStaffName ||
             g.assignedStaffName === "Unassigned" ||
             g.status === "SUBMITTED" ||
+            g.status === "AWAITING_ROUTING" ||
+            g.status === "AWAITING_ASSIGNMENT" ||
             g.status === "ROUTED" ||
             g.status === "PENDING_ASSIGNMENT" ||
             g.myDepartmentStatus === "PENDING_ASSIGNMENT";
           if (isUnassigned) return false;
-        } else if (statusFilter === "UNDER_REVIEW") {
-          if (g.status !== "UNDER_REVIEW") return false;
+        } else if (
+          statusFilter === "UNDER_REVIEW" ||
+          statusFilter === "RESOLUTION_PENDING_APPROVAL"
+        ) {
+          if (
+            g.status !== "UNDER_REVIEW" &&
+            g.status !== "RESOLUTION_PENDING_APPROVAL"
+          )
+            return false;
         } else if (statusFilter === "ASSIGNED") {
           if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
             return false;
         } else if (statusFilter === "REOPENED") {
-          if (!g.isReopened && g.status !== "REOPENED") return false;
+          if (!g.isReopened && g.status !== "REOPENED" && g.status !== "REWORK")
+            return false;
         } else if (statusFilter === "RESOLVED") {
           if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
         } else if (g.status !== statusFilter) {
@@ -284,7 +315,7 @@ export function QueueView({
 
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        if (!isNaN(dateA) && !isNaN(dateB) && dateA !== dateB) {
+        if (!Number.isNaN(dateA) && !Number.isNaN(dateB) && dateA !== dateB) {
           return dateB - dateA;
         }
 
@@ -298,7 +329,7 @@ export function QueueView({
       if (field === "createdAt") {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        if (!isNaN(timeA) && !isNaN(timeB) && timeA !== timeB) {
+        if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
           return sortState.direction === "asc" ? timeA - timeB : timeB - timeA;
         }
       }
@@ -903,6 +934,7 @@ export function QueueView({
                               ...(canHeadSubmitResolution(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
+                              item.status !== "REWORK" &&
                               item.myDepartmentStatus !== "COMPLETED"
                                 ? [
                                     {
@@ -918,9 +950,48 @@ export function QueueView({
                                     },
                                   ]
                                 : []),
+                              ...(item.status === "REWORK"
+                                ? [
+                                    {
+                                      label: "Assign Staff for Rework",
+                                      icon: (
+                                        <UserPlus className="h-3.5 w-3.5 text-teal-600" />
+                                      ),
+                                      variant: "default" as const,
+                                      onClick: () => onAssign(item),
+                                    },
+                                    ...(onDirectIntervene
+                                      ? [
+                                          {
+                                            label: "Intervene Directly",
+                                            icon: (
+                                              <Shield className="h-3.5 w-3.5 text-emerald-600" />
+                                            ),
+                                            variant: "default" as const,
+                                            onClick: () =>
+                                              onDirectIntervene(item),
+                                          },
+                                        ]
+                                      : []),
+                                    ...(onRejectRequest
+                                      ? [
+                                          {
+                                            label: "Decline Rework Request",
+                                            icon: (
+                                              <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
+                                            ),
+                                            variant: "danger" as const,
+                                            onClick: () =>
+                                              onRejectRequest(item),
+                                          },
+                                        ]
+                                      : []),
+                                  ]
+                                : []),
                               ...(!hasHeadResolutionAuthority(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
+                              item.status !== "REWORK" &&
                               !item.isBlocked &&
                               item.status !== "BLOCKED" &&
                               item.myDepartmentStatus !== "BLOCKED" &&
@@ -940,6 +1011,7 @@ export function QueueView({
                               ...(!hasHeadResolutionAuthority(item) &&
                               item.status !== "CLOSED" &&
                               item.status !== "RESOLVED" &&
+                              item.status !== "REWORK" &&
                               item.status !== "COMPLETED" &&
                               item.status !== "UNDER_REVIEW" &&
                               item.myDepartmentStatus !== "COMPLETED" &&

@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     // 1. Tab condition
     if (tab === "EXCEPTIONS") {
       conditions.push({
-        status: "SUBMITTED",
+        status: { in: ["SUBMITTED", "AWAITING_ROUTING"] },
         grievance_departments: { none: {} },
       });
     } else if (tab === "ACTIVE" || tab === "IN_PROGRESS") {
@@ -48,12 +48,25 @@ export async function GET(request: Request) {
       conditions.push({
         OR: [
           { reopen_count: { gt: 0 } },
-          { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
+          {
+            status: {
+              in: [
+                "REOPENED",
+                "RESOLUTION_PENDING_APPROVAL",
+                "REWORK",
+                "REOPEN_REVIEW",
+              ],
+            },
+          },
         ],
       });
     } else if (tab === "ESCALATED") {
       conditions.push({
-        status: "ESCALATED",
+        OR: [
+          { status: "ESCALATED" },
+          { sla_status: "BREACHED" },
+          { escalations: { some: { status: "OPEN" } } },
+        ],
       });
     } else if (tab === "CLOSED") {
       conditions.push({
@@ -109,20 +122,32 @@ export async function GET(request: Request) {
     if (status !== "ALL") {
       let stats = status.split(",").map((s) => s.trim().toUpperCase());
 
-      // Expand UNASSIGNED to SUBMITTED and ROUTED (awaiting staff assignment)
+      // Expand UNASSIGNED to SUBMITTED, AWAITING_ROUTING, and AWAITING_ASSIGNMENT
       if (stats.includes("UNASSIGNED")) {
         stats = stats
           .filter((s) => s !== "UNASSIGNED")
-          .concat(["SUBMITTED", "ROUTED"]);
+          .concat([
+            "SUBMITTED",
+            "AWAITING_ROUTING",
+            "AWAITING_ASSIGNMENT",
+            "ROUTED",
+          ]);
       }
-      // Expand IN_PROGRESS to include UNDER_REVIEW and ESCALATED
+      // Expand IN_PROGRESS to include AWAITING_INFORMATION, REWORK, RESOLUTION_PENDING_APPROVAL
       if (stats.includes("IN_PROGRESS")) {
+        if (!stats.includes("AWAITING_INFORMATION"))
+          stats.push("AWAITING_INFORMATION");
+        if (!stats.includes("REWORK")) stats.push("REWORK");
+        if (!stats.includes("RESOLUTION_PENDING_APPROVAL"))
+          stats.push("RESOLUTION_PENDING_APPROVAL");
         if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
-        if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
       }
-      // Expand REOPENED to include REOPEN_REVIEW
-      if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
-        stats.push("REOPEN_REVIEW");
+      // Expand REOPENED to include RESOLUTION_PENDING_APPROVAL and REWORK
+      if (stats.includes("REOPENED")) {
+        if (!stats.includes("REWORK")) stats.push("REWORK");
+        if (!stats.includes("RESOLUTION_PENDING_APPROVAL"))
+          stats.push("RESOLUTION_PENDING_APPROVAL");
+        if (!stats.includes("REOPEN_REVIEW")) stats.push("REOPEN_REVIEW");
       }
 
       conditions.push({ status: { in: stats } });
@@ -162,11 +187,11 @@ export async function GET(request: Request) {
         SELECT
           COUNT(*)::int AS all_count,
           COUNT(*) FILTER (
-            WHERE status = 'SUBMITTED' 
+            WHERE status IN ('SUBMITTED', 'AWAITING_ROUTING') 
             OR NOT EXISTS (SELECT 1 FROM grievance_departments gd WHERE gd.grievance_id = grievances.grievance_id)
           )::int AS exception_count,
           COUNT(*) FILTER (
-            WHERE status IN ('ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'UNDER_REVIEW')
+            WHERE status IN ('AWAITING_ASSIGNMENT', 'ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'AWAITING_INFORMATION', 'REWORK', 'RESOLUTION_PENDING_APPROVAL', 'UNDER_REVIEW')
           )::int AS active_count,
           COUNT(*) FILTER (
             WHERE sla_status = 'AT_RISK'
@@ -178,10 +203,10 @@ export async function GET(request: Request) {
             WHERE sla_status = 'BREACHED' OR status = 'ESCALATED'
           )::int AS sla_critical_count,
           COUNT(*) FILTER (
-            WHERE reopen_count > 0 OR status IN ('REOPENED', 'REOPEN_REVIEW')
+            WHERE reopen_count > 0 OR status IN ('REOPENED', 'RESOLUTION_PENDING_APPROVAL', 'REWORK', 'REOPEN_REVIEW')
           )::int AS reopened_count,
           COUNT(*) FILTER (
-            WHERE status = 'ESCALATED'
+            WHERE sla_status = 'BREACHED' OR status = 'ESCALATED' OR EXISTS (SELECT 1 FROM escalations e WHERE e.grievance_id = grievances.grievance_id AND e.status = 'OPEN')
           )::int AS escalated_count
         FROM grievances;
       `,

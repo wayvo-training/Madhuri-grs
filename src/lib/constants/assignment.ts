@@ -14,5 +14,10 @@ export const DEFAULT_ASSIGNMENT_CONFIG = {
     BEGINNER: 0.5,
   } as Record<string, number>,
   // Grievance statuses where staff active investigation workload is completed
-  INACTIVE_WORKLOAD_STATUSES: ["CLOSED", "RESOLVED", "UNDER_REVIEW"] as const,
+  INACTIVE_WORKLOAD_STATUSES: [
+    "CLOSED",
+    "RESOLVED",
+    "UNDER_REVIEW",
+    "RESOLUTION_PENDING_APPROVAL",
+  ] as const,
 };

@@ -10,17 +10,35 @@ export function filterStaffGrievances(
   return items.filter((item) => {
     // 1. Tab filter
     if (filters.tab === "in_progress") {
-      if (item.status !== "IN_PROGRESS" && item.status !== "ASSIGNED") {
+      if (
+        item.status !== "IN_PROGRESS" &&
+        item.status !== "ASSIGNED" &&
+        item.status !== "AWAITING_INFORMATION" &&
+        item.status !== "REWORK"
+      ) {
         return false;
       }
     } else if (filters.tab === "at_risk") {
       if (item.slaStatus !== "AT_RISK") return false;
     } else if (filters.tab === "breached") {
-      if (item.slaStatus !== "BREACHED") return false;
+      if (item.slaStatus !== "BREACHED" && item.status !== "ESCALATED") {
+        return false;
+      }
     } else if (filters.tab === "reopened") {
-      if (item.reopenCount <= 0 && item.status !== "REOPENED") return false;
+      if (
+        item.reopenCount <= 0 &&
+        item.status !== "REOPENED" &&
+        item.status !== "REWORK"
+      ) {
+        return false;
+      }
     } else if (filters.tab === "completed") {
-      if (item.status !== "CLOSED" && item.status !== "UNDER_REVIEW") {
+      if (
+        item.status !== "CLOSED" &&
+        item.status !== "RESOLVED" &&
+        item.status !== "RESOLUTION_PENDING_APPROVAL" &&
+        item.status !== "UNDER_REVIEW"
+      ) {
         return false;
       }
     }
