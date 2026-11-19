@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
   BookOpen,
   CheckCircle2,
   FileCheck2,
   Mail,
+  Shield,
   UserCheck,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,6 +34,8 @@ interface CaseInspectionFooterProps {
   hodEmail?: string;
   onClose: () => void;
   onAssignClick: (item: GrievanceItem) => void;
+  onDirectInterveneClick?: (item: GrievanceItem) => void;
+  onDeclineRequestClick?: (item: GrievanceItem) => void;
   onEscalateClick?: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
   onProposeKbClick?: (item: GrievanceItem) => void;
@@ -51,6 +55,8 @@ export function CaseInspectionFooter({
   hodEmail,
   onClose,
   onAssignClick,
+  onDirectInterveneClick,
+  onDeclineRequestClick,
   onEscalateClick: _onEscalateClick,
   onReviewResolutionClick,
   onProposeKbClick,
@@ -120,7 +126,42 @@ export function CaseInspectionFooter({
             </button>
           ) : null}
 
-          {!isClosedOrResolved &&
+          {currentGrievance.status === "REWORK" ? (
+            <>
+              {onDeclineRequestClick && (
+                <button
+                  type="button"
+                  onClick={() => onDeclineRequestClick(currentGrievance)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50/80 px-3.5 py-2 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 transition cursor-pointer"
+                  title="Decline rework request and maintain original resolution"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Decline Rework</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onAssignClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+                title="Assign an eligible staff member for re-investigation"
+              >
+                <UserCheck className="h-3.5 w-3.5 text-slate-500" />
+                <span>Assign Staff</span>
+              </button>
+              {onDirectInterveneClick && (
+                <button
+                  type="button"
+                  onClick={() => onDirectInterveneClick(currentGrievance)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                  title="Assume direct authority to investigate and resolve personally"
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Intervene Directly</span>
+                </button>
+              )}
+            </>
+          ) : (
+            !isClosedOrResolved &&
             currentGrievance.status !== "COMPLETED" &&
             currentGrievance.status !== "UNDER_REVIEW" &&
             currentGrievance.myDepartmentStatus !== "COMPLETED" &&
@@ -143,9 +184,11 @@ export function CaseInspectionFooter({
                     : "Assign Staff"}
                 </span>
               </button>
-            )}
+            )
+          )}
 
-          {canHeadSubmitResolution(currentGrievance) ? (
+          {currentGrievance.status !== "REWORK" &&
+          canHeadSubmitResolution(currentGrievance) ? (
             currentGrievance.canSubmitFinalResolution !== false ? (
               <button
                 type="button"

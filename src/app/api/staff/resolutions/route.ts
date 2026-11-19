@@ -315,10 +315,12 @@ export async function POST(request: Request) {
       priority: grievance.priority,
     });
 
-    const requiresHeadReview = requiresHeadManualReview(
-      grievance.reopen_count,
-      reopenPolicy,
-    );
+    const isReworkOrReopened =
+      grievance.status === "REWORK" || grievance.reopen_count > 0;
+
+    const requiresHeadReview =
+      isReworkOrReopened ||
+      requiresHeadManualReview(grievance.reopen_count, reopenPolicy);
 
     // 2. Transition grievance status
     await prisma.grievances.update({

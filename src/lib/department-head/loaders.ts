@@ -978,21 +978,30 @@ export async function fetchDepartmentHeadGrievances(
           : "Blocked";
         resolvedSlaStatus = "ON_TRACK";
       } else {
+        const activeSla = g.sla_tracking?.[0];
         const deptAllocatedMins =
-          myDeptRecord.allocated_duration_minutes ||
-          (g.due_at && g.created_at
+          activeSla?.due_at && activeSla?.started_at
             ? Math.max(
                 1,
                 Math.round(
-                  ((g.due_at.getTime() - g.created_at.getTime()) *
-                    (Number(myDeptRecord.sla_percent_allocation || 100) /
-                      100)) /
+                  (new Date(activeSla.due_at).getTime() -
+                    new Date(activeSla.started_at).getTime()) /
                     60000,
                 ),
               )
-            : 1440);
+            : myDeptRecord.allocated_duration_minutes ||
+              (g.due_at && g.created_at
+                ? Math.max(
+                    1,
+                    Math.round(
+                      ((g.due_at.getTime() - g.created_at.getTime()) *
+                        (Number(myDeptRecord.sla_percent_allocation || 100) /
+                          100)) /
+                        60000,
+                    ),
+                  )
+                : 1440);
 
-        const activeSla = g.sla_tracking?.[0];
         const isPaused = Boolean(
           activeSla?.paused_at ||
             g.status === "AWAITING_INFORMATION" ||
@@ -1009,11 +1018,15 @@ export async function fetchDepartmentHeadGrievances(
         const accumulatedPausedMins =
           activeSla?.accumulated_paused_minutes || 0;
 
-        const deptStart =
-          myDeptRecord.activated_at || myDeptRecord.assigned_at || g.created_at;
-        const deptDue =
-          myDeptRecord.due_at ||
-          new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
+        const deptStart = activeSla?.started_at
+          ? new Date(activeSla.started_at)
+          : myDeptRecord.activated_at ||
+            myDeptRecord.assigned_at ||
+            g.created_at;
+        const deptDue = activeSla?.due_at
+          ? new Date(activeSla.due_at)
+          : myDeptRecord.due_at ||
+            new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
 
         const deptSlaResult = calculateDepartmentSlaConsumption(
           deptStart,
@@ -1132,6 +1145,13 @@ export async function fetchDepartmentHeadGrievances(
       createdAt: formatFriendlyDate(g.created_at),
       isReopened: g.reopen_count > 0 || g.status === "REOPENED",
       reopenCount: g.reopen_count,
+      rejectionCount: (g.audit_logs || []).filter(
+        (l) =>
+          l.action === "REWORK_REJECTED" ||
+          l.action === "REOPEN_REJECTED" ||
+          l.action === "REWORK_REJECTED_FINAL" ||
+          l.action === "REOPEN_REJECTED_FINAL",
+      ).length,
       hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
       isCrossDepartment,
       collaboratingDepartments: deptList,

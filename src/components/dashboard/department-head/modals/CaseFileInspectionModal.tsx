@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, UserCheck } from "lucide-react";
+import { AlertTriangle, RotateCcw, Shield, UserCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
   CaseNotesSkeleton,
@@ -37,6 +37,8 @@ export interface CaseFileInspectionModalProps {
   onOpenDocumentPreview: (doc: DocumentPreviewData) => void;
   onDownloadDocument: (doc: DocumentPreviewData) => void;
   onAssignClick: (item: GrievanceItem) => void;
+  onDirectInterveneClick?: (item: GrievanceItem) => void;
+  onDeclineRequestClick?: (item: GrievanceItem) => void;
   onEscalateClick?: (item: GrievanceItem) => void;
   onReviewResolutionClick: (item: GrievanceItem) => void;
   onProposeKbClick?: (item: GrievanceItem) => void;
@@ -66,6 +68,8 @@ export function CaseFileInspectionModal({
   onOpenDocumentPreview,
   onDownloadDocument,
   onAssignClick,
+  onDirectInterveneClick,
+  onDeclineRequestClick,
   onEscalateClick,
   onReviewResolutionClick,
   onProposeKbClick,
@@ -249,6 +253,60 @@ export function CaseFileInspectionModal({
                 <span>Change Assignment</span>
               </button>
             )}
+          </div>
+        )}
+
+        {currentGrievance.status === "REWORK" && (
+          <div className="mx-6 mt-3 rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0 mt-0.5">
+                  <RotateCcw className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+                    Citizen Rework Request Awaiting Your Action
+                  </h4>
+                  <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                    The citizen was unsatisfied with the initial resolution.
+                    Please choose to assign an officer for re-investigation,
+                    intervene directly to resolve personally, or decline the
+                    request.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                {onDeclineRequestClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDeclineRequestClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <span>Decline Rework</span>
+                  </button>
+                )}
+                {onAssignClick && (
+                  <button
+                    type="button"
+                    onClick={() => onAssignClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                  >
+                    <UserCheck className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Assign Staff</span>
+                  </button>
+                )}
+                {onDirectInterveneClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDirectInterveneClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
+                  >
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Intervene Directly</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -438,6 +496,8 @@ export function CaseFileInspectionModal({
           hodEmail={hodEmail}
           onClose={onClose}
           onAssignClick={onAssignClick}
+          onDirectInterveneClick={onDirectInterveneClick}
+          onDeclineRequestClick={onDeclineRequestClick}
           onEscalateClick={onEscalateClick}
           onReviewResolutionClick={onReviewResolutionClick}
           onProposeKbClick={onProposeKbClick}

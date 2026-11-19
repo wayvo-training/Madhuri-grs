@@ -368,35 +368,49 @@ export async function GET(
     // 2. SLA calculations
     const now = new Date();
     const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
-    const deptAllocatedMins =
-      myDeptRecord?.allocated_duration_minutes ||
-      (grievance.due_at && grievance.created_at
-        ? Math.max(
-            1,
-            Math.round(
-              ((new Date(grievance.due_at).getTime() -
-                new Date(grievance.created_at).getTime()) *
-                (Number(myDeptRecord?.sla_percent_allocation || 100) / 100)) /
-                60000,
-            ),
-          )
-        : 1440);
+    const activeSla = grievance.sla_tracking?.[0];
 
-    const createdAt = myDeptRecord?.activated_at
-      ? new Date(myDeptRecord.activated_at)
-      : myDeptRecord?.assigned_at
-        ? new Date(myDeptRecord.assigned_at)
-        : new Date(grievance.created_at);
+    const createdAt = activeSla?.started_at
+      ? new Date(activeSla.started_at)
+      : myDeptRecord?.activated_at
+        ? new Date(myDeptRecord.activated_at)
+        : myDeptRecord?.assigned_at
+          ? new Date(myDeptRecord.assigned_at)
+          : new Date(grievance.created_at);
 
     const dueAt = isDeptBlocked
       ? null
-      : myDeptRecord?.due_at
-        ? new Date(myDeptRecord.due_at)
-        : grievance.due_at
-          ? new Date(grievance.due_at)
-          : null;
+      : activeSla?.due_at
+        ? new Date(activeSla.due_at)
+        : myDeptRecord?.due_at
+          ? new Date(myDeptRecord.due_at)
+          : grievance.due_at
+            ? new Date(grievance.due_at)
+            : null;
 
-    const activeSla = grievance.sla_tracking?.[0];
+    const deptAllocatedMins =
+      activeSla?.due_at && activeSla?.started_at
+        ? Math.max(
+            1,
+            Math.round(
+              (new Date(activeSla.due_at).getTime() -
+                new Date(activeSla.started_at).getTime()) /
+                60000,
+            ),
+          )
+        : myDeptRecord?.allocated_duration_minutes ||
+          (grievance.due_at && grievance.created_at
+            ? Math.max(
+                1,
+                Math.round(
+                  ((new Date(grievance.due_at).getTime() -
+                    new Date(grievance.created_at).getTime()) *
+                    (Number(myDeptRecord?.sla_percent_allocation || 100) /
+                      100)) /
+                    60000,
+                ),
+              )
+            : 1440);
     const isPaused = Boolean(
       activeSla?.paused_at ||
         grievance.status === "AWAITING_INFORMATION" ||

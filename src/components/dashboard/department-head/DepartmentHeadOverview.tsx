@@ -23,11 +23,13 @@ import type {
   GrievanceItem,
   StaffMember,
 } from "@/types/department-head";
+import type { GrievanceLifecycleStatus } from "@/types/grievance-status";
 import type { StaffGrievanceItem } from "@/types/staff";
 import { DepartmentHeadViewSwitcher } from "./components";
 import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 import {
   CaseFileInspectionModal,
+  DeclineRequestModal,
   DepartmentHeadEscalationModal,
   DepartmentHeadResolutionModal,
   DocumentViewerModal,
@@ -240,6 +242,9 @@ export function DepartmentHeadOverviewInner({
   const [proposeKbGrievance, setProposeKbGrievance] =
     useState<GrievanceItem | null>(null);
 
+  const [declineModalGrievance, setDeclineModalGrievance] =
+    useState<GrievanceItem | null>(null);
+
   // Modal Handlers
   const handleOpenProposeKbModal = useCallback((item: GrievanceItem) => {
     setProposeKbGrievance(item);
@@ -318,6 +323,134 @@ export function DepartmentHeadOverviewInner({
       setCaseDrawerTab(tab);
     },
     [],
+  );
+
+  const handleOpenDeclineModal = useCallback((item: GrievanceItem) => {
+    setDeclineModalGrievance(item);
+  }, []);
+
+  const handleExecuteDeclineRequest = useCallback(
+    async (item: GrievanceItem, reason: string): Promise<boolean> => {
+      try {
+        const res = await fetch(
+          `/api/department-head/grievances/${item.id}/review-request`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              decision: "REJECT",
+              reason,
+            }),
+          },
+        );
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          toast.error(data.message || "Failed to decline request.");
+          return false;
+        }
+
+        toast.success(
+          data.message ||
+            (data.isClosed
+              ? `Rework request rejected. Maximum reviews reached (3/3). Case CLOSED.`
+              : `Rework request declined. Grievance reverted to RESOLVED.`),
+        );
+
+        const targetStatus =
+          (data.status as GrievanceLifecycleStatus) ||
+          (data.isClosed
+            ? "CLOSED"
+            : item.status === "REWORK"
+              ? "RESOLVED"
+              : "CLOSED");
+        setGrievances((prev) =>
+          prev.map((g) =>
+            g.id === item.id
+              ? {
+                  ...g,
+                  status: targetStatus,
+                  rejectionCount:
+                    typeof data.rejectionCount === "number"
+                      ? data.rejectionCount
+                      : (g.rejectionCount ?? 0) + 1,
+                  rejectionInfo: {
+                    type: item.status === "REWORK" ? "REWORK" : "REOPEN",
+                    reason,
+                    rejectedAt: new Date().toISOString(),
+                  },
+                }
+              : g,
+          ),
+        );
+        setSelectedCaseFile(null);
+        loadData(selectedDeptId, true);
+        return true;
+      } catch (err) {
+        console.error("Error declining request:", err);
+        toast.error("An unexpected error occurred while declining request.");
+        return false;
+      }
+    },
+    [loadData, selectedDeptId],
+  );
+
+  const handleDirectIntervention = useCallback(
+    async (item: GrievanceItem) => {
+      try {
+        const res = await fetch(
+          `/api/department-head/grievances/${item.id}/review-request`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              decision: "APPROVE",
+              reason: "Department Head assumed direct authority to resolve",
+            }),
+          },
+        );
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          toast.error(
+            data.message || "Failed to assume direct authority on grievance.",
+          );
+          return;
+        }
+
+        toast.success(
+          "Direct authority assumed. You may now investigate and submit the revised resolution.",
+        );
+
+        const updatedGrievance: GrievanceItem = {
+          ...item,
+          status: "IN_PROGRESS",
+          assignedStaffName: currentHodName || "Department Head",
+          isAssignedToHead: true,
+          reopenCount: (item.reopenCount ?? 0) + 1,
+          hodIntervention: {
+            actionType: "ASSUME_RESOLUTION_AUTHORITY",
+            actionLabel: "Direct Resolution Authority",
+            note: "Department Head assumed direct authority",
+            intervenedAt: "Just now",
+            intervenedBy: currentHodName || "Department Head",
+            isResolutionAuthority: true,
+            resolutionAuthorityName: currentHodName || "Department Head",
+          },
+        };
+
+        setGrievances((prev) =>
+          prev.map((g) => (g.id === item.id ? updatedGrievance : g)),
+        );
+        setSelectedCaseFile(null);
+        loadData(selectedDeptId, true);
+
+        // Open resolution modal directly so Head can formulate resolution
+        handleOpenResolutionModal(updatedGrievance);
+      } catch (err) {
+        console.error("Error assuming direct authority:", err);
+        toast.error("Failed to assume direct authority.");
+      }
+    },
+    [currentHodName, handleOpenResolutionModal, loadData, selectedDeptId],
   );
 
   const handleEscalationFormSubmit = async (e: React.FormEvent) => {
@@ -468,6 +601,8 @@ export function DepartmentHeadOverviewInner({
           onInspect={handleInspectCase}
           onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
+          onDirectIntervene={handleDirectIntervention}
+          onRejectRequest={handleOpenDeclineModal}
           onReviewResolution={handleOpenResolutionModal}
           onProposeKb={handleOpenProposeKbModal}
         />
@@ -527,6 +662,8 @@ export function DepartmentHeadOverviewInner({
           onInspect={handleInspectCase}
           onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
+          onDirectIntervene={handleDirectIntervention}
+          onRejectRequest={handleOpenDeclineModal}
           onReviewResolution={handleOpenResolutionModal}
           onProposeKb={handleOpenProposeKbModal}
         />
@@ -669,6 +806,8 @@ export function DepartmentHeadOverviewInner({
             setSelectedCaseFile(null);
             handleOpenAssignModal(item);
           }}
+          onDirectInterveneClick={handleDirectIntervention}
+          onDeclineRequestClick={handleOpenDeclineModal}
           onEscalateClick={(item) => {
             setSelectedCaseFile(null);
             handleOpenEscalateModal(item);
@@ -706,6 +845,13 @@ export function DepartmentHeadOverviewInner({
           grievance={proposeKbGrievance}
         />
       )}
+
+      <DeclineRequestModal
+        isOpen={Boolean(declineModalGrievance)}
+        onClose={() => setDeclineModalGrievance(null)}
+        grievance={declineModalGrievance}
+        onConfirmDecline={handleExecuteDeclineRequest}
+      />
 
       <DocumentViewerModal
         document={previewDocument}

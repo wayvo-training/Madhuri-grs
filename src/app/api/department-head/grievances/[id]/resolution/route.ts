@@ -486,6 +486,16 @@ export async function POST(
               completed_at: new Date(),
             },
           });
+
+          // Ensure SLA tracking clock pauses during Employee Confirmation
+          const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");
+          await pauseSlaTracking({
+            grievanceId,
+            pauseReason: "RESOLUTION_PENDING_CONFIRMATION",
+            pausedBy: user.user_id,
+            tx,
+          });
+
           await activateNextSequentialDepartments(grievanceId, tx);
         } else {
           // Returned to staff for clarification / rework

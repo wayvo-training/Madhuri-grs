@@ -35,6 +35,7 @@ export function hasHeadResolutionAuthority(item: GrievanceItem): boolean {
     item.status === "CLOSED" ||
     item.status === "RESOLVED" ||
     item.status === "COMPLETED" ||
+    item.status === "REWORK" ||
     isResolutionSubmittedByHead(item)
   ) {
     return false;
@@ -51,6 +52,7 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
     item.status === "CLOSED" ||
     item.status === "RESOLVED" ||
     item.status === "COMPLETED" ||
+    item.status === "REWORK" ||
     isResolutionSubmittedByHead(item)
   ) {
     return false;

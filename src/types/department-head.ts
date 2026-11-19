@@ -85,6 +85,7 @@ export interface GrievanceItem {
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;
+  rejectionCount?: number;
   reopenReason?: string;
   hasProposedKb?: boolean;
   isCrossDepartment?: boolean;

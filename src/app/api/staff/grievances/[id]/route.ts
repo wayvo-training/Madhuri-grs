@@ -817,6 +817,7 @@ export async function PATCH(
       const canStart =
         grievance.status === "ASSIGNED" ||
         grievance.status === "REOPENED" ||
+        grievance.status === "REWORK" ||
         grievance.status === "IN_PROGRESS" ||
         activeAssignment?.grievance_departments?.status === "ASSIGNED" ||
         activeAssignment?.assignment_status === "ASSIGNED";
@@ -837,6 +838,21 @@ export async function PATCH(
                 changed_by: staffId,
                 remarks: "Investigation initiated by assigned staff",
               },
+            });
+          }
+
+          // If grievance was in REWORK or SLA was paused, resume SLA tracking with previously remaining duration
+          if (
+            grievance.status === "REWORK" ||
+            grievance.status === "AWAITING_INFORMATION"
+          ) {
+            const { resumeSlaTracking } = await import(
+              "@/lib/engines/sla-engine"
+            );
+            await resumeSlaTracking({
+              grievanceId,
+              resumedBy: staffId,
+              tx,
             });
           }
 
