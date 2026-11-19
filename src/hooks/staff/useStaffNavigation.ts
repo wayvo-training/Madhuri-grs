@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import type { StaffView } from "@/types/staff";
 
 export function useStaffNavigation(defaultView: StaffView = "overview") {
-  viewParam === "activity";
   // SSR-safe view: must NOT reference window during state initialization to avoid React hydration mismatches!
   const [activeView, setActiveView] = useState<StaffView>(defaultView);
 
