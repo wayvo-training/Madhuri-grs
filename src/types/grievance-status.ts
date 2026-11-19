@@ -1,7 +1,5 @@
 /**
  * Grievance Redressal System (GRS) Lifecycle Statuses
- * Strictly conforms to Approved HLD (§2.2.7) and Approved LLD (§5.7.2, Table 19 & Table 77).
- *
  * The 11 canonical lifecycle statuses:
  * 1. SUBMITTED - Grievance submitted by employee; routing in progress.
  * 2. AWAITING_ROUTING - Routing evaluation failed or unmapped; awaits Admin manual routing.
@@ -57,7 +55,7 @@ export type ResolutionReviewStatus =
   | "REWORK_REQUIRED";
 
 /**
- * Normalizes any legacy or alias status string into the canonical HLD/LLD status
+ * Normalizes any legacy or alias status string into the canonical status
  */
 export function normalizeGrievanceStatus(
   rawStatus: string,

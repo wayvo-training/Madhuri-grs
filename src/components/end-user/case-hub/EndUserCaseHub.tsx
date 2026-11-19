@@ -2,6 +2,7 @@
 
 import { cn } from "cn";
 import {
+  AlertCircle,
   ArrowLeft,
   Building2,
   Check,
@@ -12,6 +13,7 @@ import {
   FileCheck,
   FileText,
   FolderOpen,
+  HelpCircle,
   Lock,
   MessageSquare,
   Paperclip,
@@ -28,6 +30,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { AdditionalInfoModal } from "@/components/end-user/additional-info-modal";
 import { PrintSectionButton } from "@/components/end-user/print-button";
+import { ReopenButton } from "@/components/end-user/reopen-button";
 import {
   type EndUserResolutionData,
   ResolutionCard,
@@ -60,6 +63,7 @@ export interface DepartmentItem {
   involvementType: string;
   status?: string;
   assignedStaffName?: string | null;
+  assignedStaffRole?: string | null;
   completedAt?: string | null;
 }
 
@@ -88,6 +92,11 @@ export interface CaseHubGrievance {
   status: string;
   priority: string;
   createdAt: string;
+  updatedAt?: string;
+  closedAt?: string | null;
+  closureReason?: string | null;
+  reopenCount?: number;
+  rejectionCount?: number;
   dueAt?: string | null;
   categoryName: string;
   subcategoryName: string;
@@ -97,6 +106,11 @@ export interface CaseHubGrievance {
   attachments: CaseAttachment[];
   staffAttachments?: CaseAttachment[];
   statusHistory: StatusHistoryItem[];
+  rejectionInfo?: {
+    type: "REWORK" | "REOPEN";
+    reason: string;
+    rejectedAt: string;
+  } | null;
 }
 
 interface EndUserCaseHubProps {
@@ -180,6 +194,8 @@ export function EndUserCaseHub({
       isCurrent: boolean;
       isFuture: boolean;
       icon: typeof Check;
+      isReworkStage?: boolean;
+      isReopenedStage?: boolean;
     }
 
     interface TimelineStageItem {
@@ -201,11 +217,75 @@ export function EndUserCaseHub({
             .join(" • ")
         : "Assigned for detailed investigation";
 
-    const reopenHistory = (grievance.statusHistory || []).find(
-      (h) => h.status.toUpperCase() === "REOPENED",
-    );
-    const hasReopened = Boolean(
-      grievance.status === "REOPENED" || reopenHistory,
+    const reworkHistory = [...(grievance.statusHistory || [])]
+      .reverse()
+      .find(
+        (h) =>
+          h.status.toUpperCase() === "REWORK" ||
+          h.remarks?.toLowerCase().includes("rework requested"),
+      );
+
+    const firstCloseHistory = (grievance.statusHistory || [])
+      .slice()
+      .reverse()
+      .find((h) => h.status.toUpperCase() === "CLOSED");
+    const firstCloseDate = firstCloseHistory?.changedAt || grievance.closedAt;
+
+    // Identify reopen request: earliest event after initial case closure
+    const reopenRequestHistory =
+      [...(grievance.statusHistory || [])].find((h) => {
+        if (!firstCloseDate) return false;
+        const t = new Date(h.changedAt).getTime();
+        const closeT = new Date(firstCloseDate).getTime();
+        return (
+          t > closeT &&
+          (h.status.toUpperCase() === "REOPENED" ||
+            h.status.toUpperCase() === "RESOLUTION_PENDING_APPROVAL" ||
+            h.remarks?.toLowerCase().includes("reopen") ||
+            h.remarks?.toLowerCase().includes("not satisfied"))
+        );
+      }) ||
+      [...(grievance.statusHistory || [])]
+        .reverse()
+        .find(
+          (h) =>
+            h.status.toUpperCase() === "REOPENED" ||
+            h.remarks?.toLowerCase().includes("reopening requested"),
+        );
+
+    const reworkTime = reworkHistory
+      ? new Date(reworkHistory.changedAt).getTime()
+      : Infinity;
+    const reopenTime = reopenRequestHistory
+      ? new Date(reopenRequestHistory.changedAt).getTime()
+      : Infinity;
+
+    // Detect active lifecycle: Reopened cycle vs Rework cycle vs Initial cycle
+    const isReopenLifecycle =
+      grievance.status === "REOPENED" ||
+      (reopenTime < Infinity &&
+        (reworkTime === Infinity || reopenTime >= reworkTime));
+    const isReworkLifecycle =
+      !isReopenLifecycle &&
+      (grievance.status === "REWORK" ||
+        (reworkTime < Infinity &&
+          (reopenTime === Infinity || reworkTime > reopenTime)));
+    const hasReworkOrReopened = isReworkLifecycle || isReopenLifecycle;
+    const hasRework = isReworkLifecycle;
+    const hasReopened = isReopenLifecycle;
+
+    const cycle2StartTime = isReopenLifecycle
+      ? reopenTime
+      : isReworkLifecycle
+        ? reworkTime
+        : Infinity;
+    const inSecondCycle = cycle2StartTime < Infinity;
+
+    const hasAwaitingInfo = Boolean(
+      grievance.status === "AWAITING_INFORMATION" ||
+        (grievance.statusHistory || []).some(
+          (h) => h.status.toUpperCase() === "AWAITING_INFORMATION",
+        ),
     );
 
     const baseStages: TimelineStageItem[] = [
@@ -232,12 +312,28 @@ export function EndUserCaseHub({
       },
       {
         id: "IN_PROGRESS",
-        title: hasReopened
+        title: hasReworkOrReopened
           ? "Initial Investigation"
           : "Investigation In Progress",
         defaultDesc: "Evidence analysis and departmental verification underway",
         icon: Search,
       },
+      ...(hasAwaitingInfo
+        ? [
+            {
+              id: "AWAITING_INFORMATION",
+              title:
+                grievance.status === "AWAITING_INFORMATION"
+                  ? "Additional Information Requested"
+                  : "Additional Information Provided",
+              defaultDesc:
+                grievance.status === "AWAITING_INFORMATION"
+                  ? "Department requested additional documents/clarification. SLA clock paused."
+                  : "Requested documents/clarification provided by Complainant.",
+              icon: MessageSquare,
+            },
+          ]
+        : []),
     ];
 
     // Departmental findings submitted by supporting departments (e.g. HR submitted to Finance)
@@ -252,60 +348,352 @@ export function EndUserCaseHub({
       isCustomCompleted: true,
     }));
 
-    const endStages: TimelineStageItem[] = [
-      {
-        id: "RESOLUTION",
-        title:
-          grievance.departments && grievance.departments.length > 1
-            ? "Final Consolidated Resolution"
-            : "Resolution Submitted",
-        defaultDesc:
-          grievance.departments && grievance.departments.length > 1
-            ? `${grievance.departmentName || "Lead Department"} compiled departmental findings and filed resolution`
-            : "Department filed findings and action outcome",
-        icon: FileCheck,
-      },
-      ...(hasReopened
-        ? [
-            {
-              id: "REOPENED",
-              title: "Case Reopened",
-              defaultDesc: reopenHistory?.remarks
-                ? `Reopened by Complainant: "${reopenHistory.remarks}"`
-                : "Reopened by Complainant for re-investigation",
-              icon: RotateCcw,
-              customDate: reopenHistory?.changedAt,
-            },
-          ]
-        : []),
-      ...(hasReopened &&
-      (grievance.status === "IN_PROGRESS" || grievance.status === "ESCALATED")
-        ? [
-            {
-              id: "RE_INVESTIGATION",
-              title: "Re-investigation In Progress",
-              defaultDesc:
-                "Department is re-examining evidence and resolution outcome",
-              icon: Search,
-            },
-          ]
-        : []),
-      {
-        id: "UNDER_REVIEW",
-        title: "Citizen Review",
-        defaultDesc:
-          grievance.status === "CLOSED" || grievance.status === "RESOLVED"
-            ? "Resolution reviewed and accepted"
-            : "Pending your decision or feedback",
-        icon: Eye,
-      },
-      {
-        id: "CLOSED",
-        title: "Case Closed",
-        defaultDesc: "Resolution accepted and archived",
-        icon: ShieldCheck,
-      },
-    ];
+    const leadDept =
+      (grievance.departments || []).find(
+        (d) => d.involvementType === "PRIMARY",
+      ) || (grievance.departments || [])[0];
+
+    const isDirectHeadAuthority = Boolean(
+      leadDept?.assignedStaffRole === "DEPARTMENT_HEAD" ||
+        (grievance.statusHistory || []).some(
+          (h) =>
+            new Date(h.changedAt).getTime() >= cycle2StartTime &&
+            (h.remarks?.toLowerCase().includes("direct authority") ||
+              h.remarks?.toLowerCase().includes("intervened")),
+        ),
+    );
+
+    const assignedOfficerName = leadDept?.assignedStaffName;
+
+    const isReworkRejected = Boolean(
+      grievance.rejectionInfo?.type === "REWORK" ||
+        (grievance.statusHistory || []).some(
+          (h) =>
+            new Date(h.changedAt).getTime() >= cycle2StartTime &&
+            h.remarks?.toLowerCase().includes("rejected rework"),
+        ),
+    );
+
+    const isReopenRejected = Boolean(
+      grievance.rejectionInfo?.type === "REOPEN" ||
+        (grievance.statusHistory || []).some(
+          (h) =>
+            new Date(h.changedAt).getTime() >= cycle2StartTime &&
+            (h.remarks?.toLowerCase().includes("rejected reopening") ||
+              h.remarks?.toLowerCase().includes("rejected reopen")),
+        ),
+    );
+
+    let endStages: TimelineStageItem[] = [];
+
+    if (isReopenLifecycle) {
+      if (isReopenRejected) {
+        endStages = [
+          {
+            id: "RESOLUTION",
+            title: "Initial Resolution Submitted",
+            defaultDesc: "Department filed initial findings and action outcome",
+            icon: FileCheck,
+          },
+          {
+            id: "FIRST_CLOSED",
+            title: "Case Closed",
+            defaultDesc: "Grievance concluded in first resolution cycle",
+            icon: ShieldCheck,
+            customDate: firstCloseDate || undefined,
+          },
+          {
+            id: "REOPEN_REQUESTED",
+            title: "Case Reopening Requested",
+            defaultDesc: reopenRequestHistory?.remarks
+              ? `Reopening requested by Complainant: "${reopenRequestHistory.remarks}"`
+              : "Reopened by Complainant for re-investigation",
+            icon: RotateCcw,
+            customDate: reopenRequestHistory?.changedAt,
+          },
+          {
+            id: "HEAD_REVIEW",
+            title: "Department Head Review: Reopening Not Approved",
+            defaultDesc: grievance.rejectionInfo?.reason
+              ? `Department Head reviewed request and concluded reopening is not warranted: "${grievance.rejectionInfo.reason}"`
+              : "Department Head reviewed reopening request and maintained case closure.",
+            icon: AlertCircle,
+          },
+          {
+            id: "CLOSED",
+            title: "Final Case Closed",
+            defaultDesc: "Grievance closure confirmed and case archived.",
+            icon: ShieldCheck,
+          },
+        ];
+      } else {
+        endStages = [
+          {
+            id: "RESOLUTION",
+            title: "Initial Resolution Submitted",
+            defaultDesc: "Department filed initial findings and action outcome",
+            icon: FileCheck,
+          },
+          {
+            id: "FIRST_CLOSED",
+            title: "Case Closed",
+            defaultDesc: "Grievance concluded in first resolution cycle",
+            icon: ShieldCheck,
+            customDate: firstCloseDate || undefined,
+          },
+          {
+            id: "REOPEN_REQUESTED",
+            title: "Case Reopening Requested",
+            defaultDesc: reopenRequestHistory?.remarks
+              ? `Reopening requested by Complainant: "${reopenRequestHistory.remarks}"`
+              : "Reopened by Complainant for re-investigation",
+            icon: RotateCcw,
+            customDate: reopenRequestHistory?.changedAt,
+          },
+          {
+            id: "HEAD_REVIEW",
+            title:
+              grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                ? "Department Head Review & Assessment"
+                : isDirectHeadAuthority
+                  ? "Department Head Review: Direct Authority Assumed"
+                  : assignedOfficerName
+                    ? "Department Head Review: Approved & Assigned"
+                    : "Department Head Review: Approved",
+            defaultDesc:
+              grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                ? "Department Head is reviewing reopening justification to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
+                : isDirectHeadAuthority
+                  ? "Reopening approved. Department Head has assumed direct personal responsibility to resolve this grievance (New SLA cycle initiated)."
+                  : assignedOfficerName
+                    ? `Reopening approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation (New SLA cycle initiated).`
+                    : "Department Head reviewed and approved reopening for investigation (New SLA cycle initiated).",
+            icon: isDirectHeadAuthority ? Shield : UserCheck,
+          },
+          {
+            id: "RE_INVESTIGATION",
+            title:
+              grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                ? "Reopened Processing (Awaiting Head Decision)"
+                : isDirectHeadAuthority
+                  ? "Department Head Direct Inquiry"
+                  : assignedOfficerName
+                    ? "Staff Re-investigation in Progress"
+                    : "Department Re-investigation",
+            defaultDesc:
+              grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
+                : isDirectHeadAuthority
+                  ? "Department Head is directly re-examining evidence and formulating revised resolution."
+                  : assignedOfficerName
+                    ? `${assignedOfficerName} is actively re-investigating evidence and working on resolution.`
+                    : "Department is actively re-investigating evidence and working on resolution.",
+            icon:
+              grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                ? HelpCircle
+                : isDirectHeadAuthority
+                  ? Shield
+                  : Search,
+          },
+          {
+            id: "REVISED_RESOLUTION",
+            title: "Revised Resolution Review",
+            defaultDesc:
+              "Department Head reviews and submits revised resolution",
+            icon: FileCheck,
+          },
+          {
+            id: "UNDER_REVIEW",
+            title: "Citizen Review",
+            defaultDesc:
+              grievance.status === "RESOLVED" ||
+              grievance.status === "UNDER_REVIEW"
+                ? "Pending your review and final decision on revised resolution"
+                : "Pending revised resolution from department",
+            icon: Eye,
+          },
+          {
+            id: "CLOSED",
+            title: "Final Case Closed",
+            defaultDesc: "Resolution accepted and archived",
+            icon: ShieldCheck,
+          },
+        ];
+      }
+    } else if (isReworkLifecycle) {
+      if (isReworkRejected) {
+        endStages = [
+          {
+            id: "RESOLUTION",
+            title: "Initial Resolution Submitted",
+            defaultDesc: "Department filed initial findings and action outcome",
+            icon: FileCheck,
+          },
+          {
+            id: "REWORK",
+            title: "Resolution Rework Requested",
+            defaultDesc: reworkHistory?.remarks
+              ? `Rework requested by Complainant: "${reworkHistory.remarks}"`
+              : "Rework requested by Complainant (not satisfied with resolution)",
+            icon: RotateCcw,
+            customDate: reworkHistory?.changedAt,
+          },
+          {
+            id: "HEAD_REVIEW",
+            title: "Department Head Review: Request Not Approved",
+            defaultDesc: grievance.rejectionInfo?.reason
+              ? `Department Head concluded rework is not warranted: "${grievance.rejectionInfo.reason}"`
+              : "Department Head reviewed request and concluded initial resolution is justified.",
+            icon: AlertCircle,
+          },
+          {
+            id: "UNDER_REVIEW",
+            title: "Citizen Review (Resolution Maintained)",
+            defaultDesc:
+              "Case returned to your review with Department Head's decision. You may review the findings or accept the resolution.",
+            icon: Eye,
+          },
+          {
+            id: "CLOSED",
+            title:
+              grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+              (grievance.rejectionCount ?? 0) >= 3
+                ? "Case Permanently Closed"
+                : "Case Closed",
+            defaultDesc:
+              grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+              (grievance.rejectionCount ?? 0) >= 3
+                ? "Grievance closed after 3 rework reviews by Department Head."
+                : "Resolution accepted and archived",
+            icon: ShieldCheck,
+          },
+        ];
+      } else {
+        endStages = [
+          {
+            id: "RESOLUTION",
+            title: "Initial Resolution Submitted",
+            defaultDesc: "Department filed initial findings and action outcome",
+            icon: FileCheck,
+          },
+          {
+            id: "REWORK",
+            title: "Resolution Rework Requested",
+            defaultDesc: reworkHistory?.remarks
+              ? `Rework requested by Complainant: "${reworkHistory.remarks}"`
+              : "Rework requested by Complainant (not satisfied with resolution)",
+            icon: RotateCcw,
+            customDate: reworkHistory?.changedAt,
+          },
+          {
+            id: "HEAD_REVIEW",
+            title:
+              grievance.status === "REWORK"
+                ? "Department Head Review & Assessment"
+                : isDirectHeadAuthority
+                  ? "Department Head Review: Direct Authority Assumed"
+                  : assignedOfficerName
+                    ? "Department Head Review: Approved & Assigned"
+                    : "Department Head Review: Approved",
+            defaultDesc:
+              grievance.status === "REWORK"
+                ? "Department Head is reviewing your rework request and citizen remarks to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
+                : isDirectHeadAuthority
+                  ? "Request approved. Department Head has assumed direct personal responsibility to resolve this grievance."
+                  : assignedOfficerName
+                    ? `Request approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation.`
+                    : "Department Head approved rework request and assigned case for investigation.",
+            icon: isDirectHeadAuthority ? Shield : UserCheck,
+          },
+          {
+            id: "RE_INVESTIGATION",
+            title:
+              grievance.status === "REWORK"
+                ? "Action / Investigation (Awaiting Head Decision)"
+                : isDirectHeadAuthority
+                  ? "Department Head Direct Inquiry"
+                  : assignedOfficerName
+                    ? "Staff Re-investigation in Progress"
+                    : "Department Rework & Re-investigation",
+            defaultDesc:
+              grievance.status === "REWORK"
+                ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
+                : isDirectHeadAuthority
+                  ? "Department Head is directly re-examining evidence and formulating revised resolution."
+                  : assignedOfficerName
+                    ? `${assignedOfficerName} is actively investigating feedback and addressing your points.`
+                    : "Department is actively re-investigating evidence and working on revisions.",
+            icon:
+              grievance.status === "REWORK"
+                ? HelpCircle
+                : isDirectHeadAuthority
+                  ? Shield
+                  : Search,
+          },
+          {
+            id: "REVISED_RESOLUTION",
+            title: "Revised Resolution Review",
+            defaultDesc:
+              "Department Head reviews and submits revised resolution",
+            icon: FileCheck,
+          },
+          {
+            id: "UNDER_REVIEW",
+            title: "Citizen Review",
+            defaultDesc:
+              grievance.status === "RESOLVED" ||
+              grievance.status === "UNDER_REVIEW"
+                ? "Pending your review and final decision on revised resolution"
+                : "Pending revised resolution from department",
+            icon: Eye,
+          },
+          {
+            id: "CLOSED",
+            title:
+              grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+              (grievance.rejectionCount ?? 0) >= 3
+                ? "Case Permanently Closed"
+                : "Case Closed",
+            defaultDesc:
+              grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+              (grievance.rejectionCount ?? 0) >= 3
+                ? "Grievance closed after 3 rework reviews by Department Head."
+                : "Resolution accepted and archived",
+            icon: ShieldCheck,
+          },
+        ];
+      }
+    } else {
+      endStages = [
+        {
+          id: "RESOLUTION",
+          title:
+            grievance.departments && grievance.departments.length > 1
+              ? "Final Consolidated Resolution"
+              : "Resolution Submitted",
+          defaultDesc:
+            grievance.departments && grievance.departments.length > 1
+              ? `${grievance.departmentName || "Lead Department"} compiled departmental findings and filed resolution`
+              : "Department filed findings and action outcome",
+          icon: FileCheck,
+        },
+        {
+          id: "UNDER_REVIEW",
+          title: "Citizen Review",
+          defaultDesc:
+            grievance.status === "CLOSED" || grievance.status === "RESOLVED"
+              ? "Resolution reviewed and accepted"
+              : "Pending your decision or feedback",
+          icon: Eye,
+        },
+        {
+          id: "CLOSED",
+          title: "Case Closed",
+          defaultDesc: "Resolution accepted and archived",
+          icon: ShieldCheck,
+        },
+      ];
+    }
 
     const stageMap: TimelineStageItem[] = [
       ...baseStages,
@@ -313,43 +701,126 @@ export function EndUserCaseHub({
       ...endStages,
     ];
 
-    // Find chronological dates from history
+    // Find chronological dates from history, keeping initial cycle separate from second cycle
     const historyDates: Record<string, string> = {
       SUBMITTED: grievance.createdAt,
     };
 
-    grievance.statusHistory.forEach((h) => {
+    (grievance.statusHistory || []).forEach((h) => {
       const s = h.status.toUpperCase();
-      if (
-        s === "ROUTED" ||
-        s === "AWAITING_ASSIGNMENT" ||
-        s === "AWAITING_ROUTING"
-      )
-        historyDates.ROUTED = h.changedAt;
-      if (s === "ASSIGNED") historyDates.ASSIGNED = h.changedAt;
-      if (
-        s === "IN_PROGRESS" ||
-        s === "AWAITING_INFORMATION" ||
-        s === "REWORK" ||
-        s === "ESCALATED"
-      )
-        historyDates.IN_PROGRESS = h.changedAt;
-      if (
-        s === "UNDER_REVIEW" ||
-        s === "RESOLUTION_PENDING_APPROVAL" ||
-        s === "RESOLVED"
-      ) {
-        historyDates.RESOLUTION = historyDates.RESOLUTION || h.changedAt;
-        historyDates.UNDER_REVIEW = h.changedAt;
+      const hTime = new Date(h.changedAt).getTime();
+
+      if (hTime < cycle2StartTime) {
+        // Initial Cycle Events
+        if (
+          s === "ROUTED" ||
+          s === "AWAITING_ASSIGNMENT" ||
+          s === "AWAITING_ROUTING"
+        ) {
+          historyDates.ROUTED = h.changedAt;
+        }
+        if (s === "ASSIGNED") historyDates.ASSIGNED = h.changedAt;
+        if (
+          s === "IN_PROGRESS" ||
+          s === "AWAITING_INFORMATION" ||
+          s === "ESCALATED"
+        ) {
+          historyDates.IN_PROGRESS = historyDates.IN_PROGRESS || h.changedAt;
+        }
+        if (
+          s === "UNDER_REVIEW" ||
+          s === "RESOLUTION_PENDING_APPROVAL" ||
+          s === "RESOLVED"
+        ) {
+          historyDates.RESOLUTION = historyDates.RESOLUTION || h.changedAt;
+          historyDates.UNDER_REVIEW = historyDates.UNDER_REVIEW || h.changedAt;
+        }
+        if (s === "CLOSED") {
+          historyDates.FIRST_CLOSED = h.changedAt;
+          historyDates.CLOSED = h.changedAt;
+        }
+      } else {
+        // Second Cycle Events (Rework or Reopened)
+        if (isReworkLifecycle) {
+          if (s === "REWORK") {
+            historyDates.REWORK = h.changedAt;
+          }
+          if (
+            s === "IN_PROGRESS" ||
+            s === "ASSIGNED" ||
+            h.remarks?.toLowerCase().includes("approved rework") ||
+            h.remarks?.toLowerCase().includes("rejected rework")
+          ) {
+            historyDates.HEAD_REVIEW = historyDates.HEAD_REVIEW || h.changedAt;
+          }
+          if (s === "IN_PROGRESS") {
+            historyDates.RE_INVESTIGATION = h.changedAt;
+          }
+          if (s === "RESOLUTION_PENDING_APPROVAL") {
+            historyDates.REVISED_RESOLUTION = h.changedAt;
+          }
+          if (s === "RESOLVED" || s === "UNDER_REVIEW") {
+            historyDates.REVISED_RESOLUTION =
+              historyDates.REVISED_RESOLUTION || h.changedAt;
+            historyDates.UNDER_REVIEW = h.changedAt;
+          }
+          if (s === "CLOSED") {
+            historyDates.CLOSED = h.changedAt;
+          }
+        } else if (isReopenLifecycle) {
+          if (
+            s === "RESOLUTION_PENDING_APPROVAL" &&
+            !historyDates.REOPEN_REQUESTED
+          ) {
+            historyDates.REOPEN_REQUESTED = h.changedAt;
+          }
+          if (s === "REOPENED" || h.remarks?.toLowerCase().includes("reopen")) {
+            historyDates.REOPEN_REQUESTED =
+              historyDates.REOPEN_REQUESTED || h.changedAt;
+          }
+          if (
+            s === "REOPENED" ||
+            s === "IN_PROGRESS" ||
+            s === "ASSIGNED" ||
+            h.remarks?.toLowerCase().includes("approved reopen") ||
+            h.remarks?.toLowerCase().includes("rejected reopen")
+          ) {
+            historyDates.HEAD_REVIEW = historyDates.HEAD_REVIEW || h.changedAt;
+          }
+          if (s === "REOPENED") {
+            historyDates.REOPENED = h.changedAt;
+          }
+          if (s === "IN_PROGRESS") {
+            historyDates.RE_INVESTIGATION = h.changedAt;
+          }
+          if (s === "RESOLUTION_PENDING_APPROVAL" && historyDates.HEAD_REVIEW) {
+            historyDates.REVISED_RESOLUTION = h.changedAt;
+          }
+          if (s === "RESOLVED" || s === "UNDER_REVIEW") {
+            historyDates.REVISED_RESOLUTION =
+              historyDates.REVISED_RESOLUTION || h.changedAt;
+            historyDates.UNDER_REVIEW = h.changedAt;
+          }
+          if (s === "CLOSED") {
+            historyDates.CLOSED = h.changedAt;
+          }
+        }
       }
-      if (s === "CLOSED") historyDates.CLOSED = h.changedAt;
-      if (s === "REOPENED") historyDates.REOPENED = h.changedAt;
     });
 
     if (resolution?.submittedAt) {
-      historyDates.RESOLUTION = resolution.submittedAt;
-      if (!historyDates.UNDER_REVIEW) {
-        historyDates.UNDER_REVIEW = resolution.submittedAt;
+      if (!inSecondCycle) {
+        historyDates.RESOLUTION = resolution.submittedAt;
+        if (!historyDates.UNDER_REVIEW) {
+          historyDates.UNDER_REVIEW = resolution.submittedAt;
+        }
+      } else {
+        const resTime = new Date(resolution.submittedAt).getTime();
+        if (resTime >= cycle2StartTime) {
+          historyDates.REVISED_RESOLUTION = resolution.submittedAt;
+        } else {
+          historyDates.RESOLUTION = resolution.submittedAt;
+        }
       }
     }
 
@@ -384,6 +855,7 @@ export function EndUserCaseHub({
         "UNDER_REVIEW",
         "RESOLUTION_PENDING_APPROVAL",
         "RESOLVED",
+        "REWORK",
         "CLOSED",
         "REOPENED",
       ].includes(grievance.status)
@@ -397,6 +869,7 @@ export function EndUserCaseHub({
         "UNDER_REVIEW",
         "RESOLUTION_PENDING_APPROVAL",
         "RESOLVED",
+        "REWORK",
         "CLOSED",
         "REOPENED",
       ].includes(grievance.status)
@@ -404,12 +877,58 @@ export function EndUserCaseHub({
       historyDates.RESOLUTION =
         resolution?.submittedAt ||
         historyDates.UNDER_REVIEW ||
+        historyDates.REWORK ||
+        historyDates.FIRST_CLOSED ||
         historyDates.CLOSED ||
         historyDates.IN_PROGRESS ||
         grievance.createdAt;
     }
-    if (!historyDates.REOPENED && reopenHistory?.changedAt) {
-      historyDates.REOPENED = reopenHistory.changedAt;
+    if (!historyDates.FIRST_CLOSED && firstCloseDate) {
+      historyDates.FIRST_CLOSED = firstCloseDate;
+    }
+    if (!historyDates.REWORK && reworkHistory?.changedAt) {
+      historyDates.REWORK = reworkHistory.changedAt;
+    }
+    if (!historyDates.REOPEN_REQUESTED && reopenRequestHistory?.changedAt) {
+      historyDates.REOPEN_REQUESTED = reopenRequestHistory.changedAt;
+    }
+    if (grievance.rejectionInfo?.rejectedAt) {
+      historyDates.HEAD_REVIEW =
+        historyDates.HEAD_REVIEW || grievance.rejectionInfo.rejectedAt;
+    }
+    if (!historyDates.HEAD_REVIEW) {
+      if (
+        isReworkLifecycle &&
+        [
+          "IN_PROGRESS",
+          "ASSIGNED",
+          "RESOLUTION_PENDING_APPROVAL",
+          "RESOLVED",
+          "UNDER_REVIEW",
+          "CLOSED",
+        ].includes(grievance.status)
+      ) {
+        historyDates.HEAD_REVIEW =
+          historyDates.RE_INVESTIGATION ||
+          grievance.updatedAt ||
+          grievance.createdAt;
+      } else if (
+        isReopenLifecycle &&
+        [
+          "REOPENED",
+          "IN_PROGRESS",
+          "ASSIGNED",
+          "RESOLUTION_PENDING_APPROVAL",
+          "RESOLVED",
+          "UNDER_REVIEW",
+          "CLOSED",
+        ].includes(grievance.status)
+      ) {
+        historyDates.HEAD_REVIEW =
+          historyDates.RE_INVESTIGATION ||
+          grievance.updatedAt ||
+          grievance.createdAt;
+      }
     }
     if (!historyDates.CLOSED && grievance.status === "CLOSED") {
       historyDates.CLOSED =
@@ -422,30 +941,77 @@ export function EndUserCaseHub({
     // Find the index of the current active stage dynamically
     const currentStageIndex = stageMap.findIndex((s) => {
       if (isCaseClosed) return s.id === "CLOSED";
-      if (
-        grievance.status === "RESOLVED" ||
-        grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
-        grievance.status === "UNDER_REVIEW"
-      ) {
-        return s.id === "UNDER_REVIEW";
-      }
-      if (hasReopened) {
-        if (grievance.status === "REOPENED") {
-          return s.id === "REOPENED";
+
+      if (isReworkLifecycle) {
+        if (isReworkRejected) {
+          return s.id === "UNDER_REVIEW";
+        }
+        if (grievance.status === "REWORK") {
+          return s.id === "HEAD_REVIEW";
         }
         if (
           grievance.status === "IN_PROGRESS" ||
-          grievance.status === "REWORK" ||
-          grievance.status === "AWAITING_INFORMATION" ||
+          grievance.status === "ASSIGNED" ||
           grievance.status === "ESCALATED"
         ) {
           return s.id === "RE_INVESTIGATION";
         }
+        if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
+          return s.id === "REVISED_RESOLUTION";
+        }
+        if (
+          grievance.status === "RESOLVED" ||
+          grievance.status === "UNDER_REVIEW"
+        ) {
+          return s.id === "UNDER_REVIEW";
+        }
+        return s.id === "HEAD_REVIEW";
+      }
+
+      if (isReopenLifecycle) {
+        if (isReopenRejected) {
+          return s.id === "CLOSED";
+        }
+        if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
+          if (
+            historyDates.HEAD_REVIEW &&
+            historyDates.HEAD_REVIEW !== historyDates.REOPEN_REQUESTED
+          ) {
+            return s.id === "REVISED_RESOLUTION";
+          }
+          return s.id === "HEAD_REVIEW";
+        }
+        if (
+          grievance.status === "REOPENED" ||
+          grievance.status === "IN_PROGRESS" ||
+          grievance.status === "ASSIGNED" ||
+          grievance.status === "ESCALATED"
+        ) {
+          return s.id === "RE_INVESTIGATION";
+        }
+        if (
+          grievance.status === "RESOLVED" ||
+          grievance.status === "UNDER_REVIEW"
+        ) {
+          return s.id === "UNDER_REVIEW";
+        }
+        return s.id === "HEAD_REVIEW";
+      }
+
+      if (
+        grievance.status === "RESOLVED" ||
+        grievance.status === "UNDER_REVIEW"
+      ) {
+        return s.id === "UNDER_REVIEW";
+      }
+      if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
+        return s.id === "RESOLUTION";
+      }
+      if (grievance.status === "AWAITING_INFORMATION") {
+        return s.id === "AWAITING_INFORMATION";
       }
       if (
         grievance.status === "IN_PROGRESS" ||
-        grievance.status === "REWORK" ||
-        grievance.status === "AWAITING_INFORMATION" ||
         grievance.status === "ESCALATED"
       ) {
         return s.id === "IN_PROGRESS";
@@ -455,8 +1021,9 @@ export function EndUserCaseHub({
         grievance.status === "ROUTED" ||
         grievance.status === "AWAITING_ASSIGNMENT" ||
         grievance.status === "AWAITING_ROUTING"
-      )
+      ) {
         return s.id === "ROUTED";
+      }
       return s.id === "SUBMITTED";
     });
 
@@ -464,15 +1031,33 @@ export function EndUserCaseHub({
 
     return stageMap.map((stage, idx): StageNode => {
       if (isCaseClosed) {
+        let stageDate = stage.customDate || historyDates[stage.id];
+        if (!stageDate) {
+          for (let i = idx - 1; i >= 0; i--) {
+            const prev = stageMap[i];
+            const prevDate = prev.customDate || historyDates[prev.id];
+            if (prevDate) {
+              stageDate = prevDate;
+              break;
+            }
+          }
+          if (!stageDate) {
+            stageDate =
+              grievance.closedAt || grievance.updatedAt || grievance.createdAt;
+          }
+        }
+
         return {
           id: stage.id,
           title: stage.title,
           description: stage.defaultDesc,
-          date: stage.customDate || historyDates[stage.id],
+          date: stageDate,
           isCompleted: true,
           isCurrent: false,
           isFuture: false,
           icon: stage.icon,
+          isReworkStage: Boolean(hasRework),
+          isReopenedStage: Boolean(hasReopened),
         };
       }
 
@@ -486,6 +1071,8 @@ export function EndUserCaseHub({
           isCurrent: false,
           isFuture: false,
           icon: stage.icon,
+          isReworkStage: Boolean(hasRework),
+          isReopenedStage: Boolean(hasReopened),
         };
       }
 
@@ -493,15 +1080,36 @@ export function EndUserCaseHub({
       const isCurrent = idx === activeIdx;
       const isFuture = idx > activeIdx;
 
+      let stageDate = isFuture
+        ? undefined
+        : stage.customDate || historyDates[stage.id];
+
+      // For completed milestones, guarantee an accurate chronological timestamp is present
+      if (isCompleted && !stageDate) {
+        for (let i = idx - 1; i >= 0; i--) {
+          const prev = stageMap[i];
+          const prevDate = prev.customDate || historyDates[prev.id];
+          if (prevDate) {
+            stageDate = prevDate;
+            break;
+          }
+        }
+        if (!stageDate) {
+          stageDate = grievance.updatedAt || grievance.createdAt;
+        }
+      }
+
       return {
         id: stage.id,
         title: stage.title,
         description: stage.defaultDesc,
-        date: stage.customDate || historyDates[stage.id],
+        date: stageDate,
         isCompleted,
         isCurrent,
         isFuture,
         icon: stage.icon,
+        isReworkStage: Boolean(hasRework),
+        isReopenedStage: Boolean(hasReopened),
       };
     });
   }, [grievance, resolution?.submittedAt]);
@@ -771,11 +1379,11 @@ export function EndUserCaseHub({
                   <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     {grievance.departments &&
                     grievance.departments.length > 1 ? (
-                      <div className="flex flex-wrap gap-1.5 items-center">
+                      <div className="flex flex-wrap gap-2 items-center">
                         {grievance.departments.map((d) => (
                           <span
                             key={d.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-xs font-semibold"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800 text-teal-800 dark:text-teal-300 text-xs font-semibold"
                           >
                             <span>{d.name}</span>
                             {d.involvementType === "PRIMARY" ? (
@@ -784,7 +1392,27 @@ export function EndUserCaseHub({
                               </span>
                             ) : (
                               <span className="text-[10px] text-teal-600/80 dark:text-teal-400 font-medium">
-                                ({d.involvementType.toLowerCase()})
+                                Collaborator
+                              </span>
+                            )}
+                            {d.status === "BLOCKED" ? (
+                              <span className="text-[10px] bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded font-semibold">
+                                Pending
+                              </span>
+                            ) : d.completedAt ||
+                              d.status === "COMPLETED" ||
+                              d.status === "RESOLVED" ? (
+                              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">
+                                Completed
+                              </span>
+                            ) : d.status === "IN_PROGRESS" ||
+                              d.status === "ASSIGNED" ? (
+                              <span className="text-[10px] bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 px-1.5 py-0.2 rounded font-semibold">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.2 rounded font-medium">
+                                Pending Assignment
                               </span>
                             )}
                           </span>
@@ -976,10 +1604,14 @@ export function EndUserCaseHub({
                 status={grievance.status}
                 grievanceId={grievance.id.toString()}
                 grievanceNumber={grievance.grievanceNumber}
+                closedAt={grievance.closedAt}
+                reopenCount={grievance.reopenCount ?? 0}
+                closureReason={grievance.closureReason}
+                rejectionCount={grievance.rejectionCount}
                 showDownloadButton={true}
               />
             ) : grievance.status === "CLOSED" ? (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-8 text-center space-y-3 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-8 text-center space-y-4 shadow-sm">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 mx-auto">
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
@@ -992,6 +1624,48 @@ export function EndUserCaseHub({
                   case (e.g. resolved directly by administration or procedural
                   closure).
                 </p>
+                {(() => {
+                  const isPermanentlyClosed =
+                    grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+                    grievance.closureReason === "REOPEN_REJECTED_FINAL" ||
+                    (grievance.rejectionCount ?? 0) >= 3;
+                  const refDate = grievance.closedAt
+                    ? new Date(grievance.closedAt)
+                    : new Date(grievance.createdAt);
+                  const isWithin14Days =
+                    Date.now() - refDate.getTime() <= 14 * 24 * 60 * 60 * 1000;
+                  const canReopen =
+                    isWithin14Days &&
+                    (grievance.reopenCount ?? 0) < 3 &&
+                    !isPermanentlyClosed;
+                  if (canReopen) {
+                    return (
+                      <div className="pt-2 flex flex-col items-center gap-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          If this matter remains unaddressed, you can reopen it
+                          within 14 days of closure (Attempt{" "}
+                          {grievance.reopenCount ?? 0} of 3 used).
+                        </p>
+                        <ReopenButton
+                          grievanceId={grievance.id.toString()}
+                          variant="reopen"
+                          label="Reopen Grievance"
+                        />
+                      </div>
+                    );
+                  }
+                  if (isPermanentlyClosed) {
+                    return (
+                      <div className="pt-2">
+                        <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                          This case is permanently closed following 3 review
+                          rejections by the Department Head.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="pt-2">
                   <button
                     type="button"
@@ -1069,16 +1743,29 @@ export function EndUserCaseHub({
                       {/* Stepper Bullet */}
                       <div className="flex items-center justify-center shrink-0">
                         {node.isCompleted ? (
-                          <div className="h-6 w-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                          <div
+                            className={cn(
+                              "h-6 w-6 rounded-full text-white flex items-center justify-center shadow-xs",
+                              IconComponent === AlertCircle
+                                ? "bg-rose-600"
+                                : "bg-emerald-600",
+                            )}
+                          >
+                            {IconComponent === AlertCircle ? (
+                              <AlertCircle className="h-3.5 w-3.5 stroke-[2.5]" />
+                            ) : (
+                              <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                            )}
                           </div>
                         ) : node.isCurrent ? (
                           <div
                             className={cn(
                               "h-6 w-6 rounded-full ring-4 text-white flex items-center justify-center shadow-xs animate-pulse",
-                              node.id === "REOPENED"
+                              node.isReworkStage
                                 ? "bg-amber-600 ring-amber-100 dark:ring-amber-950"
-                                : "bg-teal-600 ring-teal-100 dark:ring-teal-950",
+                                : node.isReopenedStage
+                                  ? "bg-purple-600 ring-purple-100 dark:ring-purple-950"
+                                  : "bg-teal-600 ring-teal-100 dark:ring-teal-950",
                             )}
                           >
                             <IconComponent className="h-3.5 w-3.5" />
@@ -1107,9 +1794,11 @@ export function EndUserCaseHub({
                         <div
                           className={`text-sm font-bold leading-tight ${
                             node.isCurrent
-                              ? node.id === "REOPENED"
+                              ? node.isReworkStage
                                 ? "text-amber-700 dark:text-amber-400 font-extrabold"
-                                : "text-[#0F766E] dark:text-teal-400 font-extrabold"
+                                : node.isReopenedStage
+                                  ? "text-purple-700 dark:text-purple-400 font-extrabold"
+                                  : "text-[#0F766E] dark:text-teal-400 font-extrabold"
                               : node.isCompleted
                                 ? "text-slate-800 dark:text-slate-200"
                                 : "text-slate-400 dark:text-slate-500"
@@ -1130,24 +1819,56 @@ export function EndUserCaseHub({
 
                       {/* Date / Timestamp */}
                       <div className="text-right shrink-0">
-                        {node.date ? (
-                          <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                            {new Date(node.date).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                            <span className="block text-[11px] font-normal text-slate-400">
-                              {new Date(node.date).toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                        ) : node.isCompleted ? (
-                          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                            Completed
+                        {node.isCurrent ? (
+                          <span
+                            className={cn(
+                              "text-[11px] font-bold animate-pulse",
+                              node.isReworkStage
+                                ? "text-amber-600 dark:text-amber-400"
+                                : node.isReopenedStage
+                                  ? "text-purple-600 dark:text-purple-400"
+                                  : "text-teal-600 dark:text-teal-400",
+                            )}
+                          >
+                            In Progress
                           </span>
+                        ) : node.isCompleted ? (
+                          node.date ? (
+                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              {new Date(node.date).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                              <span className="block text-[11px] font-normal text-slate-400">
+                                {new Date(node.date).toLocaleTimeString(
+                                  "en-IN",
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              {new Date(
+                                grievance.updatedAt || grievance.createdAt,
+                              ).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                              <span className="block text-[11px] font-normal text-slate-400">
+                                {new Date(
+                                  grievance.updatedAt || grievance.createdAt,
+                                ).toLocaleTimeString("en-IN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          )
                         ) : (
                           <span className="text-[11px] text-slate-400 italic">
                             Pending

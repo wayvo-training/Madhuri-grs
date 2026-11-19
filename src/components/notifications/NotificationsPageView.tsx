@@ -441,7 +441,9 @@ export function NotificationsPageView({
         (!n.isRead &&
           (n.type.includes("INFO_REQUESTED") ||
             n.type === "REWORK_REQUIRED" ||
+            n.type === "REWORK_REQUESTED" ||
             n.type === "REOPENED" ||
+            n.type === "REOPEN_REQUESTED" ||
             n.type === "GRIEVANCE_REOPENED" ||
             n.type === "ROUTING_EXCEPTION" ||
             n.type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||

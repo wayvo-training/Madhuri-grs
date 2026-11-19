@@ -1,4 +1,4 @@
--- Align Grievance Lifecycle Statuses to 100% match Approved HLD & LLD
+-- Align Grievance Lifecycle Statuses 
 -- 11 Approved Statuses:
 -- SUBMITTED, AWAITING_ROUTING, AWAITING_ASSIGNMENT, ASSIGNED, IN_PROGRESS,
 -- AWAITING_INFORMATION, RESOLVED, REWORK, RESOLUTION_PENDING_APPROVAL, REOPENED, CLOSED

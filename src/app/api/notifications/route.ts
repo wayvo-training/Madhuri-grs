@@ -173,7 +173,9 @@ export async function GET() {
           (n.notification_type.includes("INFO_REQUESTED") ||
             n.notification_type.includes("ACTION_REQUIRED") ||
             n.notification_type === "REWORK_REQUIRED" ||
+            n.notification_type === "REWORK_REQUESTED" ||
             n.notification_type === "REOPENED" ||
+            n.notification_type === "REOPEN_REQUESTED" ||
             n.notification_type === "GRIEVANCE_REOPENED" ||
             n.notification_type === "ROUTING_EXCEPTION" ||
             n.notification_type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||

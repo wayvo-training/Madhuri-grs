@@ -5,6 +5,7 @@ import {
   Download,
   Eye,
   FileText,
+  RotateCcw,
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,10 @@ interface ResolutionCardProps {
   status: string;
   grievanceId: string;
   grievanceNumber?: string;
+  closedAt?: string | null;
+  closureReason?: string | null;
+  reopenCount?: number;
+  rejectionCount?: number;
   allowActions?: boolean;
   showDownloadButton?: boolean;
 }
@@ -45,11 +50,35 @@ export function ResolutionCard({
   status,
   grievanceId,
   grievanceNumber,
+  closedAt,
+  closureReason,
+  reopenCount = 0,
+  rejectionCount = 0,
   allowActions = true,
   showDownloadButton = true,
 }: ResolutionCardProps) {
   const isResolved = status === "RESOLVED" || status === "UNDER_REVIEW";
   const isClosed = status === "CLOSED";
+
+  const isPermanentlyClosed =
+    closureReason === "REWORK_REJECTED_FINAL" ||
+    closureReason === "REOPEN_REJECTED_FINAL" ||
+    rejectionCount >= 3;
+
+  const isWithinReopenWindow = (() => {
+    if (!isClosed || isPermanentlyClosed) return false;
+    const refDate = closedAt
+      ? new Date(closedAt)
+      : resolution.submittedAt
+        ? new Date(resolution.submittedAt)
+        : new Date();
+    const msSinceClosed = Date.now() - refDate.getTime();
+    const daysSinceClosed = msSinceClosed / (1000 * 60 * 60 * 24);
+    return daysSinceClosed <= 14;
+  })();
+
+  const canReopenClosedCase =
+    isClosed && isWithinReopenWindow && reopenCount < 3 && !isPermanentlyClosed;
 
   const formattedDate = resolution.submittedAt
     ? new Date(resolution.submittedAt).toLocaleDateString("en-IN", {
@@ -78,7 +107,11 @@ export function ResolutionCard({
                 Official Department Resolution
               </h3>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
-                {isClosed ? "Accepted & Concluded" : "Resolution Proposed"}
+                {isClosed
+                  ? "Accepted & Concluded"
+                  : status === "REWORK"
+                    ? "Under Revision (Rework Requested)"
+                    : "Resolution Proposed"}
               </span>
             </div>
             {formattedDate && (
@@ -207,32 +240,84 @@ export function ResolutionCard({
         <div className="pt-4 border-t border-emerald-100 dark:border-emerald-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-slate-600 dark:text-slate-400">
             <span className="font-semibold text-slate-800 dark:text-slate-200">
-              Citizen Decision Required:
+              Employee Decision Required:
             </span>{" "}
-            If you are satisfied with this resolution, please click{" "}
+            Review the proposed resolution above. If you are satisfied, click{" "}
             <span className="font-semibold text-emerald-700 dark:text-emerald-400">
               Accept Resolution
             </span>{" "}
-            to conclude the case. If the issue remains unresolved, you may
-            reopen it.
+            to conclude the case. If not satisfied, click{" "}
+            <span className="font-semibold text-rose-700 dark:text-rose-400">
+              Request Rework (Not Satisfied)
+            </span>{" "}
+            to return it for re-investigation.
           </div>
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto justify-end">
             <AcceptResolutionButton grievanceId={grievanceId} />
-            <ReopenButton grievanceId={grievanceId} />
+            <ReopenButton
+              grievanceId={grievanceId}
+              variant="rework"
+              label="Request Rework (Not Satisfied)"
+            />
           </div>
         </div>
       )}
 
-      {/* Closed Confirmation Banner */}
-      {isClosed && (
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-            <Check className="h-4 w-4 shrink-0" />
-            <span>
-              This resolution has been accepted and the grievance is formally
-              closed.
-            </span>
+      {/* Rework In Progress Banner */}
+      {status === "REWORK" && (
+        <div className="pt-4 border-t border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-amber-50/60 dark:bg-amber-950/20 -mx-6 md:-mx-8 -mb-6 md:-mb-8 p-4 md:px-8 rounded-b-2xl">
+          <div className="flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+            <RotateCcw className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div>
+              <span className="font-bold">Rework Requested by You:</span>{" "}
+              <span>
+                You requested rework on this proposed resolution. The department
+                has been returned this case to re-examine findings and address
+                your feedback. A revised resolution will be submitted after
+                mandatory Department Head review.
+              </span>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Closed Confirmation Banner & 7-Day Reopen Option */}
+      {isClosed && (
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-medium">
+            <Check className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5 sm:mt-0" />
+            <div>
+              <span>
+                This resolution has been accepted and the grievance is formally
+                closed.
+              </span>
+              {canReopenClosedCase && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  If you are not satisfied or issues persist, you can reopen
+                  this grievance within 14 days of closure (Attempt{" "}
+                  {reopenCount} of 3 used).
+                </p>
+              )}
+              {!canReopenClosedCase && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {isPermanentlyClosed
+                    ? "This grievance has been permanently closed following 3 review rejections by the Department Head. No further rework or reopening is permitted."
+                    : reopenCount >= 3
+                      ? "Maximum limit of 3 rework and reopening attempts reached."
+                      : "The 14-day post-closure reopening window has elapsed."}
+                </p>
+              )}
+            </div>
+          </div>
+          {canReopenClosedCase && (
+            <div className="shrink-0 w-full sm:w-auto flex justify-end">
+              <ReopenButton
+                grievanceId={grievanceId}
+                variant="reopen"
+                label="Reopen Grievance"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

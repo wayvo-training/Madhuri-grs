@@ -57,7 +57,11 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
           assignments: {
             include: {
               users_assignments_staff_idTousers: {
-                select: { first_name: true, last_name: true },
+                select: {
+                  first_name: true,
+                  last_name: true,
+                  roles: { select: { role_name: true } },
+                },
               },
             },
           },
@@ -91,6 +95,12 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
               "USER_ADDITIONAL_INFO_PROVIDED",
               "SUPPORTING_FINDINGS_SUBMITTED",
               "ASSIGNED_TO_STAFF",
+              "REWORK_REQUESTED",
+              "REWORK_APPROVED",
+              "REWORK_REJECTED",
+              "REOPEN_REQUESTED",
+              "REOPEN_APPROVED",
+              "REOPEN_REJECTED",
             ],
           },
         },
@@ -105,10 +115,11 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     "PENDING",
     "SUBMITTED",
     "ROUTED",
+    "AWAITING_ASSIGNMENT",
     "ASSIGNED",
     "IN_PROGRESS",
-    "WAITING_ON_USER",
-    "WAITING_ON_EMPLOYEE",
+    "AWAITING_INFORMATION",
+    "REWORK",
     "REOPENED",
   ];
   const canProvideAdditionalInfo = eligibleStatuses.includes(grievance.status);
@@ -129,6 +140,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         involvementType: gd.involvement_type,
         status: gd.status,
         assignedStaffName: staffName,
+        assignedStaffRole: staffUser?.roles?.role_name || null,
         completedAt: gd.completed_at ? gd.completed_at.toISOString() : null,
       };
     })
@@ -314,6 +326,71 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
 
   const staffAttachments = Array.from(staffAttachmentsMap.values());
 
+  const rejectionLog = (grievance.audit_logs || [])
+    .slice()
+    .reverse()
+    .find(
+      (l) =>
+        l.action === "REWORK_REJECTED" ||
+        l.action === "REOPEN_REJECTED" ||
+        l.action === "REWORK_REJECTED_FINAL" ||
+        l.action === "REOPEN_REJECTED_FINAL",
+    );
+  const rejectionHistory = (grievance.grievance_status_history || [])
+    .slice()
+    .reverse()
+    .find(
+      (h) =>
+        h.remarks?.toLowerCase().includes("rejected rework") ||
+        h.remarks?.toLowerCase().includes("rejected reopening") ||
+        h.remarks?.toLowerCase().includes("rejected reopen"),
+    );
+
+  const rejectionCount = (grievance.audit_logs || []).filter(
+    (l) =>
+      l.action === "REWORK_REJECTED" ||
+      l.action === "REOPEN_REJECTED" ||
+      l.action === "REWORK_REJECTED_FINAL" ||
+      l.action === "REOPEN_REJECTED_FINAL",
+  ).length;
+
+  let rejectionInfo: {
+    type: "REWORK" | "REOPEN";
+    reason: string;
+    rejectedAt: string;
+  } | null = null;
+
+  if (rejectionLog) {
+    const rawVal = rejectionLog.new_value;
+    const val =
+      typeof rawVal === "string"
+        ? (JSON.parse(rawVal) as Record<string, unknown>)
+        : (rawVal as Record<string, unknown> | null);
+    const reason =
+      (val?.rejectionReason as string) ||
+      (val?.reason as string) ||
+      rejectionHistory?.remarks ||
+      "Request not approved by Department Head.";
+    rejectionInfo = {
+      type:
+        rejectionLog.action === "REWORK_REJECTED" ||
+        rejectionLog.action === "REWORK_REJECTED_FINAL"
+          ? ("REWORK" as const)
+          : ("REOPEN" as const),
+      reason,
+      rejectedAt: rejectionLog.created_at.toISOString(),
+    };
+  } else if (rejectionHistory) {
+    rejectionInfo = {
+      type: rejectionHistory.remarks?.toLowerCase().includes("rework")
+        ? ("REWORK" as const)
+        : ("REOPEN" as const),
+      reason:
+        rejectionHistory.remarks || "Request not approved by Department Head.",
+      rejectedAt: rejectionHistory.changed_at.toISOString(),
+    };
+  }
+
   const serializedGrievance: CaseHubGrievance = {
     id: Number(grievance.grievance_id),
     grievanceNumber: grievance.grievance_number,
@@ -322,6 +399,11 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     status: grievance.status,
     priority: grievance.priority,
     createdAt: grievance.created_at.toISOString(),
+    updatedAt: grievance.updated_at.toISOString(),
+    closedAt: grievance.closed_at ? grievance.closed_at.toISOString() : null,
+    closureReason: grievance.closure_reason || null,
+    reopenCount: grievance.reopen_count,
+    rejectionCount,
     dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
     categoryName: grievance.categories?.category_name || "General",
     subcategoryName: grievance.subcategories?.subcategory_name || "General",
@@ -330,6 +412,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     supportingFindings,
     attachments: endUserAttachments,
     staffAttachments,
+    rejectionInfo,
     statusHistory: (grievance.grievance_status_history || []).map((h) => ({
       id: h.history_id.toString(),
       status: h.new_status,

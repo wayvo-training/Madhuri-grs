@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { validateReopenReason } from "@/lib/constants/reopen";
-import {
-  evaluateReopenPolicy,
-  getTotalAllowedReopens,
-  requiresHeadManualReview,
-} from "@/lib/engines/reopen-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
@@ -57,38 +52,74 @@ export async function POST(
       );
     }
 
-    // Evaluate Reopen Policy dynamically
-    const reopenPolicy = await evaluateReopenPolicy({
-      categoryId: grievance.category_id,
-      subcategoryId: grievance.subcategory_id,
-      priority: grievance.priority,
-    });
-
-    const totalAllowedReopens = getTotalAllowedReopens(reopenPolicy);
-    const windowHours = reopenPolicy.reopenWindowHours;
-
-    if (grievance.reopen_count >= totalAllowedReopens) {
+    // 1. Shared combined limit: maximum 3 successful combined rework and reopening attempts
+    const MAX_COMBINED_ATTEMPTS = 3;
+    if (grievance.reopen_count >= MAX_COMBINED_ATTEMPTS) {
       return NextResponse.json(
         {
           success: false,
-          message: `Maximum reopen limit reached (${totalAllowedReopens} total: ${reopenPolicy.maxReopenCount} standard reopens and ${reopenPolicy.maxManualReviewCount} head manual reviews).`,
+          message: `Maximum combined limit reached (${MAX_COMBINED_ATTEMPTS} attempts). No further rework or reopening requests are allowed for this grievance.`,
         },
         { status: 400 },
       );
     }
 
-    const referenceClosedTime = grievance.closed_at || grievance.updated_at;
-    if (windowHours && referenceClosedTime) {
-      const hoursSinceClosed =
-        (Date.now() - referenceClosedTime.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceClosed > windowHours) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: `Reopen window of ${windowHours} hours has expired.`,
-          },
-          { status: 400 },
-        );
+    if (
+      grievance.closure_reason === "REWORK_REJECTED_FINAL" ||
+      grievance.closure_reason === "REOPEN_REJECTED_FINAL"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "This grievance was permanently closed after 3 rework reviews by the Department Head. No further rework or reopening requests are allowed.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // Check rejection count from audit logs
+    const rejectionCount = await prisma.audit_logs.count({
+      where: {
+        grievance_id: grievanceId,
+        action: {
+          in: [
+            "REWORK_REJECTED",
+            "REOPEN_REJECTED",
+            "REWORK_REJECTED_FINAL",
+            "REOPEN_REJECTED_FINAL",
+          ],
+        },
+      },
+    });
+
+    if (rejectionCount >= MAX_COMBINED_ATTEMPTS) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Maximum review rejections reached (${MAX_COMBINED_ATTEMPTS}). No further rework or reopening requests are allowed for this grievance.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    // 2. Validate Reopening Window (14 days = 336 hours)
+    const isPostClosureReopen = grievance.status === "CLOSED";
+    if (isPostClosureReopen) {
+      const referenceClosedTime = grievance.closed_at || grievance.updated_at;
+      if (referenceClosedTime) {
+        const hoursSinceClosed =
+          (Date.now() - referenceClosedTime.getTime()) / (1000 * 60 * 60);
+        const maxWindowHours = 14 * 24; // 14 days (336 hours)
+        if (hoursSinceClosed > maxWindowHours) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Reopening window of 14 days has expired.",
+            },
+            { status: 400 },
+          );
+        }
       }
     }
 
@@ -99,30 +130,23 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          message: reasonValidation.error || "Invalid reopen reason",
+          message: reasonValidation.error || "Invalid rework/reopen reason",
         },
         { status: 400 },
       );
     }
     const reason = rawReason.trim();
 
-    const newReopenCount = grievance.reopen_count + 1;
-    // Escalate on reaching manual review threshold or max allowed count
-    const isEscalated = requiresHeadManualReview(newReopenCount, reopenPolicy);
-    // In accordance with LLD Table 77:
+    // In accordance with Approved Reconciliation:
     // If grievance was in RESOLVED (citizen rejects proposed resolution before closure):
-    // -> Target status is REWORK
-    // If grievance was in CLOSED:
-    // -> If requiresHeadManualReview -> RESOLUTION_PENDING_APPROVAL
-    // -> Otherwise -> REOPENED
-    let newStatus: string;
-    if (grievance.status === "RESOLVED") {
-      newStatus = "REWORK";
-    } else if (isEscalated) {
-      newStatus = "RESOLUTION_PENDING_APPROVAL";
-    } else {
-      newStatus = "REOPENED";
-    }
+    // -> Target status is REWORK (awaiting mandatory Department Head review; SLA remains paused)
+    // If grievance was in CLOSED (post-closure reopening within 14 days):
+    // -> Target status is RESOLUTION_PENDING_APPROVAL (awaiting mandatory Department Head review)
+    // IMPORTANT: Shared attempt counter (reopen_count) is NOT incremented upon citizen request!
+    // It is incremented ONLY after Department Head successfully reviews and approves the request.
+    const newStatus = isPostClosureReopen
+      ? "RESOLUTION_PENDING_APPROVAL"
+      : "REWORK";
 
     // Resolve all participating departments and their Department Heads
     const allInvolvedDepts = await prisma.grievance_departments.findMany({
@@ -185,17 +209,18 @@ export async function POST(
 
     // Execute all database updates atomically in a transaction
     await prisma.$transaction(async (tx) => {
-      // 1. Update grievance status and reopen count
+      // 1. Update grievance status without incrementing reopen_count.
+      // Shared counter is incremented strictly when Department Head approves.
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
         data: {
           status: newStatus,
-          reopen_count: { increment: 1 },
-          ...(isEscalated ? { manual_review_count: { increment: 1 } } : {}),
+          closed_at: null,
+          closure_reason: null,
         },
       });
 
-      // 2. Route reopened grievance to Primary Department first
+      // 2. Route reopened/rework grievance to Primary Department queue
       if (pRecord) {
         await tx.grievance_departments.update({
           where: {
@@ -230,6 +255,7 @@ export async function POST(
                 status: "BLOCKED",
                 activated_at: null,
                 due_at: null,
+                completed_at: null,
               },
             });
           }
@@ -253,11 +279,13 @@ export async function POST(
         data: {
           grievance_id: grievanceId,
           user_id: user.user_id,
-          action: "REOPENED",
+          action: isPostClosureReopen ? "REOPEN_REQUESTED" : "REWORK_REQUESTED",
           entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
-            details: `Grievance reopened by the end user: ${reason}${isEscalated ? ". Automatically escalated to Department Head." : ""}`,
+            details: isPostClosureReopen
+              ? `Reopening requested by end user: "${reason}". Placed in Department Head review queue.`
+              : `Rework requested by end user: "${reason}". Placed in Department Head review queue.`,
           },
         },
       });
@@ -272,25 +300,6 @@ export async function POST(
           remarks: reason,
         },
       });
-
-      // 6. Create escalation record if reaching manual review threshold (idempotent, single record)
-      if (isEscalated && hod) {
-        const existingEscalation = await tx.escalations.findFirst({
-          where: { grievance_id: grievanceId, status: "OPEN" },
-        });
-
-        if (!existingEscalation) {
-          await tx.escalations.create({
-            data: {
-              grievance_id: grievanceId,
-              escalated_to: hod.user_id,
-              escalation_level: 1,
-              reason: `Automated Reopen Limit Escalation: Reopened ${newReopenCount} times (standard reopens completed, entering Head Manual Review). Reason: ${reason}`,
-              status: "OPEN",
-            },
-          });
-        }
-      }
     });
 
     // Notifications
@@ -298,9 +307,13 @@ export async function POST(
     await NotificationService.send({
       userId: user.user_id,
       grievanceId: grievanceId,
-      type: "GRIEVANCE_REOPENED",
-      title: "Grievance Reopened",
-      message: `Your grievance ${grievance.grievance_number} has been successfully reopened and placed back into the investigation queue.`,
+      type: isPostClosureReopen ? "REOPEN_REQUESTED" : "REWORK_REQUESTED",
+      title: isPostClosureReopen
+        ? `Requested for Reopen: Grievance ${grievance.grievance_number}`
+        : `Requested for Rework: Grievance ${grievance.grievance_number}`,
+      message: isPostClosureReopen
+        ? `You have requested for reopen for closed grievance ${grievance.grievance_number}. Your request is pending Department Head review.`
+        : `You have requested for rework for grievance ${grievance.grievance_number}. Your request is pending Department Head review.`,
     });
 
     // 2. Notify Department Heads of all participating departments
@@ -324,20 +337,15 @@ export async function POST(
       await NotificationService.send({
         userId: dHead.user_id,
         grievanceId: grievanceId,
-        type:
-          isEscalated && isLeadHead
-            ? "GRIEVANCE_ESCALATED"
-            : "GRIEVANCE_REOPENED",
-        title: isLeadHead
-          ? isEscalated
-            ? `Standard Reopen Limit Reached — Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens})`
-            : "Grievance Reopened by Employee"
-          : `Collaborating Grievance Reopened: ${grievance.grievance_number}`,
+        type: isPostClosureReopen ? "REOPEN_REQUESTED" : "REWORK_REQUESTED",
+        title: isPostClosureReopen
+          ? `Requested for Reopen: Grievance ${grievance.grievance_number}`
+          : `Requested for Rework: Grievance ${grievance.grievance_number}`,
         message: isLeadHead
-          ? isEscalated
-            ? `Grievance ${grievance.grievance_number} has completed all ${reopenPolicy.maxReopenCount} standard reopens and requires Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens}). Employee reason: ${reason}. As Lead Department Head, you can solve this grievance directly or assign it to staff.`
-            : `Grievance ${grievance.grievance_number} has been reopened by the employee. Reason provided: ${reason}. Please assign staff for re-investigation.`
-          : `Grievance ${grievance.grievance_number} involving your department (${deptName}) has been reopened by the employee. Reason: ${reason}. The lead department is initiating re-investigation.`,
+          ? isPostClosureReopen
+            ? `Employee has requested for reopen for closed grievance ${grievance.grievance_number}. Reason: "${reason}". As Lead Department Head, please review and approve or reject this request.`
+            : `Employee has requested for rework for grievance ${grievance.grievance_number}. Reason: "${reason}". As Lead Department Head, please review and assign staff for rework investigation.`
+          : `Grievance ${grievance.grievance_number} involving your department (${deptName}) has been requested for ${isPostClosureReopen ? "reopen" : "rework"} by the employee. Reason: "${reason}".`,
       });
     }
 
@@ -346,28 +354,32 @@ export async function POST(
       await NotificationService.send({
         userId: hod.user_id,
         grievanceId: grievanceId,
-        type: isEscalated ? "GRIEVANCE_ESCALATED" : "GRIEVANCE_REOPENED",
-        title: isEscalated
-          ? `Standard Reopen Limit Reached — Head Manual Review (Reopen ${newReopenCount} of ${totalAllowedReopens})`
-          : "Grievance Reopened by Employee",
-        message: `Grievance ${grievance.grievance_number} has completed standard reopens and entered Head Manual Review. Reason provided: ${reason}`,
+        type: isPostClosureReopen ? "REOPEN_REQUESTED" : "REWORK_REQUESTED",
+        title: isPostClosureReopen
+          ? `Requested for Reopen: Grievance ${grievance.grievance_number}`
+          : `Requested for Rework: Grievance ${grievance.grievance_number}`,
+        message: `Employee has requested for ${isPostClosureReopen ? "reopen" : "rework"} for grievance ${grievance.grievance_number}. Reason: "${reason}". Please review in your queue.`,
       });
     }
 
-    // 3. Notify Staff Who Solved/Worked On It
+    // 3. Notify Staff Who Worked On It
     for (const assignment of previousStaffAssignments) {
       await NotificationService.send({
         userId: assignment.staff_id,
         grievanceId: grievanceId,
-        type: "GRIEVANCE_REOPENED",
-        title: "Grievance Reopened",
-        message: `Grievance ${grievance.grievance_number} which you recently worked on has been reopened by the employee. Reason: ${reason}. It has been returned to the department queue.`,
+        type: isPostClosureReopen ? "REOPEN_REQUESTED" : "REWORK_REQUESTED",
+        title: isPostClosureReopen
+          ? `Requested for Reopen: Grievance ${grievance.grievance_number}`
+          : `Requested for Rework: Grievance ${grievance.grievance_number}`,
+        message: `Employee has requested for ${isPostClosureReopen ? "reopen" : "rework"} for grievance ${grievance.grievance_number}: "${reason}".`,
       });
     }
 
     return NextResponse.json({
       success: true,
-      message: "Grievance reopened successfully",
+      message: isPostClosureReopen
+        ? "Reopening request submitted successfully. Case is pending Department Head review."
+        : "Rework request submitted successfully. Case placed in Department Head review queue.",
     });
   } catch (error) {
     console.error("Error reopening grievance:", error);
