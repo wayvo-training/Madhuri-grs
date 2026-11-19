@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BookOpen,
   CheckCircle2,
+  Clock,
   FileCheck2,
   Mail,
   Shield,
@@ -43,6 +44,7 @@ interface CaseInspectionFooterProps {
     grievance: GrievanceItem,
     note: string,
   ) => Promise<GrievanceItem | undefined>;
+  onReviewGracePeriodClick?: () => void;
 }
 
 export function CaseInspectionFooter({
@@ -61,6 +63,7 @@ export function CaseInspectionFooter({
   onReviewResolutionClick,
   onProposeKbClick,
   onAddInternalNote,
+  onReviewGracePeriodClick,
 }: CaseInspectionFooterProps) {
   const [isDirectiveModalOpen, setIsDirectiveModalOpen] = useState(false);
 
@@ -125,6 +128,19 @@ export function CaseInspectionFooter({
               <span>Contact Staff</span>
             </button>
           ) : null}
+
+          {(currentGrievance.hasPendingExtension ||
+            caseProgressData?.latestExtension?.status === "PENDING") && (
+            <button
+              type="button"
+              onClick={onReviewGracePeriodClick}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-teal-50 hover:bg-teal-100 hover:border-teal-400 active:scale-95 px-3 py-2 text-xs font-semibold text-teal-800 shadow-2xs transition cursor-pointer"
+              title="Click to review staff grace period extension request"
+            >
+              <Clock className="h-3.5 w-3.5 text-teal-600 animate-pulse" />
+              <span>Grace Period Requested</span>
+            </button>
+          )}
 
           {currentGrievance.status === "REWORK" ? (
             <>

@@ -97,8 +97,8 @@ export async function POST(
     });
     const now = new Date();
     const slaMetrics = calculateSlaConsumption(
-      grievance.created_at,
-      grievance.due_at,
+      activeTracking?.started_at || grievance.created_at,
+      activeTracking?.due_at || grievance.due_at,
       grievance.priority,
       now,
       activeTracking?.accumulated_paused_minutes || 0,

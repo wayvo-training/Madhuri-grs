@@ -322,6 +322,19 @@ export async function fetchDepartmentHeadGrievances(
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
         },
+        sla_extensions: {
+          orderBy: { extension_id: "desc" },
+          take: 1,
+          include: {
+            users_requested_by: {
+              select: {
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ priority: "desc" }, { created_at: "desc" }],
       ...(skip !== undefined ? { skip } : {}),
@@ -1069,9 +1082,16 @@ export async function fetchDepartmentHeadGrievances(
         : null;
       const accumulatedPausedMins = activeSla?.accumulated_paused_minutes || 0;
 
+      const effectiveStart = activeSla?.started_at
+        ? new Date(activeSla.started_at)
+        : g.created_at;
+      const effectiveDue = activeSla?.due_at
+        ? new Date(activeSla.due_at)
+        : g.due_at;
+
       const slaConsumption = calculateSlaConsumption(
-        g.created_at,
-        g.due_at,
+        effectiveStart,
+        effectiveDue,
         g.priority,
         new Date(),
         accumulatedPausedMins,
@@ -1085,12 +1105,14 @@ export async function fetchDepartmentHeadGrievances(
           : slaConsumption.consumptionPercent >= 75
             ? "AT_RISK"
             : "ON_TRACK");
-      resolvedSlaDeadline = g.due_at ? formatFriendlyDate(g.due_at) : "N/A";
+      resolvedSlaDeadline = effectiveDue
+        ? formatFriendlyDate(effectiveDue)
+        : "N/A";
       resolvedSlaTimeLeft = formatSlaTimeLeft(
-        g.due_at,
-        g.sla_status,
+        effectiveDue,
+        resolvedSlaStatus,
         g.priority,
-        g.created_at,
+        effectiveStart,
         isPaused,
         pausedAt,
       );
@@ -1153,6 +1175,23 @@ export async function fetchDepartmentHeadGrievances(
           l.action === "REOPEN_REJECTED_FINAL",
       ).length,
       hasProposedKb: (latestResolution?.knowledge_articles?.length ?? 0) > 0,
+      latestExtension: g.sla_extensions?.[0]
+        ? {
+            id: g.sla_extensions[0].extension_id.toString(),
+            status: g.sla_extensions[0].status as
+              | "PENDING"
+              | "APPROVED"
+              | "REJECTED",
+            requestedMinutes: g.sla_extensions[0].requested_duration_minutes,
+            grantedMinutes: g.sla_extensions[0].granted_duration_minutes,
+            reason: g.sla_extensions[0].reason,
+            createdAt: g.sla_extensions[0].created_at.toISOString(),
+            requestedByName: g.sla_extensions[0].users_requested_by
+              ? `${g.sla_extensions[0].users_requested_by.first_name} ${g.sla_extensions[0].users_requested_by.last_name || ""}`.trim()
+              : "Staff Member",
+          }
+        : null,
+      hasPendingExtension: g.sla_extensions?.[0]?.status === "PENDING",
       isCrossDepartment,
       collaboratingDepartments: deptList,
       departmentsInvolved,

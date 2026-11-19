@@ -137,6 +137,19 @@ export async function GET(
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
         },
+        sla_extensions: {
+          orderBy: { extension_id: "desc" },
+          take: 1,
+          include: {
+            users_requested_by: {
+              select: {
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -1250,6 +1263,21 @@ export async function GET(
         };
       });
 
+    const latestExt = grievance.sla_extensions?.[0];
+    const latestExtension = latestExt
+      ? {
+          id: latestExt.extension_id.toString(),
+          status: latestExt.status as "PENDING" | "APPROVED" | "REJECTED",
+          requestedMinutes: latestExt.requested_duration_minutes,
+          grantedMinutes: latestExt.granted_duration_minutes,
+          reason: latestExt.reason,
+          createdAt: latestExt.created_at.toISOString(),
+          requestedByName: latestExt.users_requested_by
+            ? `${latestExt.users_requested_by.first_name} ${latestExt.users_requested_by.last_name || ""}`.trim()
+            : "Staff Member",
+        }
+      : null;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -1263,6 +1291,8 @@ export async function GET(
           priority: grievance.priority,
           status: grievance.status,
           isAssignedToHead,
+          latestExtension,
+          hasPendingExtension: latestExtension?.status === "PENDING",
           createdAt: formatFullDateTime(grievance.created_at),
           submitterName:
             `${grievance.users?.first_name || ""} ${grievance.users?.last_name || ""}`.trim() ||
@@ -1403,6 +1433,7 @@ export async function GET(
         supportingFindings,
         departmentsInvolved,
         hodIntervention,
+        latestExtension,
       },
     });
   } catch (error) {

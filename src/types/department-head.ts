@@ -97,6 +97,16 @@ export interface GrievanceItem {
   isBlocked?: boolean;
   escalationReason?: string;
   escalationLevel?: number;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+    requestedByName?: string;
+  } | null;
+  hasPendingExtension?: boolean;
   // 11-Step SLA Escalation & Resolution Lifecycle
   escalationStage?:
     | "SLA_THRESHOLD_REACHED"
@@ -323,6 +333,15 @@ export interface CaseProgressData {
     allocatedDurationMinutes?: number | null;
   };
   latestActivity?: string;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+    requestedByName?: string;
+  } | null;
   timeline?: {
     id: string;
     timestamp: string;

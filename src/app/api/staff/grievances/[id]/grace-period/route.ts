@@ -44,6 +44,24 @@ export async function POST(
       );
     }
 
+    // Check if staff already has a pending or active extension request
+    const existingPending = await prisma.sla_extensions.findFirst({
+      where: {
+        grievance_id: grievanceId,
+        status: "PENDING",
+      },
+    });
+
+    if (existingPending) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You have already submitted a grace period request.",
+        },
+        { status: 400 },
+      );
+    }
+
     const result = await requestSlaExtension({
       grievanceId,
       staffId: user.user_id,

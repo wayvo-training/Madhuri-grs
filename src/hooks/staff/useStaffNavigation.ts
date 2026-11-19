@@ -4,30 +4,9 @@ import { useEffect, useState } from "react";
 import type { StaffView } from "@/types/staff";
 
 export function useStaffNavigation(defaultView: StaffView = "overview") {
-  const [activeView, setActiveView] = useState<StaffView>(() => {
-    if (typeof window !== "undefined") {
-      const searchParams = new URLSearchParams(window.location.search);
-      const viewParam = searchParams.get("view");
-      if (
-        viewParam === "profile" ||
-        viewParam === "queue" ||
-        viewParam === "activity"
-      ) {
-        return viewParam as StaffView;
-      }
-      const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (hash === "queue" || hash === "assigned") {
-        return "queue";
-      }
-      if (hash === "profile" || hash === "activity") {
-        return hash as StaffView;
-      }
-      if (hash === "overview") {
-        return "overview";
-      }
-    }
-    return defaultView;
-  });
+  viewParam === "activity";
+  // SSR-safe view: must NOT reference window during state initialization to avoid React hydration mismatches!
+  const [activeView, setActiveView] = useState<StaffView>(defaultView);
 
   useEffect(() => {
     const handleHash = () => {

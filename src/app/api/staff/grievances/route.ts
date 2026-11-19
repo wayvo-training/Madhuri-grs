@@ -59,6 +59,10 @@ export async function GET(req: NextRequest) {
               orderBy: { sla_tracking_id: "desc" as const },
               take: 1,
             },
+            sla_extensions: {
+              orderBy: { created_at: "desc" as const },
+              take: 1,
+            },
           },
         },
         grievance_departments: {
@@ -143,14 +147,16 @@ export async function GET(req: NextRequest) {
           stateLabel: "Blocked",
         };
       } else {
+        const activeSla = g.sla_tracking?.[0];
         const deptStart =
           a.grievance_departments?.activated_at ||
           a.grievance_departments?.assigned_at ||
+          activeSla?.started_at ||
           g.created_at;
-        const deptDue = a.grievance_departments?.due_at || g.due_at;
+        const deptDue =
+          a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
-        const activeSla = g.sla_tracking?.[0];
         slaCalc = calculateSlaStatus(
           deptStart,
           deptDue,
@@ -278,6 +284,19 @@ export async function GET(req: NextRequest) {
         departmentsInvolved,
         isCrossDepartment,
         collaboratingDepartments,
+        latestExtension: g.sla_extensions?.[0]
+          ? {
+              id: g.sla_extensions[0].extension_id.toString(),
+              status: g.sla_extensions[0].status as
+                | "PENDING"
+                | "APPROVED"
+                | "REJECTED",
+              requestedMinutes: g.sla_extensions[0].requested_duration_minutes,
+              grantedMinutes: g.sla_extensions[0].granted_duration_minutes,
+              reason: g.sla_extensions[0].reason,
+              createdAt: g.sla_extensions[0].created_at.toISOString(),
+            }
+          : null,
       };
     });
 

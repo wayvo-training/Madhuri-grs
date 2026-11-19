@@ -198,9 +198,12 @@ export async function evaluateGrievanceSla(
       ? evaluationDate
       : null);
 
+  const effectiveStart = activeTracking?.started_at || grievance.created_at;
+  const effectiveDue = activeTracking?.due_at || grievance.due_at;
+
   const { consumptionPercent } = calculateSlaConsumption(
-    grievance.created_at,
-    grievance.due_at,
+    effectiveStart,
+    effectiveDue,
     grievance.priority,
     evaluationDate,
     accPaused,
@@ -363,8 +366,8 @@ export async function evaluateGrievanceSla(
 
     const totalGrievanceMinutes =
       calculateSlaConsumption(
-        grievance.created_at,
-        grievance.due_at,
+        effectiveStart,
+        effectiveDue,
         grievance.priority || "MEDIUM",
         evaluationDate,
         accPaused,
@@ -378,7 +381,7 @@ export async function evaluateGrievanceSla(
         : Math.max(1, Math.round((totalGrievanceMinutes * percentAlloc) / 100));
 
     const activatedAt =
-      deptRec.activated_at || deptRec.assigned_at || grievance.created_at;
+      deptRec.activated_at || deptRec.assigned_at || effectiveStart;
 
     const isSequentialDept =
       deptRec.dependency_type === "SEQUENTIAL" ||
@@ -1868,14 +1871,22 @@ export async function requestSlaExtension(
 
   // 3. Invariant: One request per active SLA cycle (including rejected requests)
   const existingCycleExtension = await client.sla_extensions.findFirst({
-    where: { sla_tracking_id: activeTracking.sla_tracking_id },
+    where: {
+      OR: [
+        { sla_tracking_id: activeTracking.sla_tracking_id },
+        { grievance_id: gId, status: "PENDING" },
+      ],
+    },
+    orderBy: { created_at: "desc" },
   });
 
   if (existingCycleExtension) {
     return {
       success: false,
       message:
-        "Only 1 SLA extension request is permitted per active SLA cycle. A request has already been submitted for this cycle.",
+        existingCycleExtension.status === "PENDING"
+          ? "You have already submitted a grace period request."
+          : "You have already submitted a grace period request for this grievance.",
     };
   }
 
@@ -1972,6 +1983,50 @@ export async function requestSlaExtension(
     },
   });
 
+  // Notify active Department Head(s) of the grace period request
+  const activeDeptRecord = await client.grievance_departments.findFirst({
+    where: {
+      grievance_id: gId,
+      status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED", "BLOCKED"] },
+    },
+    include: {
+      departments: {
+        include: {
+          users: {
+            where: {
+              roles: { role_name: "DEPARTMENT_HEAD" },
+              status: "ACTIVE",
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const staffUser = await client.users.findUnique({
+    where: { user_id: sId },
+    select: { first_name: true, last_name: true },
+  });
+  const staffName = staffUser
+    ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+    : "Staff Member";
+
+  const requestedHours = Math.round(effectiveRequestedMinutes / 60);
+  const deptHeads = activeDeptRecord?.departments?.users || [];
+  for (const head of deptHeads) {
+    await client.notifications.create({
+      data: {
+        user_id: head.user_id,
+        grievance_id: gId,
+        notification_type: "SLA_EXTENSION_REQUESTED",
+        channel: "IN_APP",
+        title: `Grace Period Requested: ${grievance.grievance_number}`,
+        message: `Staff member ${staffName} has requested a grace period extension of +${requestedHours}h for grievance ${grievance.grievance_number}. Reason: "${options.reason.trim()}".`,
+        status: "PENDING",
+      },
+    });
+  }
+
   return {
     success: true,
     message: `SLA extension request for ${effectiveRequestedMinutes} minutes submitted to Department Head.`,
@@ -2042,6 +2097,19 @@ export async function reviewSlaExtension(
         new_value: {
           rejectionReason: options.rejectionReason,
         },
+      },
+    });
+
+    // Notify requesting staff member of rejection
+    await client.notifications.create({
+      data: {
+        user_id: extension.requested_by,
+        grievance_id: extension.grievance_id,
+        notification_type: "SLA_EXTENSION_REJECTED",
+        channel: "IN_APP",
+        title: `Grace Period Declined: ${extension.grievances.grievance_number}`,
+        message: `Your grace period request for grievance ${extension.grievances.grievance_number} was declined by Department Head. Reason: "${options.rejectionReason || "Declined by Department Head"}".`,
+        status: "PENDING",
       },
     });
 
@@ -2129,6 +2197,19 @@ export async function reviewSlaExtension(
     },
   });
 
+  // Notify requesting staff member of approval
+  await client.notifications.create({
+    data: {
+      user_id: extension.requested_by,
+      grievance_id: extension.grievance_id,
+      notification_type: "SLA_EXTENSION_APPROVED",
+      channel: "IN_APP",
+      title: `Grace Period Approved: ${extension.grievances.grievance_number}`,
+      message: `Your request for a +${Math.round(grantedMinutes / 60)}h grace period extension for grievance ${extension.grievances.grievance_number} was approved by Department Head.`,
+      status: "PENDING",
+    },
+  });
+
   return {
     success: true,
     message: `SLA extension approved. Extended by ${grantedMinutes} minutes.`,
@@ -2185,8 +2266,8 @@ export async function processAutoClosures(
   for (const g of resolvedInactivityGrievances) {
     const activeTracking = g.sla_tracking?.[0];
     const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
-      g.created_at,
-      g.due_at,
+      activeTracking?.started_at || g.created_at,
+      activeTracking?.due_at || g.due_at,
       g.priority,
       now,
       activeTracking?.accumulated_paused_minutes || 0,
@@ -2282,8 +2363,8 @@ export async function processAutoClosures(
   for (const g of infoNonResponseGrievances) {
     const activeTracking = g.sla_tracking?.[0];
     const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
-      g.created_at,
-      g.due_at,
+      activeTracking?.started_at || g.created_at,
+      activeTracking?.due_at || g.due_at,
       g.priority,
       now,
       activeTracking?.accumulated_paused_minutes || 0,

@@ -7,3 +7,4 @@ export * from "./CaseFileInspectionModal";
 export * from "./DeclineRequestModal";
 export * from "./DepartmentHeadEscalationModal";
 export * from "./DepartmentHeadResolutionModal";
+export * from "./ReviewGracePeriodModal";

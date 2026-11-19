@@ -97,6 +97,10 @@ export async function GET(
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
         },
+        sla_extensions: {
+          orderBy: { created_at: "desc" },
+          take: 1,
+        },
       },
     });
 
@@ -597,16 +601,17 @@ export async function GET(
         timeRemaining: "Pending Prerequisites (Blocked)",
       };
     } else {
+      const activeSla = grievance.sla_tracking?.[0];
       const deptStart =
         myDeptRaw?.activated_at ||
         myDeptRaw?.assigned_at ||
+        activeSla?.started_at ||
         grievance.created_at;
       const deptDue =
         myDeptRaw?.due_at ||
         (deptAllocatedMins
           ? new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000)
-          : grievance.due_at);
-      const activeSla = grievance.sla_tracking?.[0];
+          : activeSla?.due_at || grievance.due_at);
       const deptSlaStatus = myDeptRaw?.sla_status || grievance.sla_status;
       slaCalc = calculateSlaStatus(
         deptStart,
@@ -657,6 +662,18 @@ export async function GET(
     const canSubmitFindings =
       !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
     const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
+
+    const latestExt = grievance.sla_extensions?.[0];
+    const latestExtension = latestExt
+      ? {
+          id: latestExt.extension_id.toString(),
+          status: latestExt.status as "PENDING" | "APPROVED" | "REJECTED",
+          requestedMinutes: latestExt.requested_duration_minutes,
+          grantedMinutes: latestExt.granted_duration_minutes,
+          reason: latestExt.reason,
+          createdAt: latestExt.created_at.toISOString(),
+        }
+      : null;
 
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
@@ -715,6 +732,7 @@ export async function GET(
       canSubmitFindings,
       isFinalSequentialDepartment,
       overallStatus: grievance.status,
+      latestExtension,
       activeDepartmentName,
     };
 

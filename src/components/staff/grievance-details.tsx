@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { StatusBadge } from "@/components/dashboard/badges";
 import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
@@ -26,6 +27,7 @@ import { CollaborationTab } from "./details/CollaborationTab";
 import { InvestigationTab } from "./details/InvestigationTab";
 import { ResolutionTab } from "./details/ResolutionTab";
 import { StatementTab } from "./details/StatementTab";
+import { RequestGracePeriodModal } from "./modals/RequestGracePeriodModal";
 
 interface GrievanceDetailsProps {
   grievance: StaffGrievanceItem;
@@ -101,11 +103,21 @@ export function GrievanceDetails({
     | "findings"
   >(initialTab);
   const [isStarting, setIsStarting] = useState(false);
-  const [autoOpenRequestModal, setAutoOpenRequestModal] = useState(false);
+  const [autoOpenRequestModal, _setAutoOpenRequestModal] = useState(false);
   const [isProposeKbOpen, setIsProposeKbOpen] = useState(false);
+  const [isGracePeriodModalOpen, setIsGracePeriodModalOpen] = useState(false);
+  const [localExtension, setLocalExtension] = useState(
+    grievance.latestExtension || null,
+  );
   const [hasProposedKb, setHasProposedKb] = useState(
     Boolean(grievance.hasProposedKb),
   );
+
+  useEffect(() => {
+    if (grievance.latestExtension !== undefined) {
+      setLocalExtension(grievance.latestExtension);
+    }
+  }, [grievance.latestExtension]);
 
   useEffect(() => {
     if (initialTab) {
@@ -446,104 +458,102 @@ export function GrievanceDetails({
               </>
             )}
 
-            {!isCompleted && grievance.status !== "ASSIGNED" && (
-              <>
-                {grievance.myDepartmentStatus === "BLOCKED" ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200"
-                    title="Awaiting prerequisite departments to complete their investigation stage."
-                  >
-                    <Clock className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Stage Blocked · Awaiting Prerequisites</span>
-                  </span>
-                ) : grievance.canSubmitFinalResolution ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenResolutionForm) {
-                        onOpenResolutionForm(grievance);
-                      } else {
-                        onOpenResolveModal?.();
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                  >
-                    <FileCheck2 className="h-3.5 w-3.5" />
-                    <span>Submit Final Resolution</span>
-                  </button>
-                ) : grievance.canSubmitFindings ||
-                  (!grievance.isMyDepartmentCompleted &&
-                    grievance.myDepartmentStatus !== "COMPLETED") ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenResolutionForm) {
-                        onOpenResolutionForm(grievance);
-                      } else {
-                        onOpenResolveModal?.();
-                      }
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
-                  >
-                    <FileCheck2 className="h-3.5 w-3.5" />
-                    <span>Submit Department Findings</span>
-                  </button>
-                ) : grievance.isMyDepartmentCompleted ||
-                  grievance.myDepartmentStatus === "COMPLETED" ? (
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                      Department Findings Submitted · Awaiting Subsequent Stage
-                    </span>
-                  </div>
-                ) : (
-                  (() => {
-                    const pendingSupporting = (
-                      grievance.departmentsInvolved || []
-                    ).filter(
-                      (d) =>
-                        d.involvementType === "SUPPORTING" &&
-                        d.status !== "COMPLETED" &&
-                        d.status !== "RESOLVED" &&
-                        d.status !== "REMOVED",
-                    );
-                    if (pendingSupporting.length > 0) {
-                      return (
-                        <span
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 border border-amber-200 shadow-2xs"
-                          title={`Awaiting findings from: ${pendingSupporting.map((d) => d.departmentName).join(", ")}`}
-                        >
-                          <Clock className="h-3.5 w-3.5 text-amber-600" />
-                          <span>
-                            Awaiting Supportive Findings (
-                            {pendingSupporting
-                              .map((d) => d.departmentName)
-                              .join(", ")}
-                            )
-                          </span>
-                        </span>
-                      );
+            {!isCompleted &&
+              grievance.status !== "ASSIGNED" &&
+              (grievance.myDepartmentStatus === "BLOCKED" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-700 border border-slate-200"
+                  title="Awaiting prerequisite departments to complete their investigation stage."
+                >
+                  <Clock className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Stage Blocked · Awaiting Prerequisites</span>
+                </span>
+              ) : grievance.canSubmitFinalResolution ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenResolutionForm) {
+                      onOpenResolutionForm(grievance);
+                    } else {
+                      onOpenResolveModal?.();
                     }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  <span>Submit Final Resolution</span>
+                </button>
+              ) : grievance.canSubmitFindings ||
+                (!grievance.isMyDepartmentCompleted &&
+                  grievance.myDepartmentStatus !== "COMPLETED") ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenResolutionForm) {
+                      onOpenResolutionForm(grievance);
+                    } else {
+                      onOpenResolveModal?.();
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  <span>Submit Department Findings</span>
+                </button>
+              ) : grievance.isMyDepartmentCompleted ||
+                grievance.myDepartmentStatus === "COMPLETED" ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    Department Findings Submitted · Awaiting Subsequent Stage
+                  </span>
+                </div>
+              ) : (
+                (() => {
+                  const pendingSupporting = (
+                    grievance.departmentsInvolved || []
+                  ).filter(
+                    (d) =>
+                      d.involvementType === "SUPPORTING" &&
+                      d.status !== "COMPLETED" &&
+                      d.status !== "RESOLVED" &&
+                      d.status !== "REMOVED",
+                  );
+                  if (pendingSupporting.length > 0) {
                     return (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (onOpenResolutionForm) {
-                            onOpenResolutionForm(grievance);
-                          } else {
-                            onOpenResolveModal?.();
-                          }
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 border border-amber-200 shadow-2xs"
+                        title={`Awaiting findings from: ${pendingSupporting.map((d) => d.departmentName).join(", ")}`}
                       >
-                        <FileCheck2 className="h-3.5 w-3.5" />
-                        <span>Submit Final Resolution</span>
-                      </button>
+                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                        <span>
+                          Awaiting Supportive Findings (
+                          {pendingSupporting
+                            .map((d) => d.departmentName)
+                            .join(", ")}
+                          )
+                        </span>
+                      </span>
                     );
-                  })()
-                )}
-              </>
-            )}
+                  }
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenResolutionForm) {
+                          onOpenResolutionForm(grievance);
+                        } else {
+                          onOpenResolveModal?.();
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                    >
+                      <FileCheck2 className="h-3.5 w-3.5" />
+                      <span>Submit Final Resolution</span>
+                    </button>
+                  );
+                })()
+              ))}
 
             {grievance.status === "CLOSED" ||
             grievance.overallStatus === "CLOSED" ||
@@ -562,6 +572,77 @@ export function GrievanceDetails({
                 Department Findings Submitted
               </span>
             ) : null}
+
+            {!isCompleted &&
+              grievance.status !== "ASSIGNED" &&
+              grievance.myDepartmentStatus !== "BLOCKED" &&
+              (localExtension?.status === "PENDING" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-2xs"
+                  title={`Awaiting Department Head decision on requested extension of +${Math.round(localExtension.requestedMinutes / 60)}h`}
+                >
+                  <Clock className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
+                  <span>
+                    Grace Period Pending (+
+                    {Math.round(localExtension.requestedMinutes / 60)}h)
+                  </span>
+                </span>
+              ) : localExtension?.status === "APPROVED" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-2xs"
+                  title="Grace period approved by Department Head"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>
+                    Grace Period Granted (+
+                    {Math.round(
+                      (localExtension.grantedMinutes ||
+                        localExtension.requestedMinutes) / 60,
+                    )}
+                    h)
+                  </span>
+                </span>
+              ) : localExtension?.status === "REJECTED" ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-800 shadow-2xs"
+                  title="Grace period request was declined by Department Head"
+                >
+                  <Clock className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Grace Period Declined</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (localExtension) {
+                      toast.error(
+                        "You have already submitted a grace period request.",
+                      );
+                      return;
+                    }
+                    setIsGracePeriodModalOpen(true);
+                  }}
+                  disabled={
+                    grievance.slaConsumptionPercent < 50 ||
+                    Boolean(localExtension)
+                  }
+                  title={
+                    localExtension
+                      ? "A grace period request has already been submitted for this cycle"
+                      : grievance.slaConsumptionPercent < 50
+                        ? `Grace period unlocks after 50% SLA is consumed (currently ${grievance.slaConsumptionPercent}%)`
+                        : "Request SLA grace period / extension from Department Head"
+                  }
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer shadow-2xs ${
+                    grievance.slaConsumptionPercent >= 50 && !localExtension
+                      ? "border-teal-300 bg-teal-50/80 text-[#0F766E] hover:bg-teal-100"
+                      : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Request Grace Period</span>
+                </button>
+              ))}
 
             {!hasProposedKb && canStaffProposeKnowledge(grievance) && (
               <button
@@ -590,6 +671,22 @@ export function GrievanceDetails({
           onClose={() => setIsProposeKbOpen(false)}
           onSuccess={() => setHasProposedKb(true)}
           grievance={grievance}
+        />
+
+        {/* Request Grace Period (SLA Extension) Modal */}
+        <RequestGracePeriodModal
+          isOpen={isGracePeriodModalOpen}
+          onClose={() => setIsGracePeriodModalOpen(false)}
+          grievance={grievance}
+          onSuccess={() => {
+            setLocalExtension({
+              id: "temp",
+              status: "PENDING",
+              requestedMinutes: 240,
+              reason: "Grace period request pending review",
+              createdAt: new Date().toISOString(),
+            });
+          }}
         />
       </div>
     </div>

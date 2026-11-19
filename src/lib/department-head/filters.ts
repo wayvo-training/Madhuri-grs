@@ -267,6 +267,9 @@ export function computeAttentionRequiredList(
         g.status === "AWAITING_ASSIGNMENT" ||
         g.status === "ROUTED";
       const isPendingReview = requiresHeadResolutionReview(g);
+      const isPendingGracePeriod = Boolean(
+        g.hasPendingExtension || g.latestExtension?.status === "PENDING",
+      );
       const isException =
         g.isReopened ||
         g.status === "REOPENED" ||
@@ -274,6 +277,7 @@ export function computeAttentionRequiredList(
         g.isCrossDepartment;
       return (
         isStaffInactive ||
+        isPendingGracePeriod ||
         isBreached ||
         isAtRisk ||
         isUnassigned ||
@@ -284,6 +288,8 @@ export function computeAttentionRequiredList(
     .sort((a, b) => {
       const getPriorityRank = (g: GrievanceItem) => {
         if (g.isAssignedStaffInactive) return 5;
+        if (g.hasPendingExtension || g.latestExtension?.status === "PENDING")
+          return 4.5;
         if (
           g.slaStatus === "BREACHED" ||
           g.status === "ESCALATED" ||

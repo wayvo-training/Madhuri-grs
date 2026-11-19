@@ -164,6 +164,14 @@ export interface StaffGrievanceItem {
   isFinalSequentialDepartment?: boolean;
   overallStatus?: string;
   activeDepartmentName?: string;
+  latestExtension?: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    requestedMinutes: number;
+    grantedMinutes?: number | null;
+    reason: string;
+    createdAt: string;
+  } | null;
 }
 
 export interface StaffMemberProfile {
