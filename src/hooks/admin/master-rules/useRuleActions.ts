@@ -34,14 +34,13 @@ export interface UseRuleActionsParams {
 export interface SlaNotificationRecipients {
   warning: string[];
   at_risk: string[];
-  critical: string[];
+  critical?: string[];
   escalation: string[];
 }
 
 export const DEFAULT_SLA_RECIPIENTS: SlaNotificationRecipients = {
   warning: ["ASSIGNED_STAFF"],
   at_risk: ["ASSIGNED_STAFF", "ALL_DEPT_HEADS"],
-  critical: ["ASSIGNED_STAFF", "ALL_DEPT_HEADS"],
   escalation: ["PRIMARY_DEPT_HEAD", "ADMIN"],
 };
 
@@ -296,9 +295,13 @@ export function useRuleActions({
   );
 
   // Reopen-specific State
-  const [reopenWindowHours, setReopenWindowHours] = useState("168");
-  const [maxReopens, setMaxReopens] = useState("2");
-  const [maxReviews, setMaxReviews] = useState("1");
+  const [reopenWindowHours, setReopenWindowHours] = useState("336");
+  const [maxReopens, setMaxReopens] = useState("3");
+  const [maxReviews, setMaxReviews] = useState("3");
+  const [resolutionInactivityDays, setResolutionInactivityDays] = useState("7");
+  const [additionalInfoInactivityDays, setAdditionalInfoInactivityDays] =
+    useState("7");
+  const [maxRejections, setMaxRejections] = useState("3");
 
   function resetForm() {
     setRuleName("");
@@ -324,6 +327,12 @@ export function useRuleActions({
     setEscalationPercent("100");
     setDepartmentalAllocationMode("FULL");
     setSlaRecipients(DEFAULT_SLA_RECIPIENTS);
+    setReopenWindowHours("336");
+    setMaxReopens("3");
+    setMaxReviews("3");
+    setResolutionInactivityDays("7");
+    setAdditionalInfoInactivityDays("7");
+    setMaxRejections("3");
     setNewCategoryName("");
     setNewSubcategoryName("");
   }
@@ -602,19 +611,14 @@ export function useRuleActions({
             (Number.parseFloat(durationHours) || 24) * 60,
           warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
           at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
-          critical_threshold_percent: Number.parseFloat(criticalPercent) || 90,
-          escalation_threshold_percent:
-            Number.parseFloat(escalationPercent) || 100,
+          escalation_threshold_percent: 100,
           target_role: "DEPARTMENT_HEAD",
           status: ruleStatus,
           notification_recipients: slaRecipients,
           trigger_condition: {
             warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
             at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
-            critical_threshold_percent:
-              Number.parseFloat(criticalPercent) || 90,
-            escalation_threshold_percent:
-              Number.parseFloat(escalationPercent) || 100,
+            escalation_threshold_percent: 100,
             notification_recipients: slaRecipients,
             departmental_allocation_mode: departmentalAllocationMode,
           },
@@ -647,12 +651,26 @@ export function useRuleActions({
           }
         }
 
+        const resInactDays = Number.parseInt(resolutionInactivityDays, 10) || 7;
+        const addInfoDays =
+          Number.parseInt(additionalInfoInactivityDays, 10) || 7;
+        const maxRej = Number.parseInt(maxRejections, 10) || 3;
+
+        conditions.resolution_inactivity_days = resInactDays;
+        conditions.resolution_inactivity_hours = resInactDays * 24;
+        conditions.additional_info_days = addInfoDays;
+        conditions.additional_info_hours = addInfoDays * 24;
+        conditions.max_rejection_count = maxRej;
+
         endpoint = "/api/admin/rules/reopen";
         payload = {
           policy_name: ruleName.trim(),
-          reopen_window_hours: Number.parseInt(reopenWindowHours, 10) || 168,
-          max_reopen_count: Number.parseInt(maxReopens, 10) || 2,
-          max_manual_review_count: Number.parseInt(maxReviews, 10) || 1,
+          reopen_window_hours: Number.parseInt(reopenWindowHours, 10) || 336,
+          max_reopen_count: Number.parseInt(maxReopens, 10) || 3,
+          max_manual_review_count: Number.parseInt(maxReviews, 10) || 3,
+          resolution_inactivity_days: resInactDays,
+          additional_info_days: addInfoDays,
+          max_rejection_count: maxRej,
           status: ruleStatus,
           applicable_condition:
             Object.keys(conditions).length > 0 ? conditions : undefined,
@@ -844,6 +862,12 @@ export function useRuleActions({
     setMaxReopens,
     maxReviews,
     setMaxReviews,
+    resolutionInactivityDays,
+    setResolutionInactivityDays,
+    additionalInfoInactivityDays,
+    setAdditionalInfoInactivityDays,
+    maxRejections,
+    setMaxRejections,
     newCategoryName,
     setNewCategoryName,
     newSubcategoryName,

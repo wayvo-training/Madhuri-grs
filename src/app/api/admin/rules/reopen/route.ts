@@ -58,8 +58,23 @@ export async function POST(request: Request) {
     const windowHours = reopen_window_hours
       ? Number(reopen_window_hours)
       : null;
-    const maxReopen = Number(max_reopen_count) || 2;
-    const maxReviews = Number(max_manual_review_count) || 1;
+    const maxReopen = Number(max_reopen_count) || 3;
+    const maxReviews = Number(max_manual_review_count) || 3;
+    const resInactivity = Number(
+      body.resolution_inactivity_days ??
+        body.applicable_condition?.resolution_inactivity_days ??
+        7,
+    );
+    const infoInactivity = Number(
+      body.additional_info_days ??
+        body.applicable_condition?.additional_info_days ??
+        7,
+    );
+    const maxRej = Number(
+      body.max_rejection_count ??
+        body.applicable_condition?.max_rejection_count ??
+        3,
+    );
 
     if (windowHours !== null) {
       if (
@@ -82,13 +97,14 @@ export async function POST(request: Request) {
     if (
       Number.isNaN(maxReopen) ||
       maxReopen < 1 ||
-      maxReopen > 10 ||
+      maxReopen > 5 ||
       !Number.isInteger(maxReopen)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Max reopen count must be between 1 and 10.",
+          message:
+            "Max combined rework & reopen attempts must be between 1 and 5.",
         },
         { status: 400 },
       );
@@ -97,20 +113,76 @@ export async function POST(request: Request) {
     if (
       Number.isNaN(maxReviews) ||
       maxReviews < 1 ||
-      maxReviews > 10 ||
+      maxReviews > 5 ||
       !Number.isInteger(maxReviews)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Manual review count must be between 1 and 10.",
+          message: "Manual review count must be between 1 and 5.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      Number.isNaN(resInactivity) ||
+      resInactivity < 1 ||
+      resInactivity > 30 ||
+      !Number.isInteger(resInactivity)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Resolution inactivity auto-close must be between 1 and 30 days.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      Number.isNaN(infoInactivity) ||
+      infoInactivity < 1 ||
+      infoInactivity > 30 ||
+      !Number.isInteger(infoInactivity)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Additional information inactivity auto-close must be between 1 and 30 days.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      Number.isNaN(maxRej) ||
+      maxRej < 1 ||
+      maxRej > 5 ||
+      !Number.isInteger(maxRej)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Max rejections before permanent closure must be between 1 and 5.",
         },
         { status: 400 },
       );
     }
 
     // Optional: resolve custom categories if provided
-    const finalCondition = body.applicable_condition || null;
+    const finalCondition: Record<string, unknown> = {
+      ...(typeof body.applicable_condition === "object" &&
+      body.applicable_condition !== null
+        ? body.applicable_condition
+        : {}),
+      resolution_inactivity_days: resInactivity,
+      additional_info_days: infoInactivity,
+      max_rejection_count: maxRej,
+    };
     if (finalCondition) {
       if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
         const trimmedCat = body.new_category_name.trim();
@@ -160,14 +232,14 @@ export async function POST(request: Request) {
               equals: trimmedSubcat,
               mode: "insensitive",
             },
-            category_id: BigInt(finalCondition.category_id),
+            category_id: BigInt(String(finalCondition.category_id)),
           },
         });
         if (!subcat) {
           subcat = await prisma.subcategories.create({
             data: {
               subcategory_name: trimmedSubcat,
-              category_id: BigInt(finalCondition.category_id),
+              category_id: BigInt(String(finalCondition.category_id)),
             },
           });
         }
@@ -299,8 +371,23 @@ export async function PATCH(request: Request) {
       const windowHours = reopen_window_hours
         ? Number(reopen_window_hours)
         : null;
-      const maxReopen = Number(max_reopen_count) || 2;
-      const maxReviews = Number(max_manual_review_count) || 1;
+      const maxReopen = Number(max_reopen_count) || 3;
+      const maxReviews = Number(max_manual_review_count) || 3;
+      const resInactivity = Number(
+        body.resolution_inactivity_days ??
+          body.applicable_condition?.resolution_inactivity_days ??
+          7,
+      );
+      const infoInactivity = Number(
+        body.additional_info_days ??
+          body.applicable_condition?.additional_info_days ??
+          7,
+      );
+      const maxRej = Number(
+        body.max_rejection_count ??
+          body.applicable_condition?.max_rejection_count ??
+          3,
+      );
 
       if (windowHours !== null) {
         if (
@@ -323,13 +410,14 @@ export async function PATCH(request: Request) {
       if (
         Number.isNaN(maxReopen) ||
         maxReopen < 1 ||
-        maxReopen > 10 ||
+        maxReopen > 5 ||
         !Number.isInteger(maxReopen)
       ) {
         return NextResponse.json(
           {
             success: false,
-            message: "Max reopen count must be between 1 and 10.",
+            message:
+              "Max combined rework & reopen attempts must be between 1 and 5.",
           },
           { status: 400 },
         );
@@ -338,19 +426,75 @@ export async function PATCH(request: Request) {
       if (
         Number.isNaN(maxReviews) ||
         maxReviews < 1 ||
-        maxReviews > 10 ||
+        maxReviews > 5 ||
         !Number.isInteger(maxReviews)
       ) {
         return NextResponse.json(
           {
             success: false,
-            message: "Manual review count must be between 1 and 10.",
+            message: "Manual review count must be between 1 and 5.",
           },
           { status: 400 },
         );
       }
 
-      const finalCondition = body.applicable_condition || null;
+      if (
+        Number.isNaN(resInactivity) ||
+        resInactivity < 1 ||
+        resInactivity > 30 ||
+        !Number.isInteger(resInactivity)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Resolution inactivity auto-close must be between 1 and 30 days.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        Number.isNaN(infoInactivity) ||
+        infoInactivity < 1 ||
+        infoInactivity > 30 ||
+        !Number.isInteger(infoInactivity)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Additional information inactivity auto-close must be between 1 and 30 days.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (
+        Number.isNaN(maxRej) ||
+        maxRej < 1 ||
+        maxRej > 5 ||
+        !Number.isInteger(maxRej)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Max rejections before permanent closure must be between 1 and 5.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const finalCondition: Record<string, unknown> = {
+        ...(typeof body.applicable_condition === "object" &&
+        body.applicable_condition !== null
+          ? body.applicable_condition
+          : {}),
+        resolution_inactivity_days: resInactivity,
+        additional_info_days: infoInactivity,
+        max_rejection_count: maxRej,
+      };
       if (finalCondition) {
         if (body.new_category_name && finalCondition.category_id === "CUSTOM") {
           const trimmedCat = body.new_category_name.trim();
@@ -400,14 +544,14 @@ export async function PATCH(request: Request) {
                 equals: trimmedSubcat,
                 mode: "insensitive",
               },
-              category_id: BigInt(finalCondition.category_id),
+              category_id: BigInt(String(finalCondition.category_id)),
             },
           });
           if (!subcat) {
             subcat = await prisma.subcategories.create({
               data: {
                 subcategory_name: trimmedSubcat,
-                category_id: BigInt(finalCondition.category_id),
+                category_id: BigInt(String(finalCondition.category_id)),
               },
             });
           }

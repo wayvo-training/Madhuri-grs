@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -15,6 +15,17 @@ import {
   type SlaPolicyModalProps,
 } from "./types";
 
+const STANDARD_DURATION_OPTIONS = [
+  { label: "1 Day (24h)", val: "24" },
+  { label: "2 Days (48h)", val: "48" },
+  { label: "3 Days (72h)", val: "72" },
+  { label: "5 Days (120h)", val: "120" },
+  { label: "7 Days (168h)", val: "168" },
+  { label: "10 Days (240h)", val: "240" },
+  { label: "14 Days (336h)", val: "336" },
+  { label: "30 Days (720h - Maximum)", val: "720" },
+];
+
 export function SlaPolicyModal({
   open,
   onClose,
@@ -26,9 +37,11 @@ export function SlaPolicyModal({
   durationHours,
   setDurationHours,
   warningPercent,
+  setWarningPercent,
   atRiskPercent = "75",
-  criticalPercent = "90",
-  escalationPercent,
+  setAtRiskPercent,
+  criticalPercent: _criticalPercent,
+  escalationPercent: _escalationPercent = "100",
   slaRecipients,
   setSlaRecipients,
   isSubmitting,
@@ -44,6 +57,22 @@ export function SlaPolicyModal({
   const isDurationTooHigh = isDurationValidNumber && durationNum > 720;
   const isDurationInvalid =
     !isDurationValidNumber || isDurationTooLow || isDurationTooHigh;
+
+  const warnNum = Number(warningPercent);
+  const isWarnInvalid =
+    !warningPercent ||
+    Number.isNaN(warnNum) ||
+    warnNum < 10 ||
+    warnNum > 90 ||
+    !Number.isInteger(warnNum);
+
+  const atRiskNum = Number(atRiskPercent);
+  const isAtRiskInvalid =
+    !atRiskPercent ||
+    Number.isNaN(atRiskNum) ||
+    atRiskNum <= warnNum ||
+    atRiskNum > 99 ||
+    !Number.isInteger(atRiskNum);
 
   const getDurationDisplay = (hours: number) => {
     if (hours < 1) return null;
@@ -63,11 +92,23 @@ export function SlaPolicyModal({
   };
 
   const [activeSlaTier, setActiveSlaTier] = useState<
-    "warning" | "at_risk" | "critical" | "escalation"
+    "warning" | "at_risk" | "escalation"
   >("warning");
 
+  const [isCustomDuration, setIsCustomDuration] = useState(
+    !STANDARD_DURATION_OPTIONS.some((o) => o.val === durationHours),
+  );
+
+  useEffect(() => {
+    if (open) {
+      setIsCustomDuration(
+        !STANDARD_DURATION_OPTIONS.some((o) => o.val === durationHours),
+      );
+    }
+  }, [open, durationHours]);
+
   const handleToggleRecipient = (
-    tier: "warning" | "at_risk" | "critical" | "escalation",
+    tier: "warning" | "at_risk" | "escalation",
     designation: string,
   ) => {
     if (!setSlaRecipients) return;
@@ -208,10 +249,10 @@ export function SlaPolicyModal({
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-1">
                     <label
-                      htmlFor="target-duration-input"
-                      className="block font-semibold text-slate-700 dark:text-slate-300"
+                      htmlFor="target-duration-select"
+                      className="block font-semibold text-slate-700 dark:text-slate-300 text-xs"
                     >
                       Target Duration (Hours) *
                     </label>
@@ -219,50 +260,79 @@ export function SlaPolicyModal({
                       Range: 1 - 720 Hours (Max 30 Days)
                     </span>
                   </div>
-                  <input
-                    id="target-duration-input"
-                    type="number"
-                    min="1"
-                    max="720"
-                    value={durationHours}
-                    onChange={(e) => setDurationHours(e.target.value)}
-                    placeholder="e.g. 24"
-                    required
-                    className={`mt-1 h-9 w-full rounded-xl border ${
-                      durationHours && isDurationInvalid
-                        ? "border-rose-500 focus:border-rose-600 bg-rose-50/20"
-                        : "border-slate-200 dark:border-slate-700 focus:border-teal-600 bg-white dark:bg-slate-800"
-                    } px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
-                  />
 
-                  {/* Quick Preset Buttons */}
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
-                      Presets:
-                    </span>
-                    {[
-                      { label: "1 Day (24h)", val: "24" },
-                      { label: "2 Days (48h)", val: "48" },
-                      { label: "3 Days (72h)", val: "72" },
-                      { label: "5 Days (120h)", val: "120" },
-                      { label: "7 Days (168h)", val: "168" },
-                    ].map((p) => (
-                      <button
-                        key={p.val}
-                        type="button"
-                        onClick={() => setDurationHours(p.val)}
-                        className={`rounded-md px-2 py-0.5 text-[10px] font-semibold transition cursor-pointer border ${
-                          durationHours === p.val
-                            ? "bg-teal-600 text-white border-teal-600 shadow-xs"
-                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-500"
-                        }`}
+                  {!isCustomDuration ? (
+                    <Select
+                      value={durationHours}
+                      onValueChange={(val) => {
+                        if (!val) return;
+                        if (val === "CUSTOM") {
+                          setIsCustomDuration(true);
+                        } else {
+                          setDurationHours(val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger
+                        id="target-duration-select"
+                        className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                       >
-                        {p.label}
+                        <SelectValue placeholder="Select Target Duration">
+                          {STANDARD_DURATION_OPTIONS.find(
+                            (o) => o.val === durationHours,
+                          )?.label || `${durationHours} Hours`}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56">
+                        {STANDARD_DURATION_OPTIONS.map((o) => (
+                          <SelectItem
+                            key={o.val}
+                            value={o.val}
+                            className="text-xs cursor-pointer"
+                          >
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                        <SelectItem
+                          value="CUSTOM"
+                          className="text-xs font-semibold text-teal-600 dark:text-teal-400 cursor-pointer"
+                        >
+                          Custom Hours (1 - 720)...
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id="target-duration-input"
+                        type="number"
+                        min="1"
+                        max="720"
+                        value={durationHours}
+                        onChange={(e) => setDurationHours(e.target.value)}
+                        placeholder="e.g. 24"
+                        required
+                        className={`h-9.5 w-full rounded-xl border ${
+                          durationHours && isDurationInvalid
+                            ? "border-rose-500 focus:border-rose-600 bg-rose-50/20"
+                            : "border-slate-200 dark:border-slate-700 focus:border-teal-600 bg-white dark:bg-slate-800"
+                        } px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomDuration(false);
+                          setDurationHours("24");
+                        }}
+                        className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer text-xs"
+                        title="Back to dropdown options"
+                      >
+                        ×
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  )}
 
-                  {/* Oversized Input Alert (e.g. 168932566) */}
+                  {/* Oversized Input Alert (e.g. 10000000) */}
                   {durationHours && isDurationTooHigh && (
                     <div className="mt-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 p-2.5 text-rose-800 dark:text-rose-200 shadow-xs">
                       <div className="flex items-start gap-2">
@@ -312,25 +382,25 @@ export function SlaPolicyModal({
                     Notifications & Escalation Triggers
                   </span>
                   <span className="rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300">
-                    4-Tier Notification Engine
+                    3-Tier Milestone Engine
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
-                  Thresholds evaluated against active SLA clocks
+                  Configurable threshold percentages & recipients
                 </span>
               </div>
 
-              {/* 1. Threshold Tiers Selector */}
+              {/* 1. Threshold Tiers Selector (3 Tiers: Warning, At Risk, Breach) */}
               <div className="space-y-1.5">
                 <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block">
-                  Select Notification Tier:
+                  Select Notification Tier to Configure:
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {/* Warning (Tier 1) */}
                   <button
                     type="button"
                     onClick={() => setActiveSlaTier("warning")}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
                       activeSlaTier === "warning"
                         ? "bg-teal-50 dark:bg-teal-950/60 border-teal-500 dark:border-teal-400 ring-2 ring-teal-500/20 shadow-xs"
                         : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-teal-300 dark:hover:border-teal-700"
@@ -340,24 +410,25 @@ export function SlaPolicyModal({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
                         Tier 1
                       </span>
-                      <span className="text-xs font-bold text-teal-800 dark:text-teal-300">
+                      <span className="text-sm font-bold text-teal-800 dark:text-teal-300">
                         {warningPercent || 50}%
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">
                       Warning
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                      {(slaRecipients?.warning || []).length} recipient
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {(slaRecipients?.warning || []).length} designated
+                      recipient
                       {(slaRecipients?.warning || []).length === 1 ? "" : "s"}
                     </span>
                   </button>
 
-                  {/* At Risk (Tier 2) */}
+                  {/* At Risk / Escalation (Tier 2) */}
                   <button
                     type="button"
                     onClick={() => setActiveSlaTier("at_risk")}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
                       activeSlaTier === "at_risk"
                         ? "bg-amber-50 dark:bg-amber-950/60 border-amber-500 dark:border-amber-400 ring-2 ring-amber-500/20 shadow-xs"
                         : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-700"
@@ -367,51 +438,25 @@ export function SlaPolicyModal({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                         Tier 2
                       </span>
-                      <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                      <span className="text-sm font-bold text-amber-800 dark:text-amber-300">
                         {atRiskPercent || 75}%
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                      At Risk
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      At Risk / Auto-Escalate
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                      {(slaRecipients?.at_risk || []).length} recipient
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {(slaRecipients?.at_risk || []).length} designated
+                      recipient
                       {(slaRecipients?.at_risk || []).length === 1 ? "" : "s"}
                     </span>
                   </button>
 
-                  {/* Urgent / Critical (Tier 3) */}
-                  <button
-                    type="button"
-                    onClick={() => setActiveSlaTier("critical")}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                      activeSlaTier === "critical"
-                        ? "bg-orange-50 dark:bg-orange-950/60 border-orange-500 dark:border-orange-400 ring-2 ring-orange-500/20 shadow-xs"
-                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400">
-                        Tier 3
-                      </span>
-                      <span className="text-xs font-bold text-orange-800 dark:text-orange-300">
-                        {criticalPercent || 90}%
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                      Urgent / Critical
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                      {(slaRecipients?.critical || []).length} recipient
-                      {(slaRecipients?.critical || []).length === 1 ? "" : "s"}
-                    </span>
-                  </button>
-
-                  {/* Breach (Tier 4) */}
+                  {/* Breach (Tier 3) */}
                   <button
                     type="button"
                     onClick={() => setActiveSlaTier("escalation")}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition cursor-pointer ${
                       activeSlaTier === "escalation"
                         ? "bg-rose-50 dark:bg-rose-950/60 border-rose-500 dark:border-rose-400 ring-2 ring-rose-500/20 shadow-xs"
                         : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-700"
@@ -419,17 +464,18 @@ export function SlaPolicyModal({
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
-                        Tier 4
+                        Tier 3
                       </span>
-                      <span className="text-xs font-bold text-rose-800 dark:text-rose-300">
-                        {escalationPercent || 100}%
+                      <span className="text-sm font-bold text-rose-800 dark:text-rose-300">
+                        100%
                       </span>
                     </div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                      Breach
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-1">
+                      SLA Breach
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                      {(slaRecipients?.escalation || []).length} recipient
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      {(slaRecipients?.escalation || []).length} designated
+                      recipient
                       {(slaRecipients?.escalation || []).length === 1
                         ? ""
                         : "s"}
@@ -444,47 +490,36 @@ export function SlaPolicyModal({
                 const currentRecipients = slaRecipients?.[currentTierKey] || [];
                 const isWarning = currentTierKey === "warning";
                 const isAtRisk = currentTierKey === "at_risk";
-                const isCritical = currentTierKey === "critical";
 
                 const tierName = isWarning
                   ? "Warning Threshold"
                   : isAtRisk
-                    ? "At Risk Threshold"
-                    : isCritical
-                      ? "Urgent / Critical Threshold"
-                      : "Breach Threshold";
+                    ? "At Risk / Escalation Threshold"
+                    : "Breach Threshold";
 
                 const tierTag = isWarning
                   ? "Tier 1"
                   : isAtRisk
                     ? "Tier 2"
-                    : isCritical
-                      ? "Tier 3"
-                      : "Tier 4";
+                    : "Tier 3";
 
                 const tierDesc = isWarning
-                  ? "Triggers early advisory alert when resolution reaches the initial elapsed threshold."
+                  ? "Triggers early advisory alert and unlocks staff grace period requests when resolution time reaches this threshold."
                   : isAtRisk
-                    ? "Alerts staff and supervisors that the grievance is approaching SLA risk limits."
-                    : isCritical
-                      ? "High-priority notification for near-breach escalation requiring immediate intervention."
-                      : "Triggers full system escalation and administrative alerts when SLA deadline is exceeded.";
+                    ? "Alerts supervisors and auto-escalates to Department Head as grievance approaches breach risk."
+                    : "Triggers full system breach alerts and administrative notifications when 100% SLA deadline is reached.";
 
                 const accentBorder = isWarning
                   ? "border-teal-200 dark:border-teal-800"
                   : isAtRisk
                     ? "border-amber-200 dark:border-amber-800"
-                    : isCritical
-                      ? "border-orange-200 dark:border-orange-800"
-                      : "border-rose-200 dark:border-rose-800";
+                    : "border-rose-200 dark:border-rose-800";
 
                 const accentBadge = isWarning
                   ? "bg-teal-100 dark:bg-teal-950/70 border-teal-300 dark:border-teal-700 text-teal-800 dark:text-teal-300"
                   : isAtRisk
                     ? "bg-amber-100 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300"
-                    : isCritical
-                      ? "bg-orange-100 dark:bg-orange-950/70 border-orange-300 dark:border-orange-700 text-orange-800 dark:text-orange-300"
-                      : "bg-rose-100 dark:bg-rose-950/70 border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300";
+                    : "bg-rose-100 dark:bg-rose-950/70 border-rose-300 dark:border-rose-700 text-rose-800 dark:text-rose-300";
 
                 return (
                   <div
@@ -511,6 +546,133 @@ export function SlaPolicyModal({
                         {currentRecipients.length === 1 ? "" : "s"} selected
                       </span>
                     </div>
+
+                    {/* Configurable Threshold Input */}
+                    {isWarning && (
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <label
+                              htmlFor="warning-percent-input"
+                              className="block text-xs font-bold text-slate-800 dark:text-slate-200"
+                            >
+                              Warning Trigger Percentage (%) *
+                            </label>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                              Allowed Range: 10% - 90% of SLA Budget
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="warning-percent-input"
+                              type="number"
+                              min="10"
+                              max="90"
+                              value={warningPercent}
+                              onChange={(e) =>
+                                setWarningPercent(e.target.value)
+                              }
+                              className={`h-9 w-24 rounded-lg border text-center text-sm font-bold ${
+                                isWarnInvalid
+                                  ? "border-rose-500 bg-rose-50/30 text-rose-700"
+                                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-teal-800 dark:text-teal-300"
+                              } outline-none focus:border-teal-500`}
+                            />
+                            <div className="flex items-center gap-1">
+                              {["25", "33", "50", "60"].map((p) => (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => setWarningPercent(p)}
+                                  className={`rounded-md px-2 py-1 text-[10px] font-bold border transition ${
+                                    warningPercent === p
+                                      ? "bg-teal-600 text-white border-teal-600 shadow-2xs"
+                                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-400"
+                                  }`}
+                                >
+                                  {p}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {isWarnInvalid && (
+                          <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                            ⚠️ Warning percentage must be a valid number between
+                            10% and 90% (cannot enter unrealistic values).
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {isAtRisk && (
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <label
+                              htmlFor="at-risk-percent-input"
+                              className="block text-xs font-bold text-slate-800 dark:text-slate-200"
+                            >
+                              At-Risk Trigger Percentage (%) *
+                            </label>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                              Allowed Range: {warnNum ? warnNum + 1 : 51}% - 99%
+                              (Must be greater than Warning)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id="at-risk-percent-input"
+                              type="number"
+                              min={warnNum ? warnNum + 1 : 51}
+                              max="99"
+                              value={atRiskPercent}
+                              onChange={(e) =>
+                                setAtRiskPercent?.(e.target.value)
+                              }
+                              className={`h-9 w-24 rounded-lg border text-center text-sm font-bold ${
+                                isAtRiskInvalid
+                                  ? "border-rose-500 bg-rose-50/30 text-rose-700"
+                                  : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-300"
+                              } outline-none focus:border-amber-500`}
+                            />
+                            <div className="flex items-center gap-1">
+                              {["66", "75", "80", "85"].map((p) => (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => setAtRiskPercent?.(p)}
+                                  className={`rounded-md px-2 py-1 text-[10px] font-bold border transition ${
+                                    atRiskPercent === p
+                                      ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-amber-400"
+                                  }`}
+                                >
+                                  {p}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {isAtRiskInvalid && (
+                          <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                            ⚠️ At-Risk percentage must be between{" "}
+                            {warnNum ? warnNum + 1 : 51}% and 99% (greater than
+                            Warning percentage).
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {!isWarning && !isAtRisk && (
+                      <div className="flex items-center gap-2.5 p-3 rounded-xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs">
+                        <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        <span className="text-rose-800 dark:text-rose-200 font-medium">
+                          Breach threshold is permanently fixed at{" "}
+                          <strong>100%</strong> of the assigned SLA timeframe.
+                        </span>
+                      </div>
+                    )}
 
                     {/* Designated Recipients */}
                     <div className="space-y-1.5">
@@ -539,9 +701,7 @@ export function SlaPolicyModal({
                                     ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-400 dark:border-teal-700 text-teal-950 dark:text-teal-200 shadow-2xs"
                                     : isAtRisk
                                       ? "bg-amber-50/70 dark:bg-amber-950/50 border-amber-400 dark:border-amber-700 text-amber-950 dark:text-amber-200 shadow-2xs"
-                                      : isCritical
-                                        ? "bg-orange-50/70 dark:bg-orange-950/50 border-orange-400 dark:border-orange-700 text-orange-950 dark:text-orange-200 shadow-2xs"
-                                        : "bg-rose-50/70 dark:bg-rose-950/50 border-rose-400 dark:border-rose-700 text-rose-950 dark:text-rose-200 shadow-2xs"
+                                      : "bg-rose-50/70 dark:bg-rose-950/50 border-rose-400 dark:border-rose-700 text-rose-950 dark:text-rose-200 shadow-2xs"
                                   : "bg-slate-50/50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-slate-800"
                               }`}
                             >
@@ -552,9 +712,7 @@ export function SlaPolicyModal({
                                       ? "border-teal-600 bg-teal-600 text-white"
                                       : isAtRisk
                                         ? "border-amber-600 bg-amber-600 text-white"
-                                        : isCritical
-                                          ? "border-orange-600 bg-orange-600 text-white"
-                                          : "border-rose-600 bg-rose-600 text-white"
+                                        : "border-rose-600 bg-rose-600 text-white"
                                     : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                                 }`}
                               >
@@ -614,19 +772,6 @@ export function SlaPolicyModal({
                 <span>➔</span>
                 <button
                   type="button"
-                  onClick={() => setActiveSlaTier("critical")}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition ${
-                    activeSlaTier === "critical"
-                      ? "bg-orange-100 dark:bg-orange-950 font-bold text-orange-800 dark:text-orange-200"
-                      : "hover:underline text-orange-700 dark:text-orange-300"
-                  }`}
-                >
-                  {criticalPercent || 90}% Urgent (
-                  {(slaRecipients?.critical || []).length})
-                </button>
-                <span>➔</span>
-                <button
-                  type="button"
                   onClick={() => setActiveSlaTier("escalation")}
                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded cursor-pointer transition ${
                     activeSlaTier === "escalation"
@@ -634,8 +779,7 @@ export function SlaPolicyModal({
                       : "hover:underline text-rose-700 dark:text-rose-300"
                   }`}
                 >
-                  {escalationPercent || 100}% Breach (
-                  {(slaRecipients?.escalation || []).length})
+                  100% Breach ({(slaRecipients?.escalation || []).length})
                 </button>
               </div>
             </div>
@@ -656,7 +800,9 @@ export function SlaPolicyModal({
                 !ruleName.trim() ||
                 isRuleNameNumeric ||
                 !durationHours ||
-                isDurationInvalid
+                isDurationInvalid ||
+                isWarnInvalid ||
+                isAtRiskInvalid
               }
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] disabled:opacity-50 cursor-pointer"
             >

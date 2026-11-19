@@ -4,7 +4,6 @@ import { ActionMenu } from "@/components/ui/action-menu";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -52,18 +51,33 @@ export function ReopenPoliciesView({
     return filtered.map((p) => {
       let category = "All";
       let subcategory = "All";
+      let resolutionInactivity = 7;
+      let additionalInfoInactivity = 7;
+      let maxRejections = 3;
       try {
         const cond = p.applicable_condition as {
           category?: string;
           subcategory?: string;
+          resolution_inactivity_days?: number | string;
+          additional_info_days?: number | string;
+          max_rejection_count?: number | string;
         };
         if (cond?.category) category = cond.category;
         if (cond?.subcategory) subcategory = cond.subcategory;
+        if (cond?.resolution_inactivity_days)
+          resolutionInactivity = Number(cond.resolution_inactivity_days);
+        if (cond?.additional_info_days)
+          additionalInfoInactivity = Number(cond.additional_info_days);
+        if (cond?.max_rejection_count)
+          maxRejections = Number(cond.max_rejection_count);
       } catch (_e) {}
       return {
         ...p,
         category,
         subcategory,
+        resolutionInactivity,
+        additionalInfoInactivity,
+        maxRejections,
       };
     });
   }, [filtered]);
@@ -89,24 +103,25 @@ export function ReopenPoliciesView({
       <div className="flex flex-col gap-4">
         <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[1320px]">
+            <div className="min-w-[1300px]">
               {(() => {
                 const colGroup = (
                   <colgroup>
-                    <col className="w-[240px]" />
-                    <col className="w-[170px]" />
-                    <col className="w-[170px]" />
-                    <col className="w-[190px]" />
+                    <col className="w-[230px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[140px]" />
                     <col className="w-[160px]" />
-                    <col className="w-[190px]" />
-                    <col className="w-[110px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[100px]" />
                     <col className="w-[90px]" />
                   </colgroup>
                 );
 
                 return (
                   <>
-                    {/* Static Header Table: no scrollbar next to header */}
+                    {/* Static Header Table */}
                     <table className="w-full text-left text-[12px] table-fixed border-collapse shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                       {colGroup}
                       <TableHeader className="bg-transparent">
@@ -115,7 +130,7 @@ export function ReopenPoliciesView({
                             field="policy_name"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[240px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[230px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Policy Name
                           </SortableTableHead>
@@ -123,7 +138,7 @@ export function ReopenPoliciesView({
                             field="category"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[140px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Category
                           </SortableTableHead>
@@ -131,7 +146,7 @@ export function ReopenPoliciesView({
                             field="subcategory"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[170px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[140px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Subcategory
                           </SortableTableHead>
@@ -139,31 +154,41 @@ export function ReopenPoliciesView({
                             field="reopen_window_hours"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[190px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[140px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Reopen Window
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="resolutionInactivity"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            title="Auto-close if citizen does not confirm resolution"
+                          >
+                            Res. Auto-Close
+                          </SortableTableHead>
+                          <SortableTableHead
+                            field="additionalInfoInactivity"
+                            currentSort={sortState}
+                            onSort={handleSort}
+                            className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            title="Auto-close if citizen does not provide requested information"
+                          >
+                            Info Auto-Close
                           </SortableTableHead>
                           <SortableTableHead
                             field="max_reopen_count"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[140px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
-                            Max Reopens
-                          </SortableTableHead>
-                          <SortableTableHead
-                            field="max_manual_review_count"
-                            currentSort={sortState}
-                            onSort={handleSort}
-                            className="w-[190px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
-                          >
-                            Manual Reviews
+                            Max Cycles
                           </SortableTableHead>
                           <SortableTableHead
                             field="status"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[110px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[100px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Status
                           </SortableTableHead>
@@ -174,7 +199,7 @@ export function ReopenPoliciesView({
                       </TableHeader>
                     </table>
 
-                    {/* Scrollable Rows Container (Vertical scroll within rows only) */}
+                    {/* Scrollable Rows Container */}
                     <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
                       <table className="w-full text-left text-[13px] table-fixed border-collapse">
                         {colGroup}
@@ -182,75 +207,70 @@ export function ReopenPoliciesView({
                           {filtered.length === 0 ? (
                             <TableRow className="h-[52px]">
                               <TableCell
-                                colSpan={8}
+                                colSpan={9}
                                 className="py-12 text-center text-slate-400 font-normal text-[13px]"
                               >
                                 <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                                No Reopen Policies found.
+                                No Lifecycle & Closure Policies found.
                               </TableCell>
                             </TableRow>
                           ) : (
                             paginated.map((p) => {
+                              const windowDisplay = p.reopen_window_hours
+                                ? p.reopen_window_hours % 24 === 0
+                                  ? `${p.reopen_window_hours / 24} Days`
+                                  : `${p.reopen_window_hours} hrs`
+                                : "14 Days";
+
                               return (
                                 <TableRow
                                   key={p.reopen_policy_id}
                                   className="h-[52px] transition-colors hover:bg-slate-50/80 whitespace-nowrap border-b border-slate-100 dark:border-slate-800/60"
                                 >
-                                  <TableCell className="w-[240px] py-3 pl-4 pr-3 overflow-hidden text-ellipsis whitespace-nowrap align-middle">
+                                  <TableCell className="w-[230px] py-3 pl-4 pr-3 overflow-hidden text-ellipsis whitespace-nowrap align-middle">
                                     <TruncatedText
                                       text={p.policy_name}
-                                      maxChars={28}
+                                      maxChars={26}
                                       className="font-semibold text-slate-900 dark:text-slate-100 max-w-full truncate block text-[13px]"
                                     />
                                   </TableCell>
-                                  <TableCell className="w-[170px] px-3 py-3 text-slate-600 dark:text-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                  <TableCell className="w-[140px] px-3 py-3 text-slate-600 dark:text-slate-300 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
                                     <TruncatedText
-                                      text={(() => {
-                                        try {
-                                          const cond =
-                                            p.applicable_condition as {
-                                              category?: string;
-                                            };
-                                          return cond?.category || "All";
-                                        } catch {
-                                          return "All";
-                                        }
-                                      })()}
-                                      maxChars={20}
+                                      text={p.category}
+                                      maxChars={18}
                                       className="text-slate-600 dark:text-slate-300 max-w-full truncate block text-[13px]"
                                     />
                                   </TableCell>
-                                  <TableCell className="w-[170px] px-3 py-3 text-slate-600 dark:text-slate-400 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                  <TableCell className="w-[140px] px-3 py-3 text-slate-600 dark:text-slate-400 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
                                     <TruncatedText
-                                      text={(() => {
-                                        try {
-                                          const cond =
-                                            p.applicable_condition as {
-                                              subcategory?: string;
-                                            };
-                                          return cond?.subcategory || "All";
-                                        } catch {
-                                          return "All";
-                                        }
-                                      })()}
-                                      maxChars={20}
+                                      text={p.subcategory}
+                                      maxChars={18}
                                       className="text-slate-600 dark:text-slate-400 max-w-full truncate block text-[13px]"
                                     />
                                   </TableCell>
-                                  <TableCell className="w-[190px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
-                                    {p.reopen_window_hours
-                                      ? p.reopen_window_hours % 24 === 0
-                                        ? `${p.reopen_window_hours / 24} ${p.reopen_window_hours / 24 === 1 ? "Day" : "Days"} (${p.reopen_window_hours} hrs)`
-                                        : `${p.reopen_window_hours} Hours`
-                                      : "Unlimited"}
+                                  <TableCell className="w-[140px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle font-medium">
+                                    {windowDisplay}
                                   </TableCell>
                                   <TableCell className="w-[160px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
-                                    {p.max_reopen_count}
+                                    <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 ring-1 ring-inset ring-teal-600/20 dark:bg-teal-950/40 dark:text-teal-300 dark:ring-teal-800">
+                                      {p.resolutionInactivity} Days
+                                    </span>
                                   </TableCell>
-                                  <TableCell className="w-[190px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
-                                    {p.max_manual_review_count}
+                                  <TableCell className="w-[160px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                    <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
+                                      {p.additionalInfoInactivity} Days
+                                    </span>
                                   </TableCell>
-                                  <TableCell className="w-[110px] px-3 py-3 whitespace-nowrap overflow-hidden text-ellipsis text-[13px] align-middle">
+                                  <TableCell className="w-[140px] px-3 py-3 text-slate-600 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] align-middle">
+                                    <span className="text-slate-800 dark:text-slate-200 font-semibold">
+                                      {p.max_reopen_count}
+                                    </span>
+                                    <span className="text-slate-400 text-xs">
+                                      {" "}
+                                      cyc (rej: {p.maxRejections})
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="w-[100px] px-3 py-3 whitespace-nowrap overflow-hidden text-ellipsis text-[13px] align-middle">
                                     <button
                                       type="button"
                                       onClick={() => onToggleStatus(p)}
@@ -312,7 +332,7 @@ export function ReopenPoliciesView({
                 onPageChange={setCurrentPage}
                 onPageSizeChange={setPageSize}
                 pageSizeOptions={[5, 10, 20, 50]}
-                itemLabel="Reopen Policies"
+                itemLabel="Lifecycle Policies"
               />
             </div>
           )}

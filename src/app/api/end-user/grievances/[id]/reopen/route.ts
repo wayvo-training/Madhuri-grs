@@ -52,8 +52,18 @@ export async function POST(
       );
     }
 
-    // 1. Shared combined limit: maximum 3 successful combined rework and reopening attempts
-    const MAX_COMBINED_ATTEMPTS = 3;
+    // 1. Resolve dynamic Lifecycle & Closure Policy
+    const activeReopenPolicy = await prisma.reopen_policies.findFirst({
+      where: { status: "ACTIVE" },
+      orderBy: { updated_at: "desc" },
+    });
+    const policyCond =
+      (activeReopenPolicy?.applicable_condition as Record<string, unknown>) ||
+      {};
+    const MAX_COMBINED_ATTEMPTS = activeReopenPolicy?.max_reopen_count || 3;
+    const MAX_REJECTIONS =
+      Number(policyCond.max_rejection_count) || MAX_COMBINED_ATTEMPTS;
+
     if (grievance.reopen_count >= MAX_COMBINED_ATTEMPTS) {
       return NextResponse.json(
         {
@@ -71,8 +81,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          message:
-            "This grievance was permanently closed after 3 rework reviews by the Department Head. No further rework or reopening requests are allowed.",
+          message: `This grievance was permanently closed after ${MAX_REJECTIONS} rework reviews by the Department Head. No further rework or reopening requests are allowed.`,
         },
         { status: 400 },
       );
@@ -93,29 +102,31 @@ export async function POST(
       },
     });
 
-    if (rejectionCount >= MAX_COMBINED_ATTEMPTS) {
+    if (rejectionCount >= MAX_REJECTIONS) {
       return NextResponse.json(
         {
           success: false,
-          message: `Maximum review rejections reached (${MAX_COMBINED_ATTEMPTS}). No further rework or reopening requests are allowed for this grievance.`,
+          message: `Maximum review rejections reached (${MAX_REJECTIONS}). No further rework or reopening requests are allowed for this grievance.`,
         },
         { status: 400 },
       );
     }
 
-    // 2. Validate Reopening Window (14 days = 336 hours)
+    // 2. Validate Reopening Window from configured policy
     const isPostClosureReopen = grievance.status === "CLOSED";
     if (isPostClosureReopen) {
       const referenceClosedTime = grievance.closed_at || grievance.updated_at;
       if (referenceClosedTime) {
         const hoursSinceClosed =
           (Date.now() - referenceClosedTime.getTime()) / (1000 * 60 * 60);
-        const maxWindowHours = 14 * 24; // 14 days (336 hours)
+        const maxWindowHours =
+          activeReopenPolicy?.reopen_window_hours || 14 * 24;
+        const maxWindowDays = Math.round(maxWindowHours / 24);
         if (hoursSinceClosed > maxWindowHours) {
           return NextResponse.json(
             {
               success: false,
-              message: "Reopening window of 14 days has expired.",
+              message: `Reopening window of ${maxWindowDays} days has expired.`,
             },
             { status: 400 },
           );

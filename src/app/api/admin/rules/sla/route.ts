@@ -16,8 +16,6 @@ export async function POST(request: Request) {
       target_duration_minutes,
       warning_threshold_percent,
       at_risk_threshold_percent,
-      critical_threshold_percent,
-      escalation_threshold_percent,
       target_role,
     } = body;
 
@@ -102,8 +100,28 @@ export async function POST(request: Request) {
 
     const warnPercent = Number(warning_threshold_percent) || 50;
     const atRiskPercent = Number(at_risk_threshold_percent) || 75;
-    const critPercent = Number(critical_threshold_percent) || 90;
-    const escPercent = Number(escalation_threshold_percent) || 100;
+    const escPercent = 100;
+
+    if (warnPercent < 10 || warnPercent > 90) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Warning threshold must be between 10% and 90%.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (atRiskPercent <= warnPercent || atRiskPercent > 99) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `At-risk threshold must be between ${warnPercent + 1}% and 99% (greater than warning).`,
+        },
+        { status: 400 },
+      );
+    }
+
     const tgtRole = target_role || "DEPARTMENT_HEAD";
 
     // 3. Check duplicate configuration across all functional fields
@@ -148,11 +166,14 @@ export async function POST(request: Request) {
           trigger_condition: {
             warning_threshold_percent: warnPercent,
             at_risk_threshold_percent: atRiskPercent,
-            critical_threshold_percent: critPercent,
             escalation_threshold_percent: escPercent,
             ...(notificationRecipients
               ? { notification_recipients: notificationRecipients }
               : {}),
+            departmental_allocation_mode:
+              body.trigger_condition?.departmental_allocation_mode ||
+              body.departmental_allocation_mode ||
+              "FULL",
           },
           target_role: tgtRole,
           status: requestedStatus,
@@ -174,6 +195,48 @@ export async function POST(request: Request) {
         },
       });
 
+      // Sync active/recent open grievances with the newly configured SLA policy
+      if (priority_level && durationNum && requestedStatus === "ACTIVE") {
+        const openGrievances = await tx.grievances.findMany({
+          where: {
+            priority: priority_level,
+            status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
+          },
+          include: {
+            sla_tracking: {
+              where: {
+                sla_extensions: {
+                  none: { status: "APPROVED" },
+                },
+              },
+              orderBy: { sla_tracking_id: "desc" },
+              take: 1,
+            },
+          },
+        });
+
+        for (const g of openGrievances) {
+          const tracking = g.sla_tracking[0];
+          const startTime = tracking?.started_at || g.created_at;
+          const newDue = new Date(
+            startTime.getTime() + durationNum * 60 * 1000,
+          );
+          await tx.grievances.update({
+            where: { grievance_id: g.grievance_id },
+            data: { due_at: newDue },
+          });
+          if (tracking) {
+            await tx.sla_tracking.update({
+              where: { sla_tracking_id: tracking.sla_tracking_id },
+              data: {
+                due_at: newDue,
+                sla_policy_id: created.sla_policy_id,
+              },
+            });
+          }
+        }
+      }
+
       return created;
     });
 
@@ -188,7 +251,6 @@ export async function POST(request: Request) {
         target_duration_minutes: policy.target_duration_minutes,
         warning_threshold_percent: warnPercent.toString(),
         at_risk_threshold_percent: atRiskPercent.toString(),
-        critical_threshold_percent: critPercent.toString(),
         escalation_threshold_percent: escPercent.toString(),
         trigger_condition: policy.trigger_condition,
         target_role: policy.target_role,
@@ -231,8 +293,6 @@ export async function PATCH(request: Request) {
         target_duration_minutes,
         warning_threshold_percent,
         at_risk_threshold_percent,
-        critical_threshold_percent,
-        escalation_threshold_percent,
         target_role,
       } = body;
 
@@ -331,8 +391,28 @@ export async function PATCH(request: Request) {
       }
       const warnPercent = Number(warning_threshold_percent) || 50;
       const atRiskPercent = Number(at_risk_threshold_percent) || 75;
-      const critPercent = Number(critical_threshold_percent) || 90;
-      const escPercent = Number(escalation_threshold_percent) || 100;
+      const escPercent = 100;
+
+      if (warnPercent < 10 || warnPercent > 90) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Warning threshold must be between 10% and 90%.",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (atRiskPercent <= warnPercent || atRiskPercent > 99) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `At-risk threshold must be between ${warnPercent + 1}% and 99% (greater than warning).`,
+          },
+          { status: 400 },
+        );
+      }
+
       const tgtRole = target_role || "DEPARTMENT_HEAD";
       const notificationRecipients =
         body.notification_recipients ||
@@ -351,11 +431,14 @@ export async function PATCH(request: Request) {
             trigger_condition: {
               warning_threshold_percent: warnPercent,
               at_risk_threshold_percent: atRiskPercent,
-              critical_threshold_percent: critPercent,
               escalation_threshold_percent: escPercent,
               ...(notificationRecipients
                 ? { notification_recipients: notificationRecipients }
                 : {}),
+              departmental_allocation_mode:
+                body.trigger_condition?.departmental_allocation_mode ||
+                body.departmental_allocation_mode ||
+                "FULL",
             },
             target_role: tgtRole,
             ...(requestedStatus ? { status: requestedStatus } : {}),
@@ -376,6 +459,48 @@ export async function PATCH(request: Request) {
           },
         });
 
+        // Sync active/recent open grievances with the updated SLA policy duration
+        if (priority_level && durationNum && requestedStatus !== "INACTIVE") {
+          const openGrievances = await tx.grievances.findMany({
+            where: {
+              priority: priority_level,
+              status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
+            },
+            include: {
+              sla_tracking: {
+                where: {
+                  sla_extensions: {
+                    none: { status: "APPROVED" },
+                  },
+                },
+                orderBy: { sla_tracking_id: "desc" },
+                take: 1,
+              },
+            },
+          });
+
+          for (const g of openGrievances) {
+            const tracking = g.sla_tracking[0];
+            const startTime = tracking?.started_at || g.created_at;
+            const newDue = new Date(
+              startTime.getTime() + durationNum * 60 * 1000,
+            );
+            await tx.grievances.update({
+              where: { grievance_id: g.grievance_id },
+              data: { due_at: newDue },
+            });
+            if (tracking) {
+              await tx.sla_tracking.update({
+                where: { sla_tracking_id: tracking.sla_tracking_id },
+                data: {
+                  due_at: newDue,
+                  sla_policy_id: policy.sla_policy_id,
+                },
+              });
+            }
+          }
+        }
+
         return policy;
       });
 
@@ -390,7 +515,6 @@ export async function PATCH(request: Request) {
           target_duration_minutes: updated.target_duration_minutes,
           warning_threshold_percent: warnPercent.toString(),
           at_risk_threshold_percent: atRiskPercent.toString(),
-          critical_threshold_percent: critPercent.toString(),
           escalation_threshold_percent: escPercent.toString(),
           trigger_condition: updated.trigger_condition,
           target_role: updated.target_role,

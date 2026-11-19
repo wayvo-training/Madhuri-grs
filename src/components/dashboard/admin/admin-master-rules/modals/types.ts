@@ -167,6 +167,12 @@ export interface ReopenPolicyModalProps {
   setMaxReopens: Dispatch<SetStateAction<string>>;
   maxReviews: string;
   setMaxReviews: Dispatch<SetStateAction<string>>;
+  resolutionInactivityDays?: string;
+  setResolutionInactivityDays?: Dispatch<SetStateAction<string>>;
+  additionalInfoInactivityDays?: string;
+  setAdditionalInfoInactivityDays?: Dispatch<SetStateAction<string>>;
+  maxRejections?: string;
+  setMaxRejections?: Dispatch<SetStateAction<string>>;
   categories: RuleCategoryOption[];
   newCategoryName: string;
   setNewCategoryName: Dispatch<SetStateAction<string>>;
@@ -234,6 +240,12 @@ export interface AdminRuleConfigModalProps {
   setMaxReopens: Dispatch<SetStateAction<string>>;
   maxReviews: string;
   setMaxReviews: Dispatch<SetStateAction<string>>;
+  resolutionInactivityDays?: string;
+  setResolutionInactivityDays?: Dispatch<SetStateAction<string>>;
+  additionalInfoInactivityDays?: string;
+  setAdditionalInfoInactivityDays?: Dispatch<SetStateAction<string>>;
+  maxRejections?: string;
+  setMaxRejections?: Dispatch<SetStateAction<string>>;
 
   newCategoryName: string;
   setNewCategoryName: Dispatch<SetStateAction<string>>;

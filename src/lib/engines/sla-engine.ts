@@ -117,6 +117,9 @@ export async function evaluateGrievanceSla(
       sla_tracking: {
         include: {
           sla_policies: true,
+          sla_extensions: {
+            where: { status: "APPROVED" },
+          },
         },
         orderBy: { sla_tracking_id: "desc" },
         take: 1,
@@ -198,8 +201,41 @@ export async function evaluateGrievanceSla(
       ? evaluationDate
       : null);
 
+  // Resolve dynamic active policy from priority level
+  const activeSlaPolicy =
+    (await prisma.sla_policies.findFirst({
+      where: {
+        priority_level: grievance.priority,
+        status: "ACTIVE",
+        sla_type: "RESOLUTION",
+      },
+      orderBy: { updated_at: "desc" },
+    })) ||
+    (await prisma.sla_policies.findFirst({
+      where: {
+        priority_level: grievance.priority,
+        status: "ACTIVE",
+      },
+      orderBy: { updated_at: "desc" },
+    })) ||
+    grievance.sla_tracking?.[0]?.sla_policies ||
+    null;
+
   const effectiveStart = activeTracking?.started_at || grievance.created_at;
-  const effectiveDue = activeTracking?.due_at || grievance.due_at;
+  let effectiveDue = activeTracking?.due_at || grievance.due_at;
+
+  // If dynamic active policy exists and no manual extensions were applied, dynamically compute due based on configured duration
+  if (
+    activeSlaPolicy?.target_duration_minutes &&
+    (!activeTracking?.sla_extensions ||
+      activeTracking.sla_extensions.length === 0)
+  ) {
+    const policyDue = new Date(
+      effectiveStart.getTime() +
+        activeSlaPolicy.target_duration_minutes * 60 * 1000,
+    );
+    effectiveDue = policyDue;
+  }
 
   const { consumptionPercent } = calculateSlaConsumption(
     effectiveStart,
@@ -243,16 +279,6 @@ export async function evaluateGrievanceSla(
   let updatedStatus = grievance.status;
   let didEscalate = false;
 
-  // Resolve dynamic thresholds from policy or system defaults
-  const activeSlaPolicy =
-    grievance.sla_tracking?.[0]?.sla_policies ||
-    (await prisma.sla_policies.findFirst({
-      where: {
-        priority_level: grievance.priority,
-        status: "ACTIVE",
-      },
-    }));
-
   const tc =
     (activeSlaPolicy?.trigger_condition as Record<string, unknown>) || {};
 
@@ -266,10 +292,6 @@ export async function evaluateGrievanceSla(
     tc.at_risk_threshold_percent || DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
   );
 
-  const criticalThreshold = Number(
-    tc.critical_threshold_percent || DEFAULT_SLA_THRESHOLDS.CRITICAL_PERCENT,
-  );
-
   const breachThreshold = Number(
     tc.escalation_threshold_percent ||
       tc.breach_at_percent ||
@@ -280,7 +302,6 @@ export async function evaluateGrievanceSla(
     (tc.notification_recipients as {
       warning?: string[];
       at_risk?: string[];
-      critical?: string[];
       escalation?: string[];
     }) || {};
 
@@ -289,13 +310,9 @@ export async function evaluateGrievanceSla(
     "ASSIGNED_STAFF",
     "ALL_DEPT_HEADS",
   ];
-  const criticalDesignations = recipientsConfig.critical || [
-    "ASSIGNED_STAFF",
-    "ALL_DEPT_HEADS",
-  ];
   const escalationDesignations = recipientsConfig.escalation || [
     "PRIMARY_DEPT_HEAD",
-    "ALL_DEPT_HEADS",
+    "ADMIN",
   ];
 
   type RecipientUser = {
@@ -687,12 +704,12 @@ export async function evaluateGrievanceSla(
   }
 
   // =========================================================================
-  // RULE 3: At Risk threshold (>= atRiskThreshold and < criticalThreshold)
-  // Automatically notify Department Heads and Staff that the grievance is at SLA risk.
+  // RULE 3: At Risk threshold (>= atRiskThreshold and < breachThreshold)
+  // Automatically notify designated recipients that the grievance is at SLA risk.
   // =========================================================================
   if (
     consumptionPercent >= atRiskThreshold &&
-    consumptionPercent < criticalThreshold
+    consumptionPercent < breachThreshold
   ) {
     updatedSlaStatus = "AT_RISK";
 
@@ -771,95 +788,6 @@ export async function evaluateGrievanceSla(
       notificationsSent,
       escalated: false,
       message: `${atRiskThreshold}% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Designated recipients alerted.`,
-    };
-  }
-
-  // =========================================================================
-  // RULE 3.5: At Critical / Urgent threshold (>= criticalThreshold and < breachThreshold)
-  // Automatically notify Department Heads and Staff that the grievance is urgent before breach.
-  // =========================================================================
-  if (
-    consumptionPercent >= criticalThreshold &&
-    consumptionPercent < breachThreshold
-  ) {
-    updatedSlaStatus = "AT_RISK";
-
-    await prisma.$transaction(async (tx) => {
-      // 1. Ensure sla_status is AT_RISK
-      if (grievance.sla_status !== "AT_RISK") {
-        await tx.grievances.update({
-          where: { grievance_id: grievanceId },
-          data: { sla_status: "AT_RISK" },
-        });
-      }
-
-      // 2. Dispatch notifications to critical designations
-      const targetUsers = await resolveDesignatedUsers(criticalDesignations);
-      const unnotifiedUsers = targetUsers.filter(
-        (u) =>
-          !hasSentToUser(u.user_id, `SLA_CRITICAL_${criticalThreshold}`) &&
-          !hasSentToUser(u.user_id, "SLA_URGENT") &&
-          !hasSentToUser(u.user_id, "SLA_90_STAFF_WARNING"),
-      );
-
-      for (const u of unnotifiedUsers) {
-        await tx.notifications.create({
-          data: {
-            user_id: u.user_id,
-            grievance_id: grievanceId,
-            notification_type: `SLA_CRITICAL_${criticalThreshold}`,
-            channel: "IN_APP",
-            title: `CRITICAL SLA Alert: ${criticalThreshold}% Consumed (${grievance.grievance_number})`,
-            message: `Grievance ${grievance.grievance_number} has reached ${criticalThreshold}% of its resolution SLA (${consumptionPercent}% consumed). Urgent action required before deadline breach.`,
-            status: "PENDING",
-            created_at: evaluationDate,
-          },
-        });
-      }
-
-      if (unnotifiedUsers.length > 0) {
-        for (const u of unnotifiedUsers) {
-          existingNotifications.push({
-            user_id: u.user_id,
-            notification_type: `SLA_CRITICAL_${criticalThreshold}`,
-          });
-        }
-        notificationsSent.push("SLA_CRITICAL");
-      }
-
-      if (unnotifiedUsers.length > 0) {
-        await tx.audit_logs.create({
-          data: {
-            grievance_id: grievanceId,
-            user_id: null,
-            action: `SLA_${criticalThreshold}_PERCENT_CRITICAL_ALERT`,
-            entity_type: "grievance",
-            entity_id: grievanceId,
-            new_value: {
-              consumptionPercent,
-              threshold: `${criticalThreshold}%`,
-              slaStatus: "AT_RISK",
-              notifiedRecipients: unnotifiedUsers
-                .map((h) => `${h.first_name} ${h.last_name || ""}`.trim())
-                .join(", "),
-              reassignedAutomatically: false,
-              note: `${criticalThreshold}% SLA urgent alert: Marked AT_RISK. Designated recipients alerted with CRITICAL priority.`,
-            },
-          },
-        });
-      }
-    });
-
-    return {
-      grievanceId: grievance.grievance_id.toString(),
-      grievanceNumber: grievance.grievance_number,
-      consumptionPercent,
-      threshold: "AT_CRITICAL",
-      slaStatus: "AT_RISK",
-      status: grievance.status,
-      notificationsSent,
-      escalated: false,
-      message: `${criticalThreshold}% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Designated recipients alerted with CRITICAL priority.`,
     };
   }
 
@@ -2232,13 +2160,30 @@ export interface AutoClosureSummary {
  *    Sets closure_reason = 'INFO_REQUEST_NON_RESPONSE' and permanently stops the existing SLA cycle.
  */
 export async function processAutoClosures(
-  responsePeriodDays: number = 7,
+  responsePeriodDays?: number,
   tx?: Prisma.TransactionClient,
 ): Promise<AutoClosureSummary> {
   const client = tx || prisma;
   const now = new Date();
-  const cutoffDate = new Date(
-    now.getTime() - responsePeriodDays * 24 * 60 * 60 * 1000,
+
+  // Resolve active lifecycle & closure policy for configurable inactivity timers
+  const activeLifecyclePolicy = await client.reopen_policies.findFirst({
+    where: { status: "ACTIVE" },
+    orderBy: { updated_at: "desc" },
+  });
+  const cond =
+    (activeLifecyclePolicy?.applicable_condition as Record<string, unknown>) ||
+    {};
+  const resInactivityDays =
+    Number(cond.resolution_inactivity_days) || responsePeriodDays || 7;
+  const infoInactivityDays =
+    Number(cond.additional_info_days) || responsePeriodDays || 7;
+
+  const resCutoffDate = new Date(
+    now.getTime() - resInactivityDays * 24 * 60 * 60 * 1000,
+  );
+  const infoCutoffDate = new Date(
+    now.getTime() - infoInactivityDays * 24 * 60 * 60 * 1000,
   );
 
   const summary: AutoClosureSummary = {
@@ -2253,7 +2198,7 @@ export async function processAutoClosures(
     where: {
       status: "RESOLVED",
       closed_at: null,
-      updated_at: { lte: cutoffDate },
+      updated_at: { lte: resCutoffDate },
     },
     include: {
       sla_tracking: {
@@ -2314,7 +2259,7 @@ export async function processAutoClosures(
         old_status: "RESOLVED",
         new_status: "CLOSED",
         changed_by: g.submitted_by,
-        remarks: `Auto-closed after ${responsePeriodDays} days without employee response to proposed resolution.`,
+        remarks: `Auto-closed after ${resInactivityDays} days without employee response to proposed resolution.`,
       },
     });
 
@@ -2335,7 +2280,7 @@ export async function processAutoClosures(
           pausedAt: activeTracking?.paused_at,
           cycleNumber: activeTracking?.cycle_number || 1,
           cycleType: activeTracking?.cycle_type || "INITIAL",
-          note: `Automatically closed after ${responsePeriodDays} days of employee inactivity following resolution. SLA remains permanently paused.`,
+          note: `Automatically closed after ${resInactivityDays} days of employee inactivity following resolution. SLA remains permanently paused.`,
         },
       },
     });
@@ -2345,12 +2290,14 @@ export async function processAutoClosures(
     summary.closedGrievanceIds.push(g.grievance_id.toString());
   }
 
-  // 2. Auto-close AWAITING_INFORMATION grievances
+  // 2. Auto-close AWAITING_INFORMATION / WAITING_ON_USER grievances
   const infoNonResponseGrievances = await client.grievances.findMany({
     where: {
-      status: "AWAITING_INFORMATION",
+      status: {
+        in: ["AWAITING_INFORMATION", "WAITING_ON_USER", "WAITING_ON_EMPLOYEE"],
+      },
       closed_at: null,
-      updated_at: { lte: cutoffDate },
+      updated_at: { lte: infoCutoffDate },
     },
     include: {
       sla_tracking: {
@@ -2411,7 +2358,7 @@ export async function processAutoClosures(
         old_status: "AWAITING_INFORMATION",
         new_status: "CLOSED",
         changed_by: g.submitted_by,
-        remarks: `Auto-closed after ${responsePeriodDays} days without response to additional information/document request.`,
+        remarks: `Auto-closed after ${infoInactivityDays} days without response to additional information/document request.`,
       },
     });
 
@@ -2432,7 +2379,7 @@ export async function processAutoClosures(
           pausedAt: activeTracking?.paused_at,
           cycleNumber: activeTracking?.cycle_number || 1,
           cycleType: activeTracking?.cycle_type || "INITIAL",
-          note: `Automatically closed after ${responsePeriodDays} days without submission of requested information/documents. Existing SLA cycle permanently stopped.`,
+          note: `Automatically closed after ${infoInactivityDays} days without submission of requested information/documents. Existing SLA cycle permanently stopped.`,
         },
       },
     });

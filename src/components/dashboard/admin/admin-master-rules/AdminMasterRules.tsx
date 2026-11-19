@@ -115,6 +115,12 @@ export function AdminMasterRules({
     setMaxReopens,
     maxReviews,
     setMaxReviews,
+    resolutionInactivityDays,
+    setResolutionInactivityDays,
+    additionalInfoInactivityDays,
+    setAdditionalInfoInactivityDays,
+    maxRejections,
+    setMaxRejections,
 
     editingRuleId,
     setEditingRuleId,
@@ -214,7 +220,7 @@ export function AdminMasterRules({
                   }}
                   className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
                 >
-                  Configure Reopen Policy
+                  + Configure Lifecycle Policy
                 </button>
               )}
             </div>
@@ -234,7 +240,7 @@ export function AdminMasterRules({
           { id: "sla", label: "SLA Policies", count: slaPolicies.length },
           {
             id: "reopen",
-            label: "Reopen Policy",
+            label: "Lifecycle & Closure",
             count: reopenPolicies.length,
           },
         ].map((tab) => (
@@ -625,7 +631,7 @@ export function AdminMasterRules({
               setRuleStatus(p.status as "ACTIVE" | "INACTIVE");
               setModalRuleType("reopen");
               setRuleName(p.policy_name);
-              setReopenWindowHours(p.reopen_window_hours?.toString() || "168");
+              setReopenWindowHours(p.reopen_window_hours?.toString() || "336");
               setMaxReopens(p.max_reopen_count.toString());
               setMaxReviews(p.max_manual_review_count.toString());
 
@@ -633,11 +639,24 @@ export function AdminMasterRules({
                 const cond = p.applicable_condition as {
                   category_id?: string;
                   subcategory_id?: string;
+                  resolution_inactivity_days?: number;
+                  additional_info_days?: number;
+                  max_rejection_count?: number;
                 };
                 if (cond?.category_id)
                   setSelectedPriorityCatId(cond.category_id);
                 if (cond?.subcategory_id)
                   setSelectedPrioritySubcatId(cond.subcategory_id);
+                if (cond?.resolution_inactivity_days)
+                  setResolutionInactivityDays(
+                    cond.resolution_inactivity_days.toString(),
+                  );
+                if (cond?.additional_info_days)
+                  setAdditionalInfoInactivityDays(
+                    cond.additional_info_days.toString(),
+                  );
+                if (cond?.max_rejection_count)
+                  setMaxRejections(cond.max_rejection_count.toString());
               } catch (_e) {}
 
               setRuleModalOpen(true);
@@ -701,6 +720,12 @@ export function AdminMasterRules({
         setMaxReopens={setMaxReopens}
         maxReviews={maxReviews}
         setMaxReviews={setMaxReviews}
+        resolutionInactivityDays={resolutionInactivityDays}
+        setResolutionInactivityDays={setResolutionInactivityDays}
+        additionalInfoInactivityDays={additionalInfoInactivityDays}
+        setAdditionalInfoInactivityDays={setAdditionalInfoInactivityDays}
+        maxRejections={maxRejections}
+        setMaxRejections={setMaxRejections}
         newCategoryName={newCategoryName}
         setNewCategoryName={setNewCategoryName}
         newSubcategoryName={newSubcategoryName}

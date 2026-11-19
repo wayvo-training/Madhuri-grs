@@ -126,6 +126,14 @@ export function AdminRuleConfigModal(props: AdminRuleConfigModalProps) {
           setMaxReopens={props.setMaxReopens}
           maxReviews={props.maxReviews}
           setMaxReviews={props.setMaxReviews}
+          resolutionInactivityDays={props.resolutionInactivityDays}
+          setResolutionInactivityDays={props.setResolutionInactivityDays}
+          additionalInfoInactivityDays={props.additionalInfoInactivityDays}
+          setAdditionalInfoInactivityDays={
+            props.setAdditionalInfoInactivityDays
+          }
+          maxRejections={props.maxRejections}
+          setMaxRejections={props.setMaxRejections}
           categories={props.categories}
           newCategoryName={props.newCategoryName}
           setNewCategoryName={props.setNewCategoryName}

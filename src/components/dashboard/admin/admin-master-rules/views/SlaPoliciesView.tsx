@@ -71,14 +71,13 @@ export function SlaPoliciesView({
       <div className="flex flex-col gap-4">
         <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
           <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[1160px]">
+            <div className="min-w-[1060px]">
               {(() => {
                 const colGroup = (
                   <colgroup>
-                    <col className="w-[240px]" />
+                    <col className="w-[260px]" />
                     <col className="w-[130px]" />
                     <col className="w-[110px]" />
-                    <col className="w-[120px]" />
                     <col className="w-[120px]" />
                     <col className="w-[120px]" />
                     <col className="w-[120px]" />
@@ -98,7 +97,7 @@ export function SlaPoliciesView({
                             field="policy_name"
                             currentSort={sortState}
                             onSort={handleSort}
-                            className="w-[240px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
+                            className="w-[260px] py-3 pl-4 pr-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
                           >
                             Policy Name
                           </SortableTableHead>
@@ -135,14 +134,6 @@ export function SlaPoliciesView({
                             At Risk
                           </SortableTableHead>
                           <SortableTableHead
-                            field="critical_threshold_percent"
-                            currentSort={sortState}
-                            onSort={handleSort}
-                            className="w-[120px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
-                          >
-                            Critical
-                          </SortableTableHead>
-                          <SortableTableHead
                             field="escalation_threshold_percent"
                             currentSort={sortState}
                             onSort={handleSort}
@@ -173,7 +164,7 @@ export function SlaPoliciesView({
                           {filtered.length === 0 ? (
                             <TableRow className="h-[52px]">
                               <TableCell
-                                colSpan={9}
+                                colSpan={8}
                                 className="py-12 text-center text-slate-400 font-normal text-[13px]"
                               >
                                 <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
@@ -187,7 +178,7 @@ export function SlaPoliciesView({
                                   key={p.sla_policy_id}
                                   className="h-[52px] transition-colors hover:bg-slate-50/80 whitespace-nowrap border-b border-slate-100 dark:border-slate-800/60"
                                 >
-                                  <TableCell className="w-[240px] py-3 pl-4 pr-3 overflow-hidden text-ellipsis whitespace-nowrap align-middle">
+                                  <TableCell className="w-[260px] py-3 pl-4 pr-3 overflow-hidden text-ellipsis whitespace-nowrap align-middle">
                                     <TruncatedText
                                       text={p.policy_name}
                                       maxChars={28}
@@ -207,18 +198,13 @@ export function SlaPoliciesView({
                                     {formatDuration(p.target_duration_minutes)}
                                   </TableCell>
                                   <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
-                                    <span className="text-amber-600 font-semibold">
+                                    <span className="text-teal-700 dark:text-teal-400 font-semibold">
                                       {p.warning_threshold_percent}%
                                     </span>
                                   </TableCell>
                                   <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
-                                    <span className="text-orange-600 font-semibold">
+                                    <span className="text-amber-700 dark:text-amber-400 font-semibold">
                                       {p.at_risk_threshold_percent || "75"}%
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
-                                    <span className="text-red-500 font-semibold">
-                                      {p.critical_threshold_percent || "90"}%
                                     </span>
                                   </TableCell>
                                   <TableCell className="w-[120px] px-3 py-3 whitespace-nowrap text-[13px] align-middle">
