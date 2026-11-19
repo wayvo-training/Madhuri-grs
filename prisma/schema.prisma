@@ -194,6 +194,7 @@ model grievances {
   created_at               DateTime                   @default(now()) @db.Timestamptz(6)
   updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
   closed_at                DateTime?                  @db.Timestamptz(6)
+  closure_reason           String?                    @db.VarChar(100)
   assignments              assignments[]
   attachments              attachments[]
   audit_logs               audit_logs[]
@@ -207,6 +208,7 @@ model grievances {
   notifications            notifications[]
   resolutions              resolutions[]
   sla_tracking             sla_tracking[]
+  sla_extensions           sla_extensions[]
 
   @@index([category_id], map: "idx_grievances_category_id")
   @@index([created_at], map: "idx_grievances_created_at")
@@ -452,6 +454,7 @@ model sla_tracking {
   grievances                 grievances             @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
   sla_policies               sla_policies           @relation(fields: [sla_policy_id], references: [sla_policy_id], onDelete: NoAction, onUpdate: NoAction)
   sla_pause_logs             sla_pause_logs[]
+  sla_extensions             sla_extensions[]
 
   @@index([grievance_id], map: "idx_sla_tracking_grievance_id")
   @@index([grievance_department_id], map: "idx_sla_tracking_dept_id")
@@ -538,8 +541,33 @@ model users {
   sessions                                   sessions[]
   sla_pause_logs_paused_by                   sla_pause_logs[]           @relation("sla_pause_paused_by")
   sla_pause_logs_resumed_by                  sla_pause_logs[]           @relation("sla_pause_resumed_by")
+  sla_extensions_requested                   sla_extensions[]           @relation("sla_ext_requested_by")
+  sla_extensions_reviewed                    sla_extensions[]           @relation("sla_ext_reviewed_by")
   sla_policies                               sla_policies[]
   user_skills                                user_skills[]
   departments                                departments?               @relation(fields: [department_id], references: [department_id], onUpdate: NoAction)
   roles                                      roles                      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model sla_extensions {
+  extension_id               BigInt        @id @default(autoincrement())
+  grievance_id               BigInt
+  sla_tracking_id            BigInt
+  requested_by               BigInt
+  reason                     String
+  requested_duration_minutes Int
+  granted_duration_minutes   Int?
+  status                     String        @default("PENDING") @db.VarChar(20)
+  reviewed_by                BigInt?
+  reviewed_at                DateTime?     @db.Timestamptz(6)
+  rejection_reason           String?
+  created_at                 DateTime      @default(now()) @db.Timestamptz(6)
+  grievances                 grievances    @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  sla_tracking               sla_tracking  @relation(fields: [sla_tracking_id], references: [sla_tracking_id], onDelete: Cascade, onUpdate: NoAction)
+  users_requested_by         users         @relation("sla_ext_requested_by", fields: [requested_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  users_reviewed_by          users?        @relation("sla_ext_reviewed_by", fields: [reviewed_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([grievance_id], map: "idx_sla_extensions_grievance_id")
+  @@index([sla_tracking_id], map: "idx_sla_extensions_tracking_id")
+  @@index([status], map: "idx_sla_extensions_status")
 }

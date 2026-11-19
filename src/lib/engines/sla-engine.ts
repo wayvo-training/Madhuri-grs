@@ -19,8 +19,16 @@ export interface SlaEvaluationResult {
 }
 
 import {
+  calculateMaxCumulativeExtensionMinutes,
+  calculateMaxSingleExtensionMinutes,
+  calculateReopenedSlaMinutes,
+  calculateReworkSlaMinutes,
+  DEFAULT_REOPENED_SLA_PERCENT,
+  DEFAULT_REWORK_SLA_PERCENT,
   DEFAULT_SLA_DURATIONS_MINUTES,
   DEFAULT_SLA_THRESHOLDS,
+  MAX_APPROVED_EXTENSIONS_LIFECYCLE,
+  MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION,
 } from "@/lib/constants/sla";
 
 /**
@@ -865,7 +873,7 @@ export async function evaluateGrievanceSla(
     updatedStatus = grievance.status;
 
     await prisma.$transaction(async (tx) => {
-      // 1. Update sla_status to BREACHED on grievance and sla_tracking (do NOT overwrite lifecycle status, per HLD/LLD)
+      // 1. Update sla_status to BREACHED on grievance and sla_tracking
       if (grievance.sla_status !== "BREACHED") {
         await tx.grievances.update({
           where: { grievance_id: grievanceId },
@@ -1241,7 +1249,7 @@ export async function resumeSlaTracking(options: ResumeSlaOptions): Promise<{
     orderBy: { cycle_number: "desc" },
   });
 
-  if (!activeTracking || !activeTracking.paused_at) {
+  if (!activeTracking?.paused_at) {
     return { resumed: false, pausedDurationMinutes: 0, newDueAt: null };
   }
 
@@ -1351,6 +1359,9 @@ export async function resumeSlaTracking(options: ResumeSlaOptions): Promise<{
 
 /**
  * Completes SLA tracking for a finalized/closed grievance.
+ * Preserves the valid tracking status ('ON_TRACK' | 'AT_RISK' | 'BREACHED').
+ * Does NOT set invalid status ('COMPLETED', 'STOPPED', or 'PAUSED').
+ * Sets completed_at, and retains paused_at so the SLA clock remains permanently paused.
  */
 export async function completeSlaTracking(
   grievanceId: bigint | number | string,
@@ -1370,14 +1381,985 @@ export async function completeSlaTracking(
 
   if (!activeTracking) return false;
 
+  const pausedAt = activeTracking.paused_at ?? now;
+
   await client.sla_tracking.update({
     where: { sla_tracking_id: activeTracking.sla_tracking_id },
     data: {
       completed_at: now,
-      status: "COMPLETED",
-      paused_at: null,
+      paused_at: pausedAt,
     },
   });
 
+  try {
+    if (
+      "sla_pause_logs" in client &&
+      typeof (client as { sla_pause_logs?: { findFirst?: unknown } })
+        .sla_pause_logs?.findFirst === "function"
+    ) {
+      const openLog = await client.sla_pause_logs.findFirst({
+        where: {
+          sla_tracking_id: activeTracking.sla_tracking_id,
+          resumed_at: null,
+        },
+        orderBy: { paused_at: "desc" },
+      });
+
+      if (openLog) {
+        const pausedMinutes = Math.max(
+          1,
+          Math.round(
+            (now.getTime() - openLog.paused_at.getTime()) / (60 * 1000),
+          ),
+        );
+        await client.sla_pause_logs.update({
+          where: { id: openLog.id },
+          data: {
+            resumed_at: now,
+            duration_minutes: pausedMinutes,
+          },
+        });
+      }
+    }
+  } catch (logErr) {
+    console.warn("Non-fatal: failed to close open sla_pause_logs:", logErr);
+  }
+
   return true;
+}
+
+/**
+ * Resolves the reopened SLA duration (in minutes) for a given priority.
+ * Evaluates configured policies in sla_policies where sla_type = 'REOPENED_RESOLUTION'.
+ * Defaults to the proposed 50% baseline duration:
+ * - Critical: 12 hours (720 min)
+ * - High: 24 hours (1440 min)
+ * - Medium: 36 hours (2160 min)
+ * - Low: 60 hours (3600 min)
+ */
+export async function getReopenedSlaDurationMinutes(
+  priority: string = "MEDIUM",
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<{ durationMinutes: number; policyId: bigint }> {
+  const normPriority = priority.toUpperCase();
+
+  // 1. Check for an active policy with sla_type = 'REOPENED_RESOLUTION'
+  const reopenedPolicy = await client.sla_policies.findFirst({
+    where: {
+      priority_level: normPriority,
+      sla_type: "REOPENED_RESOLUTION",
+      status: "ACTIVE",
+    },
+  });
+
+  if (reopenedPolicy?.target_duration_minutes) {
+    return {
+      durationMinutes: reopenedPolicy.target_duration_minutes,
+      policyId: reopenedPolicy.sla_policy_id,
+    };
+  }
+
+  // 2. Fetch the active baseline resolution policy and calculate 50% through dynamic formula
+  const initialPolicy = await client.sla_policies.findFirst({
+    where: {
+      priority_level: normPriority,
+      sla_type: "RESOLUTION",
+      status: "ACTIVE",
+    },
+  });
+
+  // Calculate 50% dynamically from the configured priority baseline duration
+  const baselineMinutes =
+    initialPolicy?.target_duration_minutes ||
+    DEFAULT_SLA_DURATIONS_MINUTES[normPriority] ||
+    DEFAULT_SLA_DURATIONS_MINUTES.MEDIUM;
+
+  const durationMinutes = calculateReopenedSlaMinutes(
+    baselineMinutes,
+    DEFAULT_REOPENED_SLA_PERCENT,
+  );
+
+  const fallbackPolicyId = initialPolicy
+    ? initialPolicy.sla_policy_id
+    : BigInt(1);
+
+  return {
+    durationMinutes,
+    policyId: fallbackPolicyId,
+  };
+}
+
+/**
+ * Initiates a new SLA monitoring cycle for a reopened grievance.
+ * Preserves all previous SLA cycles and their pause/resume history.
+ * Resets accumulated_paused_minutes to 0, computes fresh due_at from baseline priority duration.
+ * Sets status ON_TRACK and synchronizes grievance master record.
+ */
+export async function initiateReopenedSlaCycle(
+  grievanceId: bigint | number | string,
+  priority: string = "MEDIUM",
+  tx?: Prisma.TransactionClient,
+): Promise<{
+  newCycleId: bigint;
+  cycleNumber: number;
+  durationMinutes: number;
+  newDueAt: Date;
+}> {
+  const gId = BigInt(grievanceId);
+  const client = tx || prisma;
+  const now = new Date();
+
+  // 1. Find latest tracking cycle to determine new cycle_number
+  const lastTracking = await client.sla_tracking.findFirst({
+    where: { grievance_id: gId },
+    orderBy: { cycle_number: "desc" },
+  });
+
+  const nextCycleNumber = (lastTracking?.cycle_number || 0) + 1;
+
+  // 2. Complete previous cycle if not yet marked completed
+  if (lastTracking && !lastTracking.completed_at) {
+    await client.sla_tracking.update({
+      where: { sla_tracking_id: lastTracking.sla_tracking_id },
+      data: {
+        completed_at: now,
+        paused_at: lastTracking.paused_at ?? now,
+      },
+    });
+  }
+
+  // 3. Resolve reopened duration & policy
+  const { durationMinutes, policyId } = await getReopenedSlaDurationMinutes(
+    priority,
+    client,
+  );
+
+  const newDueAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+
+  // 4. Create new SLA tracking cycle
+  const newCycle = await client.sla_tracking.create({
+    data: {
+      grievance_id: gId,
+      sla_policy_id: policyId,
+      cycle_number: nextCycleNumber,
+      cycle_type: "REOPENED",
+      started_at: now,
+      due_at: newDueAt,
+      status: "ON_TRACK",
+      paused_at: null,
+      resumed_at: null,
+      completed_at: null,
+      accumulated_paused_minutes: 0,
+    },
+  });
+
+  // 5. Update grievance master record
+  await client.grievances.update({
+    where: { grievance_id: gId },
+    data: {
+      due_at: newDueAt,
+      sla_status: "ON_TRACK",
+      closed_at: null,
+      closure_reason: null,
+    },
+  });
+
+  // Resolve any open escalations
+  await client.escalations.updateMany({
+    where: { grievance_id: gId, status: "OPEN" },
+    data: { status: "RESOLVED", resolved_at: now },
+  });
+
+  // 6. Update active primary department due_at
+  await client.grievance_departments.updateMany({
+    where: {
+      grievance_id: gId,
+      involvement_type: "PRIMARY",
+    },
+    data: {
+      due_at: newDueAt,
+      sla_status: "ON_TRACK",
+      activated_at: now,
+      completed_at: null,
+      allocated_duration_minutes: durationMinutes,
+    },
+  });
+
+  // 7. Retain in audit logs
+  await client.audit_logs.create({
+    data: {
+      grievance_id: gId,
+      user_id: null,
+      action: "SLA_CYCLE_CREATED",
+      entity_type: "sla_tracking",
+      entity_id: newCycle.sla_tracking_id,
+      new_value: {
+        cycleNumber: nextCycleNumber,
+        cycleType: "REOPENED",
+        durationMinutes,
+        dueAt: newDueAt.toISOString(),
+        policyType: "REOPENED_RESOLUTION",
+        baselinePolicy: "Proposed 50% priority duration",
+      },
+    },
+  });
+
+  return {
+    newCycleId: newCycle.sla_tracking_id,
+    cycleNumber: nextCycleNumber,
+    durationMinutes,
+    newDueAt,
+  };
+}
+
+/**
+ * Resolves the rework SLA duration (in minutes) for a given priority.
+ * Evaluates configured policies in sla_policies where sla_type = 'REWORK_RESOLUTION'.
+ * Defaults to the proposed 50% baseline duration (Pending Krishna's Approval).
+ */
+export async function getReworkSlaDurationMinutes(
+  priority: string = "MEDIUM",
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<{ durationMinutes: number; policyId: bigint }> {
+  const normPriority = priority.toUpperCase();
+
+  // 1. Check for an active policy with sla_type = 'REWORK_RESOLUTION'
+  const reworkPolicy = await client.sla_policies.findFirst({
+    where: {
+      priority_level: normPriority,
+      sla_type: "REWORK_RESOLUTION",
+      status: "ACTIVE",
+    },
+  });
+
+  if (reworkPolicy?.target_duration_minutes) {
+    return {
+      durationMinutes: reworkPolicy.target_duration_minutes,
+      policyId: reworkPolicy.sla_policy_id,
+    };
+  }
+
+  // 2. Fetch baseline resolution policy and calculate 50% dynamically
+  const initialPolicy = await client.sla_policies.findFirst({
+    where: {
+      priority_level: normPriority,
+      sla_type: "RESOLUTION",
+      status: "ACTIVE",
+    },
+  });
+
+  const baselineMinutes =
+    initialPolicy?.target_duration_minutes ||
+    DEFAULT_SLA_DURATIONS_MINUTES[normPriority] ||
+    DEFAULT_SLA_DURATIONS_MINUTES.MEDIUM;
+
+  const durationMinutes = calculateReworkSlaMinutes(
+    baselineMinutes,
+    DEFAULT_REWORK_SLA_PERCENT,
+  );
+
+  const fallbackPolicyId = initialPolicy
+    ? initialPolicy.sla_policy_id
+    : BigInt(1);
+
+  return {
+    durationMinutes,
+    policyId: fallbackPolicyId,
+  };
+}
+
+/**
+ * Initiates a separate SLA monitoring cycle for a grievance placed in Rework.
+ * Starts only after Department Head review and assignment/action.
+ * Duration: Proposed 50% of original priority baseline (Pending Krishna's Approval).
+ */
+export async function initiateReworkSlaCycle(
+  grievanceId: bigint | number | string,
+  priority: string = "MEDIUM",
+  tx?: Prisma.TransactionClient,
+): Promise<{
+  newCycleId: bigint;
+  cycleNumber: number;
+  durationMinutes: number;
+  newDueAt: Date;
+}> {
+  const gId = BigInt(grievanceId);
+  const client = tx || prisma;
+  const now = new Date();
+
+  // 1. Find latest tracking cycle to determine new cycle_number
+  const lastTracking = await client.sla_tracking.findFirst({
+    where: { grievance_id: gId },
+    orderBy: { cycle_number: "desc" },
+  });
+
+  const nextCycleNumber = (lastTracking?.cycle_number || 0) + 1;
+
+  // 2. Complete previous cycle if open
+  if (lastTracking && !lastTracking.completed_at) {
+    await client.sla_tracking.update({
+      where: { sla_tracking_id: lastTracking.sla_tracking_id },
+      data: {
+        completed_at: now,
+        paused_at: lastTracking.paused_at ?? now,
+      },
+    });
+  }
+
+  // 3. Resolve rework duration & policy (Proposed 50% Pending Krishna's Approval)
+  const { durationMinutes, policyId } = await getReworkSlaDurationMinutes(
+    priority,
+    client,
+  );
+
+  const newDueAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+
+  // 4. Create new SLA tracking cycle
+  const newCycle = await client.sla_tracking.create({
+    data: {
+      grievance_id: gId,
+      sla_policy_id: policyId,
+      cycle_number: nextCycleNumber,
+      cycle_type: "REWORK",
+      started_at: now,
+      due_at: newDueAt,
+      status: "ON_TRACK",
+      paused_at: null,
+      resumed_at: null,
+      completed_at: null,
+      accumulated_paused_minutes: 0,
+    },
+  });
+
+  // 5. Update grievance master record
+  await client.grievances.update({
+    where: { grievance_id: gId },
+    data: {
+      due_at: newDueAt,
+      sla_status: "ON_TRACK",
+      closed_at: null,
+      closure_reason: null,
+    },
+  });
+
+  // Resolve open escalations
+  await client.escalations.updateMany({
+    where: { grievance_id: gId, status: "OPEN" },
+    data: { status: "RESOLVED", resolved_at: now },
+  });
+
+  // 6. Update active primary department due_at
+  await client.grievance_departments.updateMany({
+    where: {
+      grievance_id: gId,
+      involvement_type: "PRIMARY",
+    },
+    data: {
+      due_at: newDueAt,
+      sla_status: "ON_TRACK",
+      activated_at: now,
+      completed_at: null,
+      allocated_duration_minutes: durationMinutes,
+    },
+  });
+
+  // 7. Retain in audit logs
+  await client.audit_logs.create({
+    data: {
+      grievance_id: gId,
+      user_id: null,
+      action: "SLA_CYCLE_CREATED",
+      entity_type: "sla_tracking",
+      entity_id: newCycle.sla_tracking_id,
+      new_value: {
+        cycleNumber: nextCycleNumber,
+        cycleType: "REWORK",
+        durationMinutes,
+        dueAt: newDueAt.toISOString(),
+        policyType: "REWORK_RESOLUTION",
+        baselinePolicy:
+          "Proposed 50% priority duration (Pending Krishna's Approval)",
+      },
+    },
+  });
+
+  return {
+    newCycleId: newCycle.sla_tracking_id,
+    cycleNumber: nextCycleNumber,
+    durationMinutes,
+    newDueAt,
+  };
+}
+
+export interface RequestSlaExtensionOptions {
+  grievanceId: bigint | number | string;
+  staffId: bigint | number | string;
+  reason: string;
+  requestedDurationMinutes: number;
+  tx?: Prisma.TransactionClient;
+}
+
+export interface RequestSlaExtensionResult {
+  success: boolean;
+  message: string;
+  extensionId?: bigint;
+  grantedMinutes?: number;
+}
+
+/**
+ * Requests an SLA Extension (Grace Period) per LLD §2.2.26:
+ * - 1 request per active SLA cycle (including rejected requests).
+ * - Max 2 approved extensions across the grievance lifecycle.
+ * - Single extension capped at stricter of 24h or 25% of baseline SLA.
+ * - Cumulative approved extensions capped at 25% of baseline SLA.
+ * - SLA clock continues to run while pending (does not pause or defer breach).
+ */
+export async function requestSlaExtension(
+  options: RequestSlaExtensionOptions,
+): Promise<RequestSlaExtensionResult> {
+  const gId = BigInt(options.grievanceId);
+  const sId = BigInt(options.staffId);
+  const client = options.tx || prisma;
+
+  // 1. Fetch grievance and active SLA tracking cycle
+  const grievance = await client.grievances.findUnique({
+    where: { grievance_id: gId },
+    include: {
+      sla_tracking: {
+        where: {
+          completed_at: null,
+          status: { in: ["ON_TRACK", "AT_RISK", "BREACHED"] },
+        },
+        orderBy: { cycle_number: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!grievance) {
+    return { success: false, message: "Grievance not found" };
+  }
+
+  const activeTracking = grievance.sla_tracking[0];
+  if (!activeTracking) {
+    return {
+      success: false,
+      message: "No active SLA tracking cycle found for this grievance",
+    };
+  }
+
+  // 2. Invariant: Staff can only request SLA extension after at least 50% SLA has elapsed
+  // (allows proactive mitigation before the 75% auto-escalation to Department Head)
+  const consumption = calculateSlaConsumption(
+    activeTracking.started_at,
+    grievance.due_at,
+    grievance.priority,
+    new Date(),
+    activeTracking.accumulated_paused_minutes,
+    activeTracking.paused_at,
+  );
+
+  if (consumption.consumptionPercent < MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION) {
+    return {
+      success: false,
+      message: `SLA extension can only be requested after at least ${MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION}% of the SLA budget has elapsed (currently ${consumption.consumptionPercent}% consumed).`,
+    };
+  }
+
+  // 3. Invariant: One request per active SLA cycle (including rejected requests)
+  const existingCycleExtension = await client.sla_extensions.findFirst({
+    where: { sla_tracking_id: activeTracking.sla_tracking_id },
+  });
+
+  if (existingCycleExtension) {
+    return {
+      success: false,
+      message:
+        "Only 1 SLA extension request is permitted per active SLA cycle. A request has already been submitted for this cycle.",
+    };
+  }
+
+  // 3. Invariant: Maximum 2 approved extensions across the grievance lifecycle
+  const approvedCount = await client.sla_extensions.count({
+    where: {
+      grievance_id: gId,
+      status: "APPROVED",
+    },
+  });
+
+  if (approvedCount >= MAX_APPROVED_EXTENSIONS_LIFECYCLE) {
+    return {
+      success: false,
+      message: `Maximum limit of ${MAX_APPROVED_EXTENSIONS_LIFECYCLE} approved extensions has been reached for this grievance lifecycle.`,
+    };
+  }
+
+  // 4. Invariant: Duration limits based on baseline priority SLA
+  const normPriority = grievance.priority.toUpperCase();
+  const baselineMinutes =
+    DEFAULT_SLA_DURATIONS_MINUTES[normPriority] ||
+    DEFAULT_SLA_DURATIONS_MINUTES.MEDIUM;
+
+  const maxSingleMinutes = calculateMaxSingleExtensionMinutes(baselineMinutes);
+  const maxCumulativeMinutes =
+    calculateMaxCumulativeExtensionMinutes(baselineMinutes);
+
+  // Check cumulative approved duration
+  const approvedExtensions = await client.sla_extensions.findMany({
+    where: {
+      grievance_id: gId,
+      status: "APPROVED",
+    },
+    select: { granted_duration_minutes: true },
+  });
+
+  const cumulativeApprovedMinutes = approvedExtensions.reduce(
+    (sum, ext) => sum + (ext.granted_duration_minutes || 0),
+    0,
+  );
+
+  const remainingCumulativeAllowed = Math.max(
+    0,
+    maxCumulativeMinutes - cumulativeApprovedMinutes,
+  );
+
+  if (remainingCumulativeAllowed <= 0) {
+    return {
+      success: false,
+      message: `The cumulative extension limit of 25% (${maxCumulativeMinutes} minutes) has already been reached for this grievance.`,
+    };
+  }
+
+  // Requested duration cannot exceed single cap or remaining cumulative cap
+  const effectiveRequestedMinutes = Math.min(
+    options.requestedDurationMinutes,
+    maxSingleMinutes,
+    remainingCumulativeAllowed,
+  );
+
+  if (effectiveRequestedMinutes <= 0) {
+    return {
+      success: false,
+      message: "Requested extension duration exceeds permitted limits.",
+    };
+  }
+
+  // 5. Create extension record with status PENDING
+  const extension = await client.sla_extensions.create({
+    data: {
+      grievance_id: gId,
+      sla_tracking_id: activeTracking.sla_tracking_id,
+      requested_by: sId,
+      reason: options.reason.trim(),
+      requested_duration_minutes: effectiveRequestedMinutes,
+      status: "PENDING",
+    },
+  });
+
+  // Audit log
+  await client.audit_logs.create({
+    data: {
+      grievance_id: gId,
+      user_id: sId,
+      action: "SLA_EXTENSION_REQUESTED",
+      entity_type: "sla_extensions",
+      entity_id: extension.extension_id,
+      new_value: {
+        requestedMinutes: effectiveRequestedMinutes,
+        reason: options.reason,
+        cycleNumber: activeTracking.cycle_number,
+      },
+    },
+  });
+
+  return {
+    success: true,
+    message: `SLA extension request for ${effectiveRequestedMinutes} minutes submitted to Department Head.`,
+    extensionId: extension.extension_id,
+    grantedMinutes: effectiveRequestedMinutes,
+  };
+}
+
+export interface ReviewSlaExtensionOptions {
+  extensionId: bigint | number | string;
+  reviewedBy: bigint | number | string;
+  decision: "APPROVE" | "REJECT";
+  grantedDurationMinutes?: number;
+  rejectionReason?: string;
+  tx?: Prisma.TransactionClient;
+}
+
+/**
+ * Department Head reviews (Approve/Reject) an SLA Extension request.
+ * If approved, extends due_at on sla_tracking, grievances, and active grievance_departments.
+ */
+export async function reviewSlaExtension(
+  options: ReviewSlaExtensionOptions,
+): Promise<{ success: boolean; message: string; newDueAt?: Date }> {
+  const extId = BigInt(options.extensionId);
+  const rBy = BigInt(options.reviewedBy);
+  const client = options.tx || prisma;
+  const now = new Date();
+
+  const extension = await client.sla_extensions.findUnique({
+    where: { extension_id: extId },
+    include: {
+      grievances: true,
+      sla_tracking: true,
+    },
+  });
+
+  if (!extension) {
+    return { success: false, message: "SLA extension request not found" };
+  }
+
+  if (extension.status !== "PENDING") {
+    return {
+      success: false,
+      message: `Extension request has already been ${extension.status.toLowerCase()}`,
+    };
+  }
+
+  if (options.decision === "REJECT") {
+    await client.sla_extensions.update({
+      where: { extension_id: extId },
+      data: {
+        status: "REJECTED",
+        reviewed_by: rBy,
+        reviewed_at: now,
+        rejection_reason:
+          options.rejectionReason || "Extension rejected by Department Head",
+      },
+    });
+
+    await client.audit_logs.create({
+      data: {
+        grievance_id: extension.grievance_id,
+        user_id: rBy,
+        action: "SLA_EXTENSION_REJECTED",
+        entity_type: "sla_extensions",
+        entity_id: extId,
+        new_value: {
+          rejectionReason: options.rejectionReason,
+        },
+      },
+    });
+
+    return { success: true, message: "SLA extension rejected successfully" };
+  }
+
+  // APPROVE
+  const grantedMinutes =
+    options.grantedDurationMinutes ?? extension.requested_duration_minutes;
+
+  await client.sla_extensions.update({
+    where: { extension_id: extId },
+    data: {
+      status: "APPROVED",
+      granted_duration_minutes: grantedMinutes,
+      reviewed_by: rBy,
+      reviewed_at: now,
+    },
+  });
+
+  // Extend due_at on active SLA tracking cycle
+  const currentSlaDue = extension.sla_tracking.due_at;
+  const newSlaDueAt = new Date(
+    currentSlaDue.getTime() + grantedMinutes * 60 * 1000,
+  );
+
+  await client.sla_tracking.update({
+    where: { sla_tracking_id: extension.sla_tracking_id },
+    data: {
+      due_at: newSlaDueAt,
+      status: "ON_TRACK",
+    },
+  });
+
+  // Extend due_at on grievance master record
+  let newGrievanceDueAt: Date | undefined;
+  if (extension.grievances.due_at) {
+    newGrievanceDueAt = new Date(
+      extension.grievances.due_at.getTime() + grantedMinutes * 60 * 1000,
+    );
+    await client.grievances.update({
+      where: { grievance_id: extension.grievance_id },
+      data: {
+        due_at: newGrievanceDueAt,
+        sla_status: "ON_TRACK",
+      },
+    });
+  }
+
+  // Extend due_at on active grievance_departments
+  const activeDepts = await client.grievance_departments.findMany({
+    where: {
+      grievance_id: extension.grievance_id,
+      status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED", "BLOCKED"] },
+      due_at: { not: null },
+    },
+  });
+
+  for (const dept of activeDepts) {
+    if (dept.due_at) {
+      const newDeptDueAt = new Date(
+        dept.due_at.getTime() + grantedMinutes * 60 * 1000,
+      );
+      await client.grievance_departments.update({
+        where: { grievance_department_id: dept.grievance_department_id },
+        data: {
+          due_at: newDeptDueAt,
+          sla_status: "ON_TRACK",
+        },
+      });
+    }
+  }
+
+  await client.audit_logs.create({
+    data: {
+      grievance_id: extension.grievance_id,
+      user_id: rBy,
+      action: "SLA_EXTENSION_APPROVED",
+      entity_type: "sla_extensions",
+      entity_id: extId,
+      new_value: {
+        grantedMinutes,
+        newDueAt: (newGrievanceDueAt || newSlaDueAt).toISOString(),
+      },
+    },
+  });
+
+  return {
+    success: true,
+    message: `SLA extension approved. Extended by ${grantedMinutes} minutes.`,
+    newDueAt: newGrievanceDueAt || newSlaDueAt,
+  };
+}
+
+export interface AutoClosureSummary {
+  totalProcessed: number;
+  resolvedInactivityCount: number;
+  infoNonResponseCount: number;
+  closedGrievanceIds: string[];
+}
+
+/**
+ * Sweeps and automatically closes:
+ * 1. RESOLVED grievances where the employee has not responded within responsePeriodDays (default 7 days).
+ *    Sets closure_reason = 'RESOLVED_INACTIVITY' and keeps SLA permanently paused.
+ * 2. AWAITING_INFORMATION grievances where the employee has not provided requested info within responsePeriodDays (default 7 days).
+ *    Sets closure_reason = 'INFO_REQUEST_NON_RESPONSE' and permanently stops the existing SLA cycle.
+ */
+export async function processAutoClosures(
+  responsePeriodDays: number = 7,
+  tx?: Prisma.TransactionClient,
+): Promise<AutoClosureSummary> {
+  const client = tx || prisma;
+  const now = new Date();
+  const cutoffDate = new Date(
+    now.getTime() - responsePeriodDays * 24 * 60 * 60 * 1000,
+  );
+
+  const summary: AutoClosureSummary = {
+    totalProcessed: 0,
+    resolvedInactivityCount: 0,
+    infoNonResponseCount: 0,
+    closedGrievanceIds: [],
+  };
+
+  // 1. Auto-close RESOLVED grievances
+  const resolvedInactivityGrievances = await client.grievances.findMany({
+    where: {
+      status: "RESOLVED",
+      closed_at: null,
+      updated_at: { lte: cutoffDate },
+    },
+    include: {
+      sla_tracking: {
+        orderBy: { cycle_number: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  for (const g of resolvedInactivityGrievances) {
+    const activeTracking = g.sla_tracking?.[0];
+    const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
+      g.created_at,
+      g.due_at,
+      g.priority,
+      now,
+      activeTracking?.accumulated_paused_minutes || 0,
+      activeTracking?.paused_at,
+    );
+    const remainingMinutes = Math.max(0, totalDurationMinutes - elapsedMinutes);
+
+    await client.grievances.update({
+      where: { grievance_id: g.grievance_id },
+      data: {
+        status: "CLOSED",
+        closed_at: now,
+        closure_reason: "RESOLVED_INACTIVITY",
+      },
+    });
+
+    await client.assignments.updateMany({
+      where: {
+        grievance_id: g.grievance_id,
+        assignment_status: "ASSIGNED",
+      },
+      data: {
+        assignment_status: "COMPLETED",
+        completed_at: now,
+      },
+    });
+
+    await client.grievance_departments.updateMany({
+      where: {
+        grievance_id: g.grievance_id,
+        status: { notIn: ["REMOVED"] },
+      },
+      data: {
+        status: "COMPLETED",
+        completed_at: now,
+      },
+    });
+
+    await completeSlaTracking(g.grievance_id, client);
+
+    await client.grievance_status_history.create({
+      data: {
+        grievance_id: g.grievance_id,
+        old_status: "RESOLVED",
+        new_status: "CLOSED",
+        changed_by: g.submitted_by,
+        remarks: `Auto-closed after ${responsePeriodDays} days without employee response to proposed resolution.`,
+      },
+    });
+
+    await client.audit_logs.create({
+      data: {
+        grievance_id: g.grievance_id,
+        user_id: null,
+        action: "AUTO_CLOSED",
+        entity_type: "grievance",
+        entity_id: g.grievance_id,
+        new_value: {
+          closureReason: "RESOLVED_INACTIVITY",
+          elapsedDurationMinutes: elapsedMinutes,
+          remainingDurationMinutes: remainingMinutes,
+          totalDurationMinutes,
+          accumulatedPausedMinutes:
+            activeTracking?.accumulated_paused_minutes || 0,
+          pausedAt: activeTracking?.paused_at,
+          cycleNumber: activeTracking?.cycle_number || 1,
+          cycleType: activeTracking?.cycle_type || "INITIAL",
+          note: `Automatically closed after ${responsePeriodDays} days of employee inactivity following resolution. SLA remains permanently paused.`,
+        },
+      },
+    });
+
+    summary.totalProcessed++;
+    summary.resolvedInactivityCount++;
+    summary.closedGrievanceIds.push(g.grievance_id.toString());
+  }
+
+  // 2. Auto-close AWAITING_INFORMATION grievances
+  const infoNonResponseGrievances = await client.grievances.findMany({
+    where: {
+      status: "AWAITING_INFORMATION",
+      closed_at: null,
+      updated_at: { lte: cutoffDate },
+    },
+    include: {
+      sla_tracking: {
+        orderBy: { cycle_number: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  for (const g of infoNonResponseGrievances) {
+    const activeTracking = g.sla_tracking?.[0];
+    const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
+      g.created_at,
+      g.due_at,
+      g.priority,
+      now,
+      activeTracking?.accumulated_paused_minutes || 0,
+      activeTracking?.paused_at,
+    );
+    const remainingMinutes = Math.max(0, totalDurationMinutes - elapsedMinutes);
+
+    await client.grievances.update({
+      where: { grievance_id: g.grievance_id },
+      data: {
+        status: "CLOSED",
+        closed_at: now,
+        closure_reason: "INFO_REQUEST_NON_RESPONSE",
+      },
+    });
+
+    await client.assignments.updateMany({
+      where: {
+        grievance_id: g.grievance_id,
+        assignment_status: "ASSIGNED",
+      },
+      data: {
+        assignment_status: "COMPLETED",
+        completed_at: now,
+      },
+    });
+
+    await client.grievance_departments.updateMany({
+      where: {
+        grievance_id: g.grievance_id,
+        status: { notIn: ["REMOVED"] },
+      },
+      data: {
+        status: "COMPLETED",
+        completed_at: now,
+      },
+    });
+
+    await completeSlaTracking(g.grievance_id, client);
+
+    await client.grievance_status_history.create({
+      data: {
+        grievance_id: g.grievance_id,
+        old_status: "AWAITING_INFORMATION",
+        new_status: "CLOSED",
+        changed_by: g.submitted_by,
+        remarks: `Auto-closed after ${responsePeriodDays} days without response to additional information/document request.`,
+      },
+    });
+
+    await client.audit_logs.create({
+      data: {
+        grievance_id: g.grievance_id,
+        user_id: null,
+        action: "AUTO_CLOSED",
+        entity_type: "grievance",
+        entity_id: g.grievance_id,
+        new_value: {
+          closureReason: "INFO_REQUEST_NON_RESPONSE",
+          elapsedDurationMinutes: elapsedMinutes,
+          remainingDurationMinutes: remainingMinutes,
+          totalDurationMinutes,
+          accumulatedPausedMinutes:
+            activeTracking?.accumulated_paused_minutes || 0,
+          pausedAt: activeTracking?.paused_at,
+          cycleNumber: activeTracking?.cycle_number || 1,
+          cycleType: activeTracking?.cycle_type || "INITIAL",
+          note: `Automatically closed after ${responsePeriodDays} days without submission of requested information/documents. Existing SLA cycle permanently stopped.`,
+        },
+      },
+    });
+
+    summary.totalProcessed++;
+    summary.infoNonResponseCount++;
+    summary.closedGrievanceIds.push(g.grievance_id.toString());
+  }
+
+  return summary;
 }

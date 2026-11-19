@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   evaluateAllActiveGrievancesSla,
   evaluateGrievanceSla,
+  processAutoClosures,
 } from "@/lib/engines/sla-engine";
 
 export async function POST(request: Request) {
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     ) {
       deptId = BigInt(user.department_id);
     }
+    const autoClosureSummary = await processAutoClosures(7);
     const batchResult = await evaluateAllActiveGrievancesSla(deptId, true);
 
     return NextResponse.json({
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
       type: "batch",
       totalEvaluated: batchResult.totalEvaluated,
       results: batchResult.results,
+      autoClosures: autoClosureSummary,
     });
   } catch (error) {
     console.error("Failed to evaluate SLA thresholds:", error);
