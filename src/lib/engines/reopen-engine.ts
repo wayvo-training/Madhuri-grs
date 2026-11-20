@@ -15,7 +15,9 @@ export interface ReopenPolicyMatchResult {
   maxReopenCount: number;
   maxManualReviewCount: number;
   reopenWindowHours: number | null;
+  reopenWindowDays: number;
   isCustom: boolean;
+  maxRejectionCount?: number;
 }
 
 /**
@@ -111,6 +113,17 @@ export async function evaluateReopenPolicy(input: {
     }
   }
 
+  const windowHours =
+    matchedPolicy?.reopen_window_hours ??
+    DEFAULT_REOPEN_POLICY.REOPEN_WINDOW_HOURS;
+  const windowDays = Math.round(windowHours / 24);
+
+  const policyCond =
+    (matchedPolicy?.applicable_condition as Record<string, unknown>) || {};
+  const maxRejectionCount =
+    Number(policyCond.max_rejection_count) ||
+    (matchedPolicy?.max_reopen_count ?? DEFAULT_REOPEN_POLICY.MAX_REOPEN_COUNT);
+
   return {
     policyId: matchedPolicy ? matchedPolicy.reopen_policy_id : null,
     policyName: matchedPolicy?.policy_name || DEFAULT_REOPEN_POLICY.POLICY_NAME,
@@ -119,10 +132,10 @@ export async function evaluateReopenPolicy(input: {
     maxManualReviewCount:
       matchedPolicy?.max_manual_review_count ??
       DEFAULT_REOPEN_POLICY.MAX_MANUAL_REVIEW_COUNT,
-    reopenWindowHours:
-      matchedPolicy?.reopen_window_hours ??
-      DEFAULT_REOPEN_POLICY.REOPEN_WINDOW_HOURS,
+    reopenWindowHours: windowHours,
+    reopenWindowDays: windowDays,
     isCustom: Boolean(matchedPolicy),
+    maxRejectionCount,
   };
 }
 

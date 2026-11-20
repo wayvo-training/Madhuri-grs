@@ -97,6 +97,9 @@ export interface CaseHubGrievance {
   closureReason?: string | null;
   reopenCount?: number;
   rejectionCount?: number;
+  reopenWindowDays?: number;
+  maxReopenAttempts?: number;
+  maxRejections?: number;
   dueAt?: string | null;
   categoryName: string;
   subcategoryName: string;
@@ -557,13 +560,13 @@ export function EndUserCaseHub({
             id: "CLOSED",
             title:
               grievance.closureReason === "REWORK_REJECTED_FINAL" ||
-              (grievance.rejectionCount ?? 0) >= 3
+              (grievance.rejectionCount ?? 0) >= (grievance.maxRejections ?? 3)
                 ? "Case Permanently Closed"
                 : "Case Closed",
             defaultDesc:
               grievance.closureReason === "REWORK_REJECTED_FINAL" ||
-              (grievance.rejectionCount ?? 0) >= 3
-                ? "Grievance closed after 3 rework reviews by Department Head."
+              (grievance.rejectionCount ?? 0) >= (grievance.maxRejections ?? 3)
+                ? `Grievance closed after ${grievance.maxRejections ?? 3} rework reviews by Department Head.`
                 : "Resolution accepted and archived",
             icon: ShieldCheck,
           },
@@ -651,13 +654,13 @@ export function EndUserCaseHub({
             id: "CLOSED",
             title:
               grievance.closureReason === "REWORK_REJECTED_FINAL" ||
-              (grievance.rejectionCount ?? 0) >= 3
+              (grievance.rejectionCount ?? 0) >= (grievance.maxRejections ?? 3)
                 ? "Case Permanently Closed"
                 : "Case Closed",
             defaultDesc:
               grievance.closureReason === "REWORK_REJECTED_FINAL" ||
-              (grievance.rejectionCount ?? 0) >= 3
-                ? "Grievance closed after 3 rework reviews by Department Head."
+              (grievance.rejectionCount ?? 0) >= (grievance.maxRejections ?? 3)
+                ? `Grievance closed after ${grievance.maxRejections ?? 3} rework reviews by Department Head.`
                 : "Resolution accepted and archived",
             icon: ShieldCheck,
           },
@@ -1608,6 +1611,9 @@ export function EndUserCaseHub({
                 reopenCount={grievance.reopenCount ?? 0}
                 closureReason={grievance.closureReason}
                 rejectionCount={grievance.rejectionCount}
+                reopenWindowDays={grievance.reopenWindowDays}
+                maxReopenAttempts={grievance.maxReopenAttempts}
+                maxRejections={grievance.maxRejections}
                 showDownloadButton={true}
               />
             ) : grievance.status === "CLOSED" ? (
@@ -1625,46 +1631,51 @@ export function EndUserCaseHub({
                   closure).
                 </p>
                 {(() => {
+                  const maxReopenAttempts = grievance.maxReopenAttempts ?? 3;
+                  const reopenWindowDays = grievance.reopenWindowDays ?? 14;
+                  const maxRejections = grievance.maxRejections ?? 3;
                   const isPermanentlyClosed =
                     grievance.closureReason === "REWORK_REJECTED_FINAL" ||
                     grievance.closureReason === "REOPEN_REJECTED_FINAL" ||
-                    (grievance.rejectionCount ?? 0) >= 3;
+                    (grievance.rejectionCount ?? 0) >= maxRejections;
                   const refDate = grievance.closedAt
                     ? new Date(grievance.closedAt)
                     : new Date(grievance.createdAt);
-                  const isWithin14Days =
-                    Date.now() - refDate.getTime() <= 14 * 24 * 60 * 60 * 1000;
+                  const isWithinReopenWindow =
+                    Date.now() - refDate.getTime() <=
+                    reopenWindowDays * 24 * 60 * 60 * 1000;
                   const canReopen =
-                    isWithin14Days &&
-                    (grievance.reopenCount ?? 0) < 3 &&
+                    isWithinReopenWindow &&
+                    (grievance.reopenCount ?? 0) < maxReopenAttempts &&
                     !isPermanentlyClosed;
-                  if (canReopen) {
-                    return (
-                      <div className="pt-2 flex flex-col items-center gap-2">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          If this matter remains unaddressed, you can reopen it
-                          within 14 days of closure (Attempt{" "}
-                          {grievance.reopenCount ?? 0} of 3 used).
-                        </p>
-                        <ReopenButton
-                          grievanceId={grievance.id.toString()}
-                          variant="reopen"
-                          label="Reopen Grievance"
-                        />
-                      </div>
-                    );
-                  }
-                  if (isPermanentlyClosed) {
-                    return (
-                      <div className="pt-2">
-                        <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">
-                          This case is permanently closed following 3 review
-                          rejections by the Department Head.
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
+                  return (
+                    <div className="pt-2 flex flex-col items-center gap-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 text-center max-w-md">
+                        {canReopen
+                          ? `If this matter remains unaddressed, you can reopen it within ${reopenWindowDays} days of closure (Attempt ${grievance.reopenCount ?? 0} of ${maxReopenAttempts} used).`
+                          : isPermanentlyClosed
+                            ? `This case is permanently closed following ${maxRejections} review rejections by the Department Head.`
+                            : (grievance.reopenCount ?? 0) >= maxReopenAttempts
+                              ? `Maximum limit of ${maxReopenAttempts} rework and reopening attempts reached.`
+                              : `The ${reopenWindowDays}-day post-closure reopening window has elapsed.`}
+                      </p>
+                      <ReopenButton
+                        grievanceId={grievance.id.toString()}
+                        variant="reopen"
+                        label="Reopen Grievance"
+                        isLimitReached={!canReopen}
+                        reopenWindowDays={reopenWindowDays}
+                        maxReopenAttempts={maxReopenAttempts}
+                        limitReason={
+                          isPermanentlyClosed
+                            ? `This case is permanently closed following ${maxRejections} review rejections by the Department Head. You cannot reopen this grievance.`
+                            : (grievance.reopenCount ?? 0) >= maxReopenAttempts
+                              ? `You have reached the maximum limit of ${maxReopenAttempts} rework and reopening attempts for this grievance.`
+                              : `The ${reopenWindowDays}-day post-closure reopening window has elapsed. You cannot reopen this grievance.`
+                        }
+                      />
+                    </div>
+                  );
                 })()}
                 <div className="pt-2">
                   <button

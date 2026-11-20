@@ -41,6 +41,9 @@ interface ResolutionCardProps {
   closureReason?: string | null;
   reopenCount?: number;
   rejectionCount?: number;
+  maxReopenAttempts?: number;
+  reopenWindowDays?: number;
+  maxRejections?: number;
   allowActions?: boolean;
   showDownloadButton?: boolean;
 }
@@ -54,16 +57,22 @@ export function ResolutionCard({
   closureReason,
   reopenCount = 0,
   rejectionCount = 0,
+  maxReopenAttempts = 3,
+  reopenWindowDays = 14,
+  maxRejections = 3,
   allowActions = true,
   showDownloadButton = true,
 }: ResolutionCardProps) {
-  const isResolved = status === "RESOLVED" || status === "UNDER_REVIEW";
+  const isResolved =
+    status === "RESOLVED" ||
+    status === "UNDER_REVIEW" ||
+    status === "RESOLUTION_PENDING_APPROVAL";
   const isClosed = status === "CLOSED";
 
   const isPermanentlyClosed =
     closureReason === "REWORK_REJECTED_FINAL" ||
     closureReason === "REOPEN_REJECTED_FINAL" ||
-    rejectionCount >= 3;
+    rejectionCount >= maxRejections;
 
   const isWithinReopenWindow = (() => {
     if (!isClosed || isPermanentlyClosed) return false;
@@ -74,11 +83,14 @@ export function ResolutionCard({
         : new Date();
     const msSinceClosed = Date.now() - refDate.getTime();
     const daysSinceClosed = msSinceClosed / (1000 * 60 * 60 * 24);
-    return daysSinceClosed <= 14;
+    return daysSinceClosed <= reopenWindowDays;
   })();
 
   const canReopenClosedCase =
-    isClosed && isWithinReopenWindow && reopenCount < 3 && !isPermanentlyClosed;
+    isClosed &&
+    isWithinReopenWindow &&
+    reopenCount < maxReopenAttempts &&
+    !isPermanentlyClosed;
 
   const formattedDate = resolution.submittedAt
     ? new Date(resolution.submittedAt).toLocaleDateString("en-IN", {
@@ -258,6 +270,16 @@ export function ResolutionCard({
               grievanceId={grievanceId}
               variant="rework"
               label="Request Rework (Not Satisfied)"
+              isLimitReached={
+                reopenCount >= maxReopenAttempts || isPermanentlyClosed
+              }
+              maxReopenAttempts={maxReopenAttempts}
+              reopenWindowDays={reopenWindowDays}
+              limitReason={
+                isPermanentlyClosed
+                  ? `This grievance has been permanently closed following ${maxRejections} review rejections by the Department Head. You cannot request rework on this case.`
+                  : `You have reached the maximum limit of ${maxReopenAttempts} rework and reopening attempts for this grievance.`
+              }
             />
           </div>
         </div>
@@ -281,7 +303,7 @@ export function ResolutionCard({
         </div>
       )}
 
-      {/* Closed Confirmation Banner & 7-Day Reopen Option */}
+      {/* Closed Confirmation Banner & Reopen Option */}
       {isClosed && (
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-2 text-xs text-slate-700 dark:text-slate-300 font-medium">
@@ -294,30 +316,38 @@ export function ResolutionCard({
               {canReopenClosedCase && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   If you are not satisfied or issues persist, you can reopen
-                  this grievance within 14 days of closure (Attempt{" "}
-                  {reopenCount} of 3 used).
+                  this grievance within {reopenWindowDays} days of closure
+                  (Attempt {reopenCount} of {maxReopenAttempts} used).
                 </p>
               )}
               {!canReopenClosedCase && (
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   {isPermanentlyClosed
-                    ? "This grievance has been permanently closed following 3 review rejections by the Department Head. No further rework or reopening is permitted."
-                    : reopenCount >= 3
-                      ? "Maximum limit of 3 rework and reopening attempts reached."
-                      : "The 14-day post-closure reopening window has elapsed."}
+                    ? `This grievance has been permanently closed following ${maxRejections} review rejections by the Department Head. No further rework or reopening is permitted.`
+                    : reopenCount >= maxReopenAttempts
+                      ? `Maximum limit of ${maxReopenAttempts} rework and reopening attempts reached.`
+                      : `The ${reopenWindowDays}-day post-closure reopening window has elapsed.`}
                 </p>
               )}
             </div>
           </div>
-          {canReopenClosedCase && (
-            <div className="shrink-0 w-full sm:w-auto flex justify-end">
-              <ReopenButton
-                grievanceId={grievanceId}
-                variant="reopen"
-                label="Reopen Grievance"
-              />
-            </div>
-          )}
+          <div className="shrink-0 w-full sm:w-auto flex justify-end">
+            <ReopenButton
+              grievanceId={grievanceId}
+              variant="reopen"
+              label="Reopen Grievance"
+              isLimitReached={!canReopenClosedCase}
+              maxReopenAttempts={maxReopenAttempts}
+              reopenWindowDays={reopenWindowDays}
+              limitReason={
+                isPermanentlyClosed
+                  ? `This grievance has been permanently closed following ${maxRejections} review rejections by the Department Head. You cannot reopen this case.`
+                  : reopenCount >= maxReopenAttempts
+                    ? `You have reached the maximum limit of ${maxReopenAttempts} rework and reopening attempts for this grievance.`
+                    : `The ${reopenWindowDays}-day post-closure reopening window has elapsed. You cannot reopen this grievance.`
+              }
+            />
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { validateReopenReason } from "@/lib/constants/reopen";
+import { evaluateReopenPolicy } from "@/lib/engines/reopen-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
@@ -53,16 +54,14 @@ export async function POST(
     }
 
     // 1. Resolve dynamic Lifecycle & Closure Policy
-    const activeReopenPolicy = await prisma.reopen_policies.findFirst({
-      where: { status: "ACTIVE" },
-      orderBy: { updated_at: "desc" },
+    const activeReopenPolicy = await evaluateReopenPolicy({
+      categoryId: grievance.category_id,
+      subcategoryId: grievance.subcategory_id,
+      priority: grievance.priority,
     });
-    const policyCond =
-      (activeReopenPolicy?.applicable_condition as Record<string, unknown>) ||
-      {};
-    const MAX_COMBINED_ATTEMPTS = activeReopenPolicy?.max_reopen_count || 3;
+    const MAX_COMBINED_ATTEMPTS = activeReopenPolicy.maxReopenCount || 3;
     const MAX_REJECTIONS =
-      Number(policyCond.max_rejection_count) || MAX_COMBINED_ATTEMPTS;
+      activeReopenPolicy.maxRejectionCount || MAX_COMBINED_ATTEMPTS;
 
     if (grievance.reopen_count >= MAX_COMBINED_ATTEMPTS) {
       return NextResponse.json(
@@ -119,9 +118,10 @@ export async function POST(
       if (referenceClosedTime) {
         const hoursSinceClosed =
           (Date.now() - referenceClosedTime.getTime()) / (1000 * 60 * 60);
-        const maxWindowHours =
-          activeReopenPolicy?.reopen_window_hours || 14 * 24;
-        const maxWindowDays = Math.round(maxWindowHours / 24);
+        const maxWindowHours = activeReopenPolicy.reopenWindowHours || 14 * 24;
+        const maxWindowDays =
+          activeReopenPolicy.reopenWindowDays ||
+          Math.round(maxWindowHours / 24);
         if (hoursSinceClosed > maxWindowHours) {
           return NextResponse.json(
             {

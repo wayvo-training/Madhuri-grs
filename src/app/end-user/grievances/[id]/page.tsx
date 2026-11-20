@@ -5,6 +5,7 @@ import {
 } from "@/components/end-user/case-hub/EndUserCaseHub";
 import type { EndUserResolutionData } from "@/components/end-user/resolution-card";
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
+import { evaluateReopenPolicy } from "@/lib/engines/reopen-engine";
 import { requirePageRole } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
@@ -391,6 +392,16 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     };
   }
 
+  const reopenPolicy = await evaluateReopenPolicy({
+    categoryId: grievance.category_id,
+    subcategoryId: grievance.subcategory_id,
+    priority: grievance.priority,
+  });
+
+  const reopenWindowDays = reopenPolicy.reopenWindowDays || 14;
+  const maxReopenAttempts = reopenPolicy.maxReopenCount || 3;
+  const maxRejections = reopenPolicy.maxRejectionCount || maxReopenAttempts;
+
   const serializedGrievance: CaseHubGrievance = {
     id: Number(grievance.grievance_id),
     grievanceNumber: grievance.grievance_number,
@@ -404,6 +415,9 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     closureReason: grievance.closure_reason || null,
     reopenCount: grievance.reopen_count,
     rejectionCount,
+    maxReopenAttempts,
+    reopenWindowDays,
+    maxRejections,
     dueAt: grievance.due_at ? grievance.due_at.toISOString() : null,
     categoryName: grievance.categories?.category_name || "General",
     subcategoryName: grievance.subcategories?.subcategory_name || "General",
