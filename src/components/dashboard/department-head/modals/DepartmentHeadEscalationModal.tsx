@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  AlertCircle,
-  CalendarPlus,
-  Check,
-  Clock,
-  FileText,
-  Send,
-  ShieldAlert,
-  ShieldCheck,
-  UserCheck,
-  Users,
-  X,
-} from "lucide-react";
+import { AlertCircle, Check, ShieldAlert, Users, X } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 import { PriorityBadge } from "@/components/dashboard/badges";
 import {
@@ -54,179 +42,60 @@ export interface DepartmentHeadEscalationModalProps {
   onNavigateToSmartAssignment?: (grievance: GrievanceItem) => void;
 }
 
-const BOTTLENECK_OPTIONS: {
-  value: EscalationBottleneck;
-  title: string;
-  description: string;
-}[] = [
-  {
-    value: "STAFF_CAPACITY",
-    title: "Staff Capacity / Absence",
-    description:
-      "Assigned Staff is overloaded, unavailable, or on approved leave.",
-  },
-  {
-    value: "CROSS_DEPT",
-    title: "Cross-Department Dependency",
-    description:
-      "Progress is waiting on another involved department or dependency.",
-  },
-  {
-    value: "MISSING_DOCS",
-    title: "Incomplete Information / Documentation",
-    description:
-      "Required information or supportive documents are unavailable or insufficient.",
-  },
-  {
-    value: "COMPLEX_INVESTIGATION",
-    title: "Complex Investigation Required",
-    description:
-      "The grievance requires additional investigation, verification, or specialized review.",
-  },
-  {
-    value: "OTHER_CONSTRAINT",
-    title: "Other Operational Constraint",
-    description: "Another operational issue is preventing timely resolution.",
-  },
-];
-
-const INTERVENTION_OPTIONS: {
-  value: EscalationInterventionType;
-  title: string;
-  purpose: string;
-  icon: typeof ShieldAlert;
-}[] = [
-  {
-    value: "MONITOR",
-    title: "Continue Monitoring",
-    purpose:
-      "Continue oversight while the assigned Staff proceeds with the current plan.",
-    icon: ShieldCheck,
-  },
-  {
-    value: "REQUEST_STATUS_UPDATE",
-    title: "Request Immediate Status Update",
-    purpose:
-      "Require the assigned Staff to provide current progress, completed actions, and next steps.",
-    icon: Clock,
-  },
-  {
-    value: "CROSS_DEPT",
-    title: "Add Supportive Staff / Department",
-    purpose:
-      "Add additional resources to increase investigation or processing capacity.",
-    icon: Users,
-  },
-  {
-    value: "REASSIGN",
-    title: "Change Assignment",
-    purpose:
-      "Open Smart Assignment to reallocate case to an optimal Staff member.",
-    icon: UserCheck,
-  },
-  {
-    value: "NOTIFY_STAFF",
-    title: "Add Direction",
-    purpose:
-      "Provide specific operational direction to the assigned Staff for the next action.",
-    icon: AlertCircle,
-  },
-  {
-    value: "ASSUME_RESOLUTION_AUTHORITY",
-    title: "Assume Resolution Authority",
-    purpose:
-      "Department Head takes responsibility for reviewing the case and submitting the final resolution.",
-    icon: ShieldAlert,
-  },
-  {
-    value: "REQUEST_ADDITIONAL_INFO",
-    title: "Request Additional Information",
-    purpose:
-      "Request missing information or supportive documentation required to continue processing.",
-    icon: FileText,
-  },
-  {
-    value: "EXTEND_SLA",
-    title: "Extend SLA with Justification",
-    purpose:
-      "Extend the resolution deadline only when formally permitted by the configured SLA policy.",
-    icon: CalendarPlus,
-  },
-];
-
-const EXTENSION_PRESETS = [
-  { label: "+6 Hours", hours: 6 },
-  { label: "+12 Hours", hours: 12 },
-  { label: "+24 Hours (1 Day)", hours: 24 },
-  { label: "+48 Hours (2 Days)", hours: 48 },
-  { label: "+72 Hours (3 Days)", hours: 72 },
-  { label: "+120 Hours (5 Days)", hours: 120 },
-];
-
 export function DepartmentHeadEscalationModal({
   grievance,
-  bottleneck,
   interventionType,
-  targetDept,
   targetStaffId = "",
-  bottleneckExplanation = "",
   note,
-  extensionHours = 24,
-  availableDepartments = [],
   staffList = [],
-  currentDepartmentName,
   onClose,
   onSubmit,
-  onBottleneckChange,
   onInterventionTypeChange,
-  onTargetDeptChange,
-  onTargetStaffIdChange: _onTargetStaffIdChange,
-  onBottleneckExplanationChange,
+  onTargetStaffIdChange,
   onNoteChange,
-  onExtensionHoursChange,
-  onNavigateToSmartAssignment,
 }: DepartmentHeadEscalationModalProps) {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const eligibleDepartments = availableDepartments.filter(
-    (d) =>
-      d.name !== currentDepartmentName &&
-      !grievance.collaboratingDepartments?.includes(d.name),
+  // Filter staff list to only include other staff members (exclude currently assigned staff)
+  const eligibleStaffList = staffList.filter(
+    (s) =>
+      s.name !== grievance.assignedStaffName &&
+      s.id !== grievance.assignedStaffId,
   );
 
-  const parsedDue = grievance.slaDeadline
-    ? new Date(grievance.slaDeadline)
-    : null;
-  const currentDueDate =
-    parsedDue && !Number.isNaN(parsedDue.getTime()) ? parsedDue : new Date();
-  const baseTime =
-    currentDueDate.getTime() > Date.now()
-      ? currentDueDate.getTime()
-      : Date.now();
-  const projectedDueDate = new Date(baseTime + extensionHours * 3600 * 1000);
+  const selectedStaffMember = eligibleStaffList.find(
+    (s) => s.id === targetStaffId,
+  );
 
-  const getPlaceholderText = () => {
-    switch (interventionType) {
-      case "ASSUME_RESOLUTION_AUTHORITY":
-      case "DIRECT_OVERSIGHT":
-        return "State justification for assuming resolution authority and executive directives for the case file...";
-      case "EXTEND_SLA":
-        return "Specify clear regulatory/investigative justification for granting this SLA extension (e.g. Awaiting external forensic analysis, pending employee document verification)...";
-      case "REQUEST_STATUS_UPDATE":
-        return "Specify what specific status or investigation report is required from the assigned officer within 4 hours...";
-      case "CROSS_DEPT":
-        return "Detail the specific inter-departmental collaboration needed from the supportive department...";
-      case "NOTIFY_STAFF":
-        return "Provide specific operational direction to the assigned Staff for the next action...";
-      case "REQUEST_ADDITIONAL_INFO":
-        return "List the specific missing documents or information required from the submitter or department...";
-      case "MONITOR":
-        return "Note supervisory observations and planned follow-up checkpoints...";
-      default:
-        return "Explain the operational bottleneck resolved and specific directives given to staff...";
+  const isCoAssign = interventionType === "CO_ASSIGN";
+
+  // Active intervention must be one of the two approved choices
+  const activeChoice: "ASSUME_RESOLUTION_AUTHORITY" | "CO_ASSIGN" = isCoAssign
+    ? "CO_ASSIGN"
+    : "ASSUME_RESOLUTION_AUTHORITY";
+
+  const handleSelectChoice = (
+    choice: "ASSUME_RESOLUTION_AUTHORITY" | "CO_ASSIGN",
+  ) => {
+    onInterventionTypeChange(choice);
+    if (choice === "ASSUME_RESOLUTION_AUTHORITY" && onTargetStaffIdChange) {
+      onTargetStaffIdChange("");
     }
   };
+
+  const getPlaceholderText = () => {
+    if (activeChoice === "CO_ASSIGN") {
+      return "Provide specific instructions and work-sharing directives for how both staff members will coordinate to complete the investigation...";
+    }
+    return "State justification for assuming direct authority to complete the investigation and submit department resolution...";
+  };
+
+  const isFormValid = Boolean(
+    note.trim() &&
+      (activeChoice === "ASSUME_RESOLUTION_AUTHORITY" ||
+        (activeChoice === "CO_ASSIGN" && targetStaffId)),
+  );
 
   if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
     return null;
@@ -240,6 +109,7 @@ export function DepartmentHeadEscalationModal({
         aria-hidden="true"
       />
       <div className="relative z-10 flex flex-col w-full max-w-2xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+        {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 bg-white shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800">
@@ -247,7 +117,7 @@ export function DepartmentHeadEscalationModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-900">
-                SLA Escalation Intervention
+                Department Head SLA Intervention
               </h3>
               <p className="text-xs font-normal text-slate-500">
                 Grievance{" "}
@@ -301,338 +171,140 @@ export function DepartmentHeadEscalationModal({
               </div>
             </div>
 
-            {/* Root Operational Bottleneck */}
+            {/* Approved Intervention Options */}
             <div>
               <div className="block text-xs font-semibold text-slate-900 mb-1.5">
-                Identify Root Operational Bottleneck{" "}
+                Select Escalation Intervention Option{" "}
                 <span className="text-rose-500">*</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {BOTTLENECK_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onBottleneckChange(opt.value)}
-                    className={`rounded-xl border p-2.5 text-left text-xs transition cursor-pointer ${
-                      bottleneck === opt.value
-                        ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] font-semibold ring-1 ring-[#0F766E]"
-                        : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    <div className="font-semibold">{opt.title}</div>
-                    <div className="text-[11px] font-normal text-slate-500 mt-0.5 leading-snug">
-                      {opt.description}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Option 1: Assume Resolution Authority */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleSelectChoice("ASSUME_RESOLUTION_AUTHORITY")
+                  }
+                  className={`flex flex-col rounded-xl border p-3.5 text-left transition cursor-pointer ${
+                    activeChoice === "ASSUME_RESOLUTION_AUTHORITY"
+                      ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] shadow-2xs ring-2 ring-[#0F766E]/20"
+                      : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="flex items-center gap-2 font-semibold text-xs text-slate-900">
+                      <ShieldAlert
+                        className={`h-4 w-4 shrink-0 ${activeChoice === "ASSUME_RESOLUTION_AUTHORITY" ? "text-[#0F766E]" : "text-slate-500"}`}
+                      />
+                      <span>Assume Direct Authority</span>
                     </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Other Operational Constraint Explanation */}
-              {bottleneck === "OTHER_CONSTRAINT" && (
-                <div className="mt-2.5">
-                  <label
-                    htmlFor="escalation-bottleneck-explanation"
-                    className="block text-xs font-semibold text-slate-900 mb-1"
-                  >
-                    Explain Operational Constraint{" "}
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="escalation-bottleneck-explanation"
-                    type="text"
-                    required
-                    value={bottleneckExplanation}
-                    onChange={(e) =>
-                      onBottleneckExplanationChange?.(e.target.value)
-                    }
-                    placeholder="Describe the specific operational constraint preventing timely resolution..."
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Choose Corrective Intervention Action */}
-            <div>
-              <div className="block text-xs font-semibold text-slate-900 mb-1.5">
-                Choose Corrective Intervention Action{" "}
-                <span className="text-rose-500">*</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {INTERVENTION_OPTIONS.map((opt) => {
-                  const Icon = opt.icon;
-                  const isSelected = interventionType === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        if (
-                          opt.value === "REASSIGN" &&
-                          onNavigateToSmartAssignment
-                        ) {
-                          onNavigateToSmartAssignment(grievance);
-                          return;
-                        }
-                        onInterventionTypeChange(opt.value);
-                      }}
-                      className={`flex flex-col rounded-xl border p-3 text-left transition cursor-pointer ${
-                        isSelected
-                          ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] shadow-2xs ring-1 ring-[#0F766E]"
-                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
-                          <Icon
-                            className={`h-4 w-4 shrink-0 ${isSelected ? "text-[#0F766E]" : "text-slate-500"}`}
-                          />
-                          <span>{opt.title}</span>
-                        </div>
-                        {opt.value === "REASSIGN" && (
-                          <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded-md border border-teal-200">
-                            Smart &rarr;
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-normal text-slate-500 mt-1 leading-snug">
-                        {opt.purpose}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Action Specific Sub-Panels */}
-
-            {/* 1. EXTEND SLA Sub-Panel */}
-            {interventionType === "EXTEND_SLA" && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-teal-950 flex items-center gap-1.5">
-                    <CalendarPlus className="h-4 w-4 text-teal-700" />
-                    Select Extension Duration
-                  </span>
-                  <span className="text-[11px] font-medium text-teal-800">
-                    SLA Reset & Extension
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {EXTENSION_PRESETS.map((preset) => (
-                    <button
-                      key={preset.hours}
-                      type="button"
-                      onClick={() => onExtensionHoursChange?.(preset.hours)}
-                      className={`rounded-lg border px-2.5 py-2 text-center text-xs transition cursor-pointer ${
-                        extensionHours === preset.hours
-                          ? "border-[#0F766E] bg-[#0F766E] text-white font-semibold shadow-xs"
-                          : "border-teal-200 bg-white hover:bg-teal-100/50 text-teal-900 font-medium"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="rounded-lg border border-teal-200/80 bg-white p-2.5 text-xs space-y-1">
-                  <div className="flex items-center justify-between text-slate-600">
-                    <span>Current Resolution Due:</span>
-                    <span className="font-medium text-slate-800">
-                      {currentDueDate.toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                    <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                      Take Authority
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-teal-950 font-semibold border-t border-slate-100 pt-1">
-                    <span>Projected Extended Deadline:</span>
-                    <span className="text-[#0F766E]">
-                      {projectedDueDate.toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 pt-1 leading-snug">
-                    * Approving will extend the deadline by{" "}
-                    <strong>+{extensionHours}h</strong>, recalculate SLA
-                    consumption back under safe threshold, and clear automated
-                    breach flags.
+                  <p className="text-[11px] font-normal text-slate-600 mt-1 leading-snug">
+                    Department Head assumes direct authority to complete the
+                    investigation and submit department findings or final
+                    resolution directly.
                   </p>
-                </div>
-              </div>
-            )}
+                </button>
 
-            {/* 2. ASSUME RESOLUTION AUTHORITY Sub-Panel */}
-            {(interventionType === "ASSUME_RESOLUTION_AUTHORITY" ||
-              interventionType === "DIRECT_OVERSIGHT") && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 text-xs text-teal-950 flex items-start gap-2.5">
-                <ShieldAlert className="h-4 w-4 text-teal-700 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold text-teal-950">
-                    Assume Resolution Authority
-                  </div>
-                  <div className="text-teal-800 text-[11px] mt-0.5 leading-snug">
-                    Department Head takes responsibility for reviewing the case
-                    and submitting the final resolution. The assigned Staff will
-                    be notified that resolution authority has been assumed. All
-                    existing Staff investigation findings, evidence, notes, and
-                    activity will be preserved. The{" "}
-                    <strong>Submit Resolution</strong> action will become active
-                    for you after confirming this intervention.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 3. REQUEST STATUS UPDATE Sub-Panel */}
-            {interventionType === "REQUEST_STATUS_UPDATE" && (
-              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs text-sky-950 flex items-start gap-2.5">
-                <Clock className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold text-sky-950">
-                    Immediate Progress Requirement
-                  </div>
-                  <div className="text-sky-800 text-[11px] mt-0.5 leading-snug">
-                    An urgent operational prompt will be dispatched to{" "}
-                    <strong>
-                      {grievance.assignedStaffName || "assigned staff"}
-                    </strong>{" "}
-                    mandating an immediate investigation update and next planned
-                    steps within 4 hours.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 4. REASSIGN Sub-Panel */}
-            {interventionType === "REASSIGN" && (
-              <div className="rounded-xl border border-teal-200 bg-teal-50/70 p-3.5 space-y-2.5">
-                <div className="flex items-start gap-2.5">
-                  <UserCheck className="h-4 w-4 text-teal-700 mt-0.5 shrink-0" />
-                  <div>
-                    <div className="font-semibold text-xs text-teal-950">
-                      Smart Staff Assignment
+                {/* Option 2: Co-Assign Secondary Staff */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectChoice("CO_ASSIGN")}
+                  className={`flex flex-col rounded-xl border p-3.5 text-left transition cursor-pointer ${
+                    activeChoice === "CO_ASSIGN"
+                      ? "border-[#0F766E] bg-[#F0FDFA] text-[#0F766E] shadow-2xs ring-2 ring-[#0F766E]/20"
+                      : "border-slate-200 bg-slate-50/50 hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="flex items-center gap-2 font-semibold text-xs text-slate-900">
+                      <Users
+                        className={`h-4 w-4 shrink-0 ${activeChoice === "CO_ASSIGN" ? "text-[#0F766E]" : "text-slate-500"}`}
+                      />
+                      <span>Assign Staff to Assist</span>
                     </div>
-                    <p className="text-[11px] text-teal-800 mt-0.5 leading-snug">
-                      Reassign this case to an optimal staff officer using
-                      intelligent workload, category specialization, and
-                      performance matching.
+                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                      2 People Working
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-normal text-slate-600 mt-1 leading-snug">
+                    Assign another staff member from your department to assist
+                    and work together on the same grievance to expedite
+                    resolution.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* Secondary Staff Selection Panel (When Co-Assign is Selected) */}
+            {activeChoice === "CO_ASSIGN" && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex items-start gap-2">
+                  <Users className="h-4 w-4 text-blue-700 mt-0.5 shrink-0" />
+                  <div>
+                    <label
+                      htmlFor="co-assign-staff-select"
+                      className="block text-xs font-semibold text-blue-950"
+                    >
+                      Select Department Staff Member to Co-Assign{" "}
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <p className="text-[11px] text-blue-800 mt-0.5">
+                      Choose a second officer from your department who will
+                      collaborate alongside{" "}
+                      <strong>
+                        {grievance.assignedStaffName || "current staff"}
+                      </strong>
+                      .
                     </p>
                   </div>
                 </div>
-                {onNavigateToSmartAssignment && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateToSmartAssignment(grievance)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                  >
-                    <UserCheck className="h-3.5 w-3.5" />
-                    <span>Open Smart Assignment &rarr;</span>
-                  </button>
-                )}
-              </div>
-            )}
 
-            {/* 5. CROSS DEPT Sub-Panel */}
-            {interventionType === "CROSS_DEPT" && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <label
-                  htmlFor="escalation-target-dept"
-                  className="block text-xs font-semibold text-slate-900 mb-1"
-                >
-                  Select Collaborating Department{" "}
-                  <span className="text-rose-500">*</span>
-                </label>
                 <Select
-                  value={targetDept}
+                  value={targetStaffId}
                   onValueChange={(val) => {
-                    if (val && val !== "NONE") onTargetDeptChange(val);
+                    if (val && val !== "NONE" && onTargetStaffIdChange) {
+                      onTargetStaffIdChange(val);
+                    }
                   }}
                 >
                   <SelectTrigger
-                    id="escalation-target-dept"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
+                    id="co-assign-staff-select"
+                    className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-blue-700 focus:outline-hidden"
                   >
-                    <SelectValue placeholder="-- Select a Collaborating Department --">
-                      {targetDept || "-- Select a Collaborating Department --"}
+                    <SelectValue placeholder="-- Select a staff member to assist --">
+                      {selectedStaffMember
+                        ? `${selectedStaffMember.name} (${selectedStaffMember.activeTickets || 0} active tickets)`
+                        : "-- Select a staff member to assist --"}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="z-60 bg-white border border-slate-200 shadow-xl max-h-56">
-                    {eligibleDepartments.length === 0 ? (
+                    {eligibleStaffList.length === 0 ? (
                       <SelectItem value="NONE" disabled className="text-xs">
-                        No other active departments available
+                        No other available staff in your department
                       </SelectItem>
                     ) : (
-                      eligibleDepartments.map((dept) => (
+                      eligibleStaffList.map((staff) => (
                         <SelectItem
-                          key={dept.id}
-                          value={dept.name}
+                          key={staff.id}
+                          value={staff.id}
                           className="text-xs cursor-pointer"
                         >
-                          {dept.name}
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <span className="font-medium text-slate-900">
+                              {staff.name}
+                            </span>
+                            <span className="text-[11px] text-slate-500">
+                              {staff.activeTickets || 0} active tickets
+                            </span>
+                          </div>
                         </SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-
-            {/* 6. ADD DIRECTION Sub-Panel */}
-            {interventionType === "NOTIFY_STAFF" && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-900 flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 text-[#0F766E] mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold text-slate-900">
-                    Add Operational Direction
-                  </div>
-                  <div className="text-slate-600 text-[11px] mt-0.5 leading-snug">
-                    Provide specific operational direction and instructions to{" "}
-                    <strong>
-                      {grievance.assignedStaffName || "assigned staff"}
-                    </strong>{" "}
-                    for the next investigative steps.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 7. REQUEST ADDITIONAL INFO Sub-Panel */}
-            {interventionType === "REQUEST_ADDITIONAL_INFO" && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-950 flex items-start gap-2.5">
-                <FileText className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold text-amber-950">
-                    Request Additional Information
-                  </div>
-                  <div className="text-amber-800 text-[11px] mt-0.5 leading-snug">
-                    Request missing information or supportive documentation
-                    required to continue processing and investigation.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 8. MONITOR Sub-Panel */}
-            {interventionType === "MONITOR" && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-900 flex items-start gap-2.5">
-                <ShieldCheck className="h-4 w-4 text-slate-600 mt-0.5 shrink-0" />
-                <div>
-                  <div className="font-semibold text-slate-900">
-                    Continue Supervisory Monitoring
-                  </div>
-                  <div className="text-slate-600 text-[11px] mt-0.5 leading-snug">
-                    Maintain oversight while assigned Staff proceeds with the
-                    current investigation plan.
-                  </div>
-                </div>
               </div>
             )}
 
@@ -642,8 +314,8 @@ export function DepartmentHeadEscalationModal({
                 htmlFor="escalation-action-note"
                 className="block text-xs font-semibold text-slate-900 mb-1.5"
               >
-                Intervention Directive &amp; Justification (Logged to Audit
-                Trail) <span className="text-rose-500">*</span>
+                Directive &amp; Operational Instructions (Logged to Audit Trail){" "}
+                <span className="text-rose-500">*</span>
               </label>
               <textarea
                 id="escalation-action-note"
@@ -657,6 +329,7 @@ export function DepartmentHeadEscalationModal({
             </div>
           </div>
 
+          {/* Modal Footer */}
           <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-slate-100 bg-slate-50/90 shrink-0 gap-2">
             <span className="text-[11px] text-slate-500">
               Intervention will be recorded in the immutable audit trail and
@@ -673,31 +346,12 @@ export function DepartmentHeadEscalationModal({
               <button
                 type="button"
                 onClick={() => {
-                  if (
-                    (interventionType === "CROSS_DEPT" && !targetDept) ||
-                    (interventionType === "REASSIGN" &&
-                      staffList.length > 0 &&
-                      !targetStaffId) ||
-                    (bottleneck === "OTHER_CONSTRAINT" &&
-                      !bottleneckExplanation?.trim()) ||
-                    !note.trim()
-                  ) {
-                    return;
-                  }
+                  if (!isFormValid) return;
                   setShowConfirmModal(true);
                 }}
-                disabled={
-                  (interventionType === "CROSS_DEPT" && !targetDept) ||
-                  (interventionType === "REASSIGN" &&
-                    staffList.length > 0 &&
-                    !targetStaffId) ||
-                  (bottleneck === "OTHER_CONSTRAINT" &&
-                    !bottleneckExplanation?.trim()) ||
-                  !note.trim()
-                }
+                disabled={!isFormValid}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition disabled:opacity-50 cursor-pointer"
               >
-                <Send className="h-3.5 w-3.5" />
                 <span>Execute Intervention &rarr;</span>
               </button>
             </div>
@@ -718,15 +372,9 @@ export function DepartmentHeadEscalationModal({
                   Confirm Executive Intervention
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  {interventionType === "REASSIGN"
-                    ? `Are you sure you want to change the assignment for ${grievance.ticketCode}? The case will be reallocated immediately.`
-                    : interventionType === "NOTIFY_STAFF"
-                      ? `Are you sure you want to issue this operational direction for ${grievance.ticketCode}?`
-                      : interventionType === "CROSS_DEPT"
-                        ? `Are you sure you want to add department collaboration for ${grievance.ticketCode}?`
-                        : interventionType === "EXTEND_SLA"
-                          ? `Are you sure you want to grant an SLA extension of ${extensionHours} hours for ${grievance.ticketCode}?`
-                          : `Are you sure you want to execute this intervention for ${grievance.ticketCode}?`}
+                  {activeChoice === "CO_ASSIGN"
+                    ? `Assign ${selectedStaffMember?.name || "secondary staff"} to assist ${grievance.assignedStaffName || "assigned staff"} on ${grievance.ticketCode}? Both staff members will collaborate on this case.`
+                    : `Assume direct resolution authority on ${grievance.ticketCode}? You will be granted authority to submit findings/resolution directly.`}
                 </p>
               </div>
             </div>
@@ -736,47 +384,18 @@ export function DepartmentHeadEscalationModal({
               <div className="flex justify-between items-center text-slate-600">
                 <span className="font-medium text-slate-500">Action:</span>
                 <span className="font-semibold text-slate-900">
-                  {INTERVENTION_OPTIONS.find(
-                    (o) => o.value === interventionType,
-                  )?.title || interventionType}
+                  {activeChoice === "CO_ASSIGN"
+                    ? "Assign Secondary Staff to Assist"
+                    : "Assume Authority to Submit Resolution"}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span className="font-medium text-slate-500">Bottleneck:</span>
-                <span className="font-semibold text-slate-800">
-                  {BOTTLENECK_OPTIONS.find((b) => b.value === bottleneck)
-                    ?.title || bottleneck}
-                </span>
-              </div>
-              {interventionType === "REASSIGN" && targetStaffId && (
+              {activeChoice === "CO_ASSIGN" && selectedStaffMember && (
                 <div className="flex justify-between items-center text-slate-600">
                   <span className="font-medium text-slate-500">
-                    Reassign To:
+                    Co-Assigned Officer:
                   </span>
-                  <span className="font-semibold text-[#0F766E]">
-                    {staffList.find((s) => s.id === targetStaffId)?.name ||
-                      targetStaffId}
-                  </span>
-                </div>
-              )}
-              {interventionType === "CROSS_DEPT" && targetDept && (
-                <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-medium text-slate-500">
-                    Supportive Dept:
-                  </span>
-                  <span className="font-semibold text-[#0F766E]">
-                    {availableDepartments.find((d) => d.id === targetDept)
-                      ?.name || targetDept}
-                  </span>
-                </div>
-              )}
-              {interventionType === "EXTEND_SLA" && (
-                <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-medium text-slate-500">
-                    SLA Extension:
-                  </span>
-                  <span className="font-semibold text-amber-700">
-                    +{extensionHours} Hours
+                  <span className="font-semibold text-blue-700">
+                    {selectedStaffMember.name}
                   </span>
                 </div>
               )}

@@ -321,6 +321,9 @@ export async function fetchDepartmentHeadGrievances(
         sla_tracking: {
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
+          include: {
+            sla_pause_logs: true,
+          },
         },
         sla_extensions: {
           orderBy: { extension_id: "desc" },
@@ -860,6 +863,10 @@ export async function fetchDepartmentHeadGrievances(
             ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
             : "Department Head"),
         targetStaffName: iv.targetStaffName as string | undefined,
+        departmentId:
+          (iv.departmentId as string) ||
+          (iv.department_id as string) ||
+          undefined,
         targetDepartment: iv.targetDepartment as string | undefined,
         isResolutionAuthority: isResAuth,
         resolutionAuthorityUserId:
@@ -992,7 +999,7 @@ export async function fetchDepartmentHeadGrievances(
         resolvedSlaStatus = "ON_TRACK";
       } else {
         const activeSla = g.sla_tracking?.[0];
-        const deptAllocatedMins =
+        const totalDurationMins =
           activeSla?.due_at && activeSla?.started_at
             ? Math.max(
                 1,
@@ -1002,18 +1009,19 @@ export async function fetchDepartmentHeadGrievances(
                     60000,
                 ),
               )
-            : myDeptRecord.allocated_duration_minutes ||
-              (g.due_at && g.created_at
-                ? Math.max(
-                    1,
-                    Math.round(
-                      ((g.due_at.getTime() - g.created_at.getTime()) *
-                        (Number(myDeptRecord.sla_percent_allocation || 100) /
-                          100)) /
-                        60000,
-                    ),
-                  )
-                : 1440);
+            : g.due_at && g.created_at
+              ? Math.max(
+                  1,
+                  Math.round(
+                    (g.due_at.getTime() - g.created_at.getTime()) / 60000,
+                  ),
+                )
+              : 1440;
+
+        const percentAlloc = Number(myDeptRecord.sla_percent_allocation || 100);
+        const deptAllocatedMins =
+          myDeptRecord.allocated_duration_minutes ||
+          Math.max(1, Math.round((totalDurationMins * percentAlloc) / 100));
 
         const isPaused = Boolean(
           activeSla?.paused_at ||
@@ -1028,18 +1036,31 @@ export async function fetchDepartmentHeadGrievances(
             ? new Date(activeSla.paused_at)
             : new Date()
           : null;
-        const accumulatedPausedMins =
-          activeSla?.accumulated_paused_minutes || 0;
+        const deptStart =
+          myDeptRecord.activated_at ||
+          myDeptRecord.assigned_at ||
+          activeSla?.started_at ||
+          g.created_at;
 
-        const deptStart = activeSla?.started_at
-          ? new Date(activeSla.started_at)
-          : myDeptRecord.activated_at ||
-            myDeptRecord.assigned_at ||
-            g.created_at;
-        const deptDue = activeSla?.due_at
-          ? new Date(activeSla.due_at)
-          : myDeptRecord.due_at ||
-            new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
+        let accumulatedPausedMins = 0;
+        if (activeSla?.sla_pause_logs && activeSla.sla_pause_logs.length > 0) {
+          accumulatedPausedMins = activeSla.sla_pause_logs
+            .filter(
+              (l) =>
+                (l.paused_at && new Date(l.paused_at) >= deptStart) ||
+                (l.resumed_at && new Date(l.resumed_at) > deptStart),
+            )
+            .reduce((sum, l) => sum + (l.duration_minutes || 0), 0);
+        } else if (
+          myDeptRecord.involvement_type === "PRIMARY" ||
+          (g.grievance_departments && g.grievance_departments.length <= 1)
+        ) {
+          accumulatedPausedMins = activeSla?.accumulated_paused_minutes || 0;
+        }
+
+        const deptDue =
+          myDeptRecord.due_at ||
+          new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000);
 
         const deptSlaResult = calculateDepartmentSlaConsumption(
           deptStart,
@@ -1063,6 +1084,7 @@ export async function fetchDepartmentHeadGrievances(
           deptStart,
           isPaused,
           pausedAt,
+          myDeptRecord.completed_at,
         );
       }
     } else {
@@ -1205,7 +1227,11 @@ export async function fetchDepartmentHeadGrievances(
       escalationReason: latestEscalation?.reason || undefined,
       escalationLevel: latestEscalation?.escalation_level || undefined,
       escalationStage:
-        g.status === "ESCALATED" || g.sla_status === "BREACHED"
+        g.status === "ESCALATED" ||
+        g.sla_status === "BREACHED" ||
+        latestEscalation?.status === "OPEN" ||
+        resolvedSlaStatus === "BREACHED" ||
+        resolvedSlaStatus === "AT_RISK"
           ? ("GRIEVANCE_ESCALATED" as const)
           : g.status === "RESOLUTION_PENDING_APPROVAL" ||
               g.status === "UNDER_REVIEW"

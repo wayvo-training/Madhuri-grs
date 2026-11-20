@@ -10,6 +10,7 @@ interface DeclineRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
   grievance: GrievanceItem | null;
+  maxRejections?: number;
   onConfirmDecline: (
     grievance: GrievanceItem,
     reason: string,
@@ -20,6 +21,7 @@ export function DeclineRequestModal({
   isOpen,
   onClose,
   grievance,
+  maxRejections = 3,
   onConfirmDecline,
 }: DeclineRequestModalProps) {
   const [reason, setReason] = useState("");
@@ -29,9 +31,10 @@ export function DeclineRequestModal({
 
   const isRework = grievance.status === "REWORK";
   const requestType = isRework ? "Rework" : "Reopening";
+  const effectiveMaxRejections = grievance.maxRejections ?? maxRejections;
   const currentRejections = grievance.rejectionCount ?? 0;
   const nextRejectionAttempt = currentRejections + 1;
-  const isFinalRejection = nextRejectionAttempt >= 3;
+  const isFinalRejection = nextRejectionAttempt >= effectiveMaxRejections;
   const trimmedReason = reason.trim();
   const isValidLength = trimmedReason.length >= 15;
   const hasLetters = /[a-zA-Z]/.test(trimmedReason);
@@ -99,14 +102,15 @@ export function DeclineRequestModal({
               <div className="flex items-center gap-1.5 font-bold text-rose-800">
                 <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
                 <span>
-                  Final Review Rejection (Attempt 3 of 3) &bull; Case Will Close
+                  Final Review Rejection (Attempt {effectiveMaxRejections} of{" "}
+                  {effectiveMaxRejections}) &bull; Case Will Close
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed text-rose-900/90">
-                This will be the 3rd rejection for this case. Confirming decline
-                will permanently <strong>CLOSE</strong> this grievance and
-                finalize dispute proceedings. The citizen will not be able to
-                submit further rework or reopening requests.
+                This will be rejection #{effectiveMaxRejections} for this case.
+                Confirming decline will permanently <strong>CLOSE</strong> this
+                grievance and finalize dispute proceedings. The citizen will not
+                be able to submit further rework or reopening requests.
               </p>
             </div>
           ) : (
@@ -117,15 +121,16 @@ export function DeclineRequestModal({
                   <span>Resolution Will Stand</span>
                 </div>
                 <span className="text-[11px] px-2 py-0.5 rounded-md bg-amber-100 font-bold text-amber-900 border border-amber-200">
-                  Attempt {nextRejectionAttempt} of 3
+                  Attempt {nextRejectionAttempt} of {effectiveMaxRejections}
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed text-amber-800/90">
                 Declining this request will return the grievance to{" "}
                 <strong>{isRework ? "RESOLVED" : "CLOSED"}</strong> status. Your
                 reason will be shared with the citizen and recorded in the
-                official audit trail. Note that upon reaching 3 rejections, the
-                grievance will be permanently closed.
+                official audit trail. Note that upon reaching{" "}
+                {effectiveMaxRejections} rejections, the grievance will be
+                permanently closed.
               </p>
             </div>
           )}
@@ -192,7 +197,10 @@ export function DeclineRequestModal({
               ) : isFinalRejection ? (
                 <span>Confirm Final Decline &amp; Close Case</span>
               ) : (
-                <span>Confirm Decline (Attempt {nextRejectionAttempt}/3)</span>
+                <span>
+                  Confirm Decline (Attempt {nextRejectionAttempt}/
+                  {effectiveMaxRejections})
+                </span>
               )}
             </button>
           </div>

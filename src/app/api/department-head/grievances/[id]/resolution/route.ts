@@ -72,6 +72,9 @@ export async function POST(
     });
 
     const grievance = grievanceDept.grievances;
+    const isPrimaryOrEqual =
+      grievanceDept.involvement_type === "PRIMARY" ||
+      grievanceDept.involvement_type === "EQUAL";
     const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
     const latestResolution = grievance.resolutions[0];
 
@@ -130,8 +133,17 @@ export async function POST(
           val.actionType === "ASSUME_RESOLUTION_AUTHORITY" ||
           val.actionType === "DIRECT_OVERSIGHT"
         ) {
-          hasInterventionAuthority = true;
-          break;
+          const logDeptId = val.departmentId || val.department_id;
+          if (
+            isAdmin ||
+            log.user_id === user.user_id ||
+            (logDeptId &&
+              BigInt(String(logDeptId)) === grievanceDept.department_id) ||
+            (!logDeptId && isPrimaryOrEqual)
+          ) {
+            hasInterventionAuthority = true;
+            break;
+          }
         }
       }
 
@@ -162,10 +174,6 @@ export async function POST(
         );
       }
     }
-
-    const isPrimaryOrEqual =
-      grievanceDept.involvement_type === "PRIMARY" ||
-      grievanceDept.involvement_type === "EQUAL";
 
     if (!isAdmin && departmentId) {
       const authResult = canDepartmentSubmitFinalResolution(

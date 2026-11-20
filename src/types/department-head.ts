@@ -86,6 +86,8 @@ export interface GrievanceItem {
   isReopened?: boolean;
   reopenCount?: number;
   rejectionCount?: number;
+  maxReopenAttempts?: number;
+  maxRejections?: number;
   reopenReason?: string;
   hasProposedKb?: boolean;
   isCrossDepartment?: boolean;
@@ -132,6 +134,7 @@ export interface GrievanceItem {
     intervenedAt: string;
     intervenedBy: string;
     targetStaffName?: string;
+    departmentId?: string;
     targetDepartment?: string;
     newDeadline?: string;
     isResolutionAuthority?: boolean;
@@ -182,6 +185,7 @@ export interface GrievanceItem {
   allocatedDurationMinutes?: number | null;
   departmentsInvolved?: {
     id: string;
+    departmentId?: string;
     departmentName: string;
     involvementType: string;
     status: string;
@@ -189,6 +193,13 @@ export interface GrievanceItem {
     slaPercentAllocation?: number | null;
     allocatedDurationMinutes?: number | null;
     executionOrder?: number;
+    activatedAt?: string | null;
+    dueAt?: string | null;
+    completedAt?: string | null;
+    slaState?: string;
+    slaStateLabel?: string;
+    consumptionPercent?: number;
+    timeRemaining?: string;
   }[];
 }
 
@@ -220,7 +231,8 @@ export type EscalationInterventionType =
   | "ASSUME_RESOLUTION_AUTHORITY"
   | "REQUEST_ADDITIONAL_INFO"
   | "EXTEND_SLA"
-  | "DIRECT_OVERSIGHT";
+  | "DIRECT_OVERSIGHT"
+  | "CO_ASSIGN";
 
 export type DepartmentHeadTab =
   | "ALL"
@@ -331,6 +343,7 @@ export interface CaseProgressData {
     stateLabel: string;
     slaPercentAllocation?: number | null;
     allocatedDurationMinutes?: number | null;
+    targetDepartmentName?: string | null;
   };
   latestActivity?: string;
   latestExtension?: {
@@ -352,6 +365,7 @@ export interface CaseProgressData {
   }[];
   departmentsInvolved?: {
     id: string;
+    departmentId?: string;
     departmentName: string;
     involvementType: string;
     status: string;
@@ -359,6 +373,13 @@ export interface CaseProgressData {
     slaPercentAllocation?: number | null;
     allocatedDurationMinutes?: number | null;
     executionOrder?: number;
+    activatedAt?: string | null;
+    dueAt?: string | null;
+    completedAt?: string | null;
+    slaState?: string;
+    slaStateLabel?: string;
+    consumptionPercent?: number;
+    timeRemaining?: string;
   }[];
   hodIntervention?: GrievanceItem["hodIntervention"];
   internalNotes?: InternalNoteItem[];

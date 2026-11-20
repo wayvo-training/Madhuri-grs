@@ -176,6 +176,7 @@ export async function POST(
       NOTIFY_STAFF: `Add Direction (Dispatched to ${currentStaffName})`,
       CROSS_DEPT: `Supporting Department Added (${targetDeptName || "External Department"})`,
       REASSIGN: `Reassigned to ${targetStaffName}`,
+      CO_ASSIGN: `Secondary Staff Co-Assigned (${targetStaffName}) to assist ${currentStaffName}`,
       ASSUME_RESOLUTION_AUTHORITY: `Resolution Authority Assumed by ${hodFullName}`,
       DIRECT_OVERSIGHT: `Resolution Authority Assumed by ${hodFullName}`,
       REQUEST_ADDITIONAL_INFO: "Request Additional Information Dispatched",
@@ -437,6 +438,62 @@ export async function POST(
             created_at: new Date(),
           },
         });
+      }
+
+      // 4b. Handle CO_ASSIGN intervention (assign secondary staff from same department to work together)
+      if (interventionType === "CO_ASSIGN" && parsedTargetStaffId) {
+        const existingCoAssignment = await tx.assignments.findFirst({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+            staff_id: parsedTargetStaffId,
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
+          },
+        });
+
+        if (!existingCoAssignment) {
+          await tx.assignments.create({
+            data: {
+              grievance_id: grievanceId,
+              grievance_department_id: grievanceDept.grievance_department_id,
+              staff_id: parsedTargetStaffId,
+              assigned_by: user.user_id,
+              assigned_at: new Date(),
+              assignment_status: "CO_ASSIGNED",
+              recommendation_reasons: {
+                reason:
+                  "Department Head Escalation: Co-assigned to assist with grievance",
+              },
+            },
+          });
+
+          await tx.notifications.create({
+            data: {
+              user_id: parsedTargetStaffId,
+              grievance_id: grievanceId,
+              notification_type: "CO_ASSIGNMENT",
+              channel: "IN_APP",
+              title: `Co-Assigned to Assist: ${grievance.grievance_number}`,
+              message: `Department Head ${hodFullName} has assigned you to work together with ${currentStaffName} on Grievance ${grievance.grievance_number}.`,
+              status: "PENDING",
+              created_at: new Date(),
+            },
+          });
+
+          if (currentAssignedStaff) {
+            await tx.notifications.create({
+              data: {
+                user_id: currentAssignedStaff.user_id,
+                grievance_id: grievanceId,
+                notification_type: "CO_ASSIGNMENT",
+                channel: "IN_APP",
+                title: `Assistant Staff Assigned: ${grievance.grievance_number}`,
+                message: `Department Head ${hodFullName} has assigned ${targetStaffName} to assist you and work together on Grievance ${grievance.grievance_number}.`,
+                status: "PENDING",
+                created_at: new Date(),
+              },
+            });
+          }
+        }
       }
 
       // 5. Handle CROSS_DEPT intervention

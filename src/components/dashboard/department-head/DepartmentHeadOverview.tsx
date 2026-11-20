@@ -28,6 +28,7 @@ import type { StaffGrievanceItem } from "@/types/staff";
 import { DepartmentHeadViewSwitcher } from "./components";
 import { DepartmentHeadProvider } from "./DepartmentHeadContext";
 import {
+  AcceptReworkModal,
   CaseFileInspectionModal,
   DeclineRequestModal,
   DepartmentHeadEscalationModal,
@@ -244,6 +245,8 @@ export function DepartmentHeadOverviewInner({
 
   const [declineModalGrievance, setDeclineModalGrievance] =
     useState<GrievanceItem | null>(null);
+  const [acceptReworkModalGrievance, setAcceptReworkModalGrievance] =
+    useState<GrievanceItem | null>(null);
 
   // Modal Handlers
   const handleOpenProposeKbModal = useCallback((item: GrievanceItem) => {
@@ -327,6 +330,10 @@ export function DepartmentHeadOverviewInner({
 
   const handleOpenDeclineModal = useCallback((item: GrievanceItem) => {
     setDeclineModalGrievance(item);
+  }, []);
+
+  const handleOpenAcceptReworkModal = useCallback((item: GrievanceItem) => {
+    setAcceptReworkModalGrievance(item);
   }, []);
 
   const handleExecuteDeclineRequest = useCallback(
@@ -602,6 +609,7 @@ export function DepartmentHeadOverviewInner({
           onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
           onDirectIntervene={handleDirectIntervention}
+          onAcceptRequest={handleOpenAcceptReworkModal}
           onRejectRequest={handleOpenDeclineModal}
           onReviewResolution={handleOpenResolutionModal}
           onProposeKb={handleOpenProposeKbModal}
@@ -663,6 +671,7 @@ export function DepartmentHeadOverviewInner({
           onAssign={handleOpenAssignModal}
           onIntervene={handleOpenEscalateModal}
           onDirectIntervene={handleDirectIntervention}
+          onAcceptRequest={handleOpenAcceptReworkModal}
           onRejectRequest={handleOpenDeclineModal}
           onReviewResolution={handleOpenResolutionModal}
           onProposeKb={handleOpenProposeKbModal}
@@ -845,6 +854,20 @@ export function DepartmentHeadOverviewInner({
           grievance={proposeKbGrievance}
         />
       )}
+
+      <AcceptReworkModal
+        isOpen={Boolean(acceptReworkModalGrievance)}
+        onClose={() => setAcceptReworkModalGrievance(null)}
+        grievance={acceptReworkModalGrievance}
+        onAssignStaff={(item) => {
+          setAcceptReworkModalGrievance(null);
+          handleOpenAssignModal(item);
+        }}
+        onDirectIntervene={(item) => {
+          setAcceptReworkModalGrievance(null);
+          handleDirectIntervention(item);
+        }}
+      />
 
       <DeclineRequestModal
         isOpen={Boolean(declineModalGrievance)}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
+import { evaluateReopenPolicy } from "@/lib/engines/reopen-engine";
 import {
   initiateReopenedSlaCycle,
   initiateReworkSlaCycle,
@@ -110,6 +111,15 @@ export async function POST(
       );
     }
 
+    const reopenPolicy = await evaluateReopenPolicy({
+      categoryId: grievance.category_id,
+      subcategoryId: grievance.subcategory_id,
+      priority: grievance.priority,
+    });
+    const maxRejections =
+      reopenPolicy.maxRejectionCount || reopenPolicy.maxReopenCount || 3;
+    const maxCombinedAttempts = reopenPolicy.maxReopenCount || 3;
+
     // 1. REJECT DECISION
     if (decision === "REJECT") {
       // Count previous rejections
@@ -128,7 +138,7 @@ export async function POST(
       });
 
       const currentRejectionNumber = existingRejections + 1;
-      const isFinalRejection = currentRejectionNumber >= 3;
+      const isFinalRejection = currentRejectionNumber >= maxRejections;
 
       const targetStatus = isFinalRejection
         ? "CLOSED"
@@ -170,8 +180,8 @@ export async function POST(
 
         // Record status history
         const remarksText = isFinalRejection
-          ? `Department Head rejected ${isRework ? "rework" : "reopening"} request (Rejection ${currentRejectionNumber} of 3). Grievance permanently closed: "${cleanReason}"`
-          : `Department Head rejected ${isRework ? "rework" : "reopening"} request (Rejection ${currentRejectionNumber} of 3): "${cleanReason}"`;
+          ? `Department Head rejected ${isRework ? "rework" : "reopening"} request (Rejection ${currentRejectionNumber} of ${maxRejections}). Grievance permanently closed: "${cleanReason}"`
+          : `Department Head rejected ${isRework ? "rework" : "reopening"} request (Rejection ${currentRejectionNumber} of ${maxRejections}): "${cleanReason}"`;
 
         await tx.grievance_status_history.create({
           data: {
@@ -216,8 +226,8 @@ export async function POST(
         : `${isRework ? "Rework" : "Reopening"} Request Rejected`;
 
       const notifMessage = isFinalRejection
-        ? `Your ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number} was rejected by the Department Head: "${cleanReason}". Maximum review attempts reached (${currentRejectionNumber}/3). This grievance has been permanently closed.`
-        : `Your ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number} was rejected by the Department Head: "${cleanReason}". (${currentRejectionNumber} of 3 review attempts used).`;
+        ? `Your ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number} was rejected by the Department Head: "${cleanReason}". Maximum review attempts reached (${currentRejectionNumber}/${maxRejections}). This grievance has been permanently closed.`
+        : `Your ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number} was rejected by the Department Head: "${cleanReason}". (${currentRejectionNumber} of ${maxRejections} review attempts used).`;
 
       await NotificationService.send({
         userId: grievance.submitted_by,
@@ -230,8 +240,8 @@ export async function POST(
       return NextResponse.json({
         success: true,
         message: isFinalRejection
-          ? `${isRework ? "Rework" : "Reopening"} request rejected (Attempt ${currentRejectionNumber} of 3). Grievance has been permanently CLOSED.`
-          : `${isRework ? "Rework" : "Reopening"} request rejected (Attempt ${currentRejectionNumber} of 3). Case reverted to ${targetStatus}.`,
+          ? `${isRework ? "Rework" : "Reopening"} request rejected (Attempt ${currentRejectionNumber} of ${maxRejections}). Grievance has been permanently CLOSED.`
+          : `${isRework ? "Rework" : "Reopening"} request rejected (Attempt ${currentRejectionNumber} of ${maxRejections}). Case reverted to ${targetStatus}.`,
         isClosed: isFinalRejection,
         rejectionCount: currentRejectionNumber,
         status: targetStatus,
@@ -239,8 +249,8 @@ export async function POST(
     }
 
     // 2. APPROVE DECISION
-    // Enforce shared counter limit <= 3
-    const MAX_COMBINED_ATTEMPTS = 3;
+    // Enforce shared counter limit based on active policy
+    const MAX_COMBINED_ATTEMPTS = maxCombinedAttempts;
     if (grievance.reopen_count >= MAX_COMBINED_ATTEMPTS) {
       return NextResponse.json(
         {

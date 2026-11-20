@@ -59,13 +59,14 @@ export function CaseInspectionFooter({
   onAssignClick,
   onDirectInterveneClick,
   onDeclineRequestClick,
-  onEscalateClick: _onEscalateClick,
+  onEscalateClick,
   onReviewResolutionClick,
   onProposeKbClick,
   onAddInternalNote,
   onReviewGracePeriodClick,
 }: CaseInspectionFooterProps) {
   const [isDirectiveModalOpen, setIsDirectiveModalOpen] = useState(false);
+  const [isReworkAccepted, setIsReworkAccepted] = useState(false);
 
   const isBlocked = Boolean(
     currentGrievance.isBlocked || currentGrievance.status === "BLOCKED",
@@ -143,39 +144,64 @@ export function CaseInspectionFooter({
           )}
 
           {currentGrievance.status === "REWORK" ? (
-            <>
-              {onDeclineRequestClick && (
+            !isReworkAccepted ? (
+              <>
+                {onDeclineRequestClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDeclineRequestClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50/80 px-3.5 py-2 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 transition cursor-pointer"
+                    title="Decline rework request and maintain original resolution"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                    <span>Decline Request</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => onDeclineRequestClick(currentGrievance)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50/80 px-3.5 py-2 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 transition cursor-pointer"
-                  title="Decline rework request and maintain original resolution"
-                >
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-                  <span>Decline Rework</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => onAssignClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
-                title="Assign an eligible staff member for re-investigation"
-              >
-                <UserCheck className="h-3.5 w-3.5 text-slate-500" />
-                <span>Assign Staff</span>
-              </button>
-              {onDirectInterveneClick && (
-                <button
-                  type="button"
-                  onClick={() => onDirectInterveneClick(currentGrievance)}
+                  onClick={() => setIsReworkAccepted(true)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
-                  title="Assume direct authority to investigate and resolve personally"
+                  title="Accept rework request to assign staff or assume direct authority"
                 >
-                  <Shield className="h-3.5 w-3.5" />
-                  <span>Intervene Directly</span>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Accept Request</span>
                 </button>
-              )}
-            </>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 animate-in fade-in duration-150">
+                <span className="text-[11px] font-semibold text-teal-800 bg-teal-50 px-2.5 py-1.5 rounded-lg border border-teal-200">
+                  Request Accepted
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onAssignClick(currentGrievance)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-white px-3.5 py-2 text-xs font-semibold text-teal-800 shadow-2xs hover:bg-teal-50 hover:text-teal-900 transition cursor-pointer"
+                  title="Assign an eligible staff member for re-investigation"
+                >
+                  <UserCheck className="h-3.5 w-3.5 text-teal-600" />
+                  <span>Assign Staff</span>
+                </button>
+                {onDirectInterveneClick && (
+                  <button
+                    type="button"
+                    onClick={() => onDirectInterveneClick(currentGrievance)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                    title="Assume direct authority to investigate and resolve personally"
+                  >
+                    <Shield className="h-3.5 w-3.5" />
+                    <span>Assume Authority</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsReworkAccepted(false)}
+                  className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                  title="Back to Accept / Decline"
+                >
+                  <span>Back</span>
+                </button>
+              </div>
+            )
           ) : (
             !isClosedOrResolved &&
             currentGrievance.status !== "COMPLETED" &&
@@ -202,6 +228,28 @@ export function CaseInspectionFooter({
               </button>
             )
           )}
+
+          {!isClosedOrResolved &&
+            currentGrievance.status !== "COMPLETED" &&
+            currentGrievance.status !== "REWORK" &&
+            currentGrievance.myDepartmentStatus !== "COMPLETED" &&
+            !hasHeadResolutionAuthority(currentGrievance) &&
+            onEscalateClick &&
+            (currentGrievance.slaStatus === "AT_RISK" ||
+              currentGrievance.slaStatus === "BREACHED" ||
+              currentGrievance.status === "ESCALATED" ||
+              Boolean(currentGrievance.escalationReason) ||
+              currentGrievance.escalationStage === "GRIEVANCE_ESCALATED") && (
+              <button
+                type="button"
+                onClick={() => onEscalateClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-amber-700 transition cursor-pointer"
+                title="Intervene directly or assume resolution authority on escalated / at-risk case"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                <span>Intervene / Assume Authority</span>
+              </button>
+            )}
 
           {currentGrievance.status !== "REWORK" &&
           canHeadSubmitResolution(currentGrievance) ? (

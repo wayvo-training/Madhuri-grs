@@ -90,6 +90,7 @@ export function CaseFileInspectionModal({
   const [caseProgressLoading, setCaseProgressLoading] = useState(false);
   const [caseProgressData, setCaseProgressData] =
     useState<CaseProgressData | null>(null);
+  const [isBannerReworkAccepted, setIsBannerReworkAccepted] = useState(false);
 
   useEffect(() => {
     setCurrentGrievance(grievance);
@@ -376,45 +377,69 @@ export function CaseFileInspectionModal({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-                    Citizen Rework Request Awaiting Your Action
+                    {isBannerReworkAccepted
+                      ? "Rework Request Accepted · Select Action"
+                      : "Citizen Rework Request Awaiting Your Action"}
                   </h4>
                   <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                    The citizen was unsatisfied with the initial resolution.
-                    Please choose to assign an officer for re-investigation,
-                    intervene directly to resolve personally, or decline the
-                    request.
+                    {isBannerReworkAccepted
+                      ? "You accepted the rework request. Choose to assign an eligible staff member for investigation, or assume direct authority to resolve personally."
+                      : "The citizen was unsatisfied with the initial resolution. Please Accept the request to proceed with staff assignment or direct intervention, or Decline the request."}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                {onDeclineRequestClick && (
-                  <button
-                    type="button"
-                    onClick={() => onDeclineRequestClick(currentGrievance)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
-                  >
-                    <span>Decline Rework</span>
-                  </button>
-                )}
-                {onAssignClick && (
-                  <button
-                    type="button"
-                    onClick={() => onAssignClick(currentGrievance)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
-                  >
-                    <UserCheck className="h-3.5 w-3.5 text-slate-500" />
-                    <span>Assign Staff</span>
-                  </button>
-                )}
-                {onDirectInterveneClick && (
-                  <button
-                    type="button"
-                    onClick={() => onDirectInterveneClick(currentGrievance)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
-                  >
-                    <Shield className="h-3.5 w-3.5" />
-                    <span>Intervene Directly</span>
-                  </button>
+                {!isBannerReworkAccepted ? (
+                  <>
+                    {onDeclineRequestClick && (
+                      <button
+                        type="button"
+                        onClick={() => onDeclineRequestClick(currentGrievance)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                        <span>Decline Request</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsBannerReworkAccepted(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Accept Request</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {onAssignClick && (
+                      <button
+                        type="button"
+                        onClick={() => onAssignClick(currentGrievance)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50 transition cursor-pointer shadow-2xs"
+                      >
+                        <UserCheck className="h-3.5 w-3.5 text-teal-600" />
+                        <span>Assign Staff</span>
+                      </button>
+                    )}
+                    {onDirectInterveneClick && (
+                      <button
+                        type="button"
+                        onClick={() => onDirectInterveneClick(currentGrievance)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        <span>Assume Authority</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsBannerReworkAccepted(false)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      <span>Back</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>

@@ -5,7 +5,6 @@ import {
   BookOpen,
   CheckCircle2,
   Eye,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   User,
@@ -78,6 +77,7 @@ export interface QueueViewProps {
   onAssign: (item: GrievanceItem, currentStaffId?: string) => void;
   onIntervene: (item: GrievanceItem) => void;
   onDirectIntervene?: (item: GrievanceItem) => void;
+  onAcceptRequest?: (item: GrievanceItem) => void;
   onRejectRequest?: (item: GrievanceItem) => void;
   onReviewResolution: (item: GrievanceItem) => void;
   onProposeKb?: (item: GrievanceItem) => void;
@@ -114,7 +114,8 @@ export function QueueView({
   onInspect,
   onAssign,
   onIntervene,
-  onDirectIntervene,
+  onDirectIntervene: _onDirectIntervene,
+  onAcceptRequest,
   onRejectRequest,
   onReviewResolution,
   onProposeKb,
@@ -953,30 +954,20 @@ export function QueueView({
                               ...(item.status === "REWORK"
                                 ? [
                                     {
-                                      label: "Assign Staff for Rework",
+                                      label: "Accept Request",
                                       icon: (
-                                        <UserPlus className="h-3.5 w-3.5 text-teal-600" />
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-teal-600" />
                                       ),
                                       variant: "default" as const,
-                                      onClick: () => onAssign(item),
+                                      onClick: () =>
+                                        onAcceptRequest
+                                          ? onAcceptRequest(item)
+                                          : onAssign(item),
                                     },
-                                    ...(onDirectIntervene
-                                      ? [
-                                          {
-                                            label: "Intervene Directly",
-                                            icon: (
-                                              <Shield className="h-3.5 w-3.5 text-emerald-600" />
-                                            ),
-                                            variant: "default" as const,
-                                            onClick: () =>
-                                              onDirectIntervene(item),
-                                          },
-                                        ]
-                                      : []),
                                     ...(onRejectRequest
                                       ? [
                                           {
-                                            label: "Decline Rework Request",
+                                            label: "Decline Request",
                                             icon: (
                                               <AlertCircle className="h-3.5 w-3.5 text-rose-600" />
                                             ),
@@ -996,7 +987,10 @@ export function QueueView({
                               item.status !== "BLOCKED" &&
                               item.myDepartmentStatus !== "BLOCKED" &&
                               (item.status === "ESCALATED" ||
-                                item.slaStatus === "BREACHED")
+                                item.slaStatus === "BREACHED" ||
+                                item.slaStatus === "AT_RISK" ||
+                                Boolean(item.escalationReason) ||
+                                item.escalationStage === "GRIEVANCE_ESCALATED")
                                 ? [
                                     {
                                       label: "Intervene",

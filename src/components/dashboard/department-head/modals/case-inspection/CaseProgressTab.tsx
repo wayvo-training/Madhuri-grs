@@ -438,6 +438,9 @@ export function CaseProgressTab({
                   {caseProgressData?.sla?.slaPercentAllocation ??
                     currentGrievance?.slaPercentAllocation}
                   % Dept Share
+                  {caseProgressData?.sla?.targetDepartmentName
+                    ? ` (${caseProgressData.sla.targetDepartmentName})`
+                    : ""}
                 </span>
               )}
             </span>
@@ -537,8 +540,33 @@ export function CaseProgressTab({
                 []
               ).map((dept) => {
                 const isPrimary = dept.involvementType === "PRIMARY";
+                const interventionDeptId =
+                  (
+                    currentGrievance.hodIntervention as Record<
+                      string,
+                      unknown
+                    > | null
+                  )?.departmentId ||
+                  (
+                    caseProgressData?.hodIntervention as Record<
+                      string,
+                      unknown
+                    > | null
+                  )?.departmentId;
+                const interventionDeptName =
+                  currentGrievance.hodIntervention?.targetDepartment ||
+                  caseProgressData?.hodIntervention?.targetDepartment;
+
                 const isHeadAuthorityForThisDept =
-                  isPrimary && isResolutionAuthorityAssumed;
+                  isResolutionAuthorityAssumed &&
+                  (interventionDeptId
+                    ? String(dept.departmentId) ===
+                        String(interventionDeptId) ||
+                      String(dept.id) === String(interventionDeptId)
+                    : interventionDeptName
+                      ? dept.departmentName?.toLowerCase().trim() ===
+                        interventionDeptName.toLowerCase().trim()
+                      : isPrimary);
 
                 return (
                   <div
@@ -637,6 +665,78 @@ export function CaseProgressTab({
                             ? "Findings Submitted"
                             : dept.status.replace(/_/g, " ")}
                       </span>
+                    </div>
+
+                    {/* Individual Department SLA Progress & Target */}
+                    <div className="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">
+                          Department SLA:
+                        </span>
+                        <span
+                          className={`font-semibold text-[10px] px-1.5 py-0.5 rounded-full ${
+                            dept.slaState === "COMPLETED_ON_TRACK"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : dept.slaState === "COMPLETED_BREACHED"
+                                ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                : dept.slaState === "BREACHED"
+                                  ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                  : dept.slaState === "SLA_AT_RISK"
+                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                    : dept.slaState === "BLOCKED"
+                                      ? "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+                                      : "bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300"
+                          }`}
+                        >
+                          {dept.slaStateLabel || "Within SLA"}
+                        </span>
+                      </div>
+
+                      {dept.status !== "BLOCKED" && (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>
+                              {dept.status === "COMPLETED"
+                                ? "Completed"
+                                : "Time Remaining"}
+                              :{" "}
+                              <strong className="text-slate-700 dark:text-slate-200">
+                                {dept.timeRemaining || "N/A"}
+                              </strong>
+                            </span>
+                            {dept.consumptionPercent != null && (
+                              <span>{dept.consumptionPercent}%</span>
+                            )}
+                          </div>
+                          {dept.consumptionPercent != null && (
+                            <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  dept.slaState === "COMPLETED_ON_TRACK"
+                                    ? "bg-emerald-500"
+                                    : dept.slaState === "COMPLETED_BREACHED" ||
+                                        dept.slaState === "BREACHED"
+                                      ? "bg-rose-500"
+                                      : dept.slaState === "SLA_AT_RISK"
+                                        ? "bg-amber-500"
+                                        : "bg-teal-600 dark:bg-teal-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, Math.max(0, dept.consumptionPercent))}%`,
+                                }}
+                              />
+                            </div>
+                          )}
+                          {dept.dueAt && (
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-0.5">
+                              <span>Target Due:</span>
+                              <span className="font-medium text-slate-700 dark:text-slate-300">
+                                {dept.dueAt}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

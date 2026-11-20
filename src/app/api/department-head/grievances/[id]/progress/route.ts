@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
+import { DEFAULT_SLA_THRESHOLDS } from "@/lib/constants/sla";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
 
@@ -136,6 +137,9 @@ export async function GET(
         sla_tracking: {
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
+          include: {
+            sla_pause_logs: true,
+          },
         },
         sla_extensions: {
           orderBy: { extension_id: "desc" },
@@ -158,6 +162,23 @@ export async function GET(
         { success: false, message: "Grievance not found" },
         { status: 404 },
       );
+    }
+
+    // Proactively evaluate SLA threshold notifications only when grievance is active and not paused
+    if (
+      grievance.status !== "CLOSED" &&
+      grievance.status !== "RESOLVED" &&
+      grievance.status !== "AWAITING_INFORMATION" &&
+      grievance.status !== "WAITING_ON_USER"
+    ) {
+      try {
+        const { evaluateGrievanceSla } = await import(
+          "@/lib/engines/sla-engine"
+        );
+        await evaluateGrievanceSla(grievanceId);
+      } catch (slaErr) {
+        console.error("SLA evaluation error in progress route:", slaErr);
+      }
     }
 
     // Fetch involved departments dynamically
@@ -203,6 +224,42 @@ export async function GET(
       }
     }
 
+    const now = new Date();
+    const activeSla = grievance.sla_tracking?.[0];
+
+    const isPaused = Boolean(
+      activeSla?.paused_at ||
+        grievance.status === "AWAITING_INFORMATION" ||
+        grievance.status === "WAITING_ON_USER" ||
+        grievance.status === "WAITING_ON_EMPLOYEE" ||
+        grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+        grievance.status === "UNDER_REVIEW" ||
+        grievance.status === "RESOLVED",
+    );
+    const effectiveNow = isPaused
+      ? activeSla?.paused_at
+        ? new Date(activeSla.paused_at)
+        : now
+      : now;
+
+    // Fetch active SLA policy for dynamic thresholds
+    const activeSlaPolicy = await prisma.sla_policies.findFirst({
+      where: {
+        priority_level: grievance.priority,
+        status: "ACTIVE",
+        sla_type: "RESOLUTION",
+      },
+      orderBy: { updated_at: "desc" },
+    });
+    const warningThreshold = Number(
+      activeSlaPolicy?.warning_threshold_percent ||
+        DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT,
+    );
+    const escalationThreshold = Number(
+      activeSlaPolicy?.escalation_threshold_percent ||
+        DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
+    );
+
     const departmentsInvolved = rawDepartments.map((rawD) => {
       const d = rawD;
       const deptAssignment = allDeptAssignments.find(
@@ -227,8 +284,134 @@ export async function GET(
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
+      // Calculate individual SLA metrics for this department
+      const dIsBlocked = deptStatus === "BLOCKED";
+      const dIsCompleted = deptStatus === "COMPLETED";
+      const dActivatedAt = d.activated_at
+        ? new Date(d.activated_at)
+        : d.assigned_at
+          ? new Date(d.assigned_at)
+          : null;
+      const dDueAt = d.due_at ? new Date(d.due_at) : null;
+      const dCompletedAt = d.completed_at ? new Date(d.completed_at) : null;
+      const dAllocatedMins =
+        d.allocated_duration_minutes ||
+        (dDueAt && dActivatedAt
+          ? Math.max(
+              1,
+              Math.round((dDueAt.getTime() - dActivatedAt.getTime()) / 60000),
+            )
+          : 60);
+
+      // Determine pause duration strictly scoped to this department's activation window
+      const startTime =
+        dActivatedAt ||
+        (grievance.created_at ? new Date(grievance.created_at) : now);
+
+      let deptPauseMs = 0;
+      if (activeSla?.sla_pause_logs && activeSla.sla_pause_logs.length > 0) {
+        deptPauseMs = activeSla.sla_pause_logs
+          .filter(
+            (l) =>
+              (l.paused_at && new Date(l.paused_at) >= startTime) ||
+              (l.resumed_at && new Date(l.resumed_at) > startTime),
+          )
+          .reduce((sum, l) => sum + (l.duration_minutes || 0) * 60 * 1000, 0);
+      } else if (
+        rawDepartments.length <= 1 ||
+        d.involvement_type === "PRIMARY"
+      ) {
+        deptPauseMs = Math.max(
+          0,
+          (activeSla?.accumulated_paused_minutes || 0) * 60 * 1000,
+        );
+      }
+
+      let dConsumptionPercent = 0;
+      let dTimeRemaining = dIsBlocked ? "Pending Prerequisite" : "N/A";
+      let dSlaState = "ON_TRACK";
+      let dSlaStateLabel = "Within SLA";
+
+      if (dIsBlocked) {
+        dSlaState = "BLOCKED";
+        dSlaStateLabel = "Waiting for Prerequisite";
+        dTimeRemaining = "Pending Prerequisite";
+      } else if (dIsCompleted) {
+        const completedTime = dCompletedAt || now;
+        if (dDueAt && dActivatedAt) {
+          const totalDuration = Math.max(
+            1,
+            dDueAt.getTime() - dActivatedAt.getTime() - deptPauseMs,
+          );
+          const actualTime = Math.max(
+            0,
+            completedTime.getTime() - dActivatedAt.getTime() - deptPauseMs,
+          );
+          dConsumptionPercent = Math.min(
+            100,
+            Math.round((actualTime / totalDuration) * 100),
+          );
+        } else {
+          dConsumptionPercent = 100;
+        }
+
+        if (dDueAt && completedTime > dDueAt) {
+          dSlaState = "COMPLETED_BREACHED";
+          dSlaStateLabel = "Completed Past SLA";
+        } else {
+          dSlaState = "COMPLETED_ON_TRACK";
+          dSlaStateLabel = "Completed Within SLA";
+        }
+        dTimeRemaining = dCompletedAt
+          ? `Done ${formatRelativeTime(dCompletedAt)}`
+          : "Findings Submitted";
+      } else if (dDueAt) {
+        const rawTotalDuration = dDueAt.getTime() - startTime.getTime();
+        const totalDuration = Math.max(1, rawTotalDuration - deptPauseMs);
+        const rawElapsed = Math.max(
+          0,
+          effectiveNow.getTime() - startTime.getTime(),
+        );
+        const activeElapsed = Math.max(0, rawElapsed - deptPauseMs);
+        dConsumptionPercent = Math.min(
+          100,
+          Math.max(0, Math.round((activeElapsed / totalDuration) * 100)),
+        );
+
+        if (!isPaused && now > dDueAt) {
+          dSlaState = "BREACHED";
+          dSlaStateLabel = "SLA Breached";
+          const diffMs = now.getTime() - dDueAt.getTime();
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffHours / 24);
+          dTimeRemaining =
+            diffDays > 0
+              ? `Breached ${diffDays}d ago`
+              : `Breached ${diffHours}h ago`;
+        } else {
+          const diffMs = Math.max(0, dDueAt.getTime() - effectiveNow.getTime());
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffMins = Math.floor((diffMs % 3600000) / 60000);
+          dTimeRemaining = isPaused
+            ? `${diffHours}h ${diffMins}m remaining (Paused)`
+            : `${diffHours}h ${diffMins}m remaining`;
+
+          if (dConsumptionPercent >= escalationThreshold) {
+            dSlaState = "SLA_AT_RISK";
+            dSlaStateLabel = "SLA At Risk";
+          } else if (dConsumptionPercent >= warningThreshold) {
+            dSlaState = "ON_TRACK";
+            dSlaStateLabel = "SLA Warning";
+          } else {
+            dSlaState = "ON_TRACK";
+            dSlaStateLabel = "Within SLA";
+          }
+        }
+      }
+
       return {
         id: d.grievance_department_id.toString(),
+        departmentId: d.department_id.toString(),
         departmentName: d.departments?.department_name || "Unknown Department",
         involvementType: d.involvement_type as
           | "PRIMARY"
@@ -239,8 +422,15 @@ export async function GET(
         slaPercentAllocation: d.sla_percent_allocation
           ? Number(d.sla_percent_allocation)
           : null,
-        allocatedDurationMinutes: d.allocated_duration_minutes || null,
+        allocatedDurationMinutes: dAllocatedMins,
         executionOrder: d.execution_order || 1,
+        activatedAt: dActivatedAt ? formatFullDateTime(dActivatedAt) : null,
+        dueAt: dDueAt ? formatFullDateTime(dDueAt) : null,
+        completedAt: dCompletedAt ? formatFullDateTime(dCompletedAt) : null,
+        slaState: dSlaState,
+        slaStateLabel: dSlaStateLabel,
+        consumptionPercent: dConsumptionPercent,
+        timeRemaining: dTimeRemaining,
       };
     });
 
@@ -248,22 +438,39 @@ export async function GET(
     const myDeptRecord = rawDepartments.find(
       (d) => d.department_id === departmentId,
     );
+
+    // Target department resolution:
+    // Focus on user's active department, or the active department in workflow if user's is completed / user is Admin
+    const activeDeptInWorkflow = rawDepartments.find(
+      (d) => d.status !== "COMPLETED" && d.status !== "BLOCKED",
+    );
+    const primaryDept =
+      rawDepartments.find((d) => d.involvement_type === "PRIMARY") ||
+      rawDepartments[0];
+
+    const targetDeptRecord =
+      isAdmin && activeDeptInWorkflow
+        ? activeDeptInWorkflow
+        : myDeptRecord?.status === "COMPLETED" && activeDeptInWorkflow
+          ? activeDeptInWorkflow
+          : myDeptRecord || activeDeptInWorkflow || primaryDept;
+
     const isDeptPending =
-      myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+      targetDeptRecord?.status === "PENDING_ASSIGNMENT" ||
       grievance.status === "SUBMITTED" ||
       grievance.status === "ROUTED" ||
       grievance.status === "AWAITING_ROUTING" ||
       grievance.status === "AWAITING_ASSIGNMENT" ||
       (grievance.status === "REOPENED" &&
-        myDeptRecord?.status === "PENDING_ASSIGNMENT");
+        targetDeptRecord?.status === "PENDING_ASSIGNMENT");
 
-    const primaryAssignment = myDeptRecord
+    const primaryAssignment = targetDeptRecord
       ? isDeptPending
         ? null
         : allDeptAssignments.find(
             (a) =>
               a.grievance_department_id ===
-                myDeptRecord.grievance_department_id &&
+                targetDeptRecord.grievance_department_id &&
               a.assignment_status === "ASSIGNED",
           ) || null
       : isDeptPending
@@ -290,7 +497,7 @@ export async function GET(
       staffName:
         !isDeptPending && assignedUser
           ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
-          : myDeptRecord?.status === "BLOCKED"
+          : targetDeptRecord?.status === "BLOCKED"
             ? "Blocked (Waiting for Prerequisite)"
             : "Unassigned",
       designation: assignedUser?.roles?.role_name || "Investigating Officer",
@@ -303,7 +510,7 @@ export async function GET(
         : null,
       status:
         primaryAssignment?.assignment_status ||
-        (myDeptRecord?.status === "BLOCKED" ? "BLOCKED" : "PENDING"),
+        (targetDeptRecord?.status === "BLOCKED" ? "BLOCKED" : "PENDING"),
     };
 
     // Check if there is an HOD intervention strictly scoped to this department in multi-dept cases
@@ -379,170 +586,34 @@ export async function GET(
         ivData.actionLabel.includes("Deadline Extended"));
 
     // 2. SLA calculations
-    const now = new Date();
-    const isDeptBlocked = myDeptRecord?.status === "BLOCKED";
-    const activeSla = grievance.sla_tracking?.[0];
+    const targetDeptData =
+      departmentsInvolved.find(
+        (d) => d.id === targetDeptRecord?.grievance_department_id.toString(),
+      ) || departmentsInvolved[0];
 
-    const createdAt = activeSla?.started_at
-      ? new Date(activeSla.started_at)
-      : myDeptRecord?.activated_at
-        ? new Date(myDeptRecord.activated_at)
-        : myDeptRecord?.assigned_at
-          ? new Date(myDeptRecord.assigned_at)
-          : new Date(grievance.created_at);
-
-    const dueAt = isDeptBlocked
-      ? null
-      : activeSla?.due_at
-        ? new Date(activeSla.due_at)
-        : myDeptRecord?.due_at
-          ? new Date(myDeptRecord.due_at)
-          : grievance.due_at
-            ? new Date(grievance.due_at)
-            : null;
+    const isDeptBlocked = targetDeptRecord?.status === "BLOCKED";
+    const isDeptCompleted = targetDeptRecord?.status === "COMPLETED";
 
     const deptAllocatedMins =
-      activeSla?.due_at && activeSla?.started_at
+      targetDeptData?.allocatedDurationMinutes ||
+      targetDeptRecord?.allocated_duration_minutes ||
+      (targetDeptRecord?.due_at && targetDeptRecord?.activated_at
         ? Math.max(
             1,
             Math.round(
-              (new Date(activeSla.due_at).getTime() -
-                new Date(activeSla.started_at).getTime()) /
+              (new Date(targetDeptRecord.due_at).getTime() -
+                new Date(targetDeptRecord.activated_at).getTime()) /
                 60000,
             ),
           )
-        : myDeptRecord?.allocated_duration_minutes ||
-          (grievance.due_at && grievance.created_at
-            ? Math.max(
-                1,
-                Math.round(
-                  ((new Date(grievance.due_at).getTime() -
-                    new Date(grievance.created_at).getTime()) *
-                    (Number(myDeptRecord?.sla_percent_allocation || 100) /
-                      100)) /
-                    60000,
-                ),
-              )
-            : 1440);
-    const isPaused = Boolean(
-      activeSla?.paused_at ||
-        grievance.status === "AWAITING_INFORMATION" ||
-        grievance.status === "WAITING_ON_USER" ||
-        grievance.status === "WAITING_ON_EMPLOYEE" ||
-        grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
-        grievance.status === "UNDER_REVIEW" ||
-        grievance.status === "RESOLVED",
-    );
-    const effectiveNow = isPaused
-      ? activeSla?.paused_at
-        ? new Date(activeSla.paused_at)
-        : now
-      : now;
-    const accumulatedPausedMs = Math.max(
-      0,
-      (activeSla?.accumulated_paused_minutes || 0) * 60 * 1000,
-    );
-
-    let consumptionPercent = 0;
-    let timeRemainingStr = isDeptBlocked
-      ? "Pending Prerequisites (Blocked)"
-      : "N/A";
-    let isBreached = false;
-    let isApproaching = false;
-
-    if (isDeptBlocked) {
-      consumptionPercent = 0;
-      timeRemainingStr = "Pending Prerequisites (Blocked)";
-      isBreached = false;
-      isApproaching = false;
-    } else if (dueAt) {
-      if (isSlaExtensionActive && interventionLog) {
-        // Calculate SLA consumption relative to the extension grace window
-        const extensionStartTime = new Date(interventionLog.created_at);
-        const extensionWindowMs = Math.max(
-          1,
-          dueAt.getTime() - extensionStartTime.getTime(),
-        );
-        const elapsedSinceExtensionMs = Math.max(
-          0,
-          effectiveNow.getTime() -
-            extensionStartTime.getTime() -
-            accumulatedPausedMs,
-        );
-
-        if (!isPaused && now > dueAt) {
-          isBreached = true;
-          consumptionPercent = 100;
-          const diffMs = now.getTime() - dueAt.getTime();
-          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-          const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
-          timeRemainingStr =
-            diffDays > 0
-              ? `Breached ${diffDays}d ago`
-              : `Breached ${diffHours}h ago`;
-        } else {
-          consumptionPercent = Math.min(
-            100,
-            Math.max(
-              0,
-              Math.round((elapsedSinceExtensionMs / extensionWindowMs) * 100),
-            ),
-          );
-          const diffMs = Math.max(0, dueAt.getTime() - effectiveNow.getTime());
-          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-          const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-          timeRemainingStr = isPaused
-            ? `${diffHours}h ${diffMins}m remaining (Paused)`
-            : `${diffHours}h ${diffMins}m remaining`;
-          if (consumptionPercent >= 75) {
-            isApproaching = true;
-          }
-        }
-      } else {
-        const rawTotalDuration = dueAt.getTime() - createdAt.getTime();
-        const totalDuration = Math.max(
-          1,
-          rawTotalDuration - accumulatedPausedMs,
-        );
-        const rawElapsed = Math.max(
-          0,
-          effectiveNow.getTime() - createdAt.getTime(),
-        );
-        const activeElapsed = Math.max(0, rawElapsed - accumulatedPausedMs);
-        if (totalDuration > 0) {
-          consumptionPercent = Math.min(
-            Math.max(Math.round((activeElapsed / totalDuration) * 100), 0),
-            100,
-          );
-        }
-        if (!isPaused && now > dueAt) {
-          isBreached = true;
-          const diffMs = now.getTime() - dueAt.getTime();
-          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-          const diffHours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
-          timeRemainingStr =
-            diffDays > 0
-              ? `Breached ${diffDays}d ago`
-              : `Breached ${diffHours}h ago`;
-        } else {
-          const diffMs = Math.max(0, dueAt.getTime() - effectiveNow.getTime());
-          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-          const diffMins = Math.floor((diffMs / (1000 * 60)) % 60);
-          timeRemainingStr = isPaused
-            ? `${diffHours}h ${diffMins}m remaining (Paused)`
-            : `${diffHours}h ${diffMins}m remaining`;
-          if (consumptionPercent >= 75) {
-            isApproaching = true;
-          }
-        }
-      }
-    }
+        : 60);
 
     const dueAtLabel = isDeptBlocked
-      ? `${Math.round(deptAllocatedMins / 60)}h allocated (${Number(myDeptRecord?.sla_percent_allocation || 100)}%)`
-      : dueAt
-        ? formatFullDateTime(dueAt)
-        : "No Target Set";
+      ? `${Math.round(deptAllocatedMins / 60)}h allocated (${Number(targetDeptRecord?.sla_percent_allocation || 100)}%)`
+      : targetDeptData?.dueAt ||
+        (targetDeptRecord?.due_at
+          ? formatFullDateTime(targetDeptRecord.due_at)
+          : "No Target Set");
 
     const pauseLabel =
       grievance.status === "AWAITING_INFORMATION" ||
@@ -556,42 +627,68 @@ export async function GET(
             ? "Awaiting Citizen Confirmation"
             : "Paused";
 
+    const targetSlaState = targetDeptData?.slaState || "ON_TRACK";
+    const targetSlaStateLabel = targetDeptData?.slaStateLabel || "Within SLA";
+    const isBreached =
+      targetSlaState === "BREACHED" || targetSlaState === "COMPLETED_BREACHED";
+    const isApproaching = targetSlaState === "SLA_AT_RISK";
+
     const sla = {
-      consumptionPercent,
-      timeRemaining: timeRemainingStr,
+      consumptionPercent: targetDeptData?.consumptionPercent ?? 0,
+      timeRemaining: targetDeptData?.timeRemaining ?? "N/A",
       dueAt: dueAtLabel,
-      state: isBreached
-        ? "BREACHED"
-        : isPaused
-          ? "PAUSED"
-          : isSlaExtensionActive
-            ? isApproaching
-              ? "SLA_AT_RISK"
-              : "ON_TRACK"
-            : isApproaching || grievance.sla_status === "AT_RISK"
-              ? "SLA_AT_RISK"
-              : "ON_TRACK",
+      state: isPaused ? "PAUSED" : targetSlaState,
       stateLabel: isBreached
         ? "SLA Breached"
         : isPaused
           ? `SLA Paused (${pauseLabel})`
-          : isSlaExtensionActive
-            ? isApproaching
-              ? "Approaching Extended SLA"
-              : "Within Extended SLA"
-            : isApproaching || grievance.sla_status === "AT_RISK"
-              ? "SLA At Risk"
-              : "Within SLA",
-      slaPercentAllocation: myDeptRecord?.sla_percent_allocation
-        ? Number(myDeptRecord.sla_percent_allocation)
+          : isDeptCompleted
+            ? isBreached
+              ? "Completed Past SLA"
+              : "Findings Completed (Within SLA)"
+            : isSlaExtensionActive
+              ? isApproaching
+                ? "Approaching Extended SLA"
+                : "Within Extended SLA"
+              : targetSlaStateLabel,
+      label: isBreached
+        ? "SLA BREACHED"
+        : isPaused
+          ? `PAUSED (${pauseLabel})`
+          : isDeptCompleted
+            ? isBreached
+              ? "COMPLETED PAST SLA"
+              : "COMPLETED"
+            : isSlaExtensionActive
+              ? isApproaching
+                ? "APPROACHING EXTENDED SLA"
+                : "WITHIN EXTENDED SLA"
+              : targetSlaStateLabel.toUpperCase(),
+      color: isBreached
+        ? "text-rose-600 bg-rose-50 border-rose-200"
+        : isPaused
+          ? "text-amber-800 bg-amber-50 border-amber-200"
+          : isDeptCompleted
+            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+            : isApproaching || targetSlaState === "SLA_AT_RISK"
+              ? "text-amber-600 bg-amber-50 border-amber-200"
+              : "text-emerald-600 bg-emerald-50 border-emerald-200",
+      slaPercentAllocation: targetDeptRecord?.sla_percent_allocation
+        ? Number(targetDeptRecord.sla_percent_allocation)
         : 100,
       allocatedDurationMinutes: deptAllocatedMins,
+      targetDepartmentName:
+        targetDeptRecord?.departments?.department_name ||
+        primaryDept?.departments?.department_name ||
+        null,
     };
 
     // 3. Current Stage & Stepper (Department-Scoped)
-    const rawPrereqs = Array.isArray(myDeptRecord?.prerequisite_department_ids)
+    const rawPrereqs = Array.isArray(
+      targetDeptRecord?.prerequisite_department_ids,
+    )
       ? (
-          myDeptRecord.prerequisite_department_ids as (
+          targetDeptRecord.prerequisite_department_ids as (
             | number
             | string
             | bigint
@@ -639,7 +736,7 @@ export async function GET(
         ? "Resolution Submitted — Under Citizen Review"
         : "Resolution Submitted — Pending HOD Approval";
       currentStageNumber = 4;
-    } else if (myDeptRecord?.status === "COMPLETED") {
+    } else if (targetDeptRecord?.status === "COMPLETED") {
       currentStageKey = "COMPLETED";
       currentStageLabel = "Department Findings Submitted (Completed)";
       currentStageNumber = 3;
@@ -648,14 +745,14 @@ export async function GET(
       currentStageLabel = "Awaiting Complainant Response";
       currentStageNumber = 3;
     } else if (
-      myDeptRecord &&
-      (myDeptRecord.status === "PENDING_ASSIGNMENT" ||
-        (!hasAssignedOfficer && myDeptRecord.status !== "IN_PROGRESS"))
+      targetDeptRecord &&
+      (targetDeptRecord.status === "PENDING_ASSIGNMENT" ||
+        (!hasAssignedOfficer && targetDeptRecord.status !== "IN_PROGRESS"))
     ) {
       currentStageKey = "SUBMITTED";
       currentStageLabel = "Pending Staff Assignment";
       currentStageNumber = 1;
-    } else if (myDeptRecord && myDeptRecord.status === "ASSIGNED") {
+    } else if (targetDeptRecord && targetDeptRecord.status === "ASSIGNED") {
       currentStageKey = "ASSIGNED";
       const officerName = assignedUser
         ? `${assignedUser.first_name} ${assignedUser.last_name || ""}`.trim()
@@ -665,8 +762,8 @@ export async function GET(
         : `Assigned to ${officerName}`;
       currentStageNumber = 2;
     } else if (
-      myDeptRecord?.status === "IN_PROGRESS" ||
-      (!myDeptRecord &&
+      targetDeptRecord?.status === "IN_PROGRESS" ||
+      (!targetDeptRecord &&
         (st === "IN_PROGRESS" ||
           st === "INVESTIGATING" ||
           st === "ESCALATED" ||
@@ -1165,6 +1262,14 @@ export async function GET(
             ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
             : "Department Head"),
         isResolutionAuthority: isResAuth,
+        departmentId:
+          (iv.departmentId as string) ||
+          (iv.department_id as string) ||
+          undefined,
+        targetDepartment:
+          (iv.targetDepartment as string) ||
+          (iv.target_department as string) ||
+          undefined,
         resolutionAuthorityName:
           (iv.resolutionAuthorityName as string) ||
           (iv.intervenedBy as string) ||

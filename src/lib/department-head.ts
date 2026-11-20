@@ -104,7 +104,18 @@ export function formatSlaTimeLeft(
   createdAt?: Date | null,
   isPaused: boolean = false,
   pausedAt?: Date | null,
+  completedAt?: Date | null,
 ): string {
+  if (completedAt) {
+    if (
+      slaStatus === "BREACHED" ||
+      (dueAt && new Date(completedAt) > new Date(dueAt))
+    ) {
+      return "Completed Past SLA";
+    }
+    return "Completed Within SLA";
+  }
+
   let effectiveDue = dueAt;
   if (!effectiveDue && createdAt && priority) {
     const mins =

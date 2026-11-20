@@ -560,7 +560,12 @@ export function SlaGovernanceView({
                                 !item.isBlocked &&
                                 item.status !== "BLOCKED" &&
                                 item.myDepartmentStatus !== "BLOCKED" &&
-                                (isEscalated || item.slaStatus === "BREACHED")
+                                (isEscalated ||
+                                  item.slaStatus === "BREACHED" ||
+                                  item.slaStatus === "AT_RISK" ||
+                                  Boolean(item.escalationReason) ||
+                                  item.escalationStage ===
+                                    "GRIEVANCE_ESCALATED")
                                   ? [
                                       {
                                         label: "Intervene",
