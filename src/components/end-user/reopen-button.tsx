@@ -75,24 +75,10 @@ export function ReopenButton({
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    if (open && isLimitReached) {
-      toast.error(
-        limitReason ||
-          (isRework
-            ? "You have reached the maximum limit of rework attempts for this grievance."
-            : "You have reached the maximum limit of reopening attempts for this grievance."),
-      );
-    }
   };
 
   const handleReopen = async () => {
     if (isLimitReached) {
-      toast.error(
-        limitReason ||
-          (isRework
-            ? "You have reached the maximum limit of rework attempts for this grievance."
-            : "You have reached the maximum limit of reopening attempts for this grievance."),
-      );
       return;
     }
 
@@ -140,16 +126,6 @@ export function ReopenButton({
         render={
           <Button
             disabled={disabled}
-            onClick={() => {
-              if (isLimitReached) {
-                toast.error(
-                  limitReason ||
-                    (isRework
-                      ? "You have reached the maximum limit of rework attempts for this grievance."
-                      : "You have reached the maximum limit of reopening attempts for this grievance."),
-                );
-              }
-            }}
             className={className || defaultButtonClass}
           >
             <RefreshCcw className="mr-2 h-4 w-4" />
