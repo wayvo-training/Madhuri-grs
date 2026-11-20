@@ -214,8 +214,11 @@ export function NotificationDrawer({
       );
     }
     if (
+      type.includes("ESCALAT") ||
       type.includes("RISK") ||
       type === "SLA_AT_RISK" ||
+      t.includes("escalated") ||
+      t.includes("escalat") ||
       t.includes("at risk") ||
       t.includes("risk")
     ) {

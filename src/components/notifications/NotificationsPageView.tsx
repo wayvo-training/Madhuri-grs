@@ -82,6 +82,8 @@ function getSemanticIcon(type: string, title = "") {
   if (
     type === "SLA_BREACH" ||
     type === "SLA_BREACHED" ||
+    type.includes("BREACH") ||
+    t.includes("breached") ||
     t.includes("breach")
   ) {
     return {
@@ -93,22 +95,28 @@ function getSemanticIcon(type: string, title = "") {
     };
   }
   if (
-    type === "SLA_URGENT" ||
-    type === "SLA_WARNING" ||
+    type === "SLA_ESCALATED" ||
+    type === "GRIEVANCE_ESCALATED" ||
+    type.includes("ESCALAT") ||
+    type.includes("RISK") ||
     type === "SLA_AT_RISK" ||
-    t.includes("urgent") ||
+    t.includes("escalated") ||
+    t.includes("escalat") ||
     t.includes("at risk")
   ) {
     return {
       icon: AlertTriangle,
-      iconColor: "text-amber-600 dark:text-amber-400",
+      iconColor: "text-orange-600 dark:text-orange-400",
       bgColor:
-        "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60",
-      label: "SLA Alert",
+        "bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-900/60",
+      label: "SLA Escalation",
     };
   }
   if (
+    type === "SLA_WARNING" ||
     type === "SLA_HALF_TIME" ||
+    type.includes("WARN") ||
+    t.includes("warning") ||
     t.includes("reminder") ||
     t.includes("nudge")
   ) {
@@ -116,8 +124,8 @@ function getSemanticIcon(type: string, title = "") {
       icon: Clock,
       iconColor: "text-amber-600 dark:text-amber-400",
       bgColor:
-        "bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-900/50",
-      label: "Reminder",
+        "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60",
+      label: "SLA Warning",
     };
   }
   if (

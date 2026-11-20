@@ -1118,6 +1118,17 @@ export async function activateNextSequentialDepartments(
             sla_status: "ON_TRACK",
           },
         });
+
+        await client.sla_tracking.updateMany({
+          where: {
+            grievance_id: gId,
+            completed_at: null,
+          },
+          data: {
+            due_at: newDueAt,
+            status: "ON_TRACK",
+          },
+        });
       }
 
       activatedDeptIds.push(blocked.department_id);

@@ -96,15 +96,12 @@ export class NotificationService {
     thresholds: {
       warning?: number;
       atRisk?: number;
-      critical?: number;
       breach?: number;
     } = {},
   ) {
     const warning =
       thresholds.warning ?? DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT;
     const atRisk = thresholds.atRisk ?? DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT;
-    const critical =
-      thresholds.critical ?? DEFAULT_SLA_THRESHOLDS.CRITICAL_PERCENT;
     const breach = thresholds.breach ?? DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT;
 
     if (slaPercentage >= warning && slaPercentage < atRisk) {
@@ -112,33 +109,63 @@ export class NotificationService {
         userId: staffId,
         grievanceId,
         type: "SLA_HALF_TIME",
-        title: `SLA Reminder: ${warning}%`,
-        message: `Grievance #${grievanceId} has reached ${warning}% of its target resolution time.`,
+        title: `SLA Warning: ${warning}% Department SLA Consumed`,
+        message: `Grievance #${grievanceId} has consumed ${warning}% of its allocated SLA. Please review the grievance progress and ensure timely completion within the remaining SLA duration.`,
       });
-    } else if (slaPercentage >= atRisk && slaPercentage < critical) {
+    } else if (slaPercentage >= atRisk && slaPercentage < breach) {
+      // 75% Escalation: Notify Assigned Staff and Responsible Department Head
       await NotificationService.send({
-        userId: departmentHeadId,
+        userId: staffId,
         grievanceId,
         type: "SLA_AT_RISK",
-        title: `SLA At Risk: ${atRisk}%`,
-        message: `Grievance #${grievanceId} has reached ${atRisk}% of its SLA.`,
+        title: `SLA Escalated: ${atRisk}% Department SLA Consumed`,
+        message: `Grievance #${grievanceId} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
       });
-    } else if (slaPercentage >= critical && slaPercentage < breach) {
-      await NotificationService.send({
-        userId: departmentHeadId,
-        grievanceId,
-        type: "SLA_URGENT",
-        title: `SLA Urgent: ${critical}%`,
-        message: `Grievance #${grievanceId} has reached ${critical}% of its SLA and requires immediate attention.`,
-      });
+      if (departmentHeadId !== staffId) {
+        await NotificationService.send({
+          userId: departmentHeadId,
+          grievanceId,
+          type: "SLA_AT_RISK",
+          title: `SLA Escalated: ${atRisk}% Department SLA Consumed`,
+          message: `Grievance #${grievanceId} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
+        });
+      }
     } else if (slaPercentage >= breach) {
+      // 100% Breach: Notify Admin, Responsible Department Head, and Assigned Staff
       await NotificationService.send({
         userId: departmentHeadId,
         grievanceId,
         type: "SLA_BREACHED",
-        title: "SLA Breached",
-        message: `Grievance #${grievanceId} has reached or exceeded ${breach}% and breached its SLA.`,
+        title: "SLA Breached: 100% Department SLA Consumed",
+        message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
       });
+
+      if (staffId && staffId !== departmentHeadId) {
+        await NotificationService.send({
+          userId: staffId,
+          grievanceId,
+          type: "SLA_BREACHED",
+          title: "SLA Breached: 100% Department SLA Consumed",
+          message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
+        });
+      }
+
+      // Default breach governance: notify all active system administrators
+      const admins = await prisma.users.findMany({
+        where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
+        select: { user_id: true },
+      });
+      for (const a of admins) {
+        if (a.user_id !== departmentHeadId && a.user_id !== staffId) {
+          await NotificationService.send({
+            userId: a.user_id,
+            grievanceId,
+            type: "SLA_BREACHED",
+            title: "SLA Breached: 100% Department SLA Consumed",
+            message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
+          });
+        }
+      }
     }
   }
 

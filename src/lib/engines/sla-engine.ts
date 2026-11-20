@@ -19,8 +19,6 @@ export interface SlaEvaluationResult {
 }
 
 import {
-  calculateMaxCumulativeExtensionMinutes,
-  calculateMaxSingleExtensionMinutes,
   calculateReopenedSlaMinutes,
   calculateReworkSlaMinutes,
   DEFAULT_REOPENED_SLA_PERCENT,
@@ -28,7 +26,6 @@ import {
   DEFAULT_SLA_DURATIONS_MINUTES,
   DEFAULT_SLA_THRESHOLDS,
   MAX_APPROVED_EXTENSIONS_LIFECYCLE,
-  MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION,
 } from "@/lib/constants/sla";
 
 /**
@@ -112,11 +109,13 @@ export async function evaluateGrievanceSla(
         select: {
           user_id: true,
           notification_type: true,
+          created_at: true,
         },
       },
       sla_tracking: {
         include: {
           sla_policies: true,
+          sla_pause_logs: true,
           sla_extensions: {
             where: { status: "APPROVED" },
           },
@@ -192,6 +191,34 @@ export async function evaluateGrievanceSla(
     };
   }
 
+  // Skip milestone evaluations and notifications while SLA clock is paused or awaiting approval
+  const pausedStatuses = [
+    "AWAITING_INFORMATION",
+    "WAITING_ON_USER",
+    "WAITING_ON_EMPLOYEE",
+    "RESOLUTION_PENDING_APPROVAL",
+    "UNDER_REVIEW",
+  ];
+  const activeTrackingEarly = grievance.sla_tracking?.[0];
+  if (
+    pausedStatuses.includes(grievance.status) ||
+    activeTrackingEarly?.paused_at
+  ) {
+    return {
+      grievanceId: grievance.grievance_id.toString(),
+      grievanceNumber: grievance.grievance_number,
+      consumptionPercent: 0,
+      threshold: "BELOW_WARNING",
+      slaStatus:
+        (grievance.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
+        "ON_TRACK",
+      status: grievance.status,
+      notificationsSent: [],
+      escalated: false,
+      message: "Grievance is paused; SLA monitoring skipped.",
+    };
+  }
+
   const activeTracking = grievance.sla_tracking?.[0];
   const accPaused = activeTracking?.accumulated_paused_minutes || 0;
   const isPaused =
@@ -221,23 +248,46 @@ export async function evaluateGrievanceSla(
     grievance.sla_tracking?.[0]?.sla_policies ||
     null;
 
-  const effectiveStart = activeTracking?.started_at || grievance.created_at;
+  const rawStart = activeTracking?.started_at || grievance.created_at;
+  const effectiveStart =
+    rawStart instanceof Date
+      ? rawStart
+      : rawStart
+        ? new Date(rawStart)
+        : new Date();
   let effectiveDue = activeTracking?.due_at || grievance.due_at;
+
+  const isReworkCycle =
+    activeTracking?.cycle_type === "REWORK" || grievance.status === "REWORK";
+
+  const approvedExtensions = (activeTracking?.sla_extensions || []).filter(
+    (e) => e.status === "APPROVED",
+  );
+  const latestApprovedExt = approvedExtensions.sort(
+    (a, b) =>
+      new Date(b.reviewed_at || 0).getTime() -
+      new Date(a.reviewed_at || 0).getTime(),
+  )[0];
+  const extensionApprovedAt = latestApprovedExt?.reviewed_at
+    ? new Date(latestApprovedExt.reviewed_at)
+    : null;
 
   // If dynamic active policy exists and no manual extensions were applied, dynamically compute due based on configured duration
   if (
     activeSlaPolicy?.target_duration_minutes &&
-    (!activeTracking?.sla_extensions ||
-      activeTracking.sla_extensions.length === 0)
+    approvedExtensions.length === 0
   ) {
+    const effectivePolicyMinutes = isReworkCycle
+      ? Math.max(1, Math.round(activeSlaPolicy.target_duration_minutes * 0.5))
+      : activeSlaPolicy.target_duration_minutes;
+
     const policyDue = new Date(
-      effectiveStart.getTime() +
-        activeSlaPolicy.target_duration_minutes * 60 * 1000,
+      effectiveStart.getTime() + effectivePolicyMinutes * 60 * 1000,
     );
     effectiveDue = policyDue;
   }
 
-  const { consumptionPercent } = calculateSlaConsumption(
+  const slaConsumption = calculateSlaConsumption(
     effectiveStart,
     effectiveDue,
     grievance.priority,
@@ -245,15 +295,31 @@ export async function evaluateGrievanceSla(
     accPaused,
     isPaused,
   );
+  const { consumptionPercent } = slaConsumption;
 
-  const existingNotifications = grievance.notifications;
+  const grievanceNotifBaseTime =
+    extensionApprovedAt && extensionApprovedAt > effectiveStart
+      ? extensionApprovedAt
+      : effectiveStart;
+
+  const cycleNotifications = (grievance.notifications || []).filter(
+    (n) => !n.created_at || new Date(n.created_at) >= effectiveStart,
+  );
+  const existingNotifications: Array<{
+    user_id: bigint;
+    notification_type: string;
+    created_at?: Date | null;
+  }> = [...cycleNotifications];
   const _existingNotificationTypes = new Set(
     existingNotifications.map((n) => n.notification_type),
   );
 
   const hasSentToUser = (userId: bigint, type: string) =>
     existingNotifications.some(
-      (n) => n.user_id === userId && n.notification_type === type,
+      (n) =>
+        n.user_id === userId &&
+        n.notification_type === type &&
+        (!n.created_at || new Date(n.created_at) >= grievanceNotifBaseTime),
     );
 
   // Staff assigned to departments that are NOT blocked
@@ -274,6 +340,9 @@ export async function evaluateGrievanceSla(
     (r) => r.departments?.users || [],
   );
 
+  const primaryDeptName =
+    primaryRecord?.departments?.department_name || "Department";
+
   const notificationsSent: string[] = [];
   let updatedSlaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" = "ON_TRACK";
   let updatedStatus = grievance.status;
@@ -289,11 +358,13 @@ export async function evaluateGrievanceSla(
   );
 
   const atRiskThreshold = Number(
-    tc.at_risk_threshold_percent || DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
+    tc.at_risk_threshold_percent ||
+      activeSlaPolicy?.escalation_threshold_percent ||
+      DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
   );
 
   const breachThreshold = Number(
-    tc.escalation_threshold_percent ||
+    tc.breach_threshold_percent ||
       tc.breach_at_percent ||
       DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT,
   );
@@ -308,12 +379,26 @@ export async function evaluateGrievanceSla(
   const warningDesignations = recipientsConfig.warning || ["ASSIGNED_STAFF"];
   const atRiskDesignations = recipientsConfig.at_risk || [
     "ASSIGNED_STAFF",
-    "ALL_DEPT_HEADS",
+    "PRIMARY_DEPT_HEAD",
   ];
-  const escalationDesignations = recipientsConfig.escalation || [
+  const defaultBreachDesignations = [
+    "ASSIGNED_STAFF",
+    "RESPONSIBLE_DEPT_HEAD",
     "PRIMARY_DEPT_HEAD",
     "ADMIN",
   ];
+  const rawEscalationDesignations =
+    recipientsConfig.escalation || defaultBreachDesignations;
+  // By default, after breach System Admin, Department Head and Assigned Staff are notified
+  const escalationDesignations = Array.from(
+    new Set([
+      ...rawEscalationDesignations,
+      "ADMIN",
+      "PRIMARY_DEPT_HEAD",
+      "RESPONSIBLE_DEPT_HEAD",
+      "ASSIGNED_STAFF",
+    ]),
+  );
 
   type RecipientUser = {
     user_id: bigint;
@@ -324,18 +409,57 @@ export async function evaluateGrievanceSla(
 
   const resolveDesignatedUsers = async (
     designations: string[],
+    deptContext?: {
+      deptRec: (typeof involvedDeptRecords)[number];
+      deptAssignedStaff?: RecipientUser | null;
+      deptHeads: RecipientUser[];
+    },
   ): Promise<RecipientUser[]> => {
     const userMap = new Map<string, RecipientUser>();
     for (const d of designations) {
       if (d === "ASSIGNED_STAFF") {
-        for (const s of assignedStaffList) {
-          userMap.set(s.user_id.toString(), s);
+        if (deptContext) {
+          if (deptContext.deptAssignedStaff) {
+            userMap.set(
+              deptContext.deptAssignedStaff.user_id.toString(),
+              deptContext.deptAssignedStaff,
+            );
+          } else {
+            // Department has no assigned staff yet (unassigned):
+            // Fallback to Department Head so critical SLA alerts are not dropped
+            for (const h of deptContext.deptHeads) {
+              userMap.set(h.user_id.toString(), h);
+            }
+          }
+        } else {
+          if (assignedStaffList.length > 0) {
+            for (const s of assignedStaffList) {
+              userMap.set(s.user_id.toString(), s);
+            }
+          } else if (primaryDeptHead) {
+            // Overall unassigned fallback to primary department head
+            userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
+          }
         }
-      } else if (d === "PRIMARY_DEPT_HEAD") {
+      } else if (
+        d === "PRIMARY_DEPT_HEAD" ||
+        d === "DEPT_HEAD" ||
+        d === "RESPONSIBLE_DEPT_HEAD"
+      ) {
+        if (deptContext?.deptHeads && deptContext.deptHeads.length > 0) {
+          for (const h of deptContext.deptHeads) {
+            userMap.set(h.user_id.toString(), h);
+          }
+        }
         if (primaryDeptHead) {
           userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
         }
       } else if (d === "SUPPORTING_DEPT_HEAD") {
+        if (deptContext && deptContext.deptRec.involvement_type !== "PRIMARY") {
+          for (const h of deptContext.deptHeads) {
+            userMap.set(h.user_id.toString(), h);
+          }
+        }
         for (const s of supportingDeptHeads) {
           userMap.set(s.user_id.toString(), s);
         }
@@ -343,9 +467,14 @@ export async function evaluateGrievanceSla(
         for (const h of unblockedAllDeptHeads) {
           userMap.set(h.user_id.toString(), h);
         }
-      } else if (d === "ADMIN") {
+      } else if (d === "ADMIN" || d === "GRIEVANCE_ADMIN") {
         const admins = await prisma.users.findMany({
-          where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
+          where: {
+            roles: {
+              role_name: { in: ["ADMIN", "GRIEVANCE_ADMIN", "SUPER_ADMIN"] },
+            },
+            status: { in: ["ACTIVE", "Active"] },
+          },
           select: {
             user_id: true,
             first_name: true,
@@ -370,6 +499,7 @@ export async function evaluateGrievanceSla(
     if (
       deptRec.status === "BLOCKED" ||
       deptRec.status === "COMPLETED" ||
+      deptRec.completed_at != null ||
       deptRec.status === "RESOLVED" ||
       deptRec.status === "REMOVED"
     ) {
@@ -393,22 +523,53 @@ export async function evaluateGrievanceSla(
 
     const deptAllocatedMinutes =
       deptRec.allocated_duration_minutes &&
-      deptRec.allocated_duration_minutes > 0
+      (!isReworkCycle ||
+        deptRec.allocated_duration_minutes <= totalGrievanceMinutes)
         ? deptRec.allocated_duration_minutes
         : Math.max(1, Math.round((totalGrievanceMinutes * percentAlloc) / 100));
-
-    const activatedAt =
-      deptRec.activated_at || deptRec.assigned_at || effectiveStart;
 
     const isSequentialDept =
       deptRec.dependency_type === "SEQUENTIAL" ||
       (typeof deptRec.execution_order === "number" &&
         deptRec.execution_order > 1);
 
+    // If sequential department has not been activated yet, do not evaluate or trigger notifications
+    if (isSequentialDept && !deptRec.activated_at) {
+      continue;
+    }
+
+    const rawActivated =
+      deptRec.activated_at || deptRec.assigned_at || effectiveStart;
+    const activatedAt =
+      rawActivated instanceof Date
+        ? rawActivated
+        : rawActivated
+          ? new Date(rawActivated)
+          : effectiveStart;
+
     const deptDueAt =
       deptRec.due_at && (!isSequentialDept || deptRec.due_at > activatedAt)
         ? deptRec.due_at
         : new Date(activatedAt.getTime() + deptAllocatedMinutes * 60 * 1000);
+
+    let deptPauseMinutes = 0;
+    if (
+      activeTracking?.sla_pause_logs &&
+      activeTracking.sla_pause_logs.length > 0
+    ) {
+      deptPauseMinutes = activeTracking.sla_pause_logs
+        .filter(
+          (l) =>
+            (l.paused_at && new Date(l.paused_at) >= activatedAt) ||
+            (l.resumed_at && new Date(l.resumed_at) > activatedAt),
+        )
+        .reduce((sum, l) => sum + (l.duration_minutes || 0) * 60 * 1000, 0);
+    } else if (
+      involvedDeptRecords.length <= 1 ||
+      deptRec.involvement_type === "PRIMARY"
+    ) {
+      deptPauseMinutes = accPaused;
+    }
 
     const deptSlaResult = calculateDepartmentSlaConsumption(
       activatedAt,
@@ -416,8 +577,11 @@ export async function evaluateGrievanceSla(
       deptAllocatedMinutes,
       deptRec.completed_at,
       evaluationDate,
-      accPaused,
+      deptPauseMinutes,
       isPaused,
+      warningThreshold,
+      atRiskThreshold,
+      breachThreshold,
     );
 
     const deptConsumptionPercent = deptSlaResult.consumptionPercent;
@@ -430,61 +594,96 @@ export async function evaluateGrievanceSla(
       )?.users_assignments_staff_idTousers;
     const deptHeads = deptRec.departments?.users || [];
 
-    // 1. Department Warning Threshold (uses dynamic warningThreshold)
+    const deptContext = {
+      deptRec,
+      deptAssignedStaff,
+      deptHeads,
+    };
+
+    const deptWarnMinutes = Math.round(
+      (deptAllocatedMinutes * warningThreshold) / 100,
+    );
+    const deptRiskMinutes = Math.round(
+      (deptAllocatedMinutes * atRiskThreshold) / 100,
+    );
+    const deptBreachMinutes = deptAllocatedMinutes;
+
+    const notifBaseTime =
+      extensionApprovedAt && extensionApprovedAt > activatedAt
+        ? extensionApprovedAt
+        : activatedAt;
+
+    const hasDeptSentToUser = (userId: bigint, type: string) =>
+      existingNotifications.some(
+        (n) =>
+          n.user_id === userId &&
+          n.notification_type === type &&
+          (!n.created_at || new Date(n.created_at) >= notifBaseTime),
+      );
+
+    // 1. Department Warning Threshold (uses dynamic warningThreshold & designated recipients)
     if (
       deptConsumptionPercent >= warningThreshold &&
       deptConsumptionPercent < atRiskThreshold
     ) {
-      if (deptAssignedStaff) {
-        const notifType = `DEPT_SLA_${warningThreshold}_${deptRec.department_id}`;
-        if (
-          !hasSentToUser(deptAssignedStaff.user_id, notifType) &&
-          !hasSentToUser(
-            deptAssignedStaff.user_id,
-            `DEPT_SLA_50_${deptRec.department_id}`,
-          )
-        ) {
-          await prisma.$transaction(async (tx) => {
+      const targetUsers = await resolveDesignatedUsers(
+        warningDesignations,
+        deptContext,
+      );
+      const notifType = `DEPT_SLA_${warningThreshold}_${deptRec.department_id}`;
+      const unnotifiedUsers = targetUsers.filter(
+        (u) =>
+          !hasDeptSentToUser(u.user_id, notifType) &&
+          !hasDeptSentToUser(u.user_id, `DEPT_SLA_50_${deptRec.department_id}`),
+      );
+
+      if (unnotifiedUsers.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          for (const u of unnotifiedUsers) {
             await tx.notifications.create({
               data: {
-                user_id: deptAssignedStaff.user_id,
+                user_id: u.user_id,
                 grievance_id: grievanceId,
                 notification_type: notifType,
                 channel: "IN_APP",
-                title: `Priority Warning: ${warningThreshold}% Department SLA Consumed (${deptName})`,
-                message: `Grievance ${grievance.grievance_number} has reached ${warningThreshold}% of its allocated SLA time in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Please prioritize investigation and findings.`,
+                title: `SLA Warning: ${warningThreshold}% Department SLA Consumed (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has consumed ${warningThreshold}% of its allocated SLA in ${deptName} (${deptWarnMinutes} minutes consumed out of ${deptAllocatedMinutes} minutes allocated).\n\nPlease review the grievance progress and ensure timely completion within the remaining SLA duration.`,
                 status: "PENDING",
                 created_at: evaluationDate,
               },
             });
-            await tx.audit_logs.create({
-              data: {
-                grievance_id: grievanceId,
-                user_id: null,
-                action: "DEPARTMENT_SLA_WARNING",
-                entity_type: "grievance_department",
-                entity_id: deptRec.grievance_department_id,
-                new_value: {
-                  department: deptName,
-                  consumptionPercent: deptConsumptionPercent,
-                  allocatedPercent: percentAlloc,
-                  threshold: `${warningThreshold}%`,
-                  notifiedStaff:
-                    `${deptAssignedStaff.first_name} ${deptAssignedStaff.last_name || ""}`.trim(),
-                },
+          }
+          await tx.audit_logs.create({
+            data: {
+              grievance_id: grievanceId,
+              user_id: null,
+              action: "DEPARTMENT_SLA_WARNING",
+              entity_type: "grievance_department",
+              entity_id: deptRec.grievance_department_id,
+              new_value: {
+                department: deptName,
+                consumptionPercent: deptConsumptionPercent,
+                allocatedPercent: percentAlloc,
+                threshold: `${warningThreshold}%`,
+                notifiedRecipients: unnotifiedUsers
+                  .map((u) => `${u.first_name} ${u.last_name || ""}`.trim())
+                  .join(", "),
               },
-            });
+            },
           });
+        });
+        for (const u of unnotifiedUsers) {
           existingNotifications.push({
-            user_id: deptAssignedStaff.user_id,
+            user_id: u.user_id,
             notification_type: notifType,
+            created_at: evaluationDate,
           });
-          notificationsSent.push(notifType);
         }
+        notificationsSent.push(notifType);
       }
     }
 
-    // 2. Department Escalation / At Risk Threshold (uses dynamic atRiskThreshold)
+    // 2. Department Escalation / At Risk Threshold (uses dynamic atRiskThreshold & designated recipients)
     if (
       deptConsumptionPercent >= atRiskThreshold &&
       deptConsumptionPercent < breachThreshold
@@ -497,13 +696,14 @@ export async function evaluateGrievanceSla(
       }
 
       const notifType = `DEPT_SLA_${atRiskThreshold}_${deptRec.department_id}`;
-      const recipientsToNotify = [
-        ...(deptAssignedStaff ? [deptAssignedStaff] : []),
-        ...deptHeads,
-      ].filter(
+      const targetUsers = await resolveDesignatedUsers(
+        atRiskDesignations,
+        deptContext,
+      );
+      const recipientsToNotify = targetUsers.filter(
         (u) =>
-          !hasSentToUser(u.user_id, notifType) &&
-          !hasSentToUser(u.user_id, `DEPT_SLA_75_${deptRec.department_id}`),
+          !hasDeptSentToUser(u.user_id, notifType) &&
+          !hasDeptSentToUser(u.user_id, `DEPT_SLA_75_${deptRec.department_id}`),
       );
 
       if (recipientsToNotify.length > 0) {
@@ -515,13 +715,34 @@ export async function evaluateGrievanceSla(
                 grievance_id: grievanceId,
                 notification_type: notifType,
                 channel: "IN_APP",
-                title: `SLA At Risk: ${atRiskThreshold}% Department SLA Consumed (${deptName})`,
-                message: `Grievance ${grievance.grievance_number} has reached ${atRiskThreshold}% of its allocated SLA in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Expedite inquiry to avoid department SLA breach.`,
+                title: `SLA Escalated: ${atRiskThreshold}% Department SLA Consumed (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has reached ${atRiskThreshold}% of its allocated SLA in ${deptName} (${deptRiskMinutes} minutes consumed out of ${deptAllocatedMinutes} minutes allocated).\n\nThe grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
                 status: "PENDING",
                 created_at: evaluationDate,
               },
             });
           }
+
+          // Record approved escalation event for responsible Department Head
+          const existingEscalation = await tx.escalations.findFirst({
+            where: { grievance_id: grievanceId, status: "OPEN" },
+          });
+          const targetDeptHead = deptContext.deptHeads[0] || primaryDeptHead;
+          if (!existingEscalation && targetDeptHead) {
+            await tx.escalations.create({
+              data: {
+                grievance_id: grievanceId,
+                escalated_to: targetDeptHead.user_id,
+                escalation_level: 1,
+                reason: `SLA Escalation Threshold Reached: ${deptConsumptionPercent}% of allocated SLA consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Department Head.`,
+                status: "OPEN",
+                sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+                created_at: evaluationDate,
+              },
+            });
+            didEscalate = true;
+          }
+
           await tx.audit_logs.create({
             data: {
               grievance_id: grievanceId,
@@ -535,6 +756,9 @@ export async function evaluateGrievanceSla(
                 allocatedPercent: percentAlloc,
                 threshold: `${atRiskThreshold}%`,
                 slaStatus: "AT_RISK",
+                notifiedRecipients: recipientsToNotify
+                  .map((u) => `${u.first_name} ${u.last_name || ""}`.trim())
+                  .join(", "),
               },
             },
           });
@@ -543,13 +767,14 @@ export async function evaluateGrievanceSla(
           existingNotifications.push({
             user_id: u.user_id,
             notification_type: notifType,
+            created_at: evaluationDate,
           });
         }
         notificationsSent.push(notifType);
       }
     }
 
-    // 3. Department Breach Threshold (uses dynamic breachThreshold or past due)
+    // 3. Department Breach Threshold (uses dynamic breachThreshold or past due & designated recipients)
     if (
       deptConsumptionPercent >= breachThreshold ||
       (deptRec.due_at && evaluationDate > deptRec.due_at)
@@ -560,12 +785,27 @@ export async function evaluateGrievanceSla(
           data: { sla_status: "BREACHED" },
         });
       }
+      if (activeTracking && activeTracking.status !== "BREACHED") {
+        await prisma.sla_tracking.update({
+          where: { sla_tracking_id: activeTracking.sla_tracking_id },
+          data: { status: "BREACHED" },
+        });
+      }
+      if (grievance.sla_status !== "BREACHED") {
+        await prisma.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { sla_status: "BREACHED" },
+        });
+      }
 
       const notifType = `DEPT_SLA_BREACH_${deptRec.department_id}`;
-      const recipientsToNotify = [
-        ...(deptAssignedStaff ? [deptAssignedStaff] : []),
-        ...deptHeads,
-      ].filter((u) => !hasSentToUser(u.user_id, notifType));
+      const targetUsers = await resolveDesignatedUsers(
+        escalationDesignations,
+        deptContext,
+      );
+      const recipientsToNotify = targetUsers.filter(
+        (u) => !hasDeptSentToUser(u.user_id, notifType),
+      );
 
       if (recipientsToNotify.length > 0) {
         await prisma.$transaction(async (tx) => {
@@ -576,23 +816,128 @@ export async function evaluateGrievanceSla(
                 grievance_id: grievanceId,
                 notification_type: notifType,
                 channel: "IN_APP",
-                title: `CRITICAL: Department SLA Breached (${deptName})`,
-                message: `Grievance ${grievance.grievance_number} has consumed ${breachThreshold}% of its allocated SLA in ${deptName} (${deptConsumptionPercent}% consumed of ${percentAlloc}% allocated budget). Immediate intervention required.`,
+                title: `SLA Breached: 100% Department SLA Consumed (${deptName})`,
+                message: `Grievance ${grievance.grievance_number} has reached 100% of its allocated SLA limit in ${deptName} (${deptBreachMinutes} minutes consumed out of ${deptAllocatedMinutes} minutes allocated).\n\nThe department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
                 status: "PENDING",
                 created_at: evaluationDate,
               },
             });
           }
+          await tx.audit_logs.create({
+            data: {
+              grievance_id: grievanceId,
+              user_id: null,
+              action: "DEPARTMENT_SLA_BREACHED",
+              entity_type: "grievance_department",
+              entity_id: deptRec.grievance_department_id,
+              new_value: {
+                department: deptName,
+                consumptionPercent: deptConsumptionPercent,
+                allocatedPercent: percentAlloc,
+                threshold: `${breachThreshold}%`,
+                slaStatus: "BREACHED",
+                notifiedRecipients: recipientsToNotify
+                  .map((u) => `${u.first_name} ${u.last_name || ""}`.trim())
+                  .join(", "),
+              },
+            },
+          });
         });
         for (const u of recipientsToNotify) {
           existingNotifications.push({
             user_id: u.user_id,
             notification_type: notifType,
+            created_at: evaluationDate,
           });
         }
         notificationsSent.push(notifType);
       }
     }
+  }
+
+  // =========================================================================
+  // MULTI-DEPARTMENT & BREACHED SHORT-CIRCUITING
+  // For multi-department cases, milestones are evaluated strictly per department above.
+  // If any department is breached, the grievance SLA is marked BREACHED and
+  // must not be overwritten by grievance-level percentage warnings.
+  // =========================================================================
+  const anyDeptBreached = involvedDeptRecords.some(
+    (d) =>
+      d.status !== "COMPLETED" &&
+      d.status !== "RESOLVED" &&
+      !d.completed_at &&
+      (d.sla_status === "BREACHED" || (d.due_at && evaluationDate > d.due_at)),
+  );
+
+  if (anyDeptBreached) {
+    if (grievance.sla_status !== "BREACHED") {
+      await prisma.grievances.update({
+        where: { grievance_id: grievanceId },
+        data: { sla_status: "BREACHED" },
+      });
+    }
+    if (activeTracking && activeTracking.status !== "BREACHED") {
+      await prisma.sla_tracking.update({
+        where: { sla_tracking_id: activeTracking.sla_tracking_id },
+        data: { status: "BREACHED" },
+      });
+    }
+
+    return {
+      grievanceId: grievance.grievance_id.toString(),
+      grievanceNumber: grievance.grievance_number,
+      consumptionPercent,
+      threshold: "AT_BREACH",
+      slaStatus: "BREACHED",
+      status: grievance.status,
+      notificationsSent,
+      escalated: true,
+      message: "Department SLA limit breached. Grievance marked BREACHED.",
+    };
+  }
+
+  const isMultiDept = involvedDeptRecords.length > 1;
+  if (isMultiDept) {
+    const activeDept = involvedDeptRecords.find(
+      (d) => d.status === "IN_PROGRESS" || d.status === "ASSIGNED",
+    );
+    const activeStatus = activeDept?.sla_status || "ON_TRACK";
+    const mappedSlaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" =
+      activeStatus === "BREACHED"
+        ? "BREACHED"
+        : activeStatus === "AT_RISK"
+          ? "AT_RISK"
+          : "ON_TRACK";
+    const mappedThreshold:
+      | "BELOW_WARNING"
+      | "AT_WARNING"
+      | "AT_RISK"
+      | "AT_CRITICAL"
+      | "AT_BREACH" =
+      mappedSlaStatus === "BREACHED"
+        ? "AT_BREACH"
+        : mappedSlaStatus === "AT_RISK"
+          ? "AT_RISK"
+          : "BELOW_WARNING";
+
+    if (grievance.sla_status !== mappedSlaStatus) {
+      await prisma.grievances.update({
+        where: { grievance_id: grievanceId },
+        data: { sla_status: mappedSlaStatus },
+      });
+    }
+
+    return {
+      grievanceId: grievance.grievance_id.toString(),
+      grievanceNumber: grievance.grievance_number,
+      consumptionPercent,
+      threshold: mappedThreshold,
+      slaStatus: mappedSlaStatus,
+      status: grievance.status,
+      notificationsSent,
+      escalated: mappedSlaStatus === "AT_RISK",
+      message: `Multi-department SLA evaluated per-department. Current active department: ${activeDept?.departments?.department_name || "Department"} (${mappedSlaStatus}).`,
+    };
   }
 
   // =========================================================================
@@ -639,6 +984,9 @@ export async function evaluateGrievanceSla(
     );
 
     if (unnotifiedUsers.length > 0) {
+      const singleWarnMinutes = Math.round(
+        (slaConsumption.totalDurationMinutes * warningThreshold) / 100,
+      );
       await prisma.$transaction(async (tx) => {
         for (const u of unnotifiedUsers) {
           await tx.notifications.create({
@@ -647,8 +995,8 @@ export async function evaluateGrievanceSla(
               grievance_id: grievanceId,
               notification_type: `SLA_WARN_${warningThreshold}`,
               channel: "IN_APP",
-              title: `Priority Warning: ${warningThreshold}% SLA Consumed (${grievance.grievance_number})`,
-              message: `Grievance ${grievance.grievance_number} has reached ${warningThreshold}% of its resolution SLA (${consumptionPercent}% consumed). Please prioritize investigation and resolution.`,
+              title: `SLA Warning: ${warningThreshold}% Department SLA Consumed (${primaryDeptName})`,
+              message: `Grievance ${grievance.grievance_number} has consumed ${warningThreshold}% of its allocated SLA in ${primaryDeptName} (${singleWarnMinutes} minutes consumed out of ${slaConsumption.totalDurationMinutes} minutes allocated).\n\nPlease review the grievance progress and ensure timely completion within the remaining SLA duration.`,
               status: "PENDING",
               created_at: evaluationDate,
             },
@@ -726,10 +1074,12 @@ export async function evaluateGrievanceSla(
         (u) =>
           !hasSentToUser(u.user_id, `SLA_RISK_${atRiskThreshold}`) &&
           !hasSentToUser(u.user_id, "SLA_75_HOD_WARNING") &&
-          !hasSentToUser(u.user_id, "SLA_AT_RISK") &&
-          !hasSentToUser(u.user_id, "SLA_WARNING"),
+          !hasSentToUser(u.user_id, "SLA_AT_RISK"),
       );
 
+      const singleRiskMinutes = Math.round(
+        (slaConsumption.totalDurationMinutes * atRiskThreshold) / 100,
+      );
       for (const u of unnotifiedUsers) {
         await tx.notifications.create({
           data: {
@@ -737,12 +1087,46 @@ export async function evaluateGrievanceSla(
             grievance_id: grievanceId,
             notification_type: `SLA_RISK_${atRiskThreshold}`,
             channel: "IN_APP",
-            title: `SLA At Risk: ${atRiskThreshold}% Consumed (${grievance.grievance_number})`,
-            message: `Grievance ${grievance.grievance_number} has reached ${atRiskThreshold}% of its resolution SLA (${consumptionPercent}% consumed). Review required: expedite investigation and resolution before breach.`,
+            title: `SLA Escalated: ${atRiskThreshold}% Department SLA Consumed (${primaryDeptName})`,
+            message: `Grievance ${grievance.grievance_number} has reached ${atRiskThreshold}% of its allocated SLA in ${primaryDeptName} (${singleRiskMinutes} minutes consumed out of ${slaConsumption.totalDurationMinutes} minutes allocated).\n\nThe grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
             status: "PENDING",
             created_at: evaluationDate,
           },
         });
+      }
+
+      // Record approved escalation event for responsible Department Head
+      const existingEscalation = await tx.escalations.findFirst({
+        where: { grievance_id: grievanceId, status: "OPEN" },
+      });
+      let escalationTargetUser = primaryDeptHead;
+      if (!escalationTargetUser) {
+        const fallbackAdmin = await tx.users.findFirst({
+          where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        });
+        if (fallbackAdmin) {
+          escalationTargetUser = fallbackAdmin;
+        }
+      }
+      if (!existingEscalation && escalationTargetUser) {
+        await tx.escalations.create({
+          data: {
+            grievance_id: grievanceId,
+            escalated_to: escalationTargetUser.user_id,
+            escalation_level: 1,
+            reason: `SLA Escalation Threshold Reached: ${consumptionPercent}% of resolution SLA consumed. Auto-escalated to Department Head.`,
+            status: "OPEN",
+            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+            created_at: evaluationDate,
+          },
+        });
+        didEscalate = true;
       }
 
       if (unnotifiedUsers.length > 0) {
@@ -786,7 +1170,7 @@ export async function evaluateGrievanceSla(
       slaStatus: "AT_RISK",
       status: grievance.status,
       notificationsSent,
-      escalated: false,
+      escalated: didEscalate,
       message: `${atRiskThreshold}% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Designated recipients alerted.`,
     };
   }
@@ -855,6 +1239,7 @@ export async function evaluateGrievanceSla(
             escalation_level: 1,
             reason: `Automated SLA Breach: ${consumptionPercent}% of SLA time consumed without resolution.`,
             status: "OPEN",
+            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
             created_at: evaluationDate,
           },
         });
@@ -871,6 +1256,7 @@ export async function evaluateGrievanceSla(
           !hasSentToUser(u.user_id, `SLA_${breachThreshold}_BREACH`),
       );
 
+      const singleBreachMinutes = slaConsumption.totalDurationMinutes;
       for (const u of unnotifiedUsers) {
         await tx.notifications.create({
           data: {
@@ -878,8 +1264,8 @@ export async function evaluateGrievanceSla(
             grievance_id: grievanceId,
             notification_type: "SLA_BREACHED",
             channel: "IN_APP",
-            title: `CRITICAL: SLA Breached & Escalated (${grievance.grievance_number})`,
-            message: `Grievance ${grievance.grievance_number} has consumed ${breachThreshold}% of its SLA deadline without resolution. Marked SLA BREACHED and moved to ESCALATED. Executive intervention required.`,
+            title: `SLA Breached: 100% Department SLA Consumed (${primaryDeptName})`,
+            message: `Grievance ${grievance.grievance_number} has reached 100% of its allocated SLA limit in ${primaryDeptName} (${singleBreachMinutes} minutes consumed out of ${slaConsumption.totalDurationMinutes} minutes allocated).\n\nThe department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
             status: "PENDING",
             created_at: evaluationDate,
           },
@@ -1022,6 +1408,9 @@ export function calculateDepartmentSlaConsumption(
   now: Date = new Date(),
   accumulatedPausedMinutes: number = 0,
   pausedAt?: Date | null,
+  _warningThresholdPercent: number = DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT,
+  atRiskThresholdPercent: number = DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
+  breachThresholdPercent: number = DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT,
 ): {
   totalDurationMinutes: number;
   elapsedMinutes: number;
@@ -1069,11 +1458,11 @@ export function calculateDepartmentSlaConsumption(
 
   let slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" = "ON_TRACK";
   if (
-    consumptionPercent >= DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT ||
+    consumptionPercent >= breachThresholdPercent ||
     (dueAt && effectiveEnd > dueAt && !pausedAt)
   ) {
     slaStatus = "BREACHED";
-  } else if (consumptionPercent >= DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT) {
+  } else if (consumptionPercent >= atRiskThresholdPercent) {
     slaStatus = "AT_RISK";
   }
 
@@ -1501,20 +1890,34 @@ export async function initiateReopenedSlaCycle(
     data: { status: "RESOLVED", resolved_at: now },
   });
 
-  // 6. Update active primary department due_at
-  await client.grievance_departments.updateMany({
+  // 6. Update all active grievance_departments with proportional allocated duration and new due date
+  const activeDepts = await client.grievance_departments.findMany({
     where: {
       grievance_id: gId,
-      involvement_type: "PRIMARY",
-    },
-    data: {
-      due_at: newDueAt,
-      sla_status: "ON_TRACK",
-      activated_at: now,
-      completed_at: null,
-      allocated_duration_minutes: durationMinutes,
+      status: { notIn: ["REMOVED"] },
     },
   });
+
+  for (const dept of activeDepts) {
+    const percentAlloc = dept.sla_percent_allocation
+      ? Number(dept.sla_percent_allocation)
+      : 100;
+    const deptDuration = Math.max(
+      1,
+      Math.round((durationMinutes * percentAlloc) / 100),
+    );
+
+    await client.grievance_departments.update({
+      where: { grievance_department_id: dept.grievance_department_id },
+      data: {
+        due_at: newDueAt,
+        sla_status: "ON_TRACK",
+        activated_at: now,
+        completed_at: null,
+        allocated_duration_minutes: deptDuration,
+      },
+    });
+  }
 
   // 7. Retain in audit logs
   await client.audit_logs.create({
@@ -1618,7 +2021,51 @@ export async function initiateReworkSlaCycle(
   const client = tx || prisma;
   const now = new Date();
 
-  // 1. Find latest tracking cycle to determine new cycle_number
+  // Idempotency check: if an active rework tracking cycle already exists, return it
+  const existingActiveRework = await client.sla_tracking.findFirst({
+    where: {
+      grievance_id: gId,
+      cycle_type: "REWORK",
+      completed_at: null,
+    },
+  });
+
+  if (existingActiveRework) {
+    return {
+      newCycleId: existingActiveRework.sla_tracking_id,
+      cycleNumber: existingActiveRework.cycle_number,
+      durationMinutes: Math.max(
+        1,
+        Math.round(
+          (existingActiveRework.due_at.getTime() -
+            existingActiveRework.started_at.getTime()) /
+            60000,
+        ),
+      ),
+      newDueAt: existingActiveRework.due_at,
+    };
+  }
+
+  // 1. Find cycle 1 tracking to accurately resolve the original baseline duration
+  const firstTracking = await client.sla_tracking.findFirst({
+    where: { grievance_id: gId, cycle_number: 1 },
+    include: { sla_policies: true },
+  });
+
+  let originalBaselineMinutes =
+    firstTracking?.sla_policies?.target_duration_minutes;
+  if (
+    !originalBaselineMinutes &&
+    firstTracking?.due_at &&
+    firstTracking?.started_at
+  ) {
+    originalBaselineMinutes = Math.round(
+      (firstTracking.due_at.getTime() - firstTracking.started_at.getTime()) /
+        60000,
+    );
+  }
+
+  // Find latest tracking cycle to determine new cycle_number
   const lastTracking = await client.sla_tracking.findFirst({
     where: { grievance_id: gId },
     orderBy: { cycle_number: "desc" },
@@ -1637,11 +2084,16 @@ export async function initiateReworkSlaCycle(
     });
   }
 
-  // 3. Resolve rework duration & policy (Proposed 50% Pending Krishna's Approval)
-  const { durationMinutes, policyId } = await getReworkSlaDurationMinutes(
-    priority,
-    client,
-  );
+  // 3. Resolve rework duration & policy (Proposed 50% of original baseline duration)
+  const { durationMinutes: fallbackDuration, policyId } =
+    await getReworkSlaDurationMinutes(priority, client);
+
+  const durationMinutes = originalBaselineMinutes
+    ? calculateReworkSlaMinutes(
+        originalBaselineMinutes,
+        DEFAULT_REWORK_SLA_PERCENT,
+      )
+    : fallbackDuration;
 
   const newDueAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
 
@@ -1679,20 +2131,34 @@ export async function initiateReworkSlaCycle(
     data: { status: "RESOLVED", resolved_at: now },
   });
 
-  // 6. Update active primary department due_at
-  await client.grievance_departments.updateMany({
+  // 6. Update all active grievance_departments with proportional allocated duration and new due date
+  const activeDepts = await client.grievance_departments.findMany({
     where: {
       grievance_id: gId,
-      involvement_type: "PRIMARY",
-    },
-    data: {
-      due_at: newDueAt,
-      sla_status: "ON_TRACK",
-      activated_at: now,
-      completed_at: null,
-      allocated_duration_minutes: durationMinutes,
+      status: { notIn: ["REMOVED"] },
     },
   });
+
+  for (const dept of activeDepts) {
+    const percentAlloc = dept.sla_percent_allocation
+      ? Number(dept.sla_percent_allocation)
+      : 100;
+    const deptDuration = Math.max(
+      1,
+      Math.round((durationMinutes * percentAlloc) / 100),
+    );
+
+    await client.grievance_departments.update({
+      where: { grievance_department_id: dept.grievance_department_id },
+      data: {
+        due_at: newDueAt,
+        sla_status: "ON_TRACK",
+        activated_at: now,
+        completed_at: null,
+        allocated_duration_minutes: deptDuration,
+      },
+    });
+  }
 
   // 7. Retain in audit logs
   await client.audit_logs.create({
@@ -1713,6 +2179,15 @@ export async function initiateReworkSlaCycle(
       },
     },
   });
+
+  try {
+    await evaluateGrievanceSla(gId);
+  } catch (evalErr) {
+    console.warn(
+      "Non-fatal: failed to evaluate SLA after rework cycle creation:",
+      evalErr,
+    );
+  }
 
   return {
     newCycleId: newCycle.sla_tracking_id,
@@ -1752,7 +2227,7 @@ export async function requestSlaExtension(
   const sId = BigInt(options.staffId);
   const client = options.tx || prisma;
 
-  // 1. Fetch grievance and active SLA tracking cycle
+  // 1. Fetch grievance and active SLA tracking cycle with configured policy and departments
   const grievance = await client.grievances.findUnique({
     where: { grievance_id: gId },
     include: {
@@ -1761,8 +2236,23 @@ export async function requestSlaExtension(
           completed_at: null,
           status: { in: ["ON_TRACK", "AT_RISK", "BREACHED"] },
         },
+        include: {
+          sla_policies: true,
+        },
         orderBy: { cycle_number: "desc" },
         take: 1,
+      },
+      grievance_departments: {
+        include: {
+          assignments: true,
+          departments: true,
+        },
+      },
+      assignments: {
+        where: {
+          staff_id: sId,
+          assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        },
       },
     },
   });
@@ -1779,21 +2269,104 @@ export async function requestSlaExtension(
     };
   }
 
-  // 2. Invariant: Staff can only request SLA extension after at least 50% SLA has elapsed
-  // (allows proactive mitigation before the 75% auto-escalation to Department Head)
+  // Find the staff member's department
+  const myAssignment = grievance.assignments?.[0];
+  const rawDepts = grievance.grievance_departments || [];
+  const myDept =
+    rawDepts.find(
+      (gd) =>
+        (myAssignment?.grievance_department_id &&
+          gd.grievance_department_id ===
+            myAssignment.grievance_department_id) ||
+        gd.assignments?.staff_id === sId,
+    ) ||
+    rawDepts.find((gd) => gd.involvement_type === "PRIMARY") ||
+    rawDepts[0];
+
+  let configuredPolicy: typeof activeTracking.sla_policies | null =
+    activeTracking.sla_policies;
+  if (!configuredPolicy) {
+    configuredPolicy = await client.sla_policies.findFirst({
+      where: {
+        priority_level: grievance.priority,
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  const tc =
+    (configuredPolicy?.trigger_condition as Record<string, unknown>) || {};
+  const warningThreshold = Number(
+    tc.warning_threshold_percent ||
+      configuredPolicy?.warning_threshold_percent ||
+      DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT,
+  );
+  const escalationThreshold = Number(
+    tc.at_risk_threshold_percent ||
+      tc.escalation_threshold_percent ||
+      configuredPolicy?.escalation_threshold_percent ||
+      DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
+  );
+
+  // Resolve total grievance baseline from configured policy, due date, or priority fallback
+  const totalGrievanceMinutes =
+    configuredPolicy?.target_duration_minutes ||
+    (grievance.due_at && grievance.created_at
+      ? Math.max(
+          1,
+          Math.round(
+            (grievance.due_at.getTime() - grievance.created_at.getTime()) /
+              60000,
+          ),
+        )
+      : DEFAULT_SLA_DURATIONS_MINUTES[grievance.priority.toUpperCase()] ||
+        1440);
+
+  // User requirement: For grace period base value use department's total allocated time, not total time
+  let deptBaselineMinutes = myDept?.allocated_duration_minutes;
+  if (!deptBaselineMinutes) {
+    const allocationPercent = Number(myDept?.sla_percent_allocation || 100);
+    deptBaselineMinutes = Math.max(
+      1,
+      Math.round((totalGrievanceMinutes * allocationPercent) / 100),
+    );
+  }
+
+  // Department SLA start & due dates
+  const deptStart =
+    myDept?.activated_at ||
+    myDept?.assigned_at ||
+    activeTracking.started_at ||
+    grievance.created_at;
+  const deptDue =
+    myDept?.due_at ||
+    new Date(deptStart.getTime() + deptBaselineMinutes * 60 * 1000);
   const consumption = calculateSlaConsumption(
-    activeTracking.started_at,
-    grievance.due_at,
+    deptStart,
+    deptDue,
     grievance.priority,
     new Date(),
-    activeTracking.accumulated_paused_minutes,
+    activeTracking.accumulated_paused_minutes || 0,
     activeTracking.paused_at,
   );
 
-  if (consumption.consumptionPercent < MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION) {
+  if (consumption.consumptionPercent < warningThreshold) {
     return {
       success: false,
-      message: `SLA extension can only be requested after at least ${MIN_SLA_CONSUMED_PERCENT_FOR_EXTENSION}% of the SLA budget has elapsed (currently ${consumption.consumptionPercent}% consumed).`,
+      message: `Grace period can only be requested after at least ${warningThreshold}% of department SLA budget is consumed (currently ${consumption.consumptionPercent}%).`,
+    };
+  }
+
+  // Grace period must be requested before escalation threshold and cannot be requested if SLA is breached
+  if (
+    consumption.consumptionPercent >= escalationThreshold ||
+    grievance.sla_status === "BREACHED" ||
+    activeTracking.status === "BREACHED" ||
+    myDept?.sla_status === "BREACHED"
+  ) {
+    return {
+      success: false,
+      message: `Grace period cannot be requested once department SLA reaches ${escalationThreshold}% escalation or is breached. Investigation is under Department Head escalation supervision.`,
     };
   }
 
@@ -1833,15 +2406,12 @@ export async function requestSlaExtension(
     };
   }
 
-  // 4. Invariant: Duration limits based on baseline priority SLA
-  const normPriority = grievance.priority.toUpperCase();
-  const baselineMinutes =
-    DEFAULT_SLA_DURATIONS_MINUTES[normPriority] ||
-    DEFAULT_SLA_DURATIONS_MINUTES.MEDIUM;
-
-  const maxSingleMinutes = calculateMaxSingleExtensionMinutes(baselineMinutes);
-  const maxCumulativeMinutes =
-    calculateMaxCumulativeExtensionMinutes(baselineMinutes);
+  // 4. Invariant: Duration limits based on department baseline allocated SLA (25% cap)
+  const maxSingleMinutes = Math.max(
+    1,
+    Math.round((deptBaselineMinutes * 25) / 100),
+  );
+  const maxCumulativeMinutes = maxSingleMinutes;
 
   // Check cumulative approved duration
   const approvedExtensions = await client.sla_extensions.findMany({
@@ -2087,7 +2657,7 @@ export async function reviewSlaExtension(
     });
   }
 
-  // Extend due_at on active grievance_departments
+  // Extend due_at and allocated_duration_minutes on active grievance_departments
   const activeDepts = await client.grievance_departments.findMany({
     where: {
       grievance_id: extension.grievance_id,
@@ -2101,15 +2671,39 @@ export async function reviewSlaExtension(
       const newDeptDueAt = new Date(
         dept.due_at.getTime() + grantedMinutes * 60 * 1000,
       );
+      const currentAlloc =
+        dept.allocated_duration_minutes && dept.allocated_duration_minutes > 0
+          ? dept.allocated_duration_minutes
+          : Math.max(
+              1,
+              Math.round(
+                (dept.due_at.getTime() -
+                  (
+                    dept.activated_at ||
+                    dept.assigned_at ||
+                    extension.sla_tracking.started_at
+                  ).getTime()) /
+                  60000,
+              ),
+            );
+      const newAlloc = currentAlloc + grantedMinutes;
+
       await client.grievance_departments.update({
         where: { grievance_department_id: dept.grievance_department_id },
         data: {
           due_at: newDeptDueAt,
+          allocated_duration_minutes: newAlloc,
           sla_status: "ON_TRACK",
         },
       });
     }
   }
+
+  // Resolve any open escalations since grace period was approved and SLA is reset to ON_TRACK
+  await client.escalations.updateMany({
+    where: { grievance_id: extension.grievance_id, status: "OPEN" },
+    data: { status: "RESOLVED", resolved_at: now },
+  });
 
   await client.audit_logs.create({
     data: {
@@ -2125,6 +2719,15 @@ export async function reviewSlaExtension(
     },
   });
 
+  const finalNewDue = newGrievanceDueAt || newSlaDueAt;
+  const formattedNewDeadline = finalNewDue.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   // Notify requesting staff member of approval
   await client.notifications.create({
     data: {
@@ -2133,10 +2736,35 @@ export async function reviewSlaExtension(
       notification_type: "SLA_EXTENSION_APPROVED",
       channel: "IN_APP",
       title: `Grace Period Approved: ${extension.grievances.grievance_number}`,
-      message: `Your request for a +${Math.round(grantedMinutes / 60)}h grace period extension for grievance ${extension.grievances.grievance_number} was approved by Department Head.`,
+      message: `Your request for a +${Math.round(grantedMinutes / 60)}h grace period extension for grievance ${extension.grievances.grievance_number} was approved by Department Head. Updated target resolution deadline: ${formattedNewDeadline}.`,
       status: "PENDING",
     },
   });
+
+  // Notify the employee / citizen who submitted the grievance of the updated resolution target
+  if (extension.grievances?.submitted_by) {
+    await client.notifications.create({
+      data: {
+        user_id: extension.grievances.submitted_by,
+        grievance_id: extension.grievance_id,
+        notification_type: "RESOLUTION_TIMELINE_UPDATED",
+        channel: "IN_APP",
+        title: `Resolution Timeline Updated: ${extension.grievances.grievance_number}`,
+        message: `The resolution deadline for your grievance ${extension.grievances.grievance_number} has been extended by ${Math.round(grantedMinutes / 60)}h. New target resolution deadline: ${formattedNewDeadline}.`,
+        status: "PENDING",
+      },
+    });
+  }
+
+  // Proactively re-evaluate SLA to immediately recalculate consumption percentages and trigger notifications under the extended window
+  try {
+    await evaluateGrievanceSla(extension.grievance_id);
+  } catch (evalErr) {
+    console.warn(
+      "Non-fatal: failed to evaluate SLA after extension review:",
+      evalErr,
+    );
+  }
 
   return {
     success: true,
