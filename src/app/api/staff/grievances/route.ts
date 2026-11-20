@@ -58,6 +58,9 @@ export async function GET(req: NextRequest) {
             sla_tracking: {
               orderBy: { sla_tracking_id: "desc" as const },
               take: 1,
+              include: {
+                sla_policies: true,
+              },
             },
             sla_extensions: {
               orderBy: { created_at: "desc" as const },
@@ -77,7 +80,7 @@ export async function GET(req: NextRequest) {
     let assignments = await prisma.assignments.findMany({
       where: {
         staff_id: staffId,
-        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
       },
       ...assignmentQuery,
       orderBy: { assigned_at: "desc" },
@@ -138,6 +141,16 @@ export async function GET(req: NextRequest) {
         ? `${submitter.first_name} ${submitter.last_name || ""}`.trim()
         : "Complainant";
 
+      const myDeptStatus = a.grievance_departments?.status || "ASSIGNED";
+      const isMyDeptCompleted =
+        myDeptStatus === "COMPLETED" ||
+        a.assignment_status === "COMPLETED" ||
+        Boolean(a.grievance_departments?.completed_at);
+      const completedAt =
+        a.grievance_departments?.completed_at ||
+        a.completed_at ||
+        (isMyDeptCompleted ? new Date() : null);
+
       let slaCalc: ReturnType<typeof calculateSlaStatus>;
       if (a.grievance_departments?.status === "BLOCKED") {
         slaCalc = {
@@ -164,12 +177,9 @@ export async function GET(req: NextRequest) {
           activeSla?.accumulated_paused_minutes || 0,
           activeSla?.paused_at,
           g.status,
+          completedAt,
         );
       }
-
-      const myDeptStatus = a.grievance_departments?.status || "ASSIGNED";
-      const isMyDeptCompleted =
-        myDeptStatus === "COMPLETED" || a.assignment_status === "COMPLETED";
 
       const activeDept = g.grievance_departments?.find(
         (gd) =>
@@ -251,6 +261,68 @@ export async function GET(req: NextRequest) {
         slaConsumptionPercent: slaCalc.consumptionPercent,
         slaTimeLeft: slaCalc.timeRemaining,
         dueAt: g.due_at ? g.due_at.toISOString() : null,
+        slaPercentAllocation: a.grievance_departments?.sla_percent_allocation
+          ? Number(a.grievance_departments.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: (() => {
+          const isReworkCase =
+            g.status === "REWORK" ||
+            g.sla_tracking?.[0]?.cycle_type === "REWORK";
+          const rawPolicyMins =
+            g.sla_tracking?.[0]?.sla_policies?.target_duration_minutes;
+          const effPolicyMins =
+            rawPolicyMins && isReworkCase
+              ? Math.max(1, Math.round(rawPolicyMins * 0.5))
+              : rawPolicyMins;
+
+          if (
+            a.grievance_departments?.allocated_duration_minutes &&
+            (!isReworkCase ||
+              !effPolicyMins ||
+              a.grievance_departments.allocated_duration_minutes <=
+                effPolicyMins)
+          ) {
+            return a.grievance_departments.allocated_duration_minutes;
+          }
+
+          if (
+            effPolicyMins &&
+            a.grievance_departments?.sla_percent_allocation
+          ) {
+            return Math.round(
+              (effPolicyMins *
+                Number(a.grievance_departments.sla_percent_allocation)) /
+                100,
+            );
+          }
+
+          return a.grievance_departments?.allocated_duration_minutes || null;
+        })(),
+        warningThresholdPercent: Number(
+          (
+            g.sla_tracking?.[0]?.sla_policies?.trigger_condition as
+              | Record<string, unknown>
+              | undefined
+          )?.warning_threshold_percent ||
+            g.sla_tracking?.[0]?.sla_policies?.warning_threshold_percent ||
+            50,
+        ),
+        escalationThresholdPercent: Number(
+          (
+            g.sla_tracking?.[0]?.sla_policies?.trigger_condition as
+              | Record<string, unknown>
+              | undefined
+          )?.at_risk_threshold_percent ||
+            (
+              g.sla_tracking?.[0]?.sla_policies?.trigger_condition as
+                | Record<string, unknown>
+                | undefined
+            )?.escalation_threshold_percent ||
+            g.sla_tracking?.[0]?.sla_policies?.escalation_threshold_percent ||
+            75,
+        ),
+        targetDurationMinutes:
+          g.sla_tracking?.[0]?.sla_policies?.target_duration_minutes || null,
         submittedAt: g.created_at.toISOString(),
         assignedAt: a.assigned_at.toISOString(),
         submitterName: submitterFullName,

@@ -336,6 +336,17 @@ export function StaffDashboard({
           : prev,
       );
       toast.success("Investigation resumed successfully.");
+      try {
+        const fullRes = await fetch(`/api/staff/grievances/${grievanceId}`);
+        if (fullRes.ok) {
+          const fullData = await fullRes.json();
+          if (fullData?.grievance) {
+            setSelectedGrievance(fullData.grievance);
+          }
+        }
+      } catch {
+        // Fallback already applied via state updater
+      }
       await fetchDashboardData(true);
     } catch (err) {
       console.error(err);

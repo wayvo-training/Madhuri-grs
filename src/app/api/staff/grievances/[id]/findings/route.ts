@@ -181,13 +181,19 @@ export async function POST(
       async (tx) => {
         // 1. Mark this department's status and staff assignment as COMPLETED
         if (myDeptRecord) {
+          const now = new Date();
+          const isBreached =
+            myDeptRecord.sla_status === "BREACHED" ||
+            Boolean(myDeptRecord.due_at && now > myDeptRecord.due_at);
+
           await tx.grievance_departments.update({
             where: {
               grievance_department_id: myDeptRecord.grievance_department_id,
             },
             data: {
               status: "COMPLETED",
-              completed_at: new Date(),
+              completed_at: now,
+              sla_status: isBreached ? "BREACHED" : "ON_TRACK",
             },
           });
 
@@ -198,7 +204,7 @@ export async function POST(
             },
             data: {
               assignment_status: "COMPLETED",
-              completed_at: new Date(),
+              completed_at: now,
             },
           });
 

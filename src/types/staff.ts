@@ -110,6 +110,7 @@ export interface StaffResolutionData {
 
 export interface StaffInvolvedDepartment {
   id: string;
+  departmentId?: string;
   departmentName: string;
   involvementType: "PRIMARY" | "SUPPORTING" | "EQUAL";
   status: string;
@@ -118,6 +119,13 @@ export interface StaffInvolvedDepartment {
   slaPercentAllocation?: number | null;
   allocatedDurationMinutes?: number | null;
   executionOrder?: number;
+  activatedAt?: string | null;
+  dueAt?: string | null;
+  completedAt?: string | null;
+  slaState?: string;
+  slaStateLabel?: string;
+  consumptionPercent?: number;
+  timeRemaining?: string;
 }
 
 export interface StaffGrievanceItem {
@@ -139,6 +147,9 @@ export interface StaffGrievanceItem {
   dueAt: string | null;
   slaPercentAllocation?: number | null;
   allocatedDurationMinutes?: number | null;
+  warningThresholdPercent?: number | null;
+  escalationThresholdPercent?: number | null;
+  targetDurationMinutes?: number | null;
   submittedAt: string;
   assignedAt: string;
   submitterName: string;

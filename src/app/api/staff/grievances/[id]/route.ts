@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { filterAuthorizedAttachments } from "@/lib/attachments/access-control";
+import {
+  DEFAULT_SLA_DURATIONS_MINUTES,
+  DEFAULT_SLA_THRESHOLDS,
+} from "@/lib/constants/sla";
 import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
 import { NotificationService } from "@/lib/services/notification.service";
@@ -96,6 +100,9 @@ export async function GET(
         sla_tracking: {
           orderBy: { sla_tracking_id: "desc" },
           take: 1,
+          include: {
+            sla_policies: true,
+          },
         },
         sla_extensions: {
           orderBy: { created_at: "desc" },
@@ -123,12 +130,21 @@ export async function GET(
 
     const currentAssignment = grievance.assignments?.[0];
 
-    // Proactively evaluate SLA threshold notifications
-    try {
-      const { evaluateGrievanceSla } = await import("@/lib/engines/sla-engine");
-      await evaluateGrievanceSla(grievanceId);
-    } catch (slaErr) {
-      console.error("SLA evaluation error:", slaErr);
+    // Proactively evaluate SLA threshold notifications only when grievance is active and not paused
+    if (
+      grievance.status !== "CLOSED" &&
+      grievance.status !== "RESOLVED" &&
+      grievance.status !== "AWAITING_INFORMATION" &&
+      grievance.status !== "WAITING_ON_USER"
+    ) {
+      try {
+        const { evaluateGrievanceSla } = await import(
+          "@/lib/engines/sla-engine"
+        );
+        await evaluateGrievanceSla(grievanceId);
+      } catch (slaErr) {
+        console.error("SLA evaluation error:", slaErr);
+      }
     }
 
     const submitter = grievance.users;
@@ -565,10 +581,6 @@ export async function GET(
       myInvolvementType === "EQUAL" ||
       isAdmin;
 
-    const isMyDeptCompleted =
-      myDept?.status === "COMPLETED" ||
-      currentAssignment?.assignment_status === "COMPLETED";
-
     const myDeptRaw =
       rawDepartments.find(
         (d) =>
@@ -578,19 +590,81 @@ export async function GET(
           (departmentId && d.department_id === departmentId),
       ) || rawDepartments[0];
 
+    const isMyDeptCompleted =
+      myDept?.status === "COMPLETED" ||
+      currentAssignment?.assignment_status === "COMPLETED" ||
+      myDeptRaw?.status === "COMPLETED" ||
+      Boolean(myDeptRaw?.completed_at);
+
+    const completedAt =
+      myDeptRaw?.completed_at ||
+      currentAssignment?.completed_at ||
+      (isMyDeptCompleted ? new Date() : null);
+
     const isDeptBlocked = myDeptRaw?.status === "BLOCKED";
-    const deptAllocatedMins =
-      myDeptRaw?.allocated_duration_minutes ||
+
+    const activeSlaPolicy =
+      grievance.sla_tracking?.[0]?.sla_policies ||
+      (await prisma.sla_policies.findFirst({
+        where: {
+          priority_level: grievance.priority,
+          status: "ACTIVE",
+        },
+      }));
+    const tc =
+      (activeSlaPolicy?.trigger_condition as Record<string, unknown>) || {};
+    const resolvedWarningPercent = Number(
+      tc.warning_threshold_percent ||
+        activeSlaPolicy?.warning_threshold_percent ||
+        DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT,
+    );
+    const resolvedEscalationPercent = Number(
+      tc.at_risk_threshold_percent ||
+        tc.escalation_threshold_percent ||
+        activeSlaPolicy?.escalation_threshold_percent ||
+        DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
+    );
+
+    const activeSlaEarly = grievance.sla_tracking?.[0];
+    const isReworkStatus =
+      grievance.status === "REWORK" || activeSlaEarly?.cycle_type === "REWORK";
+
+    let baseGrievanceMinutes =
+      activeSlaPolicy?.target_duration_minutes ||
       (grievance.due_at && grievance.created_at
         ? Math.max(
             1,
             Math.round(
-              ((grievance.due_at.getTime() - grievance.created_at.getTime()) *
-                (Number(myDeptRaw?.sla_percent_allocation || 100) / 100)) /
+              (grievance.due_at.getTime() - grievance.created_at.getTime()) /
                 60000,
             ),
           )
-        : null);
+        : null) ||
+      DEFAULT_SLA_DURATIONS_MINUTES[
+        String(grievance.priority || "MEDIUM").toUpperCase()
+      ] ||
+      1440;
+
+    if (isReworkStatus) {
+      baseGrievanceMinutes = Math.max(
+        1,
+        Math.round(baseGrievanceMinutes * 0.5),
+      );
+    }
+
+    const deptAllocatedMins =
+      myDeptRaw?.allocated_duration_minutes &&
+      (!isReworkStatus ||
+        myDeptRaw.allocated_duration_minutes <= baseGrievanceMinutes)
+        ? myDeptRaw.allocated_duration_minutes
+        : Math.max(
+            1,
+            Math.round(
+              (baseGrievanceMinutes *
+                Number(myDeptRaw?.sla_percent_allocation || 100)) /
+                100,
+            ),
+          );
 
     let slaCalc: ReturnType<typeof calculateSlaStatus>;
     if (isDeptBlocked) {
@@ -620,6 +694,7 @@ export async function GET(
         activeSla?.accumulated_paused_minutes || 0,
         activeSla?.paused_at,
         grievance.status,
+        completedAt,
       );
     }
 
@@ -636,13 +711,22 @@ export async function GET(
         ? "CLOSED"
         : grievance.status === "RESOLVED"
           ? "RESOLVED"
-          : isMyDeptCompleted
-            ? "COMPLETED"
-            : myDept?.status === "ASSIGNED"
-              ? "ASSIGNED"
-              : myDept?.status === "IN_PROGRESS"
-                ? "IN_PROGRESS"
-                : grievance.status
+          : grievance.status === "AWAITING_INFORMATION" ||
+              grievance.status === "WAITING_ON_USER" ||
+              grievance.status === "WAITING_ON_EMPLOYEE"
+            ? "AWAITING_INFORMATION"
+            : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+                grievance.status === "UNDER_REVIEW"
+              ? "RESOLUTION_PENDING_APPROVAL"
+              : grievance.status === "REWORK"
+                ? "REWORK"
+                : isMyDeptCompleted
+                  ? "COMPLETED"
+                  : myDept?.status === "ASSIGNED"
+                    ? "ASSIGNED"
+                    : myDept?.status === "IN_PROGRESS"
+                      ? "IN_PROGRESS"
+                      : grievance.status
     ) as StaffGrievanceItem["status"];
 
     const targetDeptId =
@@ -703,6 +787,10 @@ export async function GET(
         ? Number(myDeptRaw.sla_percent_allocation)
         : null,
       allocatedDurationMinutes: deptAllocatedMins,
+      warningThresholdPercent: resolvedWarningPercent,
+      escalationThresholdPercent: resolvedEscalationPercent,
+      targetDurationMinutes: baseGrievanceMinutes,
+
       submittedAt: formatRelativeTime(grievance.created_at),
       assignedAt: currentAssignment
         ? formatRelativeTime(currentAssignment.assigned_at)
@@ -792,7 +880,7 @@ export async function PATCH(
         },
         assignments: {
           where: {
-            assignment_status: "ASSIGNED",
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
             ...(isAdmin ? {} : { staff_id: staffId }),
           },
           include: {
@@ -859,10 +947,16 @@ export async function PATCH(
             });
           }
 
-          // If grievance was in REWORK or SLA was paused, resume SLA tracking with previously remaining duration
-          if (
-            grievance.status === "REWORK" ||
-            grievance.status === "AWAITING_INFORMATION"
+          // If grievance was in REWORK, initiate the 50% rework SLA cycle; if SLA was paused, resume it
+          if (grievance.status === "REWORK") {
+            const { initiateReworkSlaCycle } = await import(
+              "@/lib/engines/sla-engine"
+            );
+            await initiateReworkSlaCycle(grievanceId, grievance.priority, tx);
+          } else if (
+            grievance.status === "AWAITING_INFORMATION" ||
+            grievance.status === "WAITING_ON_USER" ||
+            grievance.status === "WAITING_ON_EMPLOYEE"
           ) {
             const { resumeSlaTracking } = await import(
               "@/lib/engines/sla-engine"

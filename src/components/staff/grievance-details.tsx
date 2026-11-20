@@ -423,7 +423,23 @@ export function GrievanceDetails({
               <strong className="text-slate-800">
                 {grievance.slaConsumptionPercent}%
               </strong>{" "}
-              ({grievance.slaTimeLeft})
+              (
+              {grievance.isMyDepartmentCompleted ||
+              grievance.myDepartmentStatus === "COMPLETED" ||
+              grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+              grievance.status === "RESOLVED" ||
+              grievance.status === "CLOSED"
+                ? grievance.status === "RESOLUTION_PENDING_APPROVAL"
+                  ? "Resolution Pending Approval (SLA Paused)"
+                  : grievance.status === "RESOLVED"
+                    ? "Resolution Proposed (SLA Paused)"
+                    : grievance.status === "CLOSED"
+                      ? "Case Closed"
+                      : grievance.slaTimeLeft === "Completed (Past SLA)"
+                        ? "Completed Past SLA"
+                        : "Completed"
+                : grievance.slaTimeLeft}
+              )
             </span>
           </div>
 
@@ -611,37 +627,76 @@ export function GrievanceDetails({
                   <span>Grace Period Declined</span>
                 </span>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (localExtension) {
-                      toast.error(
-                        "You have already submitted a grace period request.",
-                      );
-                      return;
-                    }
-                    setIsGracePeriodModalOpen(true);
-                  }}
-                  disabled={
-                    grievance.slaConsumptionPercent < 50 ||
-                    Boolean(localExtension)
-                  }
-                  title={
-                    localExtension
-                      ? "A grace period request has already been submitted for this cycle"
-                      : grievance.slaConsumptionPercent < 50
-                        ? `Grace period unlocks after 50% SLA is consumed (currently ${grievance.slaConsumptionPercent}%)`
-                        : "Request SLA grace period / extension from Department Head"
-                  }
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer shadow-2xs ${
-                    grievance.slaConsumptionPercent >= 50 && !localExtension
-                      ? "border-teal-300 bg-teal-50/80 text-[#0F766E] hover:bg-teal-100"
-                      : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
-                  }`}
-                >
-                  <Clock className="h-3.5 w-3.5" />
-                  <span>Request Grace Period</span>
-                </button>
+                (() => {
+                  const warningThresh = grievance.warningThresholdPercent ?? 50;
+                  const escalationThresh =
+                    grievance.escalationThresholdPercent ?? 75;
+                  const isUnderWarning =
+                    (grievance.slaConsumptionPercent ?? 0) < warningThresh;
+                  const isOverEscalation =
+                    (grievance.slaConsumptionPercent ?? 0) >= escalationThresh;
+                  const isBreached =
+                    grievance.slaStatus === "BREACHED" ||
+                    (grievance.slaConsumptionPercent ?? 0) >= 100;
+                  const canRequest =
+                    !isUnderWarning &&
+                    !isOverEscalation &&
+                    !isBreached &&
+                    !localExtension;
+
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (localExtension) {
+                          toast.error(
+                            "You have already submitted a grace period request.",
+                          );
+                          return;
+                        }
+                        if (isBreached) {
+                          toast.error(
+                            "Grace period cannot be requested after SLA has breached.",
+                          );
+                          return;
+                        }
+                        if (isOverEscalation) {
+                          toast.error(
+                            `Grace period requests close at ${escalationThresh}% SLA when the case auto-escalates to Department Head.`,
+                          );
+                          return;
+                        }
+                        if (isUnderWarning) {
+                          toast.error(
+                            `Grace period can only be requested after at least ${warningThresh}% SLA is consumed (currently ${grievance.slaConsumptionPercent}%).`,
+                          );
+                          return;
+                        }
+                        setIsGracePeriodModalOpen(true);
+                      }}
+                      disabled={!canRequest}
+                      title={
+                        localExtension
+                          ? "A grace period request has already been submitted for this cycle"
+                          : isBreached
+                            ? "SLA has breached. Grace period cannot be requested after SLA breach."
+                            : isOverEscalation
+                              ? `Grace period requests close at ${escalationThresh}% SLA (auto-escalated to Department Head)`
+                              : isUnderWarning
+                                ? `Grace period unlocks after ${warningThresh}% SLA is consumed (currently ${grievance.slaConsumptionPercent}%)`
+                                : "Request SLA grace period / extension from Department Head"
+                      }
+                      className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-semibold transition cursor-pointer shadow-2xs ${
+                        canRequest
+                          ? "border-teal-300 bg-teal-50/80 text-[#0F766E] hover:bg-teal-100"
+                          : "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed"
+                      }`}
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Request Grace Period</span>
+                    </button>
+                  );
+                })()
               ))}
 
             {!hasProposedKb && canStaffProposeKnowledge(grievance) && (

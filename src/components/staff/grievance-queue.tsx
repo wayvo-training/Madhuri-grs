@@ -1,19 +1,6 @@
 "use client";
 
-import {
-  BookOpen,
-  ChevronDown,
-  Clock,
-  Eye,
-  FileCheck2,
-  Filter,
-  Inbox,
-  Play,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { BookOpen, Clock, Eye, FileCheck2, Inbox, Play, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import { ActionMenu } from "@/components/ui/action-menu";
@@ -24,7 +11,6 @@ import {
 } from "@/components/ui/advanced-table-search";
 import type { CustomSelectOption } from "@/components/ui/custom-select";
 import { Pagination } from "@/components/ui/pagination";
-import { Popover } from "@/components/ui/popover";
 import {
   SortableTh,
   type SortState,
@@ -35,7 +21,6 @@ import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import { canStaffProposeKnowledge } from "@/lib/staff/utils";
 import type {
   StaffGrievanceItem,
-  StaffPriority,
   StaffQueueFilterState,
   StaffQueueTab,
 } from "@/types/staff";
@@ -92,8 +77,6 @@ export function GrievanceQueue({
     setSortState({ field, direction });
   };
 
-  const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
@@ -116,72 +99,6 @@ export function GrievanceQueue({
     }
     return Array.from(set).sort();
   }, [categoriesProp, grievances]);
-
-  // Tab counts for quick stats
-  const tabCounts = useMemo(() => {
-    return {
-      all: grievances.length,
-      in_progress: grievances.filter(
-        (g) =>
-          !g.isMyDepartmentCompleted &&
-          g.status !== "COMPLETED" &&
-          (g.status === "IN_PROGRESS" ||
-            g.status === "ASSIGNED" ||
-            g.status === "AWAITING_INFORMATION" ||
-            g.status === "WAITING_ON_USER" ||
-            g.status === "REWORK"),
-      ).length,
-      at_risk: grievances.filter(
-        (g) =>
-          g.slaStatus === "AT_RISK" &&
-          g.status !== "CLOSED" &&
-          g.status !== "RESOLVED" &&
-          g.status !== "COMPLETED" &&
-          !g.isMyDepartmentCompleted,
-      ).length,
-      breached: grievances.filter(
-        (g) =>
-          (g.slaStatus === "BREACHED" || g.status === "ESCALATED") &&
-          g.status !== "CLOSED" &&
-          g.status !== "RESOLVED" &&
-          g.status !== "COMPLETED" &&
-          !g.isMyDepartmentCompleted,
-      ).length,
-      reopened: grievances.filter(
-        (g) =>
-          (g.reopenCount > 0 ||
-            g.status === "REOPENED" ||
-            g.status === "REWORK") &&
-          g.status !== "CLOSED" &&
-          g.status !== "RESOLVED",
-      ).length,
-      completed: grievances.filter(
-        (g) =>
-          g.status === "CLOSED" ||
-          g.status === "RESOLVED" ||
-          g.status === "RESOLUTION_PENDING_APPROVAL" ||
-          g.status === "UNDER_REVIEW" ||
-          g.status === "COMPLETED" ||
-          g.isMyDepartmentCompleted,
-      ).length,
-    };
-  }, [grievances]);
-
-  // Options for custom dropdown menus
-  const queueOptions: CustomSelectOption[] = useMemo(
-    () => [
-      { value: "all", label: `All Assigned (${tabCounts.all})` },
-      { value: "in_progress", label: `In Progress (${tabCounts.in_progress})` },
-      { value: "at_risk", label: `SLA At Risk (${tabCounts.at_risk})` },
-      { value: "breached", label: `SLA Breached (${tabCounts.breached})` },
-      {
-        value: "reopened",
-        label: `Reopened Grievance (${tabCounts.reopened})`,
-      },
-      { value: "completed", label: `Completed (${tabCounts.completed})` },
-    ],
-    [tabCounts],
-  );
 
   const priorityOptions: CustomSelectOption[] = useMemo(
     () => [
@@ -308,7 +225,8 @@ export function GrievanceQueue({
           item.status === "CLOSED" ||
           (item.status !== "IN_PROGRESS" &&
             item.status !== "ASSIGNED" &&
-            item.status !== "WAITING_ON_USER")
+            item.status !== "WAITING_ON_USER" &&
+            item.status !== "AWAITING_INFORMATION")
         ) {
           return false;
         }
@@ -382,7 +300,7 @@ export function GrievanceQueue({
       return list.sort((a, b) => {
         const dateB = new Date(b.assignedAt || b.submittedAt).getTime();
         const dateA = new Date(a.assignedAt || a.submittedAt).getTime();
-        if (!isNaN(dateB) && !isNaN(dateA) && dateB !== dateA) {
+        if (!Number.isNaN(dateB) && !Number.isNaN(dateA) && dateB !== dateA) {
           return dateB - dateA;
         }
         const idA = Number(a.id) || 0;
@@ -443,11 +361,6 @@ export function GrievanceQueue({
     filters.priority !== "ALL" ||
     filters.category !== "ALL";
 
-  const appliedFiltersCount =
-    (filters.priority !== "ALL" ? 1 : 0) +
-    (filters.status !== "ALL" ? 1 : 0) +
-    (filters.category !== "ALL" ? 1 : 0);
-
   const resetFilters = () => {
     setActiveTab("all");
     setFilters({
@@ -486,11 +399,11 @@ export function GrievanceQueue({
     <colgroup>
       <col className="w-[145px]" />
       <col className="w-[260px]" />
-      <col className="w-[175px]" />
+      <col className="w-[140px]" />
       <col className="w-[170px]" />
       <col className="w-[105px]" />
-      <col className="w-[140px]" />
-      <col className="w-[140px]" />
+      <col className="w-[160px]" />
+      <col className="w-[155px]" />
       <col className="w-[130px]" />
       <col className="w-[115px]" />
     </colgroup>
@@ -745,10 +658,11 @@ export function GrievanceQueue({
                                 ? "Findings Done"
                                 : "Work Completed"}
                             </span>
-                          ) : item.status === "WAITING_ON_USER" ? (
-                            <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
+                          ) : item.status === "WAITING_ON_USER" ||
+                            item.status === "AWAITING_INFORMATION" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                              Waiting on User
+                              Awaiting Info
                             </span>
                           ) : (
                             <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
@@ -756,9 +670,13 @@ export function GrievanceQueue({
                                 ? "In Progress"
                                 : item.status === "ASSIGNED"
                                   ? "Assigned"
-                                  : item.status === "UNDER_REVIEW"
+                                  : item.status === "UNDER_REVIEW" ||
+                                      item.status ===
+                                        "RESOLUTION_PENDING_APPROVAL"
                                     ? "Under Review"
-                                    : item.status}
+                                    : item.status === "REWORK"
+                                      ? "Rework"
+                                      : item.status}
                             </span>
                           )}
                         </td>
@@ -766,7 +684,7 @@ export function GrievanceQueue({
                         {/* SLA */}
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                           <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                            <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400" />
+                            <Clock className="w-3.5 h-3.5 text-slate-900 dark:text-slate-400 shrink-0" />
                             {isBreached
                               ? "SLA Breached"
                               : isAtRisk

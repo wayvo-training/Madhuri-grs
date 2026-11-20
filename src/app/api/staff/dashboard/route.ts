@@ -125,6 +125,9 @@ export async function GET(request: Request) {
             sla_tracking: {
               orderBy: { sla_tracking_id: "desc" as const },
               take: 1,
+              include: {
+                sla_policies: true,
+              },
             },
             sla_extensions: {
               orderBy: { created_at: "desc" as const },
@@ -139,7 +142,7 @@ export async function GET(request: Request) {
     let assignments = await prisma.assignments.findMany({
       where: {
         staff_id: staffId,
-        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
       },
       ...assignmentQuery,
       orderBy: { assigned_at: "desc" },
@@ -209,6 +212,15 @@ export async function GET(request: Request) {
         myInvolvementType === "EQUAL" ||
         isAdmin;
 
+      const isMyDeptCompleted =
+        a.grievance_departments?.status === "COMPLETED" ||
+        a.assignment_status === "COMPLETED" ||
+        Boolean(a.grievance_departments?.completed_at);
+      const completedAt =
+        a.grievance_departments?.completed_at ||
+        a.completed_at ||
+        (isMyDeptCompleted ? new Date() : null);
+
       let slaCalc: ReturnType<typeof calculateSlaStatus>;
       if (a.grievance_departments?.status === "BLOCKED") {
         slaCalc = {
@@ -235,6 +247,7 @@ export async function GET(request: Request) {
           activeSla?.accumulated_paused_minutes || 0,
           activeSla?.paused_at,
           g.status,
+          completedAt,
         );
       }
 
@@ -632,10 +645,6 @@ export async function GET(request: Request) {
             isFinalSequentialDept: false,
           };
 
-      const isMyDeptCompleted =
-        a.grievance_departments?.status === "COMPLETED" ||
-        a.assignment_status === "COMPLETED";
-
       const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
       const canSubmitFindings =
         !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
@@ -687,6 +696,59 @@ export async function GET(request: Request) {
         slaConsumptionPercent: slaCalc.consumptionPercent,
         slaTimeLeft: slaCalc.timeRemaining,
         dueAt: g.due_at ? new Date(g.due_at).toISOString() : null,
+        slaPercentAllocation: a.grievance_departments?.sla_percent_allocation
+          ? Number(a.grievance_departments.sla_percent_allocation)
+          : null,
+        allocatedDurationMinutes: (() => {
+          const isReworkCase =
+            g.status === "REWORK" ||
+            g.sla_tracking?.[0]?.cycle_type === "REWORK";
+          const rawPolicyMins =
+            g.sla_tracking?.[0]?.sla_policies?.target_duration_minutes;
+          const effPolicyMins =
+            rawPolicyMins && isReworkCase
+              ? Math.max(1, Math.round(rawPolicyMins * 0.5))
+              : rawPolicyMins;
+
+          if (
+            a.grievance_departments?.allocated_duration_minutes &&
+            (!isReworkCase ||
+              !effPolicyMins ||
+              a.grievance_departments.allocated_duration_minutes <=
+                effPolicyMins)
+          ) {
+            return a.grievance_departments.allocated_duration_minutes;
+          }
+
+          if (
+            effPolicyMins &&
+            a.grievance_departments?.sla_percent_allocation
+          ) {
+            return Math.round(
+              (effPolicyMins *
+                Number(a.grievance_departments.sla_percent_allocation)) /
+                100,
+            );
+          }
+
+          return a.grievance_departments?.allocated_duration_minutes || null;
+        })(),
+        warningThresholdPercent: Number(
+          g.sla_tracking?.[0]?.sla_policies?.warning_threshold_percent || 50,
+        ),
+        escalationThresholdPercent: Number(
+          g.sla_tracking?.[0]?.sla_policies?.escalation_threshold_percent || 75,
+        ),
+        targetDurationMinutes: (() => {
+          const isReworkCase =
+            g.status === "REWORK" ||
+            g.sla_tracking?.[0]?.cycle_type === "REWORK";
+          const rawPolicyMins =
+            g.sla_tracking?.[0]?.sla_policies?.target_duration_minutes;
+          return rawPolicyMins && isReworkCase
+            ? Math.max(1, Math.round(rawPolicyMins * 0.5))
+            : rawPolicyMins || null;
+        })(),
         submittedAt: formatRelativeTime(g.created_at),
         assignedAt: formatRelativeTime(a.assigned_at),
         submitterName: submitterFullName,

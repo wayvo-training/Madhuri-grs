@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -58,7 +58,8 @@ export function StaffSingleGrievanceView({
       if (!res.ok) {
         throw new Error(`Failed to load grievance details (${res.status})`);
       }
-      const data: StaffGrievanceItem = await res.json();
+      const json = await res.json();
+      const data: StaffGrievanceItem = json?.data || json;
       setGrievance(data);
     } catch (err) {
       console.error(err);
@@ -140,6 +141,22 @@ export function StaffSingleGrievanceView({
     await fetchGrievance();
   };
 
+  const handleResumeInvestigation = async (id: string) => {
+    const res = await fetch(`/api/staff/grievances/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "RESUME_INVESTIGATION" }),
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(
+        errJson.message || errJson.error || "Failed to resume investigation",
+      );
+    }
+    toast.success("Investigation resumed. SLA clock has resumed.");
+    await fetchGrievance();
+  };
+
   const handleSubmitResolution = async (
     id: string,
     resolution: StaffResolutionData,
@@ -209,6 +226,7 @@ export function StaffSingleGrievanceView({
         onAddNote={handleAddNote}
         onStartInvestigation={handleStartInvestigation}
         onRequestAdditionalInfo={handleRequestAdditionalInfo}
+        onResumeInvestigation={handleResumeInvestigation}
         onOpenDocumentPreview={setPreviewDocument}
         onOpenResolveModal={() => {
           if (grievance.status === "ASSIGNED") {

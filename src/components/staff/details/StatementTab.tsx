@@ -2,12 +2,9 @@
 
 import {
   AlertCircle,
-  Bell,
   BookOpen,
-  CheckCircle2,
   Clock,
   Eye,
-  FileQuestion,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
@@ -16,14 +13,10 @@ import {
   MessageSquare,
   Paperclip,
   Play,
-  Send,
   Shield,
-  X,
 } from "lucide-react";
 import Link from "next/link";
-import type React from "react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import {
   type KnowledgeArticleData,
   KnowledgeArticleViewerModal,
@@ -70,10 +63,7 @@ export function StatementTab({
   hodEscalationUrl,
   hodName,
   isWaitingOnUser,
-  isInProgress,
-  autoOpenRequestModal,
   onResumeInvestigation,
-  onRequestAdditionalInfo,
   onOpenDocumentPreview,
 }: StatementTabProps) {
   // Knowledge Base recommendations state
@@ -129,69 +119,7 @@ export function StatementTab({
     };
     fetchKb();
   }, [grievance]);
-  // Additional Information Request State
-  const [isRequestInfoOpen, setIsRequestInfoOpen] = useState(
-    Boolean(autoOpenRequestModal),
-  );
-  const [selectedChannels, setSelectedChannels] = useState<
-    ("IN_APP" | "EMAIL")[]
-  >(["IN_APP", "EMAIL"]);
-  const [inquirySubject, setInquirySubject] = useState(
-    `Additional documentation required for ${grievance.grievanceNumber}`,
-  );
-  const [inquiryMessage, setInquiryMessage] = useState("");
-  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
-  const [customDocInput, setCustomDocInput] = useState("");
-  const [isSendingRequest, setIsSendingRequest] = useState(false);
-  const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
   const [isResuming, setIsResuming] = useState(false);
-
-  useEffect(() => {
-    if (autoOpenRequestModal) {
-      setIsRequestInfoOpen(true);
-    }
-  }, [autoOpenRequestModal]);
-
-  const hasChannel = selectedChannels.length > 0;
-  const hasContent =
-    Boolean(inquiryMessage.trim()) ||
-    selectedDocs.length > 0 ||
-    Boolean(customDocInput.trim());
-  const isFormValid = hasChannel && hasContent;
-
-  const handleRequestInfoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid || isSendingRequest || !onRequestAdditionalInfo) return;
-    setIsSendingRequest(true);
-    setRequestSuccess(null);
-
-    const docsToSend = [...selectedDocs];
-    if (customDocInput.trim()) {
-      docsToSend.push(customDocInput.trim());
-    }
-
-    try {
-      await onRequestAdditionalInfo(grievance.id, {
-        channels: selectedChannels,
-        subject: inquirySubject.trim(),
-        message: inquiryMessage.trim(),
-        requestedDocs: docsToSend,
-      });
-      setIsRequestInfoOpen(false);
-      setInquiryMessage("");
-      setSelectedDocs([]);
-      setCustomDocInput("");
-    } catch (err: unknown) {
-      console.error("Failed to request additional info:", err);
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Failed to request additional information",
-      );
-    } finally {
-      setIsSendingRequest(false);
-    }
-  };
 
   const handleResume = async () => {
     if (isResuming || !onResumeInvestigation) return;
@@ -205,16 +133,6 @@ export function StatementTab({
       );
     } finally {
       setIsResuming(false);
-    }
-  };
-
-  const toggleChannel = (channel: "IN_APP" | "EMAIL") => {
-    if (selectedChannels.includes(channel)) {
-      if (selectedChannels.length > 1) {
-        setSelectedChannels(selectedChannels.filter((c) => c !== channel));
-      }
-    } else {
-      setSelectedChannels([...selectedChannels, channel]);
     }
   };
 
@@ -298,23 +216,6 @@ export function StatementTab({
         </div>
       </div>
 
-      {/* Request Success Alert Banner */}
-      {requestSuccess && (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 flex items-center justify-between text-xs text-emerald-900 animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span>{requestSuccess}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setRequestSuccess(null)}
-            className="text-emerald-700 hover:text-emerald-950 font-semibold cursor-pointer"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Status: WAITING ON USER Banner */}
       {isWaitingOnUser && (
         <div className="rounded-xl border border-amber-300 bg-amber-50/80 p-4 space-y-3 shadow-2xs">
@@ -340,7 +241,7 @@ export function StatementTab({
               </div>
             </div>
 
-            {onResumeInvestigation && (
+            {onResumeInvestigation && !grievance.isMyDepartmentCompleted && (
               <button
                 type="button"
                 onClick={handleResume}
@@ -365,231 +266,6 @@ export function StatementTab({
               <strong>In Progress</strong> and you will receive a notification.
             </p>
           </div>
-        </div>
-      )}
-
-      {/* Request Additional Information or Documents from Employee Card */}
-      {isInProgress && onRequestAdditionalInfo && (
-        <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-3 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700 shrink-0 mt-0.5">
-                <FileQuestion className="h-4 w-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-blue-950">
-                  Need Additional Information or Documents from Employee?
-                </h4>
-                <p className="text-[11px] text-blue-800 mt-0.5">
-                  Request clarification or documents via In-App Notification and
-                  Email.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsRequestInfoOpen(!isRequestInfoOpen)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer shrink-0"
-            >
-              <Send className="h-3 w-3" />
-              <span>
-                {isRequestInfoOpen
-                  ? "Close Request Form"
-                  : "Request Additional Info"}
-              </span>
-            </button>
-          </div>
-
-          {/* Interactive Request Additional Info Modal */}
-          {isRequestInfoOpen && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-xl sticky top-0 z-10">
-                  <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                    <FileQuestion className="h-4 w-4 text-blue-600" />
-                    Request Additional Information
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setIsRequestInfoOpen(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <form
-                  onSubmit={handleRequestInfoSubmit}
-                  className="p-5 space-y-4"
-                >
-                  {/* Notification Channels Selection */}
-                  <div className="space-y-1.5">
-                    <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                      <span>Select Notification Channels:</span>
-                      <span className="text-[11px] text-slate-500 font-normal">
-                        (Email and In-App Notifications)
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-4 pt-1">
-                      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedChannels.includes("IN_APP")}
-                          onChange={() => toggleChannel("IN_APP")}
-                          className="rounded border-slate-300 text-[#0F766E] focus:ring-teal-600 h-4 w-4 cursor-pointer"
-                        />
-                        <span className="flex items-center gap-1.5">
-                          <Bell className="h-3.5 w-3.5 text-[#0F766E]" />
-                          <strong>In-App Notification</strong> (Employee Portal)
-                        </span>
-                      </label>
-
-                      <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedChannels.includes("EMAIL")}
-                          onChange={() => toggleChannel("EMAIL")}
-                          className="rounded border-slate-300 text-[#0F766E] focus:ring-teal-600 h-4 w-4 cursor-pointer"
-                        />
-                        <span className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-emerald-600" />
-                          <strong>Email</strong> ({grievance.submitterEmail})
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Request Subject */}
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="inquiry-subject"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Inquiry Subject / Topic:
-                    </label>
-                    <input
-                      id="inquiry-subject"
-                      type="text"
-                      required
-                      value={inquirySubject}
-                      onChange={(e) => setInquirySubject(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 focus:border-[#0F766E] focus:outline-hidden"
-                      placeholder="e.g. Additional documentation required: Performance evaluation records"
-                    />
-                  </div>
-
-                  {/* Message / Information Needed */}
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="inquiry-message"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Specific Questions &amp; Clarification Needed:
-                    </label>
-                    <textarea
-                      id="inquiry-message"
-                      rows={3}
-                      value={inquiryMessage}
-                      onChange={(e) => setInquiryMessage(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0F766E] focus:outline-hidden leading-relaxed"
-                      placeholder="Describe the exact information or clarification needed from the employee..."
-                    />
-                  </div>
-
-                  {/* Required Documents Checklist */}
-                  <div className="space-y-2">
-                    <div className="text-xs font-semibold text-slate-700">
-                      Documents Required:
-                    </div>
-                    <div className="space-y-3">
-                      <select
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val && !selectedDocs.includes(val)) {
-                            setSelectedDocs([...selectedDocs, val]);
-                          }
-                          e.target.value = "";
-                        }}
-                        className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 focus:border-[#0F766E] focus:outline-hidden bg-slate-50/50"
-                      >
-                        <option value="">
-                          Select a document to request...
-                        </option>
-                        {[
-                          "Appraisal / Scorecard Sheet",
-                          "Salary Slip / Remuneration Sheet",
-                          "Written Email / Chat Proofs",
-                          "Medical Certificate / Official Proof",
-                          "Company Policy / Contract Copy",
-                        ].map((doc) => (
-                          <option key={doc} value={doc}>
-                            {doc}
-                          </option>
-                        ))}
-                      </select>
-
-                      {selectedDocs.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {selectedDocs.map((doc) => (
-                            <span
-                              key={doc}
-                              className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 px-2.5 py-1 rounded-md text-[11px] font-medium border border-blue-200 shadow-xs"
-                            >
-                              {doc}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSelectedDocs(
-                                    selectedDocs.filter((d) => d !== doc),
-                                  )
-                                }
-                                className="text-blue-400 hover:text-blue-700 hover:bg-blue-100 rounded-sm p-0.5 transition"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Custom Doc Add */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="text"
-                        value={customDocInput}
-                        onChange={(e) => setCustomDocInput(e.target.value)}
-                        placeholder="Add another required document..."
-                        className="flex-1 rounded-lg border border-slate-300 p-1.5 text-xs text-slate-900 focus:border-blue-600 focus:outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Action Submission */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end pt-3 border-t border-slate-100 gap-2">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        type="button"
-                        onClick={() => setIsRequestInfoOpen(false)}
-                        className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSendingRequest || !isFormValid}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-lg transition shadow-2xs disabled:opacity-50 cursor-pointer"
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        <span>
-                          {isSendingRequest ? "Dispatching..." : "Send Request"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -663,30 +339,34 @@ export function StatementTab({
                   className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-2xs"
                 >
                   <div className="space-y-1.5 text-xs text-slate-700">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Department:</span>
-                      <span className="font-semibold text-slate-900">
-                        {myDept.departmentName}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500 shrink-0">
+                        Department:
+                      </span>
+                      <span className="font-semibold text-slate-900 text-right truncate">
+                        {myDept.departmentName || "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Role:</span>
-                      <span className="font-semibold text-slate-900 capitalize">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500 shrink-0">Role:</span>
+                      <span className="font-semibold text-slate-900 capitalize text-right">
                         {myDept.involvementType === "SUPPORTING"
-                          ? "supportive"
-                          : myDept.involvementType.toLowerCase()}
+                          ? "Supportive"
+                          : myDept.involvementType
+                            ? myDept.involvementType.toLowerCase()
+                            : "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Staff:</span>
-                      <span className="font-semibold text-slate-900">
-                        {myDept.assignedStaff}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500 shrink-0">Staff:</span>
+                      <span className="font-semibold text-slate-900 text-right">
+                        {myDept.assignedStaff || "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Status:</span>
-                      <span className="font-semibold text-slate-900">
-                        {myDept.status.replace(/_/g, " ")}
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500 shrink-0">Status:</span>
+                      <span className="font-semibold text-slate-900 text-right">
+                        {myDept.status ? myDept.status.replace(/_/g, " ") : "—"}
                       </span>
                     </div>
                   </div>

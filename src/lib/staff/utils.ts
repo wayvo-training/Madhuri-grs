@@ -19,23 +19,39 @@ export function calculateSlaStatus(
   accumulatedPausedMinutes: number = 0,
   pausedAt?: Date | string | null,
   grievanceStatus?: string | null,
+  completedAt?: Date | string | null,
 ): SlaCalculationResult {
   const now = new Date();
   const created = new Date(createdAt);
   const due = dueAt ? new Date(dueAt) : null;
-
-  const isPaused = Boolean(
-    pausedAt ||
-      grievanceStatus === "AWAITING_INFORMATION" ||
-      grievanceStatus === "WAITING_ON_USER" ||
-      grievanceStatus === "WAITING_ON_EMPLOYEE" ||
-      grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
-      grievanceStatus === "UNDER_REVIEW",
+  const completed = completedAt ? new Date(completedAt) : null;
+  const isCompleted = Boolean(
+    completed ||
+      grievanceStatus === "COMPLETED" ||
+      grievanceStatus === "RESOLVED" ||
+      grievanceStatus === "CLOSED",
   );
 
-  const effectiveNow = isPaused ? (pausedAt ? new Date(pausedAt) : now) : now;
+  const isPaused =
+    !isCompleted &&
+    Boolean(
+      pausedAt ||
+        grievanceStatus === "AWAITING_INFORMATION" ||
+        grievanceStatus === "WAITING_ON_USER" ||
+        grievanceStatus === "WAITING_ON_EMPLOYEE" ||
+        grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+        grievanceStatus === "UNDER_REVIEW",
+    );
 
-  if (overrideStatus === "BREACHED") {
+  const effectiveNow = isCompleted
+    ? (completed ?? now)
+    : isPaused
+      ? pausedAt
+        ? new Date(pausedAt)
+        : now
+      : now;
+
+  if (overrideStatus === "BREACHED" && !isCompleted) {
     return {
       consumptionPercent: 100,
       timeRemaining: "SLA Breached",
@@ -46,10 +62,10 @@ export function calculateSlaStatus(
 
   if (!due) {
     return {
-      consumptionPercent: 0,
-      timeRemaining: "No Target Set",
+      consumptionPercent: isCompleted ? 100 : 0,
+      timeRemaining: isCompleted ? "Completed" : "No Target Set",
       state: "ON_TRACK",
-      stateLabel: "Within SLA",
+      stateLabel: isCompleted ? "Completed" : "Within SLA",
     };
   }
 
@@ -65,6 +81,18 @@ export function calculateSlaStatus(
       Math.max(Math.round((activeElapsed / totalDuration) * 100), 0),
       100,
     );
+  }
+
+  if (isCompleted) {
+    const wasBreached = Boolean(
+      overrideStatus === "BREACHED" || (due && effectiveNow > due),
+    );
+    return {
+      consumptionPercent,
+      timeRemaining: wasBreached ? "Completed (Past SLA)" : "Completed",
+      state: wasBreached ? "BREACHED" : "ON_TRACK",
+      stateLabel: wasBreached ? "Completed Past SLA" : "Completed",
+    };
   }
 
   if (!isPaused && now > due) {
@@ -107,7 +135,11 @@ export function calculateSlaStatus(
 
     return {
       consumptionPercent,
-      timeRemaining,
+      timeRemaining:
+        grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+        grievanceStatus === "UNDER_REVIEW"
+          ? "Resolution Pending Approval (Paused)"
+          : timeRemaining,
       state: "PAUSED",
       stateLabel: `SLA Paused (${pauseLabel})`,
     };

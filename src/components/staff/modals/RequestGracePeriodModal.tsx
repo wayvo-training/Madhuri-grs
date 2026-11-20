@@ -19,12 +19,21 @@ interface RequestGracePeriodModalProps {
   onSuccess?: () => void;
 }
 
-const BASELINE_HOURS: Record<StaffPriority, number> = {
-  CRITICAL: 24,
-  HIGH: 48,
-  MEDIUM: 72,
-  LOW: 120,
-};
+function formatDurationDisplay(mins: number): string {
+  if (mins < 60) return `${mins} Minute${mins === 1 ? "" : "s"}`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (m === 0) return `${h} Hour${h === 1 ? "" : "s"}`;
+  return `${h}h ${m}m`;
+}
+
+function formatExtensionBadge(mins: number): string {
+  if (mins < 60) return `+${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (m === 0) return `+${h}h`;
+  return `+${h}h ${m}m`;
+}
 
 export function RequestGracePeriodModal({
   isOpen,
@@ -34,27 +43,118 @@ export function RequestGracePeriodModal({
 }: RequestGracePeriodModalProps) {
   const normPriority =
     (grievance.priority?.toUpperCase() as StaffPriority) || "MEDIUM";
-  const baselineHours = BASELINE_HOURS[normPriority] || 72;
 
-  // Maximum single extension is min(24h, 25% of baseline)
-  const maxAllowedHours = useMemo(() => {
-    const twentyFivePercent = Math.round((baselineHours * 25) / 100);
-    return Math.min(24, Math.max(1, twentyFivePercent));
-  }, [baselineHours]);
-
-  const presetHours = useMemo(() => {
-    const candidates = [2, 4, 6, 8, 12, 18, 24];
-    const filtered = candidates.filter((h) => h <= maxAllowedHours);
-    if (!filtered.includes(maxAllowedHours)) {
-      filtered.push(maxAllowedHours);
-      filtered.sort((a, b) => a - b);
+  // Base value: Use department's total allocated time, not total grievance time
+  const baselineMinutes = useMemo(() => {
+    // 1. Direct department allocated duration
+    if (
+      grievance.allocatedDurationMinutes &&
+      grievance.allocatedDurationMinutes > 0
+    ) {
+      return grievance.allocatedDurationMinutes;
     }
-    return filtered;
-  }, [maxAllowedHours]);
 
-  const [selectedHours, setSelectedHours] = useState<number>(() => {
+    // 2. Look for assigned department in departmentsInvolved
+    if (
+      grievance.departmentsInvolved &&
+      grievance.departmentsInvolved.length > 0
+    ) {
+      const myDept =
+        grievance.departmentsInvolved.find((d) => d.isMyAssignment) ||
+        grievance.departmentsInvolved.find(
+          (d) => d.involvementType === "PRIMARY",
+        ) ||
+        grievance.departmentsInvolved[0];
+
+      if (
+        myDept?.allocatedDurationMinutes &&
+        myDept.allocatedDurationMinutes > 0
+      ) {
+        return myDept.allocatedDurationMinutes;
+      }
+    }
+
+    // 3. Calculated from configured SLA policy target duration and percentage share
+    if (
+      grievance.targetDurationMinutes &&
+      grievance.targetDurationMinutes > 0
+    ) {
+      const share = Number(grievance.slaPercentAllocation || 100);
+      return Math.max(
+        1,
+        Math.round((grievance.targetDurationMinutes * share) / 100),
+      );
+    }
+
+    // 4. Fallback based on timestamps if available
+    if (grievance.dueAt && grievance.submittedAt) {
+      const diffMs =
+        new Date(grievance.dueAt).getTime() -
+        new Date(grievance.submittedAt).getTime();
+      if (!Number.isNaN(diffMs) && diffMs > 0) {
+        const share = Number(grievance.slaPercentAllocation || 100);
+        return Math.max(1, Math.round((diffMs / 60000) * (share / 100)));
+      }
+    }
+
+    // 5. Configured or standard priority duration fallback
+    const defaultPriorityHours: Record<string, number> = {
+      CRITICAL: 24,
+      HIGH: 48,
+      MEDIUM: 72,
+      LOW: 120,
+    };
+    const totalHours = defaultPriorityHours[normPriority] || 72;
+    const share = Number(grievance.slaPercentAllocation || 100);
+    return Math.max(1, Math.round(totalHours * 60 * (share / 100)));
+  }, [
+    grievance.allocatedDurationMinutes,
+    grievance.departmentsInvolved,
+    grievance.targetDurationMinutes,
+    grievance.slaPercentAllocation,
+    grievance.dueAt,
+    grievance.submittedAt,
+    normPriority,
+  ]);
+
+  // Maximum single extension is 25% of department's allocated baseline
+  const maxAllowedMinutes = useMemo(() => {
+    return Math.max(1, Math.round((baselineMinutes * 25) / 100));
+  }, [baselineMinutes]);
+
+  // Dynamic extension presets scaled to maxAllowedMinutes
+  const presetMinutes = useMemo(() => {
+    if (maxAllowedMinutes <= 30) {
+      const set = new Set<number>();
+      if (maxAllowedMinutes >= 15) set.add(Math.round(maxAllowedMinutes / 3));
+      if (maxAllowedMinutes >= 10)
+        set.add(Math.round((maxAllowedMinutes * 2) / 3));
+      set.add(maxAllowedMinutes);
+      return Array.from(set)
+        .filter((m) => m > 0)
+        .sort((a, b) => a - b);
+    }
+    if (maxAllowedMinutes <= 120) {
+      const set = new Set<number>();
+      const candidates = [15, 30, 45, 60, 90, 120];
+      for (const c of candidates) {
+        if (c <= maxAllowedMinutes) set.add(c);
+      }
+      set.add(maxAllowedMinutes);
+      return Array.from(set).sort((a, b) => a - b);
+    }
+    const hourCandidates = [1, 2, 4, 6, 8, 12, 18, 24];
+    const set = new Set<number>();
+    for (const h of hourCandidates) {
+      if (h * 60 <= maxAllowedMinutes) set.add(h * 60);
+    }
+    set.add(maxAllowedMinutes);
+    return Array.from(set).sort((a, b) => a - b);
+  }, [maxAllowedMinutes]);
+
+  const [selectedMinutes, setSelectedMinutes] = useState<number>(() => {
     const defaultChoice =
-      presetHours[Math.floor(presetHours.length / 2)] || maxAllowedHours;
+      presetMinutes[Math.floor(presetMinutes.length / 2)] || maxAllowedMinutes;
     return defaultChoice;
   });
 
@@ -69,17 +169,30 @@ export function RequestGracePeriodModal({
   const trimmedReason = reason.trim();
   const isValidLength = trimmedReason.length >= 15;
   const hasLetters = /[a-zA-Z]/.test(trimmedReason);
-  const isEligible50 = grievance.slaConsumptionPercent >= 50;
+
+  // Dynamic thresholds configured by admin (default: 50% warning, 75% auto-escalation)
+  const warningThreshold = grievance.warningThresholdPercent ?? 50;
+  const escalationThreshold = grievance.escalationThresholdPercent ?? 75;
+
+  const isEligibleWarning =
+    (grievance.slaConsumptionPercent ?? 0) >= warningThreshold;
+  const isUnderEscalation =
+    (grievance.slaConsumptionPercent ?? 0) < escalationThreshold;
+  const isNotBreached =
+    grievance.slaStatus !== "BREACHED" &&
+    (grievance.slaConsumptionPercent ?? 0) < 100;
   const canSubmit =
     isValidLength &&
     hasLetters &&
-    isEligible50 &&
+    isEligibleWarning &&
+    isUnderEscalation &&
+    isNotBreached &&
     !hasExistingExtension &&
     !isSubmitting;
 
   const currentDue = grievance.dueAt ? new Date(grievance.dueAt) : new Date();
   const projectedDue = new Date(
-    currentDue.getTime() + selectedHours * 60 * 60 * 1000,
+    currentDue.getTime() + selectedMinutes * 60 * 1000,
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,9 +202,18 @@ export function RequestGracePeriodModal({
       return;
     }
     if (!canSubmit) {
-      if (!isEligible50) {
+      if (
+        grievance.slaStatus === "BREACHED" ||
+        (grievance.slaConsumptionPercent ?? 0) >= 100
+      ) {
+        toast.error("Grace period cannot be requested after SLA has breached.");
+      } else if (!isUnderEscalation) {
         toast.error(
-          `Grace period can only be requested after at least 50% SLA is consumed (currently ${grievance.slaConsumptionPercent}%).`,
+          `Grace period requests close at ${escalationThreshold}% SLA when the case auto-escalates to Department Head.`,
+        );
+      } else if (!isEligibleWarning) {
+        toast.error(
+          `Grace period can only be requested after at least ${warningThreshold}% SLA is consumed (currently ${grievance.slaConsumptionPercent}%).`,
         );
       } else if (!isValidLength) {
         toast.error(
@@ -111,7 +233,7 @@ export function RequestGracePeriodModal({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            requestedMinutes: selectedHours * 60,
+            requestedMinutes: selectedMinutes,
             reason: trimmedReason,
           }),
         },
@@ -125,7 +247,7 @@ export function RequestGracePeriodModal({
 
       toast.success(
         data.message ||
-          `Grace period request (+${selectedHours}h) submitted for Department Head review.`,
+          `Grace period request (${formatExtensionBadge(selectedMinutes)}) submitted for Department Head review.`,
       );
       onSuccess?.();
       onClose();
@@ -176,9 +298,9 @@ export function RequestGracePeriodModal({
               </span>
               <span
                 className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
-                  grievance.slaConsumptionPercent >= 75
+                  grievance.slaConsumptionPercent >= escalationThreshold
                     ? "bg-rose-100 text-rose-800"
-                    : grievance.slaConsumptionPercent >= 50
+                    : grievance.slaConsumptionPercent >= warningThreshold
                       ? "bg-amber-100 text-amber-800"
                       : "bg-emerald-100 text-emerald-800"
                 }`}
@@ -187,14 +309,14 @@ export function RequestGracePeriodModal({
               </span>
             </div>
 
-            {/* SLA Progress Bar with 50% & 75% markers */}
+            {/* SLA Progress Bar with dynamic warning & escalation markers */}
             <div className="space-y-0.5">
               <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden relative">
                 <div
                   className={`h-full transition-all duration-300 ${
-                    grievance.slaConsumptionPercent >= 75
+                    grievance.slaConsumptionPercent >= escalationThreshold
                       ? "bg-rose-500"
-                      : grievance.slaConsumptionPercent >= 50
+                      : grievance.slaConsumptionPercent >= warningThreshold
                         ? "bg-amber-500"
                         : "bg-emerald-500"
                   }`}
@@ -206,10 +328,10 @@ export function RequestGracePeriodModal({
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <span>0%</span>
                 <span className="font-semibold text-amber-700">
-                  50% (Grace Period Unlocked)
+                  {warningThreshold}% (Grace Period Unlocked)
                 </span>
                 <span className="font-semibold text-rose-700">
-                  75% (Auto-Escalate)
+                  {escalationThreshold}% (Auto-Escalate)
                 </span>
                 <span>100%</span>
               </div>
@@ -225,14 +347,14 @@ export function RequestGracePeriodModal({
               <div>
                 <span className="text-slate-500">Baseline Budget:</span>{" "}
                 <span className="font-semibold text-slate-800">
-                  {baselineHours} Hours
+                  {formatDurationDisplay(baselineMinutes)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Under 50% Warning */}
-          {!isEligible50 && (
+          {/* Under Warning Threshold */}
+          {!isEligibleWarning && (
             <div className="rounded-lg border border-amber-300 bg-amber-50/90 p-2 text-xs text-amber-900 flex items-start gap-1.5">
               <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
               <div>
@@ -240,8 +362,28 @@ export function RequestGracePeriodModal({
                   Minimum Threshold Not Reached
                 </span>
                 <p className="text-[10px] text-amber-800 leading-tight mt-0.5">
-                  Grace period requests unlock after at least 50% SLA is
-                  consumed (currently {grievance.slaConsumptionPercent}%).
+                  Grace period requests unlock after at least {warningThreshold}
+                  % of department SLA is consumed (currently{" "}
+                  {grievance.slaConsumptionPercent}%).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Over Escalation Threshold or Breached Warning */}
+          {(!isUnderEscalation || !isNotBreached) && (
+            <div className="rounded-lg border border-rose-300 bg-rose-50/90 p-2 text-xs text-rose-900 flex items-start gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-[11px]">
+                  {!isNotBreached
+                    ? "SLA Breached"
+                    : "Grace Period Window Closed (Escalated)"}
+                </span>
+                <p className="text-[10px] text-rose-800 leading-tight mt-0.5">
+                  {!isNotBreached
+                    ? "This grievance has already breached its SLA. Grace period extensions cannot be requested after breach."
+                    : `SLA consumption has reached ${grievance.slaConsumptionPercent}%. Grace period requests are restricted to before ${escalationThreshold}% auto-escalation.`}
                 </p>
               </div>
             </div>
@@ -254,24 +396,26 @@ export function RequestGracePeriodModal({
                 Extension Duration <span className="text-rose-500">*</span>
               </span>
               <span className="text-[10px] font-normal text-slate-500">
-                Max Allowed: +{maxAllowedHours}h (25% cap)
+                Max Allowed: {formatExtensionBadge(maxAllowedMinutes)} (25% cap)
               </span>
             </div>
 
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-              {presetHours.map((hours) => (
+            <div className="flex flex-wrap gap-2">
+              {presetMinutes.map((mins) => (
                 <button
-                  key={hours}
+                  key={mins}
                   type="button"
-                  onClick={() => setSelectedHours(hours)}
-                  disabled={!isEligible50}
-                  className={`rounded-lg py-1.5 px-2 text-xs font-bold transition cursor-pointer border text-center ${
-                    selectedHours === hours
+                  onClick={() => setSelectedMinutes(mins)}
+                  disabled={
+                    !isEligibleWarning || !isUnderEscalation || !isNotBreached
+                  }
+                  className={`rounded-lg py-1.5 px-3 text-xs font-bold transition cursor-pointer border text-center ${
+                    selectedMinutes === mins
                       ? "border-[#0F766E] bg-[#0F766E] text-white shadow-xs"
                       : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   }`}
                 >
-                  +{hours}h
+                  {formatExtensionBadge(mins)}
                 </button>
               ))}
             </div>
@@ -314,7 +458,12 @@ export function RequestGracePeriodModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Detail the operational reason for requesting extra time (e.g. Awaiting third-party forensic analysis, vendor delay)..."
-              disabled={isSubmitting || !isEligible50}
+              disabled={
+                isSubmitting ||
+                !isEligibleWarning ||
+                !isUnderEscalation ||
+                !isNotBreached
+              }
               className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0F766E] focus:ring-1 focus:ring-[#0F766E] outline-hidden transition resize-none disabled:bg-slate-50 disabled:cursor-not-allowed"
             />
           </div>
@@ -323,8 +472,8 @@ export function RequestGracePeriodModal({
           <div className="rounded-lg bg-slate-50 border border-slate-200/70 px-2.5 py-1.5 text-[11px] text-slate-500 flex items-center gap-1.5">
             <ShieldAlert className="h-3.5 w-3.5 text-slate-400 shrink-0" />
             <span className="leading-tight">
-              1 request/cycle &bull; SLA clock continues running &bull; Grants +
-              {selectedHours}h if approved.
+              1 request/cycle &bull; SLA clock continues running &bull; Grants{" "}
+              {formatExtensionBadge(selectedMinutes)} if approved.
             </span>
           </div>
 
@@ -364,10 +513,25 @@ export function RequestGracePeriodModal({
                   <Clock className="h-3.5 w-3.5" />
                   <span>Request Already Submitted</span>
                 </>
+              ) : !isNotBreached ? (
+                <>
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  <span>SLA Breached (Closed)</span>
+                </>
+              ) : !isUnderEscalation ? (
+                <>
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  <span>
+                    Auto-Escalated to Head (&ge;{escalationThreshold}%)
+                  </span>
+                </>
               ) : (
                 <>
                   <Clock className="h-3.5 w-3.5" />
-                  <span>Submit Grace Period Request (+{selectedHours}h)</span>
+                  <span>
+                    Submit Grace Period Request (
+                    {formatExtensionBadge(selectedMinutes)})
+                  </span>
                 </>
               )}
             </button>
