@@ -8,7 +8,7 @@ import {
   ShieldAlert,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -18,24 +18,72 @@ import {
 } from "@/components/ui/select";
 import { isPurelyNumeric, type ReopenPolicyModalProps } from "./types";
 
-const STANDARD_DAY_OPTIONS = [
-  { label: "1 Day (24 hrs)", val: "1" },
-  { label: "2 Days (48 hrs)", val: "2" },
-  { label: "3 Days (72 hrs)", val: "3" },
-  { label: "5 Days (120 hrs)", val: "5" },
-  { label: "7 Days (1 Week - Default)", val: "7" },
-  { label: "10 Days (240 hrs)", val: "10" },
-  { label: "14 Days (2 Weeks - Default Reopen)", val: "14" },
-  { label: "21 Days (3 Weeks)", val: "21" },
-  { label: "30 Days (1 Month - Maximum)", val: "30" },
+const REOPEN_WINDOW_OPTIONS = [
+  { label: "1 Day (24 hrs)", triggerLabel: "1 Day", val: "1" },
+  { label: "2 Days (48 hrs)", triggerLabel: "2 Days", val: "2" },
+  { label: "3 Days (72 hrs)", triggerLabel: "3 Days", val: "3" },
+  { label: "5 Days (120 hrs)", triggerLabel: "5 Days", val: "5" },
+  { label: "7 Days (1 Week)", triggerLabel: "7 Days", val: "7" },
+  { label: "10 Days (240 hrs)", triggerLabel: "10 Days", val: "10" },
+  {
+    label: "14 Days (2 Weeks - Default)",
+    triggerLabel: "14 Days (Default)",
+    val: "14",
+  },
+  { label: "21 Days (3 Weeks)", triggerLabel: "21 Days", val: "21" },
+  { label: "30 Days (1 Month - Max)", triggerLabel: "30 Days", val: "30" },
 ];
 
-const STANDARD_ATTEMPT_OPTIONS = [
-  { label: "1 Attempt / Cycle", val: "1" },
-  { label: "2 Attempts / Cycles", val: "2" },
-  { label: "3 Attempts / Cycles (Default)", val: "3" },
-  { label: "4 Attempts / Cycles", val: "4" },
-  { label: "5 Attempts / Cycles (Maximum)", val: "5" },
+const INACTIVITY_AUTO_CLOSE_OPTIONS = [
+  { label: "1 Day (24 hrs)", triggerLabel: "1 Day", val: "1" },
+  { label: "2 Days (48 hrs)", triggerLabel: "2 Days", val: "2" },
+  { label: "3 Days (72 hrs)", triggerLabel: "3 Days", val: "3" },
+  { label: "5 Days (120 hrs)", triggerLabel: "5 Days", val: "5" },
+  {
+    label: "7 Days (1 Week - Default)",
+    triggerLabel: "7 Days (Default)",
+    val: "7",
+  },
+  { label: "10 Days (240 hrs)", triggerLabel: "10 Days", val: "10" },
+  { label: "14 Days (2 Weeks)", triggerLabel: "14 Days", val: "14" },
+  { label: "21 Days (3 Weeks)", triggerLabel: "21 Days", val: "21" },
+  { label: "30 Days (1 Month - Max)", triggerLabel: "30 Days", val: "30" },
+];
+
+const MAX_REOPEN_ATTEMPT_OPTIONS = [
+  { label: "1 Attempt", triggerLabel: "1 Attempt", val: "1" },
+  { label: "2 Attempts", triggerLabel: "2 Attempts", val: "2" },
+  {
+    label: "3 Attempts (Default)",
+    triggerLabel: "3 Attempts (Default)",
+    val: "3",
+  },
+  { label: "4 Attempts", triggerLabel: "4 Attempts", val: "4" },
+  { label: "5 Attempts (Max)", triggerLabel: "5 Attempts (Max)", val: "5" },
+];
+
+const MAX_REVIEW_CYCLE_OPTIONS = [
+  { label: "1 Review Cycle", triggerLabel: "1 Cycle", val: "1" },
+  { label: "2 Review Cycles", triggerLabel: "2 Cycles", val: "2" },
+  {
+    label: "3 Review Cycles (Default)",
+    triggerLabel: "3 Cycles (Default)",
+    val: "3",
+  },
+  { label: "4 Review Cycles", triggerLabel: "4 Cycles", val: "4" },
+  { label: "5 Review Cycles (Max)", triggerLabel: "5 Cycles (Max)", val: "5" },
+];
+
+const MAX_REJECTION_OPTIONS = [
+  { label: "1 Rejection", triggerLabel: "1 Rejection", val: "1" },
+  { label: "2 Rejections", triggerLabel: "2 Rejections", val: "2" },
+  {
+    label: "3 Rejections (Default)",
+    triggerLabel: "3 Rejections (Default)",
+    val: "3",
+  },
+  { label: "4 Rejections", triggerLabel: "4 Rejections", val: "4" },
+  { label: "5 Rejections (Max)", triggerLabel: "5 Rejections (Max)", val: "5" },
 ];
 
 export function ReopenPolicyModal({
@@ -70,9 +118,47 @@ export function ReopenPolicyModal({
   isSubmitting,
   onSubmit,
 }: ReopenPolicyModalProps) {
-  const [isCustomWindow, setIsCustomWindow] = useState(false);
-  const [isCustomResDays, setIsCustomResDays] = useState(false);
-  const [isCustomInfoDays, setIsCustomInfoDays] = useState(false);
+  // 1. Citizen Reopen Window (Days): 1 to 30 days
+  const windowDays = reopenWindowHours
+    ? (Number(reopenWindowHours) / 24).toString()
+    : "14";
+
+  const [isCustomWindow, setIsCustomWindow] = useState(
+    !REOPEN_WINDOW_OPTIONS.some((o) => o.val === windowDays),
+  );
+  const [isCustomResDays, setIsCustomResDays] = useState(
+    !INACTIVITY_AUTO_CLOSE_OPTIONS.some(
+      (o) => o.val === resolutionInactivityDays,
+    ),
+  );
+  const [isCustomInfoDays, setIsCustomInfoDays] = useState(
+    !INACTIVITY_AUTO_CLOSE_OPTIONS.some(
+      (o) => o.val === additionalInfoInactivityDays,
+    ),
+  );
+
+  useEffect(() => {
+    if (open) {
+      setIsCustomWindow(
+        !REOPEN_WINDOW_OPTIONS.some((o) => o.val === windowDays),
+      );
+      setIsCustomResDays(
+        !INACTIVITY_AUTO_CLOSE_OPTIONS.some(
+          (o) => o.val === resolutionInactivityDays,
+        ),
+      );
+      setIsCustomInfoDays(
+        !INACTIVITY_AUTO_CLOSE_OPTIONS.some(
+          (o) => o.val === additionalInfoInactivityDays,
+        ),
+      );
+    }
+  }, [
+    open,
+    windowDays,
+    resolutionInactivityDays,
+    additionalInfoInactivityDays,
+  ]);
 
   if (!open) return null;
 
@@ -82,11 +168,6 @@ export function ReopenPolicyModal({
   const isSubcategoryNumeric =
     selectedPrioritySubcatId === "CUSTOM" &&
     isPurelyNumeric(newSubcategoryName);
-
-  // 1. Citizen Reopen Window (Days): 1 to 30 days
-  const windowDays = reopenWindowHours
-    ? (Number(reopenWindowHours) / 24).toString()
-    : "14";
   const numDays = Number(windowDays);
   const isWindowOversized = numDays > 30 || numDays > 1000;
   const isWindowInvalid =
@@ -434,12 +515,12 @@ export function ReopenPolicyModal({
                       className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                     >
                       <SelectValue placeholder="Select Days">
-                        {STANDARD_DAY_OPTIONS.find((o) => o.val === windowDays)
-                          ?.label || `${windowDays} Days`}
+                        {REOPEN_WINDOW_OPTIONS.find((o) => o.val === windowDays)
+                          ?.triggerLabel || `${windowDays} Days`}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56">
-                      {STANDARD_DAY_OPTIONS.map((o) => (
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56 min-w-[240px]">
+                      {REOPEN_WINDOW_OPTIONS.map((o) => (
                         <SelectItem
                           key={o.val}
                           value={o.val}
@@ -540,13 +621,13 @@ export function ReopenPolicyModal({
                       className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                     >
                       <SelectValue placeholder="Select Days">
-                        {STANDARD_DAY_OPTIONS.find(
+                        {INACTIVITY_AUTO_CLOSE_OPTIONS.find(
                           (o) => o.val === resolutionInactivityDays,
-                        )?.label || `${resolutionInactivityDays} Days`}
+                        )?.triggerLabel || `${resolutionInactivityDays} Days`}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56">
-                      {STANDARD_DAY_OPTIONS.map((o) => (
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56 min-w-[240px]">
+                      {INACTIVITY_AUTO_CLOSE_OPTIONS.map((o) => (
                         <SelectItem
                           key={o.val}
                           value={o.val}
@@ -641,13 +722,14 @@ export function ReopenPolicyModal({
                       className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                     >
                       <SelectValue placeholder="Select Days">
-                        {STANDARD_DAY_OPTIONS.find(
+                        {INACTIVITY_AUTO_CLOSE_OPTIONS.find(
                           (o) => o.val === additionalInfoInactivityDays,
-                        )?.label || `${additionalInfoInactivityDays} Days`}
+                        )?.triggerLabel ||
+                          `${additionalInfoInactivityDays} Days`}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56">
-                      {STANDARD_DAY_OPTIONS.map((o) => (
+                    <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56 min-w-[240px]">
+                      {INACTIVITY_AUTO_CLOSE_OPTIONS.map((o) => (
                         <SelectItem
                           key={o.val}
                           value={o.val}
@@ -746,15 +828,13 @@ export function ReopenPolicyModal({
                     className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                   >
                     <SelectValue placeholder="Select Limit">
-                      {
-                        STANDARD_ATTEMPT_OPTIONS.find(
-                          (o) => o.val === (maxReopens || "3"),
-                        )?.label
-                      }
+                      {MAX_REOPEN_ATTEMPT_OPTIONS.find(
+                        (o) => o.val === (maxReopens || "3"),
+                      )?.triggerLabel || `${maxReopens || "3"} Attempts`}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
-                    {STANDARD_ATTEMPT_OPTIONS.map((o) => (
+                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl min-w-[240px]">
+                    {MAX_REOPEN_ATTEMPT_OPTIONS.map((o) => (
                       <SelectItem
                         key={o.val}
                         value={o.val}
@@ -805,15 +885,13 @@ export function ReopenPolicyModal({
                     className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                   >
                     <SelectValue placeholder="Select Limit">
-                      {
-                        STANDARD_ATTEMPT_OPTIONS.find(
-                          (o) => o.val === (maxReviews || "3"),
-                        )?.label
-                      }
+                      {MAX_REVIEW_CYCLE_OPTIONS.find(
+                        (o) => o.val === (maxReviews || "3"),
+                      )?.triggerLabel || `${maxReviews || "3"} Cycles`}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
-                    {STANDARD_ATTEMPT_OPTIONS.map((o) => (
+                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl min-w-[240px]">
+                    {MAX_REVIEW_CYCLE_OPTIONS.map((o) => (
                       <SelectItem
                         key={o.val}
                         value={o.val}
@@ -864,15 +942,13 @@ export function ReopenPolicyModal({
                     className="h-9.5 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 focus:border-teal-600 font-medium"
                   >
                     <SelectValue placeholder="Select Limit">
-                      {
-                        STANDARD_ATTEMPT_OPTIONS.find(
-                          (o) => o.val === (maxRejections || "3"),
-                        )?.label
-                      }
+                      {MAX_REJECTION_OPTIONS.find(
+                        (o) => o.val === (maxRejections || "3"),
+                      )?.triggerLabel || `${maxRejections || "3"} Rejections`}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl">
-                    {STANDARD_ATTEMPT_OPTIONS.map((o) => (
+                  <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl min-w-[240px]">
+                    {MAX_REJECTION_OPTIONS.map((o) => (
                       <SelectItem
                         key={o.val}
                         value={o.val}

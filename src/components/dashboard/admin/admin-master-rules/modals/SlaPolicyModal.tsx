@@ -283,7 +283,7 @@ export function SlaPolicyModal({
                           )?.label || `${durationHours} Hours`}
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56">
+                      <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl max-h-56 min-w-[240px]">
                         {STANDARD_DURATION_OPTIONS.map((o) => (
                           <SelectItem
                             key={o.val}
@@ -695,7 +695,7 @@ export function SlaPolicyModal({
                               onClick={() =>
                                 handleToggleRecipient(currentTierKey, opt.id)
                               }
-                              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition cursor-pointer ${
                                 isSelected
                                   ? isWarning
                                     ? "bg-teal-50/70 dark:bg-teal-950/50 border-teal-400 dark:border-teal-700 text-teal-950 dark:text-teal-200 shadow-2xs"
@@ -706,7 +706,7 @@ export function SlaPolicyModal({
                               }`}
                             >
                               <div
-                                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
                                   isSelected
                                     ? isWarning
                                       ? "border-teal-600 bg-teal-600 text-white"
@@ -722,14 +722,9 @@ export function SlaPolicyModal({
                                   </span>
                                 )}
                               </div>
-                              <div className="space-y-0.5 min-w-0">
-                                <p className="text-xs font-semibold leading-tight truncate">
-                                  {opt.label}
-                                </p>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-1">
-                                  {opt.description}
-                                </p>
-                              </div>
+                              <span className="text-xs font-semibold leading-tight truncate">
+                                {opt.label}
+                              </span>
                             </button>
                           );
                         })}

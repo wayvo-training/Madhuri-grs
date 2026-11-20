@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AdminPanelHeader } from "@/components/dashboard/admin/admin-shared";
 import {
   AdvancedTableSearch,
+  type FilterMode,
   type SearchCondition,
 } from "@/components/ui/advanced-table-search";
 import { useAdminRules } from "@/hooks/admin/master-rules/useAdminRules";
@@ -55,6 +56,10 @@ export function AdminMasterRules({
     setStatusFilter,
     deptFilter,
     catFilter,
+    searchConditions,
+    setSearchConditions,
+    filterMode,
+    setFilterMode,
     handleResetFilters,
   } = useRuleFilters({ routingRules });
 
@@ -294,6 +299,11 @@ export function AdminMasterRules({
                   },
                   { id: "category", label: "Category", type: "text" as const },
                   {
+                    id: "subcategory",
+                    label: "Subcategory",
+                    type: "text" as const,
+                  },
+                  {
                     id: "priority",
                     label: "Priority Level",
                     type: "text" as const,
@@ -336,6 +346,11 @@ export function AdminMasterRules({
                     type: "text" as const,
                   },
                   {
+                    id: "priority",
+                    label: "Priority Level",
+                    type: "text" as const,
+                  },
+                  {
                     id: "description",
                     label: "Description",
                     type: "text" as const,
@@ -365,14 +380,25 @@ export function AdminMasterRules({
                     label: "Policy Name",
                     type: "text" as const,
                   },
+                  { id: "category", label: "Category", type: "text" as const },
                   {
-                    id: "description",
-                    label: "Description",
+                    id: "subcategory",
+                    label: "Subcategory",
                     type: "text" as const,
                   },
                   {
                     id: "reopen_window_hours",
                     label: "Reopen Window",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "resolution_inactivity",
+                    label: "Res. Auto-Close",
+                    type: "number" as const,
+                  },
+                  {
+                    id: "additional_info_inactivity",
+                    label: "Info Auto-Close",
                     type: "number" as const,
                   },
                   {
@@ -385,12 +411,19 @@ export function AdminMasterRules({
                     label: "Max Reviews",
                     type: "number" as const,
                   },
+                  {
+                    id: "description",
+                    label: "Description",
+                    type: "text" as const,
+                  },
                   commonStatus,
                 ];
               }
               return [commonStatus];
             })()}
-            onSearch={(conditions: SearchCondition[], _mode: string) => {
+            onSearch={(conditions: SearchCondition[], mode: FilterMode) => {
+              setSearchConditions(conditions);
+              setFilterMode(mode || "AND");
               setStatusFilter([]);
               setSearchQuery("");
               const newStatus: string[] = [];
@@ -427,6 +460,8 @@ export function AdminMasterRules({
             searchQuery={searchQuery}
             catFilter={catFilter}
             statusFilter={statusFilter}
+            searchConditions={searchConditions}
+            filterMode={filterMode}
             onToggleStatus={(r) =>
               handleToggleStatus("priority", r.priority_rule_id, r.status)
             }
@@ -476,6 +511,8 @@ export function AdminMasterRules({
             catFilter={catFilter}
             deptFilter={deptFilter}
             statusFilter={statusFilter}
+            searchConditions={searchConditions}
+            filterMode={filterMode}
             onToggleStatus={(r) =>
               handleToggleStatus("routing", r.routing_rule_id, r.status)
             }
@@ -568,6 +605,8 @@ export function AdminMasterRules({
             policies={slaPolicies}
             searchQuery={searchQuery}
             statusFilter={statusFilter}
+            searchConditions={searchConditions}
+            filterMode={filterMode}
             onToggleStatus={(p) =>
               handleToggleStatus("sla", p.sla_policy_id, p.status)
             }
@@ -619,6 +658,8 @@ export function AdminMasterRules({
             policies={reopenPolicies}
             searchQuery={searchQuery}
             statusFilter={statusFilter}
+            searchConditions={searchConditions}
+            filterMode={filterMode}
             onToggleStatus={(p) =>
               handleToggleStatus("reopen", p.reopen_policy_id, p.status)
             }

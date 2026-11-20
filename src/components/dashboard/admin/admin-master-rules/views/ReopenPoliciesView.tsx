@@ -1,6 +1,10 @@
 import { CheckCircle2, FileText, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
@@ -19,6 +23,8 @@ interface ReopenPoliciesViewProps {
   policies: SerializedReopenPolicy[];
   searchQuery: string;
   statusFilter: string[];
+  searchConditions?: SearchCondition[];
+  filterMode?: FilterMode;
   onEdit: (policy: SerializedReopenPolicy) => void;
   onToggleStatus: (policy: SerializedReopenPolicy) => void;
   onDelete: (policy: SerializedReopenPolicy) => void;
@@ -28,27 +34,14 @@ export function ReopenPoliciesView({
   policies,
   searchQuery,
   statusFilter,
+  searchConditions,
+  filterMode = "AND",
   onEdit,
   onToggleStatus,
   onDelete: _onDelete,
 }: ReopenPoliciesViewProps) {
-  const filtered = policies.filter((p) => {
-    if (statusFilter.length > 0 && !statusFilter.includes(p.status))
-      return false;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = p.policy_name.toLowerCase().includes(q);
-      if (!matchName) return false;
-    }
-    return true;
-  });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
   const policiesWithTaxonomy = useMemo(() => {
-    return filtered.map((p) => {
+    return policies.map((p) => {
       let category = "All";
       let subcategory = "All";
       let resolutionInactivity = 7;
@@ -80,15 +73,238 @@ export function ReopenPoliciesView({
         maxRejections,
       };
     });
-  }, [filtered]);
+  }, [policies]);
 
-  const { sortState, handleSort, sortedItems } = useTableSort(
+  const filtered = useMemo(() => {
+    return policiesWithTaxonomy.filter((item) => {
+      // 1. Status Filter
+      if (statusFilter.length > 0 && !statusFilter.includes(item.status)) {
+        return false;
+      }
+
+      // 2. Structured Conditions Filter
+      if (searchConditions && searchConditions.length > 0) {
+        const evalCond = (c: SearchCondition): boolean => {
+          const field = c.field;
+          const op = c.operator || "equals";
+          const rawVal = c.value;
+          const valArray = Array.isArray(rawVal) ? rawVal : [rawVal];
+          const valStr = String(rawVal ?? "")
+            .trim()
+            .toLowerCase();
+          const valNum = Number(Array.isArray(rawVal) ? rawVal[0] : rawVal);
+
+          if (field === "status") {
+            if (op === "not_equals" || op === "is_not_in") {
+              return !valArray.some(
+                (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+              );
+            }
+            return valArray.some(
+              (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+            );
+          }
+
+          if (
+            field === "policy_name" ||
+            field === "category" ||
+            field === "subcategory" ||
+            field === "description"
+          ) {
+            const desc =
+              (item.applicable_condition as { description?: string })
+                ?.description || "";
+            const target = (
+              field === "policy_name"
+                ? item.policy_name
+                : field === "category"
+                  ? item.category
+                  : field === "subcategory"
+                    ? item.subcategory
+                    : desc
+            ).toLowerCase();
+
+            switch (op) {
+              case "equals":
+                return target === valStr;
+              case "not_equals":
+                return target !== valStr;
+              case "contains":
+                return target.includes(valStr);
+              case "does_not_contain":
+                return !target.includes(valStr);
+              case "starts_with":
+                return target.startsWith(valStr);
+              case "ends_with":
+                return target.endsWith(valStr);
+              case "is_empty":
+                return target === "" || target === "all" || target === "—";
+              case "is_not_empty":
+                return target !== "" && target !== "all" && target !== "—";
+              default:
+                return target.includes(valStr);
+            }
+          }
+
+          if (field === "reopen_window_hours") {
+            const rawHours = item.reopen_window_hours ?? 336;
+            const days = rawHours / 24;
+            const hours = rawHours;
+
+            if (Number.isNaN(valNum)) return true;
+
+            const checkOp = (v: number) => {
+              switch (op) {
+                case "equals":
+                  return v === valNum;
+                case "not_equals":
+                  return v !== valNum;
+                case "greater_than":
+                  return v > valNum;
+                case "greater_than_or_equal":
+                  return v >= valNum;
+                case "less_than":
+                  return v < valNum;
+                case "less_than_or_equal":
+                  return v <= valNum;
+                default:
+                  return v === valNum;
+              }
+            };
+
+            // Allow matching either day count (1, 14) or raw hour count (24, 336)
+            if (op === "equals") {
+              return checkOp(days) || checkOp(hours);
+            }
+            if (op === "not_equals") {
+              return !checkOp(days) && !checkOp(hours);
+            }
+            if (valNum <= 30) {
+              return checkOp(days) || checkOp(hours);
+            }
+            return checkOp(hours);
+          }
+
+          if (
+            field === "resolution_inactivity" ||
+            field === "additional_info_inactivity" ||
+            field === "max_reopens" ||
+            field === "max_reviews"
+          ) {
+            const num =
+              field === "resolution_inactivity"
+                ? item.resolutionInactivity
+                : field === "additional_info_inactivity"
+                  ? item.additionalInfoInactivity
+                  : field === "max_reopens"
+                    ? item.max_reopen_count
+                    : item.max_manual_review_count;
+
+            if (Number.isNaN(valNum)) return true;
+
+            switch (op) {
+              case "equals":
+                return num === valNum;
+              case "not_equals":
+                return num !== valNum;
+              case "greater_than":
+                return num > valNum;
+              case "greater_than_or_equal":
+                return num >= valNum;
+              case "less_than":
+                return num < valNum;
+              case "less_than_or_equal":
+                return num <= valNum;
+              default:
+                return num === valNum;
+            }
+          }
+
+          // Fallback generic search across all text properties
+          const condDesc =
+            (item.applicable_condition as { description?: string })
+              ?.description || "";
+          return (
+            item.policy_name.toLowerCase().includes(valStr) ||
+            item.category.toLowerCase().includes(valStr) ||
+            item.subcategory.toLowerCase().includes(valStr) ||
+            condDesc.toLowerCase().includes(valStr)
+          );
+        };
+
+        if (filterMode === "OR") {
+          const anyMatch = searchConditions.some(evalCond);
+          if (!anyMatch) return false;
+        } else if (filterMode === "NOT") {
+          const noneMatch = !searchConditions.some(evalCond);
+          if (!noneMatch) return false;
+        } else {
+          // AND mode
+          const allMatch = searchConditions.every(evalCond);
+          if (!allMatch) return false;
+        }
+      }
+
+      // 3. Fallback generic text searchQuery
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const rawHours = item.reopen_window_hours ?? 336;
+        const days = rawHours / 24;
+        const desc =
+          (item.applicable_condition as { description?: string })
+            ?.description || "";
+        const matchName = item.policy_name.toLowerCase().includes(q);
+        const matchCat = item.category.toLowerCase().includes(q);
+        const matchSub = item.subcategory.toLowerCase().includes(q);
+        const matchDesc = desc.toLowerCase().includes(q);
+        const matchDays =
+          days.toString() === q ||
+          `${days} day`.toLowerCase().includes(q) ||
+          `${days} days`.toLowerCase().includes(q);
+        const matchHours =
+          rawHours.toString() === q ||
+          `${rawHours} hrs`.toLowerCase().includes(q) ||
+          `${rawHours} hours`.toLowerCase().includes(q);
+        const matchReopens = item.max_reopen_count.toString() === q;
+        const matchReviews = item.max_manual_review_count.toString() === q;
+        const matchRes = item.resolutionInactivity.toString() === q;
+        const matchInfo = item.additionalInfoInactivity.toString() === q;
+        const matchStatus = item.status.toLowerCase().includes(q);
+
+        if (
+          !matchName &&
+          !matchCat &&
+          !matchSub &&
+          !matchDesc &&
+          !matchDays &&
+          !matchHours &&
+          !matchReopens &&
+          !matchReviews &&
+          !matchRes &&
+          !matchInfo &&
+          !matchStatus
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
     policiesWithTaxonomy,
-    {
-      field: "policy_name",
-      direction: "asc",
-    },
-  );
+    statusFilter,
+    searchConditions,
+    filterMode,
+    searchQuery,
+  ]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
+    field: "policy_name",
+    direction: "asc",
+  });
 
   const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);

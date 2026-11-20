@@ -1,6 +1,10 @@
 import { FileText, Pencil, Power } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
@@ -20,6 +24,8 @@ interface SlaPoliciesViewProps {
   policies: SerializedSlaPolicy[];
   searchQuery: string;
   statusFilter: string[];
+  searchConditions?: SearchCondition[];
+  filterMode?: FilterMode;
   onEdit: (policy: SerializedSlaPolicy) => void;
   onToggleStatus: (policy: SerializedSlaPolicy) => void;
   onDelete?: (policy: SerializedSlaPolicy) => void;
@@ -29,20 +35,212 @@ export function SlaPoliciesView({
   policies,
   searchQuery,
   statusFilter,
+  searchConditions,
+  filterMode = "AND",
   onEdit,
   onToggleStatus,
 }: SlaPoliciesViewProps) {
-  const filtered = policies.filter((p) => {
-    if (statusFilter.length > 0 && !statusFilter.includes(p.status))
-      return false;
+  const filtered = useMemo(() => {
+    return policies.filter((item) => {
+      // 1. Status Filter
+      if (statusFilter.length > 0 && !statusFilter.includes(item.status)) {
+        return false;
+      }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = p.policy_name.toLowerCase().includes(q);
-      if (!matchName) return false;
-    }
-    return true;
-  });
+      // 2. Structured Conditions Filter
+      if (searchConditions && searchConditions.length > 0) {
+        const evalCond = (c: SearchCondition): boolean => {
+          const field = c.field;
+          const op = c.operator || "equals";
+          const rawVal = c.value;
+          const valArray = Array.isArray(rawVal) ? rawVal : [rawVal];
+          const valStr = String(rawVal ?? "")
+            .trim()
+            .toLowerCase();
+          const valNum = Number(Array.isArray(rawVal) ? rawVal[0] : rawVal);
+
+          if (field === "status") {
+            if (op === "not_equals" || op === "is_not_in") {
+              return !valArray.some(
+                (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+              );
+            }
+            return valArray.some(
+              (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+            );
+          }
+
+          if (
+            field === "policy_name" ||
+            field === "priority" ||
+            field === "description"
+          ) {
+            const desc =
+              (item.trigger_condition as { description?: string })
+                ?.description || "";
+            const target = (
+              field === "policy_name"
+                ? item.policy_name
+                : field === "priority"
+                  ? item.priority_level || ""
+                  : desc
+            ).toLowerCase();
+
+            switch (op) {
+              case "equals":
+                return target === valStr;
+              case "not_equals":
+                return target !== valStr;
+              case "contains":
+                return target.includes(valStr);
+              case "does_not_contain":
+                return !target.includes(valStr);
+              case "starts_with":
+                return target.startsWith(valStr);
+              case "ends_with":
+                return target.endsWith(valStr);
+              case "is_empty":
+                return target === "";
+              case "is_not_empty":
+                return target !== "";
+              default:
+                return target.includes(valStr);
+            }
+          }
+
+          if (field === "duration_hours") {
+            const hours = item.target_duration_minutes / 60;
+            const days = item.target_duration_minutes / 1440;
+            const mins = item.target_duration_minutes;
+
+            if (Number.isNaN(valNum)) return true;
+
+            const checkOp = (v: number) => {
+              switch (op) {
+                case "equals":
+                  return v === valNum;
+                case "not_equals":
+                  return v !== valNum;
+                case "greater_than":
+                  return v > valNum;
+                case "greater_than_or_equal":
+                  return v >= valNum;
+                case "less_than":
+                  return v < valNum;
+                case "less_than_or_equal":
+                  return v <= valNum;
+                default:
+                  return v === valNum;
+              }
+            };
+
+            if (op === "equals") {
+              return checkOp(hours) || checkOp(days) || checkOp(mins);
+            }
+            if (op === "not_equals") {
+              return !checkOp(hours) && !checkOp(days) && !checkOp(mins);
+            }
+            if (valNum <= 30) {
+              return checkOp(days) || checkOp(hours);
+            }
+            return checkOp(hours);
+          }
+
+          if (field === "warning_percent" || field === "escalation_percent") {
+            const num =
+              field === "warning_percent"
+                ? Number(item.warning_threshold_percent)
+                : Number(
+                    item.escalation_threshold_percent ||
+                      item.at_risk_threshold_percent ||
+                      0,
+                  );
+
+            if (Number.isNaN(valNum)) return true;
+
+            switch (op) {
+              case "equals":
+                return num === valNum;
+              case "not_equals":
+                return num !== valNum;
+              case "greater_than":
+                return num > valNum;
+              case "greater_than_or_equal":
+                return num >= valNum;
+              case "less_than":
+                return num < valNum;
+              case "less_than_or_equal":
+                return num <= valNum;
+              default:
+                return num === valNum;
+            }
+          }
+
+          const desc =
+            (item.trigger_condition as { description?: string })?.description ||
+            "";
+          return (
+            item.policy_name.toLowerCase().includes(valStr) ||
+            (item.priority_level || "").toLowerCase().includes(valStr) ||
+            desc.toLowerCase().includes(valStr)
+          );
+        };
+
+        if (filterMode === "OR") {
+          const anyMatch = searchConditions.some(evalCond);
+          if (!anyMatch) return false;
+        } else if (filterMode === "NOT") {
+          const noneMatch = !searchConditions.some(evalCond);
+          if (!noneMatch) return false;
+        } else {
+          // AND mode
+          const allMatch = searchConditions.every(evalCond);
+          if (!allMatch) return false;
+        }
+      }
+
+      // 3. Fallback generic text searchQuery
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const hours = item.target_duration_minutes / 60;
+        const days = item.target_duration_minutes / 1440;
+        const desc =
+          (item.trigger_condition as { description?: string })?.description ||
+          "";
+        const matchName = item.policy_name.toLowerCase().includes(q);
+        const matchPriority = (item.priority_level || "")
+          .toLowerCase()
+          .includes(q);
+        const matchDesc = desc.toLowerCase().includes(q);
+        const matchHours =
+          hours.toString() === q ||
+          `${hours} hours`.toLowerCase().includes(q) ||
+          `${hours} hrs`.toLowerCase().includes(q);
+        const matchDays =
+          days.toString() === q ||
+          `${days} days`.toLowerCase().includes(q) ||
+          `${days} day`.toLowerCase().includes(q);
+        const matchWarning = item.warning_threshold_percent?.toString() === q;
+        const matchEsc = item.escalation_threshold_percent?.toString() === q;
+        const matchStatus = item.status.toLowerCase().includes(q);
+
+        if (
+          !matchName &&
+          !matchPriority &&
+          !matchDesc &&
+          !matchHours &&
+          !matchDays &&
+          !matchWarning &&
+          !matchEsc &&
+          !matchStatus
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [policies, statusFilter, searchConditions, filterMode, searchQuery]);
 
   const formatDuration = (minutes: number) => {
     if (minutes >= 1440 && minutes % 1440 === 0)

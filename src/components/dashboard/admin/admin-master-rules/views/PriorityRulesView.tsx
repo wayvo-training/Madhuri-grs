@@ -1,10 +1,13 @@
 import { CheckCircle2, FileText, Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -26,6 +29,8 @@ interface PriorityRulesViewProps {
   searchQuery: string;
   catFilter: string;
   statusFilter: string[];
+  searchConditions?: SearchCondition[];
+  filterMode?: FilterMode;
   onEdit: (rule: SerializedPriorityRule) => void;
   onToggleStatus: (rule: SerializedPriorityRule) => void;
   onDelete: (rule: SerializedPriorityRule) => void;
@@ -101,30 +106,14 @@ export function PriorityRulesView({
   searchQuery,
   catFilter,
   statusFilter,
+  searchConditions,
+  filterMode = "AND",
   onEdit,
   onToggleStatus,
   onDelete: _onDelete,
 }: PriorityRulesViewProps) {
-  const filtered = rules.filter((r) => {
-    if (statusFilter.length > 0 && !statusFilter.includes(r.status))
-      return false;
-
-    const { ruleCat, ruleSubcat } = extractPriorityRuleTaxonomy(r, categories);
-
-    if (catFilter !== "ALL" && ruleCat !== catFilter) return false;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = r.rule_name.toLowerCase().includes(q);
-      const matchCat = ruleCat.toLowerCase().includes(q);
-      const matchSub = ruleSubcat.toLowerCase().includes(q);
-      if (!matchName && !matchCat && !matchSub) return false;
-    }
-    return true;
-  });
-
   const rulesWithTaxonomy = useMemo(() => {
-    return filtered.map((r) => {
+    return rules.map((r) => {
       const { ruleCat, ruleSubcat } = extractPriorityRuleTaxonomy(
         r,
         categories,
@@ -135,18 +124,137 @@ export function PriorityRulesView({
         subcategory_name: ruleSubcat,
       };
     });
-  }, [filtered, categories]);
+  }, [rules, categories]);
+
+  const filtered = useMemo(() => {
+    return rulesWithTaxonomy.filter((item) => {
+      // 1. Status Filter
+      if (statusFilter.length > 0 && !statusFilter.includes(item.status)) {
+        return false;
+      }
+
+      // 2. Category Filter
+      if (catFilter !== "ALL" && item.category_name !== catFilter) {
+        return false;
+      }
+
+      // 3. Structured Conditions Filter
+      if (searchConditions && searchConditions.length > 0) {
+        const evalCond = (c: SearchCondition): boolean => {
+          const field = c.field;
+          const op = c.operator || "equals";
+          const rawVal = c.value;
+          const valArray = Array.isArray(rawVal) ? rawVal : [rawVal];
+          const valStr = String(rawVal ?? "")
+            .trim()
+            .toLowerCase();
+
+          if (field === "status") {
+            if (op === "not_equals" || op === "is_not_in") {
+              return !valArray.some(
+                (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+              );
+            }
+            return valArray.some(
+              (v) => String(v).toUpperCase() === item.status.toUpperCase(),
+            );
+          }
+
+          if (
+            field === "rule_name" ||
+            field === "category" ||
+            field === "subcategory" ||
+            field === "priority"
+          ) {
+            const target = (
+              field === "rule_name"
+                ? item.rule_name
+                : field === "category"
+                  ? item.category_name
+                  : field === "subcategory"
+                    ? item.subcategory_name
+                    : item.priority_level
+            ).toLowerCase();
+
+            switch (op) {
+              case "equals":
+                return target === valStr;
+              case "not_equals":
+                return target !== valStr;
+              case "contains":
+                return target.includes(valStr);
+              case "does_not_contain":
+                return !target.includes(valStr);
+              case "starts_with":
+                return target.startsWith(valStr);
+              case "ends_with":
+                return target.endsWith(valStr);
+              case "is_empty":
+                return target === "" || target === "all" || target === "—";
+              case "is_not_empty":
+                return target !== "" && target !== "all" && target !== "—";
+              default:
+                return target.includes(valStr);
+            }
+          }
+
+          return (
+            item.rule_name.toLowerCase().includes(valStr) ||
+            item.category_name.toLowerCase().includes(valStr) ||
+            item.subcategory_name.toLowerCase().includes(valStr)
+          );
+        };
+
+        if (filterMode === "OR") {
+          const anyMatch = searchConditions.some(evalCond);
+          if (!anyMatch) return false;
+        } else if (filterMode === "NOT") {
+          const noneMatch = !searchConditions.some(evalCond);
+          if (!noneMatch) return false;
+        } else {
+          // AND mode
+          const allMatch = searchConditions.every(evalCond);
+          if (!allMatch) return false;
+        }
+      }
+
+      // 4. Fallback generic text searchQuery
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = item.rule_name.toLowerCase().includes(q);
+        const matchCat = item.category_name.toLowerCase().includes(q);
+        const matchSub = item.subcategory_name.toLowerCase().includes(q);
+        const matchPriority = item.priority_level.toLowerCase().includes(q);
+        const matchStatus = item.status.toLowerCase().includes(q);
+        if (
+          !matchName &&
+          !matchCat &&
+          !matchSub &&
+          !matchPriority &&
+          !matchStatus
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    rulesWithTaxonomy,
+    statusFilter,
+    catFilter,
+    searchConditions,
+    filterMode,
+    searchQuery,
+  ]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const { sortState, handleSort, sortedItems } = useTableSort(
-    rulesWithTaxonomy,
-    {
-      field: "rule_order",
-      direction: "asc",
-    },
-  );
+  const { sortState, handleSort, sortedItems } = useTableSort(filtered, {
+    field: "rule_order",
+    direction: "asc",
+  });
 
   const totalCount = sortedItems.length;
   const totalPages = Math.ceil(totalCount / pageSize);

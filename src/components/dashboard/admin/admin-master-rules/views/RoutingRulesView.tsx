@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   CheckCircle2,
   FileText,
   GitBranch,
@@ -11,10 +10,13 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ActionMenu } from "@/components/ui/action-menu";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -38,6 +40,8 @@ interface RoutingRulesViewProps {
   catFilter: string;
   deptFilter: string;
   statusFilter: string[];
+  searchConditions?: SearchCondition[];
+  filterMode?: FilterMode;
   onEdit: (rule: SerializedRoutingRule) => void;
   onToggleStatus: (rule: SerializedRoutingRule) => void;
   onDelete: (rule: SerializedRoutingRule) => void;
@@ -133,6 +137,8 @@ export function RoutingRulesView({
   catFilter: externalCat,
   deptFilter: externalDept,
   statusFilter: externalStatus,
+  searchConditions,
+  filterMode = "AND",
   onEdit,
   onToggleStatus,
   onDelete: _onDelete,
@@ -174,7 +180,108 @@ export function RoutingRulesView({
         if (!isLead && !isSupp && !isDepInConditions) return false;
       }
 
-      // 4. Search Query
+      // 4. Structured Conditions Filter
+      if (searchConditions && searchConditions.length > 0) {
+        const evalCond = (c: SearchCondition): boolean => {
+          const field = c.field;
+          const op = c.operator || "equals";
+          const rawVal = c.value;
+          const valArray = Array.isArray(rawVal) ? rawVal : [rawVal];
+          const valStr = String(rawVal ?? "")
+            .trim()
+            .toLowerCase();
+
+          if (field === "status") {
+            if (op === "not_equals" || op === "is_not_in") {
+              return !valArray.some(
+                (v) => String(v).toUpperCase() === r.status.toUpperCase(),
+              );
+            }
+            return valArray.some(
+              (v) => String(v).toUpperCase() === r.status.toUpperCase(),
+            );
+          }
+
+          if (
+            field === "rule_name" ||
+            field === "category" ||
+            field === "subcategory" ||
+            field === "priority" ||
+            field === "department" ||
+            field === "involvement"
+          ) {
+            const condPriority =
+              (
+                r.conditions as {
+                  priority?: string;
+                  priority_level?: string;
+                } | null
+              )?.priority ||
+              (
+                r.conditions as {
+                  priority?: string;
+                  priority_level?: string;
+                } | null
+              )?.priority_level ||
+              "";
+            const target = (
+              field === "rule_name"
+                ? r.rule_name
+                : field === "category"
+                  ? r.category_name || ""
+                  : field === "subcategory"
+                    ? r.subcategory_name || ""
+                    : field === "priority"
+                      ? condPriority
+                      : field === "department"
+                        ? `${r.department_name} ${(r.supporting_departments || []).join(" ")}`
+                        : r.involvement_type || ""
+            ).toLowerCase();
+
+            switch (op) {
+              case "equals":
+                return target === valStr;
+              case "not_equals":
+                return target !== valStr;
+              case "contains":
+                return target.includes(valStr);
+              case "does_not_contain":
+                return !target.includes(valStr);
+              case "starts_with":
+                return target.startsWith(valStr);
+              case "ends_with":
+                return target.endsWith(valStr);
+              case "is_empty":
+                return target === "" || target === "all" || target === "—";
+              case "is_not_empty":
+                return target !== "" && target !== "all" && target !== "—";
+              default:
+                return target.includes(valStr);
+            }
+          }
+
+          return (
+            r.rule_name.toLowerCase().includes(valStr) ||
+            (r.category_name || "").toLowerCase().includes(valStr) ||
+            (r.subcategory_name || "").toLowerCase().includes(valStr) ||
+            r.department_name.toLowerCase().includes(valStr)
+          );
+        };
+
+        if (filterMode === "OR") {
+          const anyMatch = searchConditions.some(evalCond);
+          if (!anyMatch) return false;
+        } else if (filterMode === "NOT") {
+          const noneMatch = !searchConditions.some(evalCond);
+          if (!noneMatch) return false;
+        } else {
+          // AND mode
+          const allMatch = searchConditions.every(evalCond);
+          if (!allMatch) return false;
+        }
+      }
+
+      // 5. Fallback Search Query
       const effectiveSearch = (externalSearch || "").toLowerCase().trim();
       if (effectiveSearch) {
         const matchName = r.rule_name.toLowerCase().includes(effectiveSearch);
@@ -204,7 +311,15 @@ export function RoutingRulesView({
 
       return true;
     });
-  }, [rules, externalStatus, externalCat, externalDept, externalSearch]);
+  }, [
+    rules,
+    externalStatus,
+    externalCat,
+    externalDept,
+    searchConditions,
+    filterMode,
+    externalSearch,
+  ]);
 
   const rulesWithMDI = useMemo(() => {
     return filtered.map((r) => {

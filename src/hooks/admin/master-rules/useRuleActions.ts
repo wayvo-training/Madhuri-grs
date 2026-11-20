@@ -611,14 +611,16 @@ export function useRuleActions({
             (Number.parseFloat(durationHours) || 24) * 60,
           warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
           at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
-          escalation_threshold_percent: 100,
+          escalation_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
           target_role: "DEPARTMENT_HEAD",
           status: ruleStatus,
           notification_recipients: slaRecipients,
           trigger_condition: {
             warning_threshold_percent: Number.parseFloat(warningPercent) || 50,
             at_risk_threshold_percent: Number.parseFloat(atRiskPercent) || 75,
-            escalation_threshold_percent: 100,
+            escalation_threshold_percent:
+              Number.parseFloat(atRiskPercent) || 75,
+            breach_threshold_percent: 100,
             notification_recipients: slaRecipients,
             departmental_allocation_mode: departmentalAllocationMode,
           },

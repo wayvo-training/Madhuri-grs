@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { evaluateGrievanceSla } from "@/lib/engines/sla-engine";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -100,7 +101,6 @@ export async function POST(request: Request) {
 
     const warnPercent = Number(warning_threshold_percent) || 50;
     const atRiskPercent = Number(at_risk_threshold_percent) || 75;
-    const escPercent = 100;
 
     if (warnPercent < 10 || warnPercent > 90) {
       return NextResponse.json(
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
         sla_type: slaTypeVal,
         target_duration_minutes: durationNum,
         warning_threshold_percent: warnPercent,
-        escalation_threshold_percent: escPercent,
+        escalation_threshold_percent: atRiskPercent,
       },
     });
 
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: `An SLA policy with identical configuration already exists ("${configConflict.policy_name}": ${durationHours}h target duration, ${warnPercent}% warning, and ${escPercent}% escalation threshold for ${priorityDesc}). Please modify the parameters or use the existing policy.`,
+          message: `An SLA policy with identical configuration already exists ("${configConflict.policy_name}": ${durationHours}h target duration, ${warnPercent}% warning, and ${atRiskPercent}% escalation threshold for ${priorityDesc}). Please modify the parameters or use the existing policy.`,
         },
         { status: 409 },
       );
@@ -162,11 +162,12 @@ export async function POST(request: Request) {
           sla_type: slaTypeVal,
           target_duration_minutes: durationNum,
           warning_threshold_percent: warnPercent,
-          escalation_threshold_percent: escPercent,
+          escalation_threshold_percent: atRiskPercent,
           trigger_condition: {
             warning_threshold_percent: warnPercent,
             at_risk_threshold_percent: atRiskPercent,
-            escalation_threshold_percent: escPercent,
+            escalation_threshold_percent: atRiskPercent,
+            breach_threshold_percent: 100,
             ...(notificationRecipients
               ? { notification_recipients: notificationRecipients }
               : {}),
@@ -197,48 +198,118 @@ export async function POST(request: Request) {
 
       // Sync active/recent open grievances with the newly configured SLA policy
       if (priority_level && durationNum && requestedStatus === "ACTIVE") {
-        const openGrievances = await tx.grievances.findMany({
-          where: {
-            priority: priority_level,
-            status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
-          },
-          include: {
-            sla_tracking: {
-              where: {
-                sla_extensions: {
-                  none: { status: "APPROVED" },
-                },
-              },
-              orderBy: { sla_tracking_id: "desc" },
-              take: 1,
+        try {
+          const openGrievances = await tx.grievances.findMany({
+            where: {
+              priority: priority_level,
+              status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
             },
-          },
-        });
-
-        for (const g of openGrievances) {
-          const tracking = g.sla_tracking[0];
-          const startTime = tracking?.started_at || g.created_at;
-          const newDue = new Date(
-            startTime.getTime() + durationNum * 60 * 1000,
-          );
-          await tx.grievances.update({
-            where: { grievance_id: g.grievance_id },
-            data: { due_at: newDue },
+            include: {
+              sla_tracking: {
+                where: {
+                  sla_extensions: {
+                    none: { status: "APPROVED" },
+                  },
+                },
+                orderBy: { sla_tracking_id: "desc" },
+                take: 1,
+              },
+            },
           });
-          if (tracking) {
-            await tx.sla_tracking.update({
-              where: { sla_tracking_id: tracking.sla_tracking_id },
-              data: {
-                due_at: newDue,
-                sla_policy_id: created.sla_policy_id,
+
+          for (const g of openGrievances) {
+            const tracking = g.sla_tracking[0];
+            const rawStart = tracking?.started_at || g.created_at;
+            const startDate =
+              rawStart instanceof Date
+                ? rawStart
+                : rawStart
+                  ? new Date(rawStart)
+                  : new Date();
+            const newDue = new Date(
+              startDate.getTime() + durationNum * 60 * 1000,
+            );
+            await tx.grievances.update({
+              where: { grievance_id: g.grievance_id },
+              data: { due_at: newDue },
+            });
+            if (tracking) {
+              await tx.sla_tracking.update({
+                where: { sla_tracking_id: tracking.sla_tracking_id },
+                data: {
+                  due_at: newDue,
+                  sla_policy_id: created.sla_policy_id,
+                },
+              });
+            }
+
+            // Update each involved active department's allocated duration and due date
+            const deptRecords = await tx.grievance_departments.findMany({
+              where: {
+                grievance_id: g.grievance_id,
+                status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
               },
             });
+
+            for (const d of deptRecords) {
+              const percentAlloc = d.sla_percent_allocation
+                ? Number(d.sla_percent_allocation)
+                : 100;
+              const newDeptMinutes = Math.max(
+                1,
+                Math.round((durationNum * percentAlloc) / 100),
+              );
+              const rawAct = d.activated_at || d.assigned_at || startDate;
+              const actDate =
+                rawAct instanceof Date
+                  ? rawAct
+                  : rawAct
+                    ? new Date(rawAct)
+                    : startDate;
+              const newDeptDue = new Date(
+                actDate.getTime() + newDeptMinutes * 60 * 1000,
+              );
+              await tx.grievance_departments.update({
+                where: { grievance_department_id: d.grievance_department_id },
+                data: {
+                  allocated_duration_minutes: newDeptMinutes,
+                  ...(d.status !== "BLOCKED" ? { due_at: newDeptDue } : {}),
+                },
+              });
+            }
           }
+        } catch (syncErr) {
+          console.error(
+            "Failed to sync open grievances with new SLA policy:",
+            syncErr,
+          );
         }
       }
 
       return created;
     });
+
+    // Trigger SLA evaluation on all active grievances with this priority to apply new thresholds & send notifications
+    if (priority_level && requestedStatus === "ACTIVE") {
+      const activeGrievanceIds = await prisma.grievances.findMany({
+        where: {
+          priority: priority_level,
+          status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
+        },
+        select: { grievance_id: true },
+      });
+
+      for (const g of activeGrievanceIds) {
+        try {
+          await evaluateGrievanceSla(g.grievance_id);
+        } catch (evalErr) {
+          console.error(
+            `Failed to evaluate SLA for grievance ${g.grievance_id}:`,
+            evalErr,
+          );
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -251,7 +322,7 @@ export async function POST(request: Request) {
         target_duration_minutes: policy.target_duration_minutes,
         warning_threshold_percent: warnPercent.toString(),
         at_risk_threshold_percent: atRiskPercent.toString(),
-        escalation_threshold_percent: escPercent.toString(),
+        escalation_threshold_percent: atRiskPercent.toString(),
         trigger_condition: policy.trigger_condition,
         target_role: policy.target_role,
         status: policy.status,
@@ -259,10 +330,11 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Failed to create SLA policy:", error);
-    return NextResponse.json(
-      { success: false, message: "Internal server error creating SLA policy." },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error creating SLA policy.";
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
 
@@ -282,7 +354,15 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const policyId = BigInt(sla_policy_id);
+    let policyId: bigint;
+    try {
+      policyId = BigInt(sla_policy_id);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Invalid Policy ID format." },
+        { status: 400 },
+      );
+    }
 
     // If this is a full policy update (policy_name is provided)
     if (body.policy_name) {
@@ -391,7 +471,6 @@ export async function PATCH(request: Request) {
       }
       const warnPercent = Number(warning_threshold_percent) || 50;
       const atRiskPercent = Number(at_risk_threshold_percent) || 75;
-      const escPercent = 100;
 
       if (warnPercent < 10 || warnPercent > 90) {
         return NextResponse.json(
@@ -427,11 +506,12 @@ export async function PATCH(request: Request) {
             sla_type: slaTypeVal,
             target_duration_minutes: durationNum,
             warning_threshold_percent: warnPercent,
-            escalation_threshold_percent: escPercent,
+            escalation_threshold_percent: atRiskPercent,
             trigger_condition: {
               warning_threshold_percent: warnPercent,
               at_risk_threshold_percent: atRiskPercent,
-              escalation_threshold_percent: escPercent,
+              escalation_threshold_percent: atRiskPercent,
+              breach_threshold_percent: 100,
               ...(notificationRecipients
                 ? { notification_recipients: notificationRecipients }
                 : {}),
@@ -461,48 +541,121 @@ export async function PATCH(request: Request) {
 
         // Sync active/recent open grievances with the updated SLA policy duration
         if (priority_level && durationNum && requestedStatus !== "INACTIVE") {
-          const openGrievances = await tx.grievances.findMany({
-            where: {
-              priority: priority_level,
-              status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
-            },
-            include: {
-              sla_tracking: {
-                where: {
-                  sla_extensions: {
-                    none: { status: "APPROVED" },
-                  },
-                },
-                orderBy: { sla_tracking_id: "desc" },
-                take: 1,
+          try {
+            const openGrievances = await tx.grievances.findMany({
+              where: {
+                priority: priority_level,
+                status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
               },
-            },
-          });
-
-          for (const g of openGrievances) {
-            const tracking = g.sla_tracking[0];
-            const startTime = tracking?.started_at || g.created_at;
-            const newDue = new Date(
-              startTime.getTime() + durationNum * 60 * 1000,
-            );
-            await tx.grievances.update({
-              where: { grievance_id: g.grievance_id },
-              data: { due_at: newDue },
+              include: {
+                sla_tracking: {
+                  where: {
+                    sla_extensions: {
+                      none: { status: "APPROVED" },
+                    },
+                  },
+                  orderBy: { sla_tracking_id: "desc" },
+                  take: 1,
+                },
+              },
             });
-            if (tracking) {
-              await tx.sla_tracking.update({
-                where: { sla_tracking_id: tracking.sla_tracking_id },
-                data: {
-                  due_at: newDue,
-                  sla_policy_id: policy.sla_policy_id,
+
+            for (const g of openGrievances) {
+              const tracking = g.sla_tracking[0];
+              const rawStart = tracking?.started_at || g.created_at;
+              const startDate =
+                rawStart instanceof Date
+                  ? rawStart
+                  : rawStart
+                    ? new Date(rawStart)
+                    : new Date();
+              const newDue = new Date(
+                startDate.getTime() + durationNum * 60 * 1000,
+              );
+              await tx.grievances.update({
+                where: { grievance_id: g.grievance_id },
+                data: { due_at: newDue },
+              });
+              if (tracking) {
+                await tx.sla_tracking.update({
+                  where: { sla_tracking_id: tracking.sla_tracking_id },
+                  data: {
+                    due_at: newDue,
+                    sla_policy_id: policy.sla_policy_id,
+                  },
+                });
+              }
+
+              // Update each involved active department's allocated duration and due date
+              const deptRecords = await tx.grievance_departments.findMany({
+                where: {
+                  grievance_id: g.grievance_id,
+                  status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
                 },
               });
+
+              for (const d of deptRecords) {
+                const percentAlloc = d.sla_percent_allocation
+                  ? Number(d.sla_percent_allocation)
+                  : 100;
+                const newDeptMinutes = Math.max(
+                  1,
+                  Math.round((durationNum * percentAlloc) / 100),
+                );
+                const rawAct = d.activated_at || d.assigned_at || startDate;
+                const actDate =
+                  rawAct instanceof Date
+                    ? rawAct
+                    : rawAct
+                      ? new Date(rawAct)
+                      : startDate;
+                const newDeptDue = new Date(
+                  actDate.getTime() + newDeptMinutes * 60 * 1000,
+                );
+                await tx.grievance_departments.update({
+                  where: { grievance_department_id: d.grievance_department_id },
+                  data: {
+                    allocated_duration_minutes: newDeptMinutes,
+                    ...(d.status !== "BLOCKED" ? { due_at: newDeptDue } : {}),
+                  },
+                });
+              }
             }
+          } catch (syncErr) {
+            console.error(
+              "Failed to sync open grievances with updated SLA policy:",
+              syncErr,
+            );
           }
         }
 
         return policy;
       });
+
+      // Trigger SLA evaluation on all active grievances with this priority to apply updated thresholds & send notifications
+      if (
+        priority_level &&
+        (body.status === "ACTIVE" || updated.status === "ACTIVE")
+      ) {
+        const activeGrievanceIds = await prisma.grievances.findMany({
+          where: {
+            priority: priority_level,
+            status: { notIn: ["RESOLVED", "CLOSED", "REJECTED"] },
+          },
+          select: { grievance_id: true },
+        });
+
+        for (const g of activeGrievanceIds) {
+          try {
+            await evaluateGrievanceSla(g.grievance_id);
+          } catch (evalErr) {
+            console.error(
+              `Failed to evaluate SLA for grievance ${g.grievance_id}:`,
+              evalErr,
+            );
+          }
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -515,7 +668,7 @@ export async function PATCH(request: Request) {
           target_duration_minutes: updated.target_duration_minutes,
           warning_threshold_percent: warnPercent.toString(),
           at_risk_threshold_percent: atRiskPercent.toString(),
-          escalation_threshold_percent: escPercent.toString(),
+          escalation_threshold_percent: atRiskPercent.toString(),
           trigger_condition: updated.trigger_condition,
           target_role: updated.target_role,
           status: updated.status,
@@ -587,10 +740,11 @@ export async function PATCH(request: Request) {
     });
   } catch (error) {
     console.error("Failed to update SLA policy:", error);
-    return NextResponse.json(
-      { success: false, message: "Internal server error updating SLA policy." },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal server error updating SLA policy.";
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
 
