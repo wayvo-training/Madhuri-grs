@@ -11,10 +11,6 @@ interface CachedArticlesResponse {
 }
 const articlesResponseCache = new Map<string, CachedArticlesResponse>();
 
-export function invalidateKnowledgeArticlesCache() {
-  articlesResponseCache.clear();
-}
-
 export async function GET(request: Request) {
   const auth = await resolveDepartmentHeadAuth(request);
   if ("error" in auth) {

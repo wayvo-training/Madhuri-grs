@@ -370,7 +370,7 @@ export async function POST(
             action: isSupportingContributor
               ? "SUPPORTING_FINDINGS_SUBMITTED"
               : "RESOLUTION_SUBMITTED",
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               stage: newOverallStatus,
@@ -473,7 +473,7 @@ export async function POST(
               grievance_id: grievanceId,
               user_id: user.user_id,
               action: "ACCEPT_RESOLUTION",
-              entity_type: "grievance",
+              entity_type: "GRIEVANCE",
               entity_id: grievanceId,
               new_value: {
                 decision: "APPROVE",
@@ -540,7 +540,7 @@ export async function POST(
               grievance_id: grievanceId,
               user_id: user.user_id,
               action: "Resolution Returned for Clarification",
-              entity_type: "grievance",
+              entity_type: "GRIEVANCE",
               entity_id: grievanceId,
               new_value: {
                 decision: "REJECT",

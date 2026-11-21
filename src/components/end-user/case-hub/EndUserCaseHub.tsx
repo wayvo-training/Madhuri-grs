@@ -264,13 +264,19 @@ export function EndUserCaseHub({
       : Infinity;
 
     // Detect active lifecycle: Reopened cycle vs Rework cycle vs Initial cycle
+    const isClosedCase =
+      grievance.status === "CLOSED" || Boolean(grievance.closedAt);
     const isReopenLifecycle =
       grievance.status === "REOPENED" ||
+      grievance.closureReason === "REOPEN_REJECTED_FINAL" ||
+      (grievance.rejectionInfo?.type === "REOPEN" && isClosedCase) ||
       (reopenTime < Infinity &&
         (reworkTime === Infinity || reopenTime >= reworkTime));
     const isReworkLifecycle =
       !isReopenLifecycle &&
       (grievance.status === "REWORK" ||
+        grievance.closureReason === "REWORK_REJECTED_FINAL" ||
+        (grievance.rejectionInfo?.type === "REWORK" && isClosedCase) ||
         (reworkTime < Infinity &&
           (reopenTime === Infinity || reworkTime > reopenTime)));
     const hasReworkOrReopened = isReworkLifecycle || isReopenLifecycle;
@@ -370,6 +376,7 @@ export function EndUserCaseHub({
 
     const isReworkRejected = Boolean(
       grievance.rejectionInfo?.type === "REWORK" ||
+        grievance.closureReason === "REWORK_REJECTED_FINAL" ||
         (grievance.statusHistory || []).some(
           (h) =>
             new Date(h.changedAt).getTime() >= cycle2StartTime &&
@@ -379,6 +386,7 @@ export function EndUserCaseHub({
 
     const isReopenRejected = Boolean(
       grievance.rejectionInfo?.type === "REOPEN" ||
+        grievance.closureReason === "REOPEN_REJECTED_FINAL" ||
         (grievance.statusHistory || []).some(
           (h) =>
             new Date(h.changedAt).getTime() >= cycle2StartTime &&

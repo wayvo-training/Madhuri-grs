@@ -1145,7 +1145,7 @@ export async function activateNextSequentialDepartments(
               "@/lib/services/notification.service"
             );
             const { invalidateUserNotificationsCache } = await import(
-              "@/app/api/notifications/route"
+              "@/lib/services/notification-cache"
             );
 
             const formattedDeadline = newDueAt

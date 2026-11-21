@@ -273,7 +273,7 @@ export async function POST(
             grievance_id: grievanceId,
             user_id: staffId,
             action: "SUPPORTING_FINDINGS_SUBMITTED",
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               department: deptName,

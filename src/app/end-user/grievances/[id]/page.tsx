@@ -99,9 +99,13 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
               "REWORK_REQUESTED",
               "REWORK_APPROVED",
               "REWORK_REJECTED",
+              "REWORK_REJECTED_FINAL",
               "REOPEN_REQUESTED",
               "REOPEN_APPROVED",
               "REOPEN_REJECTED",
+              "REOPEN_REJECTED_FINAL",
+              "RESOLUTION_SUBMITTED",
+              "ACCEPT_RESOLUTION",
             ],
           },
         },
@@ -327,33 +331,37 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
 
   const staffAttachments = Array.from(staffAttachmentsMap.values());
 
-  const rejectionLog = (grievance.audit_logs || [])
-    .slice()
-    .reverse()
-    .find(
-      (l) =>
-        l.action === "REWORK_REJECTED" ||
-        l.action === "REOPEN_REJECTED" ||
-        l.action === "REWORK_REJECTED_FINAL" ||
-        l.action === "REOPEN_REJECTED_FINAL",
-    );
-  const rejectionHistory = (grievance.grievance_status_history || [])
-    .slice()
-    .reverse()
-    .find(
-      (h) =>
-        h.remarks?.toLowerCase().includes("rejected rework") ||
-        h.remarks?.toLowerCase().includes("rejected reopening") ||
-        h.remarks?.toLowerCase().includes("rejected reopen"),
-    );
-
-  const rejectionCount = (grievance.audit_logs || []).filter(
+  // Audit logs are the primary, authoritative source for rejection events
+  const auditRejectionLogs = (grievance.audit_logs || []).filter(
     (l) =>
       l.action === "REWORK_REJECTED" ||
       l.action === "REOPEN_REJECTED" ||
       l.action === "REWORK_REJECTED_FINAL" ||
       l.action === "REOPEN_REJECTED_FINAL",
-  ).length;
+  );
+
+  const rejectionLog =
+    auditRejectionLogs.length > 0
+      ? auditRejectionLogs[auditRejectionLogs.length - 1]
+      : undefined;
+
+  const historyRejections = (grievance.grievance_status_history || []).filter(
+    (h) =>
+      h.remarks?.toLowerCase().includes("rejected rework") ||
+      h.remarks?.toLowerCase().includes("rejected reopening") ||
+      h.remarks?.toLowerCase().includes("rejected reopen"),
+  );
+
+  const rejectionHistory =
+    historyRejections.length > 0
+      ? historyRejections[historyRejections.length - 1]
+      : undefined;
+
+  // Accurately calculate rejectionCount: prioritize audit_logs, only falling back to status history if 0 audit logs exist (never sum them)
+  const rejectionCount =
+    auditRejectionLogs.length > 0
+      ? auditRejectionLogs.length
+      : historyRejections.length;
 
   let rejectionInfo: {
     type: "REWORK" | "REOPEN";
@@ -370,6 +378,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     const reason =
       (val?.rejectionReason as string) ||
       (val?.reason as string) ||
+      (val?.details as string) ||
       rejectionHistory?.remarks ||
       "Request not approved by Department Head.";
     rejectionInfo = {

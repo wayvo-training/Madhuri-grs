@@ -695,7 +695,7 @@ export async function POST(
           grievance_id: grievanceId,
           user_id: user.user_id,
           action: "HOD_INTERVENTION_TAKEN",
-          entity_type: "grievance",
+          entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
             actionType: interventionType,

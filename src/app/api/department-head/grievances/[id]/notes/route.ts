@@ -365,7 +365,7 @@ export async function POST(
         grievance_id: grievanceId,
         user_id: userId,
         action,
-        entity_type: "grievance",
+        entity_type: "GRIEVANCE",
         entity_id: grievanceId,
         new_value: {
           note: noteText,

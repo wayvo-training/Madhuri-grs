@@ -207,7 +207,7 @@ export async function POST(
             grievance_id: grievanceId,
             user_id: user.user_id,
             action: auditAction,
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               rejectionReason: cleanReason,
@@ -338,7 +338,7 @@ export async function POST(
           grievance_id: grievanceId,
           user_id: user.user_id,
           action: isRework ? "REWORK_APPROVED" : "REOPEN_APPROVED",
-          entity_type: "grievance",
+          entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
             assignedStaffId: assignedStaffId.toString(),
