@@ -15,7 +15,7 @@ export async function POST(
     return auth.error;
   }
 
-  const { staffId, departmentId, isAdmin } = auth;
+  const { staffId, isAdmin } = auth;
   const { id } = await params;
 
   try {
@@ -134,25 +134,46 @@ export async function POST(
       },
     });
 
-    // Find the current staff member's department record
-    const myDeptRecord = allInvolvedDepts.find(
-      (d) =>
-        (d.assignments?.staff_id &&
-          d.assignments.staff_id.toString() === staffId.toString()) ||
-        (!isAdmin && departmentId
-          ? d.department_id.toString() === departmentId.toString()
-          : false),
-    );
+    // Find the current staff member's active assignment
+    const myAssignment = allInvolvedDepts
+      .flatMap((d) => d.assignments || [])
+      .find(
+        (a) =>
+          a.staff_id.toString() === staffId.toString() &&
+          a.assignment_status === "ASSIGNED",
+      );
 
-    if (!myDeptRecord && !isAdmin) {
+    if (!myAssignment && !isAdmin) {
       return NextResponse.json(
         {
           success: false,
-          message: "Forbidden: You are not assigned to this grievance",
+          message:
+            "Forbidden: You do not have an active assignment for this grievance",
         },
         { status: 403 },
       );
     }
+
+    if (
+      myAssignment &&
+      myAssignment.assignment_role === "SUPPORTING" &&
+      !isAdmin
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: Supporting Staff cannot submit department findings. Please submit your findings via Supporting Findings.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const myDeptRecord =
+      allInvolvedDepts.find(
+        (d) =>
+          d.grievance_department_id === myAssignment?.grievance_department_id,
+      ) || (isAdmin ? allInvolvedDepts[0] : null);
 
     if (myDeptRecord?.status === "BLOCKED") {
       return NextResponse.json(
@@ -300,15 +321,16 @@ export async function POST(
 
     for (const otherDept of otherInvolvedDepts) {
       // Notify other department's assigned staff if assigned
-      const assignedStaffId = otherDept.assignments?.staff_id;
-      if (assignedStaffId && assignedStaffId !== staffId) {
-        await NotificationService.send({
-          userId: assignedStaffId,
-          grievanceId,
-          type: "HEAD_INTERNAL_NOTE",
-          title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
-          message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
-        });
+      for (const a of otherDept.assignments || []) {
+        if (a.assignment_status === "ASSIGNED" && a.staff_id !== staffId) {
+          await NotificationService.send({
+            userId: a.staff_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
+          });
+        }
       }
 
       // Notify other department's HOD(s)

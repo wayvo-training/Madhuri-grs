@@ -539,10 +539,23 @@ export function SlaGovernanceView({
                               </span>
                             ) : (
                               <span
-                                className="inline-block truncate max-w-[150px] text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap"
-                                title={item.assignedStaffName || "Unassigned"}
+                                className="inline-flex items-center gap-1.5 truncate max-w-[200px] text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap"
+                                title={
+                                  item.supportingStaff &&
+                                  item.supportingStaff.length > 0
+                                    ? `${item.assignedStaffName || "Unassigned"} (Supporting: ${item.supportingStaff.map((s) => s.name).join(", ")})`
+                                    : item.assignedStaffName || "Unassigned"
+                                }
                               >
-                                {item.assignedStaffName || "Unassigned"}
+                                <span>
+                                  {item.assignedStaffName || "Unassigned"}
+                                </span>
+                                {item.supportingStaff &&
+                                  item.supportingStaff.length > 0 && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800 shrink-0">
+                                      +{item.supportingStaff.length} supporting
+                                    </span>
+                                  )}
                               </span>
                             )}
                           </td>

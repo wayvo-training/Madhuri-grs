@@ -82,6 +82,22 @@ export interface GrievanceItem {
   assignedStaffRole?: string | null;
   isAssignedStaffInactive?: boolean;
   isAssignedToHead?: boolean;
+  primaryStaff?: { id: string; name: string; email: string } | null;
+  supportingStaff?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    assignedAt: string;
+  }>;
+  supportingStaffFindings?: Array<{
+    id: string;
+    staffId: string;
+    staffName: string;
+    departmentId?: string;
+    departmentName?: string;
+    findings: string;
+    submittedAt: string;
+  }>;
   createdAt: string;
   isReopened?: boolean;
   reopenCount?: number;
@@ -190,6 +206,8 @@ export interface GrievanceItem {
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    primaryStaff?: { id: string; name: string } | null;
+    supportingStaff?: Array<{ id: string; name: string }>;
     slaPercentAllocation?: number | null;
     allocatedDurationMinutes?: number | null;
     executionOrder?: number;
@@ -375,6 +393,8 @@ export interface CaseProgressData {
     involvementType: string;
     status: string;
     assignedStaff?: string | null;
+    primaryStaff?: { id: string; name: string } | null;
+    supportingStaff?: Array<{ id: string; name: string }>;
     slaPercentAllocation?: number | null;
     allocatedDurationMinutes?: number | null;
     executionOrder?: number;

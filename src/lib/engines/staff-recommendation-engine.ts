@@ -96,7 +96,14 @@ export async function calculateStaffRecommendations(
   }
 
   // Active assignment if already assigned in this specific department
-  const activeAssignment = targetDeptRecord?.assignments;
+  const activeAssignment =
+    targetDeptRecord?.assignments?.find(
+      (a) =>
+        a.assignment_role === "PRIMARY" && a.assignment_status === "ASSIGNED",
+    ) ||
+    targetDeptRecord?.assignments?.find(
+      (a) => a.assignment_status === "ASSIGNED",
+    );
   const currentAssignedUser =
     activeAssignment?.assignment_status === "ASSIGNED"
       ? activeAssignment.users_assignments_staff_idTousers

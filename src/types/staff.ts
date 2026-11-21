@@ -115,6 +115,8 @@ export interface StaffInvolvedDepartment {
   involvementType: "PRIMARY" | "SUPPORTING" | "EQUAL";
   status: string;
   assignedStaff?: string | null;
+  primaryStaff?: { id: string; name: string } | null;
+  supportingStaff?: Array<{ id: string; name: string }>;
   isMyAssignment?: boolean;
   slaPercentAllocation?: number | null;
   allocatedDurationMinutes?: number | null;
@@ -168,6 +170,24 @@ export interface StaffGrievanceItem {
   collaboratingDepartments?: string[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   isPrimaryOwner?: boolean;
+  isPrimaryStaff?: boolean;
+  isSupportingStaff?: boolean;
+  primaryStaff?: { id: string; name: string; email: string } | null;
+  supportingStaff?: Array<{
+    id: string;
+    name: string;
+    email: string;
+    assignedAt: string;
+  }>;
+  supportingStaffFindings?: Array<{
+    id: string;
+    staffId: string;
+    staffName: string;
+    departmentId?: string;
+    departmentName?: string;
+    findings: string;
+    submittedAt: string;
+  }>;
   myDepartmentStatus?: string;
   isMyDepartmentCompleted?: boolean;
   canSubmitFinalResolution?: boolean;

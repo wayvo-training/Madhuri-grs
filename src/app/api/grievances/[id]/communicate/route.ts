@@ -77,7 +77,7 @@ export async function POST(
         categories: true,
         subcategories: true,
         assignments: {
-          where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
+          where: { assignment_status: "ASSIGNED" },
           include: {
             users_assignments_staff_idTousers: {
               select: {
@@ -120,11 +120,12 @@ export async function POST(
 
     const isSubmitter = grievance.submitted_by === userId;
     const isAssignedStaff = grievance.assignments.some(
-      (a) => a.staff_id === userId,
+      (a) => a.staff_id === userId && a.assignment_status === "ASSIGNED",
     );
-    const isInvolvedDepartment = deptId
-      ? involvedDepts.some((gd) => gd.department_id === deptId)
-      : false;
+    const isPermittedDeptHead =
+      userRole === "DEPARTMENT_HEAD" &&
+      deptId !== null &&
+      involvedDepts.some((gd) => gd.department_id === deptId);
 
     const isAdmin = userRole === "ADMIN";
     const hasSendCommunication =
@@ -144,7 +145,7 @@ export async function POST(
     if (
       !isSubmitter &&
       !isAssignedStaff &&
-      !isInvolvedDepartment &&
+      !isPermittedDeptHead &&
       !(isAdmin && hasSendCommunication)
     ) {
       return NextResponse.json(

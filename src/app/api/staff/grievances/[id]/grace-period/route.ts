@@ -44,6 +44,26 @@ export async function POST(
       );
     }
 
+    // Verify staff has an active assignment on this grievance
+    const activeAssignment = await prisma.assignments.findFirst({
+      where: {
+        grievance_id: grievanceId,
+        staff_id: user.user_id,
+        assignment_status: "ASSIGNED",
+      },
+    });
+
+    if (!activeAssignment && user.roles?.role_name !== "ADMIN") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: You do not have an active assignment for this grievance.",
+        },
+        { status: 403 },
+      );
+    }
+
     // Check if staff already has a pending or active extension request
     const existingPending = await prisma.sla_extensions.findFirst({
       where: {
@@ -104,6 +124,26 @@ export async function GET(
 
   try {
     const grievanceId = BigInt(id);
+
+    // Verify staff has an active assignment on this grievance
+    const activeAssignment = await prisma.assignments.findFirst({
+      where: {
+        grievance_id: grievanceId,
+        staff_id: auth.staffId,
+        assignment_status: "ASSIGNED",
+      },
+    });
+
+    if (!activeAssignment && !auth.isAdmin) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: You do not have an active assignment for this grievance.",
+        },
+        { status: 403 },
+      );
+    }
 
     const extensions = await prisma.sla_extensions.findMany({
       where: { grievance_id: grievanceId },

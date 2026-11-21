@@ -159,7 +159,7 @@ export function checkAttachmentAccess(
   // Formal resolution attachments are visible to all participating departments, assigned officers, and the citizen owner
   if (isResolutionAttachment) {
     if (
-      isUserDeptParticipant ||
+      (isUserDeptParticipant && userRole !== "STAFF") ||
       isUserAssignedStaff ||
       (grievanceOwnerId !== null && currentUserId === grievanceOwnerId)
     ) {
@@ -174,6 +174,7 @@ export function checkAttachmentAccess(
   // 4. Own department upload (e.g. supporting department uploaded its own findings evidence)
   const isOwnDeptUpload =
     (userDeptRecord &&
+      userRole !== "STAFF" &&
       attachment.grievance_department_id &&
       BigInt(attachment.grievance_department_id) ===
         BigInt(userDeptRecord.grievance_department_id)) ||
@@ -213,7 +214,10 @@ export function checkAttachmentAccess(
     );
   });
 
-  if (isPrimaryOrEqual || isAssignedToPrimaryOrEqual) {
+  if (
+    isAssignedToPrimaryOrEqual ||
+    (isPrimaryOrEqual && userRole !== "STAFF")
+  ) {
     return {
       allowed: true,
       reason:
@@ -237,9 +241,8 @@ export function checkAttachmentAccess(
       const dId = BigInt(gd.department_id);
       const dIdStr = dId.toString();
       const deptName =
-        (gd.department_name && gd.department_name.trim()) ||
-        (gd.departments?.department_name &&
-          gd.departments.department_name.trim()) ||
+        gd.department_name?.trim() ||
+        gd.departments?.department_name?.trim() ||
         (dIdStr === "1"
           ? "Human Resources"
           : dIdStr === "2"
@@ -294,7 +297,7 @@ export function checkAttachmentAccess(
       return targetDepartmentIds?.some((id) => id === BigInt(gd.department_id));
     });
 
-    if (isDeptGranted || isAssignedToGrantedDept) {
+    if (isAssignedToGrantedDept || (isDeptGranted && userRole !== "STAFF")) {
       return {
         allowed: true,
         reason: "Access granted based on department document visibility.",

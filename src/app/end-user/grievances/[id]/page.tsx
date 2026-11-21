@@ -135,7 +135,15 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
 
   const allDepts = (grievance.grievance_departments || [])
     .map((gd) => {
-      const staffUser = gd.assignments?.users_assignments_staff_idTousers;
+      const activeAssignments = (gd.assignments || []).filter(
+        (a) =>
+          a.assignment_status === "ASSIGNED" ||
+          a.assignment_status === "COMPLETED",
+      );
+      const primaryAssignment =
+        activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        activeAssignments[0];
+      const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
       const staffName = staffUser
         ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
         : null;

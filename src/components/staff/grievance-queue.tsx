@@ -580,6 +580,11 @@ export function GrievanceQueue({
                           >
                             {item.grievanceNumber}
                           </button>
+                          {item.isSupportingStaff && (
+                            <span className="ml-1.5 inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300">
+                              Supporting
+                            </span>
+                          )}
                         </td>
 
                         {/* Summary */}

@@ -281,6 +281,11 @@ export function SmartStaffAssignmentModal({
   const [recommendations, setRecommendations] = useState<
     StaffRecommendationResult[]
   >([]);
+  const [assignmentRole, setAssignmentRole] = useState<
+    "PRIMARY" | "SUPPORTING"
+  >("PRIMARY");
+  const [replaceStaffId, setReplaceStaffId] = useState<string | null>(null);
+  const [replaceStaffName, setReplaceStaffName] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [assignmentNote, setAssignmentNote] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -554,6 +559,8 @@ export function SmartStaffAssignmentModal({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             staffId: selectedStaffId,
+            assignmentRole,
+            replaceStaffId: replaceStaffId || undefined,
             note: assignmentNote.trim() || undefined,
             recommendationScore: selectedCandidate.score,
             recommendationReasons: selectedCandidate.rawReasons,
@@ -572,12 +579,18 @@ export function SmartStaffAssignmentModal({
         return;
       }
 
-      toast.success(
-        isReassignment
-          ? `Grievance reassigned to ${selectedCandidate.name}`
-          : `Grievance assigned to ${selectedCandidate.name}`,
-        { id: `assign-${selectedCandidate.staffId}` },
-      );
+      const successToast =
+        assignmentRole === "SUPPORTING"
+          ? replaceStaffId
+            ? `Supporting Investigator reassigned to ${selectedCandidate.name}`
+            : `Added ${selectedCandidate.name} as Supporting Investigator`
+          : isReassignment
+            ? `Primary Investigator reassigned to ${selectedCandidate.name}`
+            : `Grievance assigned to ${selectedCandidate.name}`;
+
+      toast.success(successToast, {
+        id: `assign-${selectedCandidate.staffId}`,
+      });
       setShowConfirmModal(false);
       onAssignmentSuccess(
         selectedCandidate.staffId,
@@ -724,27 +737,167 @@ export function SmartStaffAssignmentModal({
               )}
           </div>
 
-          {/* 2. If Reassigning: Show Current Staff Context */}
-          {isReassignment && (
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 flex items-start gap-2.5 text-xs">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-900 font-bold text-xs mt-0.5">
-                <UserCheck className="h-3.5 w-3.5" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-0.5">
-                <div className="font-semibold text-amber-950 text-xs">
-                  Currently Assigned:{" "}
-                  <span className="font-semibold text-amber-950">
-                    {grievance.assignedStaffName || "Assigned Staff Member"}
-                  </span>
+          {/* 2. Department Staff Team (Primary & Supporting) */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-teal-600" />
+                <span>Department Staff Team</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAssignmentRole("SUPPORTING");
+                  setReplaceStaffId(null);
+                  setReplaceStaffName(null);
+                  setSelectedStaffId("");
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-lg hover:bg-teal-100 transition cursor-pointer"
+              >
+                + Add Supporting Staff
+              </button>
+            </div>
+
+            {/* Primary Investigator */}
+            <div className="rounded-lg border border-teal-200/80 bg-teal-50/50 p-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white font-bold text-xs">
+                  <UserCheck className="h-3.5 w-3.5" />
                 </div>
-                <p className="text-amber-800 text-[11px]">
-                  {currentAssignedMember
-                    ? `Current Workload: ${currentAssignedMember.activeTickets} / ${currentAssignedMember.maxCapacity} active grievances (${currentAssignedMember.status})`
-                    : "Reassigning will record prior assignment as REASSIGNED without resetting the SLA."}
-                </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 truncate">
+                      {grievance.primaryStaff?.name ||
+                        grievance.assignedStaffName ||
+                        "Unassigned"}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-100 text-teal-800 border border-teal-200">
+                      Primary Investigator
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {grievance.primaryStaff?.email ||
+                      (currentAssignedMember
+                        ? `${currentAssignedMember.email} • ${currentAssignedMember.designation}`
+                        : "Responsible for conducting inquiry and final resolution")}
+                  </p>
+                </div>
+              </div>
+
+              {isReassignment && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssignmentRole("PRIMARY");
+                    setReplaceStaffId(null);
+                    setReplaceStaffName(null);
+                    setSelectedStaffId("");
+                  }}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                    assignmentRole === "PRIMARY" && !replaceStaffId
+                      ? "bg-teal-700 text-white border-teal-700"
+                      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {assignmentRole === "PRIMARY" && !replaceStaffId
+                    ? "Reassigning..."
+                    : "Reassign"}
+                </button>
+              )}
+            </div>
+
+            {/* Supporting Investigators List */}
+            {grievance.supportingStaff &&
+              grievance.supportingStaff.length > 0 && (
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="text-[10px] font-semibold uppercase text-slate-400">
+                    Supporting Investigators ({grievance.supportingStaff.length}
+                    )
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {grievance.supportingStaff.map((staff) => (
+                      <div
+                        key={staff.id}
+                        className="rounded-lg border border-slate-200 bg-slate-50/60 p-2 flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-800 truncate">
+                            {staff.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate">
+                            {staff.email}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssignmentRole("SUPPORTING");
+                            setReplaceStaffId(staff.id);
+                            setReplaceStaffName(staff.name);
+                            setSelectedStaffId("");
+                          }}
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition cursor-pointer shrink-0 ${
+                            replaceStaffId === staff.id
+                              ? "bg-amber-600 text-white border-amber-600"
+                              : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          {replaceStaffId === staff.id
+                            ? "Replacing..."
+                            : "Reassign"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+          </div>
+
+          {/* Role selector tabs */}
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800">
+                Assignment Target Role:
+              </span>
+              <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssignmentRole("PRIMARY");
+                    setReplaceStaffId(null);
+                    setReplaceStaffName(null);
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                    assignmentRole === "PRIMARY"
+                      ? "bg-white text-teal-800 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Primary Investigator
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssignmentRole("SUPPORTING");
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                    assignmentRole === "SUPPORTING"
+                      ? "bg-white text-teal-800 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Supporting Investigator
+                </button>
               </div>
             </div>
-          )}
+            <p className="text-[11px] text-slate-500">
+              {assignmentRole === "PRIMARY"
+                ? "Primary Investigator holds overall ownership of the grievance and submits the final resolution proposal."
+                : replaceStaffId
+                  ? `Reassigning Supporting Investigator (${replaceStaffName}). The replaced staff member will immediately lose access.`
+                  : "Supporting Investigators assist by submitting investigation findings within the department."}
+            </p>
+          </div>
 
           {/* 3. Smart Staff Recommendations Section */}
           <div className="space-y-2.5">
@@ -1197,14 +1350,22 @@ export function SmartStaffAssignmentModal({
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {isReassignment
-                    ? "Confirm Assignment Change"
-                    : "Confirm Staff Assignment"}
+                  {assignmentRole === "SUPPORTING"
+                    ? replaceStaffId
+                      ? "Confirm Supporting Staff Reassignment"
+                      : "Confirm Supporting Staff Assignment"
+                    : isReassignment
+                      ? "Confirm Primary Investigator Reassignment"
+                      : "Confirm Primary Staff Assignment"}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  {isReassignment
-                    ? `Are you sure you want to reassign grievance ${grievance.ticketCode} to ${selectedCandidate.name}?`
-                    : `Are you sure you want to assign grievance ${grievance.ticketCode} to ${selectedCandidate.name}?`}
+                  {assignmentRole === "SUPPORTING"
+                    ? replaceStaffId
+                      ? `Are you sure you want to replace ${replaceStaffName} with ${selectedCandidate.name} as Supporting Investigator? The previous staff member's access will be revoked.`
+                      : `Are you sure you want to add ${selectedCandidate.name} as Supporting Investigator on grievance ${grievance.ticketCode}?`
+                    : isReassignment
+                      ? `Are you sure you want to reassign primary ownership of grievance ${grievance.ticketCode} to ${selectedCandidate.name}? The previous primary staff member's access will be revoked.`
+                      : `Are you sure you want to assign grievance ${grievance.ticketCode} to ${selectedCandidate.name} as Primary Investigator?`}
                 </p>
               </div>
             </div>

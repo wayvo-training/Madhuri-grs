@@ -215,13 +215,21 @@ export async function GET(req: NextRequest) {
       const rawDepts = g.grievance_departments || [];
       const departmentsInvolved: StaffInvolvedDepartment[] = rawDepts.map(
         (gd) => {
-          const deptAssignment =
-            gd.assignments &&
-            (gd.assignments.assignment_status === "ASSIGNED" ||
-              gd.assignments.assignment_status === "COMPLETED")
-              ? gd.assignments
-              : null;
-          const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+          const activeAssignments = (gd.assignments || []).filter(
+            (assign) =>
+              assign.assignment_status === "ASSIGNED" ||
+              assign.assignment_status === "COMPLETED",
+          );
+          const primaryAssignment =
+            activeAssignments.find(
+              (assign) => assign.assignment_role === "PRIMARY",
+            ) || activeAssignments[0];
+          const supportingAssignments = activeAssignments.filter(
+            (assign) => assign !== primaryAssignment,
+          );
+
+          const staffUser =
+            primaryAssignment?.users_assignments_staff_idTousers;
           const assignedStaff = staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
@@ -235,6 +243,19 @@ export async function GET(req: NextRequest) {
               "PRIMARY",
             status: gd.status,
             assignedStaff,
+            primaryStaff: staffUser
+              ? {
+                  id: primaryAssignment.staff_id.toString(),
+                  name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+                }
+              : null,
+            supportingStaff: supportingAssignments.map((sa) => {
+              const su = sa.users_assignments_staff_idTousers;
+              return {
+                id: sa.staff_id.toString(),
+                name: `${su.first_name} ${su.last_name || ""}`.trim(),
+              };
+            }),
             isMyAssignment:
               gd.grievance_department_id === a.grievance_department_id,
           };

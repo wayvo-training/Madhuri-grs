@@ -689,7 +689,11 @@ export async function GET(request: Request) {
             isFinalSequentialDept: false,
           };
 
-      const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
+      const isSupportingStaff = a.assignment_role === "SUPPORTING";
+      const isPrimaryStaff = a.assignment_role === "PRIMARY";
+
+      const canSubmitFinalResolution =
+        !isSupportingStaff && (isAdmin || resolutionAuth.canResolve);
       const canSubmitFindings =
         !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
       const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
@@ -813,6 +817,8 @@ export async function GET(request: Request) {
         departmentsInvolved,
         myInvolvementType,
         isPrimaryOwner,
+        isPrimaryStaff,
+        isSupportingStaff,
         myDepartmentStatus: a.grievance_departments?.status || "ASSIGNED",
         isMyDepartmentCompleted: isMyDeptCompleted,
         canSubmitFinalResolution,

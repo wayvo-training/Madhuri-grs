@@ -158,10 +158,17 @@ export async function POST(
     }
 
     // Target the assigned staff of THIS specific department first, falling back to grievance-level active assignment
+    const activeDeptAssignment =
+      grievanceDept.assignments?.find(
+        (a) =>
+          a.assignment_role === "PRIMARY" && a.assignment_status === "ASSIGNED",
+      ) ||
+      grievanceDept.assignments?.find(
+        (a) => a.assignment_status === "ASSIGNED",
+      );
+
     const currentAssignedStaff =
-      (grievanceDept.assignments?.assignment_status === "ASSIGNED"
-        ? grievanceDept.assignments.users_assignments_staff_idTousers
-        : null) ||
+      activeDeptAssignment?.users_assignments_staff_idTousers ||
       grievance.assignments[0]?.users_assignments_staff_idTousers ||
       null;
 

@@ -232,6 +232,15 @@ export function GrievanceDetails({
                         : "Low"}
                 </span>
                 <StatusBadge status={grievance.status} />
+                {grievance.isSupportingStaff ? (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800">
+                    Supporting Investigator
+                  </span>
+                ) : grievance.isPrimaryStaff ? (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                    Primary Investigator
+                  </span>
+                ) : null}
                 {grievance.overallStatus &&
                   (grievance.isMyDepartmentCompleted ||
                     grievance.status === "COMPLETED") &&
@@ -477,9 +486,11 @@ export function GrievanceDetails({
                 >
                   <Lock className="h-3.5 w-3.5 text-slate-400" />
                   <span>
-                    {grievance.isPrimaryOwner === false
-                      ? "Submit Department Findings"
-                      : "Submit Final Resolution"}
+                    {grievance.isSupportingStaff
+                      ? "Submit Investigation Findings"
+                      : grievance.isPrimaryOwner === false
+                        ? "Submit Department Findings"
+                        : "Submit Final Resolution"}
                   </span>
                 </button>
               </>
@@ -495,6 +506,21 @@ export function GrievanceDetails({
                   <Clock className="h-3.5 w-3.5 text-slate-500" />
                   <span>Stage Blocked · Awaiting Prerequisites</span>
                 </span>
+              ) : grievance.isSupportingStaff ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenResolutionForm) {
+                      onOpenResolutionForm(grievance);
+                    } else {
+                      onOpenResolveModal?.();
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-teal-800 transition cursor-pointer"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  <span>Submit Investigation Findings</span>
+                </button>
               ) : grievance.canSubmitFinalResolution ? (
                 <button
                   type="button"

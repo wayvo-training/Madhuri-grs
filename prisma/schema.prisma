@@ -8,25 +8,29 @@ datasource db {
 }
 
 model assignments {
-  assignment_id                        BigInt                @id @default(autoincrement())
+  assignment_id                        BigInt                         @id @default(autoincrement())
   grievance_id                         BigInt
-  grievance_department_id              BigInt                @unique(map: "uq_active_assignment", where: raw("((assignment_status)::text = 'ASSIGNED'::text)"))
+  grievance_department_id              BigInt
   staff_id                             BigInt
-  recommendation_score                 Decimal?              @db.Decimal(5, 2)
+  recommendation_score                 Decimal?                       @db.Decimal(5, 2)
   recommendation_reasons               Json?
-  assignment_status                    String                @default("ASSIGNED") @db.VarChar(30)
+  assignment_role                      String                         @default("PRIMARY") @db.VarChar(20)
+  assignment_status                    String                         @default("ASSIGNED") @db.VarChar(30)
   assigned_by                          BigInt
-  assigned_at                          DateTime              @default(now()) @db.Timestamptz(6)
-  completed_at                         DateTime?             @db.Timestamptz(6)
-  users_assignments_assigned_byTousers users                 @relation("assignments_assigned_byTousers", fields: [assigned_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
-  grievance_departments                grievance_departments @relation(fields: [grievance_department_id], references: [grievance_department_id], onDelete: Cascade, onUpdate: NoAction)
-  grievances                           grievances            @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
-  users_assignments_staff_idTousers    users                 @relation("assignments_staff_idTousers", fields: [staff_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  assigned_at                          DateTime                       @default(now()) @db.Timestamptz(6)
+  completed_at                         DateTime?                      @db.Timestamptz(6)
+  users_assignments_assigned_byTousers users                          @relation("assignments_assigned_byTousers", fields: [assigned_by], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  grievance_departments                grievance_departments          @relation(fields: [grievance_department_id], references: [grievance_department_id], onDelete: Cascade, onUpdate: NoAction)
+  grievances                           grievances                     @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
+  users_assignments_staff_idTousers    users                          @relation("assignments_staff_idTousers", fields: [staff_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction)
+  staff_investigation_findings         staff_investigation_findings[]
 
+  @@unique([grievance_department_id, staff_id], map: "uq_active_staff_dept_assignment", where: raw("((assignment_status)::text = 'ASSIGNED'::text)"))
   @@index([grievance_id], map: "idx_assignments_grievance_id")
   @@index([staff_id], map: "idx_assignments_staff_id")
   @@index([staff_id, assignment_status], map: "idx_assignments_staff_status")
   @@index([assignment_status], map: "idx_assignments_status")
+  @@index([grievance_department_id, assignment_role], map: "idx_assignments_dept_role")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -149,9 +153,10 @@ model grievance_departments {
   prerequisite_department_ids Json          @default("[]")
   execution_order            Int            @default(1)
   activated_at               DateTime?      @db.Timestamptz(6)
-  assignments                assignments?
+  assignments                assignments[]
   attachments                attachments[]
   sla_tracking               sla_tracking[]
+  staff_investigation_findings staff_investigation_findings[]
   departments                departments    @relation(fields: [department_id], references: [department_id], onDelete: NoAction, onUpdate: NoAction)
   grievances                 grievances     @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -210,6 +215,7 @@ model grievances {
   sla_tracking             sla_tracking[]
   sla_extensions           sla_extensions[]
   grievance_feedback       grievance_feedback?
+  staff_investigation_findings staff_investigation_findings[]
 
   @@index([category_id], map: "idx_grievances_category_id")
   @@index([created_at], map: "idx_grievances_created_at")
@@ -547,6 +553,7 @@ model users {
   sla_policies                               sla_policies[]
   user_skills                                user_skills[]
   grievance_feedback                         grievance_feedback[]
+  staff_investigation_findings               staff_investigation_findings[]
   departments                                departments?               @relation(fields: [department_id], references: [department_id], onUpdate: NoAction)
   roles                                      roles                      @relation(fields: [role_id], references: [role_id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -585,4 +592,27 @@ model grievance_feedback {
   users        users      @relation(fields: [employee_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "grievance_feedback_employee_id_fkey")
 
   @@index([employee_id], map: "idx_grievance_feedback_employee_id")
+}
+
+model staff_investigation_findings {
+  finding_id              BigInt                @id @default(autoincrement())
+  grievance_id            BigInt
+  grievance_department_id BigInt
+  assignment_id           BigInt
+  staff_id                BigInt
+  finding_content         String                @db.Text
+  action_taken            String?               @db.Text
+  notes                   String?               @db.Text
+  attachments             Json?                 @default("[]")
+  submitted_at            DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime              @default(now()) @updatedAt @db.Timestamptz(6)
+  grievances              grievances            @relation(fields: [grievance_id], references: [grievance_id], onDelete: Cascade, onUpdate: NoAction, map: "staff_findings_grievance_id_fkey")
+  grievance_departments   grievance_departments @relation(fields: [grievance_department_id], references: [grievance_department_id], onDelete: Cascade, onUpdate: NoAction, map: "staff_findings_dept_id_fkey")
+  assignments             assignments           @relation(fields: [assignment_id], references: [assignment_id], onDelete: Cascade, onUpdate: NoAction, map: "staff_findings_assignment_id_fkey")
+  users                   users                 @relation(fields: [staff_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "staff_findings_staff_id_fkey")
+
+  @@index([grievance_id], map: "idx_staff_findings_grievance_id")
+  @@index([grievance_department_id], map: "idx_staff_findings_dept_id")
+  @@index([staff_id], map: "idx_staff_findings_staff_id")
+  @@index([assignment_id], map: "idx_staff_findings_assignment_id")
 }

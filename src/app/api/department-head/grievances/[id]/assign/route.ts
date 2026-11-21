@@ -18,7 +18,21 @@ export async function POST(
   try {
     const grievanceId = BigInt(id);
     const body = await request.json();
-    const { staffId, note, recommendationScore, recommendationReasons } = body;
+    const {
+      staffId,
+      note,
+      recommendationScore,
+      recommendationReasons,
+      assignmentRole: rawAssignmentRole,
+      role,
+      replaceStaffId,
+      replaceAssignmentId,
+    } = body;
+
+    const assignmentRole: "PRIMARY" | "SUPPORTING" =
+      (rawAssignmentRole || role || "PRIMARY").toUpperCase() === "SUPPORTING"
+        ? "SUPPORTING"
+        : "PRIMARY";
 
     if (!staffId) {
       return NextResponse.json(
@@ -142,6 +156,26 @@ export async function POST(
 
     const staffName = `${staff.first_name} ${staff.last_name || ""}`.trim();
 
+    // Check if staff member already has an active assignment in this department
+    const existingStaffAssignment = await prisma.assignments.findFirst({
+      where: {
+        grievance_department_id: grievanceDept.grievance_department_id,
+        staff_id: targetStaffId,
+        assignment_status: "ASSIGNED",
+      },
+    });
+
+    if (existingStaffAssignment) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "This staff member is already actively assigned to this grievance department.",
+        },
+        { status: 400 },
+      );
+    }
+
     // Prepare recommendation payload if provided
     const reasonsPayload = recommendationReasons
       ? {
@@ -154,19 +188,92 @@ export async function POST(
         ? { note }
         : undefined;
 
+    const roleTitle =
+      assignmentRole === "SUPPORTING"
+        ? "Supporting Investigator"
+        : "Primary Investigator";
+
+    let priorAssignment: { assignment_id: bigint; staff_id: bigint } | null =
+      null;
+
     // 3. Database transaction: Complete prior active assignment, create new assignment, update status and logs
     await prisma.$transaction(async (tx) => {
-      // Mark any existing active assignment as REASSIGNED
-      await tx.assignments.updateMany({
-        where: {
-          grievance_department_id: grievanceDept.grievance_department_id,
-          assignment_status: "ASSIGNED",
-        },
-        data: {
-          assignment_status: "REASSIGNED",
-          completed_at: new Date(),
-        },
-      });
+      if (assignmentRole === "PRIMARY") {
+        const priorPrimary = await tx.assignments.findFirst({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+            assignment_status: "ASSIGNED",
+            assignment_role: "PRIMARY",
+          },
+        });
+
+        if (priorPrimary) {
+          priorAssignment = priorPrimary;
+          await tx.assignments.update({
+            where: { assignment_id: priorPrimary.assignment_id },
+            data: {
+              assignment_status: "REASSIGNED",
+              completed_at: new Date(),
+            },
+          });
+
+          if (priorPrimary.staff_id !== targetStaffId) {
+            await tx.notifications.create({
+              data: {
+                user_id: priorPrimary.staff_id,
+                grievance_id: grievanceId,
+                notification_type: "ASSIGNMENT",
+                channel: "IN_APP",
+                title: `Case Reassigned: ${grievance.grievance_number}`,
+                message: `Your assignment as Primary Investigator on Grievance ${grievance.grievance_number} (${grievance.title}) has been transferred to ${staffName}. Your access has been revoked.`,
+                status: "PENDING",
+                created_at: new Date(),
+              },
+            });
+          }
+        }
+      } else {
+        // SUPPORTING role reassignment if a specific previous assignment is targeted
+        if (replaceAssignmentId || replaceStaffId) {
+          const priorSupporting = await tx.assignments.findFirst({
+            where: {
+              grievance_department_id: grievanceDept.grievance_department_id,
+              assignment_status: "ASSIGNED",
+              assignment_role: "SUPPORTING",
+              ...(replaceAssignmentId
+                ? { assignment_id: BigInt(replaceAssignmentId) }
+                : {}),
+              ...(replaceStaffId ? { staff_id: BigInt(replaceStaffId) } : {}),
+            },
+          });
+
+          if (priorSupporting) {
+            priorAssignment = priorSupporting;
+            await tx.assignments.update({
+              where: { assignment_id: priorSupporting.assignment_id },
+              data: {
+                assignment_status: "REASSIGNED",
+                completed_at: new Date(),
+              },
+            });
+
+            if (priorSupporting.staff_id !== targetStaffId) {
+              await tx.notifications.create({
+                data: {
+                  user_id: priorSupporting.staff_id,
+                  grievance_id: grievanceId,
+                  notification_type: "ASSIGNMENT",
+                  channel: "IN_APP",
+                  title: `Case Reassigned: ${grievance.grievance_number}`,
+                  message: `Your supporting role on Grievance ${grievance.grievance_number} (${grievance.title}) has been transferred to ${staffName}. Your access has been revoked.`,
+                  status: "PENDING",
+                  created_at: new Date(),
+                },
+              });
+            }
+          }
+        }
+      }
 
       // Insert new active assignment
       await tx.assignments.create({
@@ -177,6 +284,7 @@ export async function POST(
           assigned_by: user.user_id,
           assigned_at: new Date(),
           assignment_status: "ASSIGNED",
+          assignment_role: assignmentRole,
           recommendation_score:
             recommendationScore !== undefined && recommendationScore !== null
               ? Number(recommendationScore)
@@ -192,10 +300,13 @@ export async function POST(
           grievance_id: grievanceId,
           notification_type: "ASSIGNMENT",
           channel: "IN_APP",
-          title: `New Case Assigned: ${grievance.grievance_number}`,
+          title:
+            assignmentRole === "SUPPORTING"
+              ? `Assigned as Supporting Investigator: ${grievance.grievance_number}`
+              : `New Case Assigned: ${grievance.grievance_number}`,
           message: note
-            ? `You have been assigned Grievance ${grievance.grievance_number} (${grievance.title}). Note: "${note}"`
-            : `You have been assigned Grievance ${grievance.grievance_number} (${grievance.title}) by Department Head.`,
+            ? `You have been assigned as ${roleTitle} on Grievance ${grievance.grievance_number} (${grievance.title}). Note: "${note}"`
+            : `You have been assigned as ${roleTitle} on Grievance ${grievance.grievance_number} (${grievance.title}) by Department Head.`,
           status: "PENDING",
           created_at: new Date(),
         },
@@ -210,7 +321,7 @@ export async function POST(
             notification_type: "ASSIGNMENT",
             channel: "IN_APP",
             title: `Assignment Confirmed: ${grievance.grievance_number}`,
-            message: `You assigned grievance ${grievance.grievance_number} (${grievance.title}) to ${staffName}.`,
+            message: `You assigned grievance ${grievance.grievance_number} (${grievance.title}) to ${staffName} as ${roleTitle}.`,
             status: "PENDING",
             created_at: new Date(),
           },
@@ -288,17 +399,24 @@ export async function POST(
         data: {
           grievance_id: grievanceId,
           user_id: user.user_id,
-          action: "ASSIGNED_TO_STAFF",
+          action: priorAssignment ? "REASSIGNED_STAFF" : "ASSIGNED_TO_STAFF",
           entity_type: "GRIEVANCE",
           entity_id: grievanceId,
           new_value: {
             staff_id: staff.user_id.toString(),
             staff_name: staffName,
-            note: note || "Assigned by Department Head",
+            assignment_role: assignmentRole,
+            role_label: roleTitle,
+            replaced_staff_id: priorAssignment
+              ? priorAssignment.staff_id.toString()
+              : null,
+            note: note || `Assigned as ${roleTitle} by Department Head`,
             stage: "ASSIGNED",
             recommendation_score: recommendationScore ?? null,
             recommendation_reasons: reasonsPayload ?? null,
-            details: `Assigned to ${staffName}${recommendationScore ? ` (Match score: ${recommendationScore}%)` : ""}`,
+            details: priorAssignment
+              ? `Reassigned ${roleTitle} on department ${grievanceDept.department_id.toString()} to ${staffName}`
+              : `Assigned as ${roleTitle} to ${staffName}${recommendationScore ? ` (Match score: ${recommendationScore}%)` : ""}`,
           },
         },
       });
@@ -310,18 +428,19 @@ export async function POST(
           old_status: grievance.status,
           new_status: newStatus,
           changed_by: user.user_id,
-          remarks: note || `Assigned to ${staffName}`,
+          remarks: note || `Assigned as ${roleTitle} to ${staffName}`,
         },
       });
     });
 
     return NextResponse.json({
       success: true,
-      message: `Assigned grievance ${grievance.grievance_number} to ${staffName}.`,
+      message: `Assigned grievance ${grievance.grievance_number} to ${staffName} as ${roleTitle}.`,
       assignedStaff: {
         id: staff.user_id.toString(),
         name: staffName,
         email: staff.email,
+        assignmentRole,
       },
     });
   } catch (error) {

@@ -82,7 +82,20 @@ async function resolveInternalDiscussionAuth(
       if (d) deptInvolved = true;
     }
 
-    if (!assignment && !deptInvolved) {
+    if (userRole === "STAFF") {
+      if (assignment?.assignment_status !== "ASSIGNED") {
+        return {
+          error: NextResponse.json(
+            {
+              success: false,
+              message:
+                "Forbidden: You do not have an active assignment for this grievance",
+            },
+            { status: 403 },
+          ),
+        };
+      }
+    } else if (!assignment && !deptInvolved) {
       return {
         error: NextResponse.json(
           {
@@ -395,8 +408,10 @@ export async function POST(
 
       const userIdsToNotify = new Set<bigint>();
       for (const d of involvedDepts) {
-        if (d.assignments?.staff_id && d.assignments.staff_id !== userId) {
-          userIdsToNotify.add(d.assignments.staff_id);
+        for (const a of d.assignments || []) {
+          if (a.staff_id && a.staff_id !== userId) {
+            userIdsToNotify.add(a.staff_id);
+          }
         }
         const deptHeads = await prisma.users.findMany({
           where: {

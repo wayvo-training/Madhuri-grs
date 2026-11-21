@@ -590,8 +590,13 @@ export async function evaluateGrievanceSla(
     );
 
     const deptConsumptionPercent = deptSlaResult.consumptionPercent;
+    const activeDeptAssignment =
+      deptRec.assignments?.find(
+        (a) =>
+          a.assignment_role === "PRIMARY" && a.assignment_status === "ASSIGNED",
+      ) || deptRec.assignments?.find((a) => a.assignment_status === "ASSIGNED");
     const deptAssignedStaff =
-      deptRec.assignments?.users_assignments_staff_idTousers ||
+      activeDeptAssignment?.users_assignments_staff_idTousers ||
       grievance.assignments?.find(
         (a) =>
           a.grievance_department_id === deptRec.grievance_department_id ||
@@ -2676,7 +2681,7 @@ export async function requestSlaExtension(
         (myAssignment?.grievance_department_id &&
           gd.grievance_department_id ===
             myAssignment.grievance_department_id) ||
-        gd.assignments?.staff_id === sId,
+        gd.assignments?.some((a) => a.staff_id === sId),
     ) ||
     rawDepts.find((gd) => gd.involvement_type === "PRIMARY") ||
     rawDepts[0];
@@ -4109,11 +4114,16 @@ export async function processPreExpiryReminders(options?: {
           // Recipients: Assigned staff + Department Heads
           const recipients: Array<{ userId: bigint; role: string }> = [];
 
-          if (gd.assignments?.staff_id) {
-            recipients.push({
-              userId: gd.assignments.staff_id,
-              role: "SUPPORTING_STAFF",
-            });
+          for (const a of gd.assignments || []) {
+            if (a.staff_id && a.assignment_status === "ASSIGNED") {
+              recipients.push({
+                userId: a.staff_id,
+                role:
+                  a.assignment_role === "PRIMARY"
+                    ? "PRIMARY_STAFF"
+                    : "SUPPORTING_STAFF",
+              });
+            }
           }
 
           const heads = await client.users.findMany({

@@ -578,29 +578,41 @@ export async function GET(
 
     const departmentsInvolved = rawDepartments.map((rawD) => {
       const d = rawD;
-      const deptAssignment = allDeptAssignments.find(
+      const deptAssignments = allDeptAssignments.filter(
         (a) => a.grievance_department_id === d.grievance_department_id,
       );
+      const primaryAssignment =
+        deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments[0];
+      const supportingAssignments = deptAssignments.filter(
+        (a) => a !== primaryAssignment,
+      );
+
       let deptStatus = d.status;
-      if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
+      if (
+        primaryAssignment &&
+        primaryAssignment.assignment_status === "ASSIGNED"
+      ) {
         if (deptStatus === "PENDING_ASSIGNMENT") {
           deptStatus = "ASSIGNED";
         }
-      } else if (!deptAssignment && deptStatus === "ASSIGNED") {
+      } else if (!primaryAssignment && deptStatus === "ASSIGNED") {
         deptStatus = "PENDING_ASSIGNMENT";
       }
 
-      const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+      const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
       const assignedStaff =
-        deptStatus === "PENDING_ASSIGNMENT" && !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" && !primaryAssignment
           ? null
           : staffUser &&
-              (deptAssignment?.assignment_status === "ASSIGNED" ||
-                deptAssignment?.assignment_status === "COMPLETED")
+              (primaryAssignment?.assignment_status === "ASSIGNED" ||
+                primaryAssignment?.assignment_status === "COMPLETED")
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
 
-      const isMyAssignment = deptAssignment?.staff_id === staffId;
+      const isMyAssignment = deptAssignments.some(
+        (a) => a.staff_id === staffId,
+      );
 
       return {
         id: d.grievance_department_id.toString(),
@@ -611,6 +623,19 @@ export async function GET(
           | "EQUAL",
         status: deptStatus,
         assignedStaff,
+        primaryStaff: staffUser
+          ? {
+              id: primaryAssignment.staff_id.toString(),
+              name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+            }
+          : null,
+        supportingStaff: supportingAssignments.map((sa) => {
+          const su = sa.users_assignments_staff_idTousers;
+          return {
+            id: sa.staff_id.toString(),
+            name: `${su.first_name} ${su.last_name || ""}`.trim(),
+          };
+        }),
         isMyAssignment,
         slaPercentAllocation: d.sla_percent_allocation
           ? Number(d.sla_percent_allocation)
@@ -789,10 +814,34 @@ export async function GET(
           isFinalSequentialDept: false,
         };
 
-    const canSubmitFinalResolution = isAdmin || resolutionAuth.canResolve;
+    const isPrimaryStaff =
+      currentAssignment?.assignment_role === "PRIMARY" ||
+      (!currentAssignment?.assignment_role && isPrimaryOwner);
+    const isSupportingStaff =
+      currentAssignment?.assignment_role === "SUPPORTING";
+
+    const canSubmitFinalResolution =
+      !isSupportingStaff && (isAdmin || resolutionAuth.canResolve);
     const canSubmitFindings =
-      !canSubmitFinalResolution && resolutionAuth.canSubmitFindings;
+      isSupportingStaff ||
+      (!canSubmitFinalResolution && resolutionAuth.canSubmitFindings);
     const isFinalSequentialDepartment = resolutionAuth.isFinalSequentialDept;
+
+    const staffFindings = await prisma.staff_investigation_findings.findMany({
+      where: { grievance_id: grievanceId },
+      include: {
+        users: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        grievance_departments: { include: { departments: true } },
+      },
+      orderBy: { submitted_at: "desc" },
+    });
 
     const latestExt = grievance.sla_extensions?.[0];
     const latestExtension = latestExt
@@ -877,6 +926,18 @@ export async function GET(
               grievance.grievance_feedback.submitted_at.toISOString(),
           }
         : null,
+      isPrimaryStaff,
+      isSupportingStaff,
+      supportingStaffFindings: staffFindings.map((sf) => ({
+        id: sf.finding_id.toString(),
+        staffId: sf.staff_id.toString(),
+        staffName: `${sf.users.first_name} ${sf.users.last_name || ""}`.trim(),
+        departmentId: sf.grievance_departments.department_id.toString(),
+        departmentName:
+          sf.grievance_departments.departments?.department_name || "Department",
+        findings: sf.finding_content,
+        submittedAt: sf.submitted_at.toISOString(),
+      })),
     };
 
     return NextResponse.json({
@@ -1309,14 +1370,16 @@ export async function PATCH(
           }
 
           // Notify assigned staff
-          if (gd.assignments && gd.assignments.staff_id !== staffId) {
-            await NotificationService.send({
-              userId: gd.assignments.staff_id,
-              grievanceId,
-              type: "HEAD_INTERNAL_NOTE",
-              title: "Cross-Department Collaboration Note",
-              message: `${authorDisplay} posted on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
-            });
+          for (const a of gd.assignments || []) {
+            if (a.staff_id && a.staff_id !== staffId) {
+              await NotificationService.send({
+                userId: a.staff_id,
+                grievanceId,
+                type: "HEAD_INTERNAL_NOTE",
+                title: "Cross-Department Collaboration Note",
+                message: `${authorDisplay} posted on shared grievance ${grievance.grievance_number}: "${noteContent.length > 60 ? `${noteContent.substring(0, 60)}...` : noteContent}"`,
+              });
+            }
           }
         }
       } else {

@@ -348,7 +348,7 @@ export async function fetchDepartmentHeadGrievances(
   ]);
 
   const gIds = rawGrievances.map((g) => g.grievance_id);
-  const [allDeptRecords, allAssignments] = await Promise.all([
+  const [allDeptRecords, allAssignments, allStaffFindings] = await Promise.all([
     prisma.grievance_departments.findMany({
       where: { grievance_id: { in: gIds } },
       include: { departments: true },
@@ -365,6 +365,21 @@ export async function fetchDepartmentHeadGrievances(
         grievance_departments: { include: { departments: true } },
       },
       orderBy: { assigned_at: "desc" },
+    }),
+    prisma.staff_investigation_findings.findMany({
+      where: { grievance_id: { in: gIds } },
+      include: {
+        users: {
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        grievance_departments: { include: { departments: true } },
+      },
+      orderBy: { submitted_at: "desc" },
     }),
   ]);
 
@@ -399,15 +414,40 @@ export async function fetchDepartmentHeadGrievances(
               a.grievance_departments?.department_id &&
               BigInt(a.grievance_departments.department_id) ===
                 BigInt(departmentId) &&
+              a.assignment_status === "ASSIGNED" &&
+              a.assignment_role === "PRIMARY",
+          ) ||
+          grievanceAssignments.find(
+            (a) =>
+              a.grievance_departments?.department_id &&
+              BigInt(a.grievance_departments.department_id) ===
+                BigInt(departmentId) &&
               a.assignment_status === "ASSIGNED",
-          ) || null
+          ) ||
+          null
       : null;
+
+    const myDeptSupportingAssignments = departmentId
+      ? grievanceAssignments.filter(
+          (a) =>
+            a.grievance_departments?.department_id &&
+            BigInt(a.grievance_departments.department_id) ===
+              BigInt(departmentId) &&
+            a.assignment_status === "ASSIGNED" &&
+            a.assignment_role === "SUPPORTING",
+        )
+      : [];
 
     const activeAssignment = departmentId
       ? myDeptAssignment
       : isDeptPendingAssignment
         ? null
         : grievanceAssignments.find(
+            (a) =>
+              a.assignment_status === "ASSIGNED" &&
+              a.assignment_role === "PRIMARY",
+          ) ||
+          grievanceAssignments.find(
             (a) => a.assignment_status === "ASSIGNED",
           ) ||
           (g.assignments && g.assignments[0]?.assignment_status === "ASSIGNED"
@@ -660,8 +700,8 @@ export async function fetchDepartmentHeadGrievances(
           : "Staff Member";
         const resDeptName =
           resUser?.departments?.department_name ||
-          g.grievance_departments?.find(
-            (gd) => gd.assignments?.staff_id === res.submitted_by,
+          g.grievance_departments?.find((gd) =>
+            gd.assignments?.some((a) => a.staff_id === res.submitted_by),
           )?.departments?.department_name ||
           "Department";
 
@@ -956,16 +996,22 @@ export async function fetchDepartmentHeadGrievances(
     const isCrossDepartment = deptList.length > 1;
 
     const departmentsInvolved = relatedDepts.map((d) => {
-      const deptAssignment = grievanceAssignments.find(
+      const deptAssignments = grievanceAssignments.filter(
         (a) =>
           a.grievance_department_id === d.grievance_department_id &&
           a.assignment_status === "ASSIGNED",
       );
-      const deptStatus = d.status;
+      const primaryAssignment =
+        deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments[0];
+      const supportingAssignments = deptAssignments.filter(
+        (a) => a !== primaryAssignment,
+      );
 
-      const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+      const deptStatus = d.status;
+      const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
       const assignedStaffUser =
-        deptStatus === "PENDING_ASSIGNMENT" || !deptAssignment
+        deptStatus === "PENDING_ASSIGNMENT" || !primaryAssignment
           ? null
           : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
@@ -979,6 +1025,19 @@ export async function fetchDepartmentHeadGrievances(
           "PRIMARY",
         status: deptStatus,
         assignedStaff: assignedStaffUser,
+        primaryStaff: staffUser
+          ? {
+              id: staffUser.user_id.toString(),
+              name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+            }
+          : null,
+        supportingStaff: supportingAssignments.map((sa) => {
+          const su = sa.users_assignments_staff_idTousers;
+          return {
+            id: su.user_id.toString(),
+            name: `${su.first_name} ${su.last_name || ""}`.trim(),
+          };
+        }),
       };
     });
 
@@ -1232,6 +1291,36 @@ export async function fetchDepartmentHeadGrievances(
       assignedStaffName: resolvedAssignedStaffName,
       assignedStaffStatus: assignedStaff?.status || null,
       assignedStaffRole: assignedStaff?.roles?.role_name || null,
+      primaryStaff: myDeptAssignment?.users_assignments_staff_idTousers
+        ? {
+            id: myDeptAssignment.users_assignments_staff_idTousers.user_id.toString(),
+            name: `${myDeptAssignment.users_assignments_staff_idTousers.first_name} ${myDeptAssignment.users_assignments_staff_idTousers.last_name || ""}`.trim(),
+            email: myDeptAssignment.users_assignments_staff_idTousers.email,
+          }
+        : null,
+      supportingStaff: myDeptSupportingAssignments.map((sa) => {
+        const su = sa.users_assignments_staff_idTousers;
+        return {
+          id: su.user_id.toString(),
+          name: `${su.first_name} ${su.last_name || ""}`.trim(),
+          email: su.email,
+          assignedAt: sa.assigned_at.toISOString(),
+        };
+      }),
+      supportingStaffFindings: allStaffFindings
+        .filter((sf) => sf.grievance_id === g.grievance_id)
+        .map((sf) => ({
+          id: sf.finding_id.toString(),
+          staffId: sf.staff_id.toString(),
+          staffName:
+            `${sf.users.first_name} ${sf.users.last_name || ""}`.trim(),
+          departmentId: sf.grievance_departments.department_id.toString(),
+          departmentName:
+            sf.grievance_departments.departments?.department_name ||
+            "Department",
+          findings: sf.finding_content,
+          submittedAt: sf.submitted_at.toISOString(),
+        })),
       isAssignedStaffInactive: Boolean(
         assignedStaff &&
           (assignedStaff.status === "INACTIVE" ||

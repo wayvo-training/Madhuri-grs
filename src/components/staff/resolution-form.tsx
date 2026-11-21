@@ -82,13 +82,23 @@ export function ResolutionForm({
   const isOutcomeValid =
     isOutcomeLengthValid && hasOutcomeLetters && !isOutcomeOnlyDigits;
 
-  const isFormValid =
-    isProblemSummaryValid &&
-    isFindingsValid &&
-    isActionTakenValid &&
-    isOutcomeValid;
+  const isFormValid = grievance.isSupportingStaff
+    ? isFindingsValid
+    : isProblemSummaryValid &&
+      isFindingsValid &&
+      isActionTakenValid &&
+      isOutcomeValid;
 
   const getValidationError = (): string | null => {
+    if (grievance.isSupportingStaff) {
+      if (!findings.trim()) return "Investigation findings are required.";
+      if (!isFindingsLengthValid)
+        return `Investigation findings must be at least 20 characters (currently ${findings.trim().length}).`;
+      if (!hasFindingsLetters || isFindingsOnlyDigits)
+        return "Investigation findings must contain letters/words and cannot consist only of digits/numbers.";
+      return null;
+    }
+
     if (!problemSummary.trim()) return "Problem summary is required.";
     if (!isProblemSummaryLengthValid)
       return `Problem summary must be at least 20 characters (currently ${problemSummary.trim().length}).`;
@@ -187,10 +197,33 @@ export function ResolutionForm({
         }),
       );
       const isResolving =
-        grievance.canSubmitFinalResolution ??
-        grievance.isPrimaryOwner !== false;
+        !grievance.isSupportingStaff &&
+        (grievance.canSubmitFinalResolution ??
+          grievance.isPrimaryOwner !== false);
 
-      if (!isResolving) {
+      if (grievance.isSupportingStaff) {
+        // Supporting Investigator Findings submission (In-Department)
+        const res = await fetch(
+          `/api/staff/grievances/${grievance.id}/supporting-findings`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              findings: findings.trim(),
+            }),
+          },
+        );
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(
+            data.message || "Failed to submit supporting findings",
+          );
+        }
+        toast.success(
+          "Supporting findings submitted! Primary investigator and Department Head notified.",
+        );
+      } else if (!isResolving) {
         // Department Findings Submission (Sequential hand-off or Supportive contributor)
         const res = await fetch(
           `/api/staff/grievances/${grievance.id}/findings`,
@@ -304,30 +337,39 @@ export function ResolutionForm({
         {/* Header */}
         {(() => {
           const isResolving =
-            grievance.canSubmitFinalResolution ??
-            grievance.isPrimaryOwner !== false;
+            !grievance.isSupportingStaff &&
+            (grievance.canSubmitFinalResolution ??
+              grievance.isPrimaryOwner !== false);
           return (
             <>
               <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
                 <div className="flex items-center gap-2.5">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                      !isResolving
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-emerald-100 text-emerald-800"
+                      grievance.isSupportingStaff
+                        ? "bg-teal-100 text-teal-800"
+                        : !isResolving
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
                     }`}
                   >
                     <FileCheck2 className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
-                      {!isResolving
-                        ? "Submit Department Findings & Sign-Off"
-                        : "Submit Grievance Resolution"}
+                      {grievance.isSupportingStaff
+                        ? "Submit Supporting Investigation Findings"
+                        : !isResolving
+                          ? "Submit Department Findings & Sign-Off"
+                          : "Submit Grievance Resolution"}
                     </h3>
                     <p className="text-xs text-slate-500">
                       Case {grievance.grievanceNumber} &bull; {grievance.title}
-                      {!isResolving ? (
+                      {grievance.isSupportingStaff ? (
+                        <span className="ml-1 text-teal-700 font-semibold bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
+                          Supporting Investigator
+                        </span>
+                      ) : !isResolving ? (
                         <span className="ml-1 text-amber-600 font-medium">
                           (Sequential Stage Hand-off)
                         </span>
@@ -348,8 +390,18 @@ export function ResolutionForm({
                 </button>
               </div>
 
-              {/* Supporting / Sequential Stage Contributor Notice Banner */}
-              {!isResolving && (
+              {/* Supporting Investigator Mode Notice */}
+              {grievance.isSupportingStaff ? (
+                <div className="bg-teal-50/90 border-b border-teal-200/80 px-5 py-2.5 text-[11px] text-teal-950 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Supporting Investigator Mode:</strong> Record your
+                    findings and evidence for this case. Your findings will be
+                    reviewed and consolidated by the Primary Investigator, who
+                    holds authority to submit the final resolution.
+                  </span>
+                </div>
+              ) : !isResolving ? (
                 <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span>
@@ -361,7 +413,7 @@ export function ResolutionForm({
                     resolution stage.
                   </span>
                 </div>
-              )}
+              ) : null}
             </>
           );
         })()}
@@ -375,54 +427,108 @@ export function ResolutionForm({
             </div>
           )}
 
-          {/* Problem Summary */}
-          <div className="space-y-1">
-            <label
-              htmlFor="resolution-problem-summary"
-              className="font-semibold text-slate-700"
-            >
-              Problem Summary <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="resolution-problem-summary"
-              type="text"
-              required
-              value={problemSummary}
-              onChange={(e) => setProblemSummary(e.target.value)}
-              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
-                problemSummary.length > 0 && !isProblemSummaryValid
-                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
-                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-              }`}
-              placeholder="Concise overview of the issue investigated"
-            />
-            <div className="flex items-center justify-between text-[11px]">
-              <span
-                className={
+          {/* Problem Summary (Primary & Cross-Department only) */}
+          {!grievance.isSupportingStaff && (
+            <div className="space-y-1">
+              <label
+                htmlFor="resolution-problem-summary"
+                className="font-semibold text-slate-700"
+              >
+                Problem Summary <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="resolution-problem-summary"
+                type="text"
+                required
+                value={problemSummary}
+                onChange={(e) => setProblemSummary(e.target.value)}
+                className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
                   problemSummary.length > 0 && !isProblemSummaryValid
-                    ? "text-amber-700 font-medium"
-                    : "text-slate-500"
-                }
-              >
-                {problemSummary.length === 0
-                  ? "Minimum 20 characters required. Cannot be only numbers."
-                  : problemSummary.trim().length < 20
-                    ? `Minimum 20 characters required (${20 - problemSummary.trim().length} more needed)`
-                    : !hasProblemSummaryLetters || isProblemSummaryOnlyDigits
-                      ? "Must contain letters/words (cannot be only numbers)"
-                      : "✓ Valid format"}
-              </span>
-              <span
-                className={
-                  isProblemSummaryValid
-                    ? "text-emerald-700 font-semibold"
-                    : "text-slate-400"
-                }
-              >
-                {problemSummary.length} chars
-              </span>
+                    ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                    : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                }`}
+                placeholder="Concise overview of the issue investigated"
+              />
+              <div className="flex items-center justify-between text-[11px]">
+                <span
+                  className={
+                    problemSummary.length > 0 && !isProblemSummaryValid
+                      ? "text-amber-700 font-medium"
+                      : "text-slate-500"
+                  }
+                >
+                  {problemSummary.length === 0
+                    ? "Minimum 20 characters required. Cannot be only numbers."
+                    : problemSummary.trim().length < 20
+                      ? `Minimum 20 characters required (${20 - problemSummary.trim().length} more needed)`
+                      : !hasProblemSummaryLetters || isProblemSummaryOnlyDigits
+                        ? "Must contain letters/words (cannot be only numbers)"
+                        : "✓ Valid format"}
+                </span>
+                <span
+                  className={
+                    isProblemSummaryValid
+                      ? "text-emerald-700 font-semibold"
+                      : "text-slate-400"
+                  }
+                >
+                  {problemSummary.length} chars
+                </span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Supporting Staff Findings Consolidation Section (For Primary Investigator) */}
+          {!grievance.isSupportingStaff &&
+            grievance.supportingStaffFindings &&
+            grievance.supportingStaffFindings.length > 0 && (
+              <div className="rounded-xl border border-teal-200 bg-teal-50/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-teal-700" />
+                    <span>
+                      Supporting Staff Investigation Findings (
+                      {grievance.supportingStaffFindings.length})
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-teal-700 font-medium">
+                    Synthesize into final findings
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {grievance.supportingStaffFindings.map((sf) => (
+                    <div
+                      key={sf.id}
+                      className="rounded-lg border border-teal-200/60 bg-white p-2.5 text-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span className="font-semibold text-slate-800">
+                          {sf.staffName} ({sf.departmentName || "Supporting"})
+                        </span>
+                        <span>{new Date(sf.submittedAt).toLocaleString()}</span>
+                      </div>
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-[11px]">
+                        {sf.findings}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const snippet = `\n\n[Findings from Supporting Staff ${sf.staffName}]:\n${sf.findings}`;
+                          setFindings((prev) =>
+                            prev ? prev + snippet : sf.findings,
+                          );
+                          toast.success(`Inserted ${sf.staffName}'s findings`);
+                        }}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 transition cursor-pointer"
+                      >
+                        + Insert into Resolution Findings
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           {/* Investigation Findings */}
           <div className="space-y-1">
@@ -434,7 +540,7 @@ export function ResolutionForm({
             </label>
             <textarea
               id="resolution-findings"
-              rows={3}
+              rows={4}
               required
               value={findings}
               onChange={(e) => setFindings(e.target.value)}
@@ -443,7 +549,11 @@ export function ResolutionForm({
                   ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
                   : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
               }`}
-              placeholder="Detail your findings, interviews conducted, policies referenced, or records verified..."
+              placeholder={
+                grievance.isSupportingStaff
+                  ? "Detail your investigation findings, inquiries made, records verified, or departmental assessments..."
+                  : "Detail your findings, interviews conducted, policies referenced, or records verified..."
+              }
             />
             <div className="flex items-center justify-between text-[11px]">
               <span
@@ -473,104 +583,108 @@ export function ResolutionForm({
             </div>
           </div>
 
-          {/* Action Taken */}
-          <div className="space-y-1">
-            <label
-              htmlFor="resolution-action-taken"
-              className="font-semibold text-slate-700"
-            >
-              Corrective Action Taken <span className="text-rose-500">*</span>
-            </label>
-            <textarea
-              id="resolution-action-taken"
-              rows={3}
-              required
-              value={actionTaken}
-              onChange={(e) => setActionTaken(e.target.value)}
-              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 leading-relaxed font-sans transition focus:outline-hidden ${
-                actionTaken.length > 0 && !isActionTakenValid
-                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
-                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-              }`}
-              placeholder="Specific remedies executed (e.g. system adjustments, policy explanation, corrective guidance)..."
-            />
-            <div className="flex items-center justify-between text-[11px]">
-              <span
-                className={
+          {/* Action Taken (Primary & Cross-Department only) */}
+          {!grievance.isSupportingStaff && (
+            <div className="space-y-1">
+              <label
+                htmlFor="resolution-action-taken"
+                className="font-semibold text-slate-700"
+              >
+                Corrective Action Taken <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                id="resolution-action-taken"
+                rows={3}
+                required
+                value={actionTaken}
+                onChange={(e) => setActionTaken(e.target.value)}
+                className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 leading-relaxed font-sans transition focus:outline-hidden ${
                   actionTaken.length > 0 && !isActionTakenValid
-                    ? "text-amber-700 font-medium"
-                    : "text-slate-500"
-                }
-              >
-                {actionTaken.length === 0
-                  ? "Minimum 20 characters required. Cannot be only numbers."
-                  : actionTaken.trim().length < 20
-                    ? `Minimum 20 characters required (${20 - actionTaken.trim().length} more needed)`
-                    : !hasActionTakenLetters || isActionTakenOnlyDigits
-                      ? "Must contain letters/words (cannot be only numbers)"
-                      : "✓ Valid format"}
-              </span>
-              <span
-                className={
-                  isActionTakenValid
-                    ? "text-emerald-700 font-semibold"
-                    : "text-slate-400"
-                }
-              >
-                {actionTaken.length} chars
-              </span>
+                    ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                    : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                }`}
+                placeholder="Specific remedies executed (e.g. system adjustments, policy explanation, corrective guidance)..."
+              />
+              <div className="flex items-center justify-between text-[11px]">
+                <span
+                  className={
+                    actionTaken.length > 0 && !isActionTakenValid
+                      ? "text-amber-700 font-medium"
+                      : "text-slate-500"
+                  }
+                >
+                  {actionTaken.length === 0
+                    ? "Minimum 20 characters required. Cannot be only numbers."
+                    : actionTaken.trim().length < 20
+                      ? `Minimum 20 characters required (${20 - actionTaken.trim().length} more needed)`
+                      : !hasActionTakenLetters || isActionTakenOnlyDigits
+                        ? "Must contain letters/words (cannot be only numbers)"
+                        : "✓ Valid format"}
+                </span>
+                <span
+                  className={
+                    isActionTakenValid
+                      ? "text-emerald-700 font-semibold"
+                      : "text-slate-400"
+                  }
+                >
+                  {actionTaken.length} chars
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Final Outcome */}
-          <div className="space-y-1">
-            <label
-              htmlFor="resolution-outcome"
-              className="font-semibold text-slate-700"
-            >
-              Proposed Settlement / Outcome{" "}
-              <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="resolution-outcome"
-              type="text"
-              required
-              value={outcome}
-              onChange={(e) => setOutcome(e.target.value)}
-              className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
-                outcome.length > 0 && !isOutcomeValid
-                  ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
-                  : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
-              }`}
-              placeholder="e.g. Grievance validated; leave ledger reconciled and updated"
-            />
-            <div className="flex items-center justify-between text-[11px]">
-              <span
-                className={
+          {/* Final Outcome (Primary & Cross-Department only) */}
+          {!grievance.isSupportingStaff && (
+            <div className="space-y-1">
+              <label
+                htmlFor="resolution-outcome"
+                className="font-semibold text-slate-700"
+              >
+                Proposed Settlement / Outcome{" "}
+                <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="resolution-outcome"
+                type="text"
+                required
+                value={outcome}
+                onChange={(e) => setOutcome(e.target.value)}
+                className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 transition focus:outline-hidden ${
                   outcome.length > 0 && !isOutcomeValid
-                    ? "text-amber-700 font-medium"
-                    : "text-slate-500"
-                }
-              >
-                {outcome.length === 0
-                  ? "Minimum 15 characters required. Cannot be only numbers."
-                  : outcome.trim().length < 15
-                    ? `Minimum 15 characters required (${15 - outcome.trim().length} more needed)`
-                    : !hasOutcomeLetters || isOutcomeOnlyDigits
-                      ? "Must contain letters/words (cannot be only numbers)"
-                      : "✓ Valid format"}
-              </span>
-              <span
-                className={
-                  isOutcomeValid
-                    ? "text-emerald-700 font-semibold"
-                    : "text-slate-400"
-                }
-              >
-                {outcome.length} chars
-              </span>
+                    ? "border-amber-400 focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                    : "border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                }`}
+                placeholder="e.g. Grievance validated; leave ledger reconciled and updated"
+              />
+              <div className="flex items-center justify-between text-[11px]">
+                <span
+                  className={
+                    outcome.length > 0 && !isOutcomeValid
+                      ? "text-amber-700 font-medium"
+                      : "text-slate-500"
+                  }
+                >
+                  {outcome.length === 0
+                    ? "Minimum 15 characters required. Cannot be only numbers."
+                    : outcome.trim().length < 15
+                      ? `Minimum 15 characters required (${15 - outcome.trim().length} more needed)`
+                      : !hasOutcomeLetters || isOutcomeOnlyDigits
+                        ? "Must contain letters/words (cannot be only numbers)"
+                        : "✓ Valid format"}
+                </span>
+                <span
+                  className={
+                    isOutcomeValid
+                      ? "text-emerald-700 font-semibold"
+                      : "text-slate-400"
+                  }
+                >
+                  {outcome.length} chars
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Supporting Evidence / Notes */}
           <div className="space-y-1">
@@ -715,8 +829,8 @@ export function ResolutionForm({
                     return;
                   }
                   setErrorMsg(null);
-                  if (!isResolving) {
-                    // Direct submission for department findings - avoids redundant double modal popup
+                  if (grievance.isSupportingStaff || !isResolving) {
+                    // Direct submission for supporting findings or department findings - avoids redundant double modal popup
                     submitForm(false);
                   } else {
                     setShowConfirmModal(true);
@@ -724,9 +838,11 @@ export function ResolutionForm({
                 }}
                 disabled={isSubmitting || !isFormValid}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
-                  !isResolving
-                    ? "bg-amber-600 hover:bg-amber-700"
-                    : "bg-[#0F766E] hover:bg-[#115E59]"
+                  grievance.isSupportingStaff
+                    ? "bg-teal-700 hover:bg-teal-800"
+                    : !isResolving
+                      ? "bg-amber-600 hover:bg-amber-700"
+                      : "bg-[#0F766E] hover:bg-[#115E59]"
                 }`}
               >
                 {isSubmitting ? (
@@ -738,11 +854,13 @@ export function ResolutionForm({
                   <>
                     <Send className="h-3.5 w-3.5" />
                     <span>
-                      {!isResolving
-                        ? "Submit Department Findings"
-                        : grievance.reopenCount >= 3
-                          ? "Submit for Review"
-                          : "Resolve Grievance"}
+                      {grievance.isSupportingStaff
+                        ? "Submit Supporting Findings"
+                        : !isResolving
+                          ? "Submit Department Findings"
+                          : grievance.reopenCount >= 3
+                            ? "Submit for Review"
+                            : "Resolve Grievance"}
                     </span>
                   </>
                 )}

@@ -161,9 +161,91 @@ async function run() {
     `);
 
     await client.query(`
+      ALTER TABLE "assignments" ADD COLUMN IF NOT EXISTS "assignment_role" VARCHAR(20) NOT NULL DEFAULT 'PRIMARY';
+      DROP INDEX IF EXISTS "uq_active_assignment";
+      CREATE UNIQUE INDEX IF NOT EXISTS "uq_active_primary_assignment"
+        ON "assignments" ("grievance_department_id")
+        WHERE ("assignment_status" = 'ASSIGNED' AND "assignment_role" = 'PRIMARY');
+      CREATE UNIQUE INDEX IF NOT EXISTS "uq_active_staff_dept_assignment"
+        ON "assignments" ("grievance_department_id", "staff_id")
+        WHERE ("assignment_status" = 'ASSIGNED');
+      CREATE INDEX IF NOT EXISTS "idx_assignments_dept_role"
+        ON "assignments" ("grievance_department_id", "assignment_role");
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint
+          WHERE conname = 'check_assignments_assignment_role'
+            AND conrelid = 'assignments'::regclass
+        ) THEN
+          ALTER TABLE "assignments"
+            ADD CONSTRAINT "check_assignments_assignment_role"
+            CHECK ("assignment_role" IN ('PRIMARY', 'SUPPORTING'));
+        END IF;
+      END $$;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "staff_investigation_findings" (
+        "finding_id" BIGSERIAL NOT NULL,
+        "grievance_id" BIGINT NOT NULL,
+        "grievance_department_id" BIGINT NOT NULL,
+        "assignment_id" BIGINT NOT NULL,
+        "staff_id" BIGINT NOT NULL,
+        "finding_content" TEXT NOT NULL,
+        "action_taken" TEXT,
+        "notes" TEXT,
+        "attachments" JSONB DEFAULT '[]',
+        "submitted_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "staff_investigation_findings_pkey" PRIMARY KEY ("finding_id")
+      );
+      CREATE INDEX IF NOT EXISTS "idx_staff_findings_grievance_id" ON "staff_investigation_findings"("grievance_id");
+      CREATE INDEX IF NOT EXISTS "idx_staff_findings_dept_id" ON "staff_investigation_findings"("grievance_department_id");
+      CREATE INDEX IF NOT EXISTS "idx_staff_findings_staff_id" ON "staff_investigation_findings"("staff_id");
+      CREATE INDEX IF NOT EXISTS "idx_staff_findings_assignment_id" ON "staff_investigation_findings"("assignment_id");
+    `);
+
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'staff_findings_grievance_id_fkey'
+        ) THEN
+          ALTER TABLE "staff_investigation_findings" ADD CONSTRAINT "staff_findings_grievance_id_fkey" FOREIGN KEY ("grievance_id") REFERENCES "grievances"("grievance_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'staff_findings_dept_id_fkey'
+        ) THEN
+          ALTER TABLE "staff_investigation_findings" ADD CONSTRAINT "staff_findings_dept_id_fkey" FOREIGN KEY ("grievance_department_id") REFERENCES "grievance_departments"("grievance_department_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'staff_findings_assignment_id_fkey'
+        ) THEN
+          ALTER TABLE "staff_investigation_findings" ADD CONSTRAINT "staff_findings_assignment_id_fkey" FOREIGN KEY ("assignment_id") REFERENCES "assignments"("assignment_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'staff_findings_staff_id_fkey'
+        ) THEN
+          ALTER TABLE "staff_investigation_findings" ADD CONSTRAINT "staff_findings_staff_id_fkey" FOREIGN KEY ("staff_id") REFERENCES "users"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+      END $$;
+    `);
+
+    await client.query(`
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '_prisma_migrations') THEN
+          IF NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name = '20261122_supporting_staff_collaboration') THEN
+            INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
+            VALUES (gen_random_uuid()::text, 'self-healed', CURRENT_TIMESTAMP, '20261122_supporting_staff_collaboration', NULL, NULL, CURRENT_TIMESTAMP, 1);
+          END IF;
           IF NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name = '20261121_add_grievance_feedback') THEN
             INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
             VALUES (gen_random_uuid()::text, 'self-healed', CURRENT_TIMESTAMP, '20261121_add_grievance_feedback', NULL, NULL, CURRENT_TIMESTAMP, 1);

@@ -215,30 +215,31 @@ export async function POST(
       });
     });
 
-    // 5. Notify the Assigned Staff
-    const activeAssignment = grievance.assignments?.[0];
-    const assignedStaff = activeAssignment?.users_assignments_staff_idTousers;
+    // 5. Notify the Assigned Staff (Primary and Supporting)
+    const activeAssignments = grievance.assignments || [];
+    for (const a of activeAssignments) {
+      const assignedStaff = a.users_assignments_staff_idTousers;
+      if (assignedStaff) {
+        // In-App notification
+        await NotificationService.send({
+          userId: assignedStaff.user_id,
+          grievanceId: targetGrievanceId,
+          type: "ADDITIONAL_INFO_SUBMITTED",
+          channel: "IN_APP",
+          title: `Complainant Responded with Documents (${grievance.grievance_number})`,
+          message: `${complainantName} has submitted requested information and ${incomingFiles.length} document(s). Investigation resumed to In Progress.`,
+        });
 
-    if (assignedStaff) {
-      // In-App notification
-      await NotificationService.send({
-        userId: assignedStaff.user_id,
-        grievanceId: targetGrievanceId,
-        type: "ADDITIONAL_INFO_SUBMITTED",
-        channel: "IN_APP",
-        title: `Complainant Responded with Documents (${grievance.grievance_number})`,
-        message: `${complainantName} has submitted requested information and ${incomingFiles.length} document(s). Investigation resumed to In Progress.`,
-      });
-
-      // Email notification
-      await NotificationService.send({
-        userId: assignedStaff.user_id,
-        grievanceId: targetGrievanceId,
-        type: "ADDITIONAL_INFO_SUBMITTED",
-        channel: "EMAIL",
-        title: `Clarification Received: ${grievance.grievance_number}`,
-        message: `Hello ${assignedStaff.first_name},\n\nComplainant ${complainantName} has submitted response details and documentation for grievance #${grievance.grievance_number}.\n\nResponse Statement:\n"${responseMessage}"\n\nAttached Documents: ${incomingFiles.map((f) => f.fileName).join(", ") || "None"}\n\nThe grievance status has been transitioned back to In Progress so you can continue your investigation.\n\nRegards,\nGRS Resolution Desk`,
-      });
+        // Email notification
+        await NotificationService.send({
+          userId: assignedStaff.user_id,
+          grievanceId: targetGrievanceId,
+          type: "ADDITIONAL_INFO_SUBMITTED",
+          channel: "EMAIL",
+          title: `Clarification Received: ${grievance.grievance_number}`,
+          message: `Hello ${assignedStaff.first_name},\n\nComplainant ${complainantName} has submitted response details and documentation for grievance #${grievance.grievance_number}.\n\nResponse Statement:\n"${responseMessage}"\n\nAttached Documents: ${incomingFiles.map((f) => f.fileName).join(", ") || "None"}\n\nThe grievance status has been transitioned back to In Progress so you can continue your investigation.\n\nRegards,\nGRS Resolution Desk`,
+        });
+      }
     }
 
     // 6. Notify complainant confirming their submission

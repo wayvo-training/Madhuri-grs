@@ -448,6 +448,15 @@ export function AttentionRequiredPanel({
                             <span className="truncate">
                               {item.assignedStaffName}
                             </span>
+                            {item.supportingStaff &&
+                              item.supportingStaff.length > 0 && (
+                                <span
+                                  title={`Supporting Staff: ${item.supportingStaff.map((s) => s.name).join(", ")}`}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800 shrink-0"
+                                >
+                                  +{item.supportingStaff.length} supporting
+                                </span>
+                              )}
                             {item.isAssignedStaffInactive && (
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 shrink-0">
                                 Inactive

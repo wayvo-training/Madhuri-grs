@@ -192,6 +192,21 @@ export async function POST(request: Request) {
       );
     }
 
+    if (
+      !isAdmin &&
+      myAssignment &&
+      myAssignment.assignment_role === "SUPPORTING"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Forbidden: Supporting Staff cannot submit the final resolution. Please submit your findings using the Supporting Findings form.",
+        },
+        { status: 403 },
+      );
+    }
+
     if (grievance.status === "ASSIGNED") {
       return NextResponse.json(
         {
@@ -509,15 +524,16 @@ export async function POST(request: Request) {
     );
 
     for (const otherDept of otherInvolvedDepts) {
-      const otherStaffId = otherDept.assignments?.staff_id;
-      if (otherStaffId && otherStaffId !== staffId) {
-        await NotificationService.send({
-          userId: otherStaffId,
-          grievanceId: gId,
-          type: "RESOLUTION_SUBMITTED",
-          title: `[${priority}] Case Resolved by ${submittingDeptName}: ${grievance.grievance_number}`,
-          message: `${priorityTag} ${authorName} (${submittingDeptName}) has concluded the investigation and submitted the resolution for ${grievance.grievance_number}.`,
-        });
+      for (const a of otherDept.assignments || []) {
+        if (a.assignment_status === "ASSIGNED" && a.staff_id !== staffId) {
+          await NotificationService.send({
+            userId: a.staff_id,
+            grievanceId: gId,
+            type: "RESOLUTION_SUBMITTED",
+            title: `[${priority}] Case Resolved by ${submittingDeptName}: ${grievance.grievance_number}`,
+            message: `${priorityTag} ${authorName} (${submittingDeptName}) has concluded the investigation and submitted the resolution for ${grievance.grievance_number}.`,
+          });
+        }
       }
 
       const otherHods = await prisma.users.findMany({
