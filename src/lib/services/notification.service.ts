@@ -64,7 +64,7 @@ export class NotificationService {
    * Duplicate prevention: if an unread/pending notification of the exact same type and grievance exists, it will not insert a duplicate.
    */
   static async send(params: SendNotificationParams) {
-    // Deduplicate repetitive SLA alerts while unread/pending
+    // Deduplicate repetitive SLA alerts per user and grievance
     const isSlaType =
       params.type.startsWith("SLA_") || params.type.startsWith("DEPT_SLA_");
     if (params.grievanceId && isSlaType) {
@@ -73,7 +73,6 @@ export class NotificationService {
           user_id: params.userId,
           grievance_id: params.grievanceId,
           notification_type: params.type,
-          status: "PENDING",
         },
       });
       if (existing) return existing; // Skip duplicate SLA alert
@@ -111,7 +110,7 @@ export class NotificationService {
     const atRisk = thresholds.atRisk ?? DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT;
     const breach = thresholds.breach ?? DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT;
 
-    if (slaPercentage >= warning && slaPercentage < atRisk) {
+    if (slaPercentage >= warning) {
       await NotificationService.send({
         userId: staffId,
         grievanceId,
@@ -119,8 +118,10 @@ export class NotificationService {
         title: `SLA Warning: ${warning}% Department SLA Consumed`,
         message: `Grievance #${grievanceId} has consumed ${warning}% of its allocated SLA. Please review the grievance progress and ensure timely completion within the remaining SLA duration.`,
       });
-    } else if (slaPercentage >= atRisk && slaPercentage < breach) {
-      // 75% Escalation: Notify Assigned Staff and Responsible Department Head
+    }
+
+    if (slaPercentage >= atRisk) {
+      // Escalation: Notify Assigned Staff and Responsible Department Head
       await NotificationService.send({
         userId: staffId,
         grievanceId,
@@ -137,8 +138,10 @@ export class NotificationService {
           message: `Grievance #${grievanceId} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
         });
       }
-    } else if (slaPercentage >= breach) {
-      // 100% Breach: Notify Admin, Responsible Department Head, and Assigned Staff
+    }
+
+    if (slaPercentage >= breach) {
+      // Breach: Notify Admin, Responsible Department Head, and Assigned Staff
       await NotificationService.send({
         userId: departmentHeadId,
         grievanceId,

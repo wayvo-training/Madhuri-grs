@@ -627,10 +627,7 @@ export async function evaluateGrievanceSla(
       );
 
     // 1. Department Warning Threshold (uses dynamic warningThreshold & designated recipients)
-    if (
-      deptConsumptionPercent >= warningThreshold &&
-      deptConsumptionPercent < atRiskThreshold
-    ) {
+    if (deptConsumptionPercent >= warningThreshold) {
       const targetUsers = await resolveDesignatedUsers(
         warningDesignations,
         deptContext,
@@ -689,15 +686,53 @@ export async function evaluateGrievanceSla(
     }
 
     // 2. Department Escalation / At Risk Threshold (uses dynamic atRiskThreshold & designated recipients)
-    if (
-      deptConsumptionPercent >= atRiskThreshold &&
-      deptConsumptionPercent < breachThreshold
-    ) {
-      if (deptRec.sla_status !== "AT_RISK") {
+    if (deptConsumptionPercent >= atRiskThreshold) {
+      if (
+        deptRec.sla_status !== "AT_RISK" &&
+        deptRec.sla_status !== "BREACHED"
+      ) {
         await prisma.grievance_departments.update({
           where: { grievance_department_id: deptRec.grievance_department_id },
           data: { sla_status: "AT_RISK" },
         });
+      }
+
+      // Record approved escalation event for responsible Department Head if not exists
+      const existingLevel1 = await prisma.escalations.findFirst({
+        where: { grievance_id: grievanceId, escalation_level: 1 },
+      });
+      const targetDeptHead = deptContext.deptHeads[0] || primaryDeptHead;
+      let escalationTarget: { user_id: bigint } | null = targetDeptHead;
+      if (!escalationTarget) {
+        const fallbackAdmin = await prisma.users.findFirst({
+          where: {
+            roles: { role_name: "ADMIN" },
+            status: "ACTIVE",
+          },
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        });
+        if (fallbackAdmin) {
+          escalationTarget = fallbackAdmin;
+        }
+      }
+      if (!existingLevel1 && escalationTarget) {
+        await prisma.escalations.create({
+          data: {
+            grievance_id: grievanceId,
+            escalated_to: escalationTarget.user_id,
+            escalation_level: 1,
+            reason: `SLA Escalation Threshold Reached: ${deptConsumptionPercent}% of allocated SLA consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Department Head.`,
+            status: "OPEN",
+            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+            created_at: evaluationDate,
+          },
+        });
+        didEscalate = true;
       }
 
       const notifType = `DEPT_SLA_${atRiskThreshold}_${deptRec.department_id}`;
@@ -726,44 +761,6 @@ export async function evaluateGrievanceSla(
                 created_at: evaluationDate,
               },
             });
-          }
-
-          // Record approved escalation event for responsible Department Head
-          const existingLevel1 = await tx.escalations.findFirst({
-            where: { grievance_id: grievanceId, escalation_level: 1 },
-          });
-          const targetDeptHead = deptContext.deptHeads[0] || primaryDeptHead;
-          let escalationTarget: { user_id: bigint } | null = targetDeptHead;
-          if (!escalationTarget) {
-            const fallbackAdmin = await tx.users.findFirst({
-              where: {
-                roles: { role_name: "ADMIN" },
-                status: "ACTIVE",
-              },
-              select: {
-                user_id: true,
-                first_name: true,
-                last_name: true,
-                email: true,
-              },
-            });
-            if (fallbackAdmin) {
-              escalationTarget = fallbackAdmin;
-            }
-          }
-          if (!existingLevel1 && escalationTarget) {
-            await tx.escalations.create({
-              data: {
-                grievance_id: grievanceId,
-                escalated_to: escalationTarget.user_id,
-                escalation_level: 1,
-                reason: `SLA Escalation Threshold Reached: ${deptConsumptionPercent}% of allocated SLA consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Department Head.`,
-                status: "OPEN",
-                sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
-                created_at: evaluationDate,
-              },
-            });
-            didEscalate = true;
           }
 
           await tx.audit_logs.create({
@@ -941,46 +938,63 @@ export async function evaluateGrievanceSla(
       });
     }
 
-    // Ensure formal Level 2 escalation record exists even when early-returning from department breach
+    // Ensure formal Level 1 and Level 2 escalation records exist even when early-returning from department breach
+    const existingLevel1 = await prisma.escalations.findFirst({
+      where: { grievance_id: grievanceId, escalation_level: 1 },
+    });
     const existingLevel2 = await prisma.escalations.findFirst({
       where: { grievance_id: grievanceId, escalation_level: 2 },
     });
 
-    if (!existingLevel2) {
-      let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
-      if (!escalationTargetUser) {
-        const fallbackAdmin = await prisma.users.findFirst({
-          where: {
-            roles: { role_name: "ADMIN" },
-            status: "ACTIVE",
-          },
-          select: {
-            user_id: true,
-            first_name: true,
-            last_name: true,
-            email: true,
-          },
-        });
-        if (fallbackAdmin) {
-          escalationTargetUser = fallbackAdmin;
-        }
+    let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
+    if (!escalationTargetUser) {
+      const fallbackAdmin = await prisma.users.findFirst({
+        where: {
+          roles: { role_name: "ADMIN" },
+          status: "ACTIVE",
+        },
+        select: {
+          user_id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+        },
+      });
+      if (fallbackAdmin) {
+        escalationTargetUser = fallbackAdmin;
       }
+    }
 
-      if (escalationTargetUser) {
-        await prisma.escalations.create({
-          data: {
-            grievance_id: grievanceId,
-            escalated_to: escalationTargetUser.user_id,
-            escalation_level: 2,
-            reason:
-              "Department SLA Breach: 100% of allocated SLA limit consumed without resolution. Auto-escalated to Level 2 (Department Head).",
-            status: "OPEN",
-            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
-            created_at: evaluationDate,
-          },
-        });
-        didEscalate = true;
-      }
+    if (!existingLevel1 && escalationTargetUser) {
+      await prisma.escalations.create({
+        data: {
+          grievance_id: grievanceId,
+          escalated_to: escalationTargetUser.user_id,
+          escalation_level: 1,
+          reason:
+            "Department SLA Escalation Threshold Reached: Auto-escalated to Level 1 (Department Head).",
+          status: "OPEN",
+          sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+          created_at: evaluationDate,
+        },
+      });
+      didEscalate = true;
+    }
+
+    if (!existingLevel2 && escalationTargetUser) {
+      await prisma.escalations.create({
+        data: {
+          grievance_id: grievanceId,
+          escalated_to: escalationTargetUser.user_id,
+          escalation_level: 2,
+          reason:
+            "Department SLA Breach: 100% of allocated SLA limit consumed without resolution. Auto-escalated to Level 2 (Department Head).",
+          status: "OPEN",
+          sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+          created_at: evaluationDate,
+        },
+      });
+      didEscalate = true;
     }
 
     return {
@@ -1066,14 +1080,13 @@ export async function evaluateGrievanceSla(
   }
 
   // =========================================================================
-  // RULE 2: At Warning threshold (>= warningThreshold and < atRiskThreshold)
+  // RULE 2: At Warning threshold (>= warningThreshold)
   // Automatically notify designated staff / recipients that time is running low.
   // =========================================================================
-  if (
-    consumptionPercent >= warningThreshold &&
-    consumptionPercent < atRiskThreshold
-  ) {
-    updatedSlaStatus = "ON_TRACK";
+  if (consumptionPercent >= warningThreshold) {
+    if (!grievance.sla_status || grievance.sla_status === "ON_TRACK") {
+      updatedSlaStatus = "ON_TRACK";
+    }
 
     const targetUsers = await resolveDesignatedUsers(warningDesignations);
     const unnotifiedUsers = targetUsers.filter(
@@ -1131,42 +1144,51 @@ export async function evaluateGrievanceSla(
       notificationsSent.push(`SLA_${warningThreshold}_WARNING`);
     }
 
-    if (grievance.sla_status !== "ON_TRACK") {
+    if (
+      consumptionPercent < atRiskThreshold &&
+      grievance.sla_status !== "ON_TRACK"
+    ) {
       await prisma.grievances.update({
         where: { grievance_id: grievanceId },
         data: { sla_status: "ON_TRACK" },
       });
     }
 
-    return {
-      grievanceId: grievance.grievance_id.toString(),
-      grievanceNumber: grievance.grievance_number,
-      consumptionPercent,
-      threshold: "AT_WARNING",
-      slaStatus: "ON_TRACK",
-      status: grievance.status,
-      notificationsSent,
-      escalated: false,
-      message: `${warningThreshold}% SLA threshold reached (${consumptionPercent}%). Designated recipients notified.`,
-    };
+    if (consumptionPercent < atRiskThreshold) {
+      return {
+        grievanceId: grievance.grievance_id.toString(),
+        grievanceNumber: grievance.grievance_number,
+        consumptionPercent,
+        threshold: "AT_WARNING",
+        slaStatus: "ON_TRACK",
+        status: grievance.status,
+        notificationsSent,
+        escalated: false,
+        message: `${warningThreshold}% SLA threshold reached (${consumptionPercent}%). Designated recipients notified.`,
+      };
+    }
   }
 
   // =========================================================================
-  // RULE 3: At Risk threshold (>= atRiskThreshold and < breachThreshold)
+  // RULE 3: At Risk threshold (>= atRiskThreshold)
   // Automatically notify designated recipients that the grievance is at SLA risk.
   // =========================================================================
-  if (
-    consumptionPercent >= atRiskThreshold &&
-    consumptionPercent < breachThreshold
-  ) {
-    updatedSlaStatus = "AT_RISK";
+  if (consumptionPercent >= atRiskThreshold) {
+    if (grievance.sla_status !== "BREACHED") {
+      updatedSlaStatus = "AT_RISK";
+    }
 
     await prisma.$transaction(async (tx) => {
-      // 1. Update sla_status to AT_RISK
-      await tx.grievances.update({
-        where: { grievance_id: grievanceId },
-        data: { sla_status: "AT_RISK" },
-      });
+      // 1. Update sla_status to AT_RISK if not already breached
+      if (
+        grievance.sla_status !== "AT_RISK" &&
+        grievance.sla_status !== "BREACHED"
+      ) {
+        await tx.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { sla_status: "AT_RISK" },
+        });
+      }
 
       // 2. Dispatch notifications to configured designations
       const targetUsers = await resolveDesignatedUsers(atRiskDesignations);
@@ -1237,9 +1259,7 @@ export async function evaluateGrievanceSla(
           });
         }
         notificationsSent.push("SLA_AT_RISK");
-      }
 
-      if (unnotifiedUsers.length > 0) {
         await tx.audit_logs.create({
           data: {
             grievance_id: grievanceId,
@@ -1262,17 +1282,22 @@ export async function evaluateGrievanceSla(
       }
     });
 
-    return {
-      grievanceId: grievance.grievance_id.toString(),
-      grievanceNumber: grievance.grievance_number,
-      consumptionPercent,
-      threshold: "AT_RISK",
-      slaStatus: "AT_RISK",
-      status: grievance.status,
-      notificationsSent,
-      escalated: didEscalate,
-      message: `${atRiskThreshold}% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Designated recipients alerted.`,
-    };
+    const isPastDue = Boolean(
+      grievance.due_at && evaluationDate > grievance.due_at,
+    );
+    if (consumptionPercent < breachThreshold && !isPastDue) {
+      return {
+        grievanceId: grievance.grievance_id.toString(),
+        grievanceNumber: grievance.grievance_number,
+        consumptionPercent,
+        threshold: "AT_RISK",
+        slaStatus: "AT_RISK",
+        status: grievance.status,
+        notificationsSent,
+        escalated: didEscalate,
+        message: `${atRiskThreshold}% SLA threshold reached (${consumptionPercent}%). Marked AT_RISK. Designated recipients alerted.`,
+      };
+    }
   }
 
   // =========================================================================
