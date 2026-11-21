@@ -60,6 +60,7 @@ interface GrievanceDetailsProps {
     note: string,
     parentId?: string,
     replyToAuthor?: string,
+    scope?: "INTERNAL" | "COLLABORATION",
   ) => Promise<void>;
   onOpenResolutionForm?: (grievance: StaffGrievanceItem) => void;
   onOpenResolveModal?: () => void;
@@ -392,7 +393,12 @@ export function GrievanceDetails({
           )}
 
           {activeTab === "collaboration" && (
-            <CollaborationTab grievance={grievance} onAddNote={onAddNote} />
+            <CollaborationTab
+              grievance={grievance}
+              onAddNote={(gid, note, pid, rta) =>
+                onAddNote(gid, note, pid, rta, "COLLABORATION")
+              }
+            />
           )}
 
           {activeTab === "findings" && (
@@ -402,7 +408,12 @@ export function GrievanceDetails({
           )}
 
           {activeTab === "investigation" && (
-            <InvestigationTab grievance={grievance} onAddNote={onAddNote} />
+            <InvestigationTab
+              grievance={grievance}
+              onAddNote={(gid, note, pid, rta) =>
+                onAddNote(gid, note, pid, rta, "INTERNAL")
+              }
+            />
           )}
 
           {activeTab === "activity" && <ActivityTab grievance={grievance} />}

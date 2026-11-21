@@ -78,6 +78,7 @@ export function StaffSingleGrievanceView({
     noteText: string,
     parentId?: string,
     replyToAuthor?: string,
+    scope: "INTERNAL" | "COLLABORATION" = "INTERNAL",
   ) => {
     const res = await fetch(`/api/staff/grievances/${id}`, {
       method: "PATCH",
@@ -87,14 +88,23 @@ export function StaffSingleGrievanceView({
         note: noteText,
         parentId,
         replyToAuthor,
+        scope,
       }),
     });
     if (!res.ok) {
       const errJson = await res.json().catch(() => ({}));
-      throw new Error(errJson.message || errJson.error || "Failed to add note");
+      throw new Error(
+        errJson.message ||
+          errJson.error ||
+          `Failed to add ${scope === "COLLABORATION" ? "collaboration" : "internal"} note`,
+      );
     }
     toast.success(
-      parentId ? "Reply posted to thread." : "Internal note saved.",
+      scope === "COLLABORATION"
+        ? "Collaboration note saved."
+        : parentId
+          ? "Reply posted to thread."
+          : "Internal note saved.",
     );
     await fetchGrievance();
   };

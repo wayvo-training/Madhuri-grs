@@ -171,6 +171,7 @@ export function StaffDashboard({
     noteText: string,
     parentId?: string,
     replyToAuthor?: string,
+    scope: "INTERNAL" | "COLLABORATION" = "INTERNAL",
   ) => {
     try {
       const res = await fetch(`/api/staff/grievances/${grievanceId}`, {
@@ -181,19 +182,27 @@ export function StaffDashboard({
           note: noteText,
           parentId,
           replyToAuthor,
+          scope,
         }),
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(
-          errJson.message || errJson.error || "Failed to add internal note",
+          errJson.message ||
+            errJson.error ||
+            `Failed to add ${scope === "COLLABORATION" ? "collaboration" : "internal"} note`,
         );
       }
       setSelectedGrievance((prev) => {
         if (!prev || prev.id !== grievanceId) return prev;
         const newAudit: StaffAuditItem = {
           id: `temp-${Date.now()}`,
-          action: parentId ? "Internal Reply" : "Investigation Note",
+          action:
+            scope === "COLLABORATION"
+              ? "Collaboration Note"
+              : parentId
+                ? "Internal Reply"
+                : "Investigation Note",
           details: noteText,
           actor: `Staff — ${staffName}`,
           timestamp: new Date().toISOString(),
@@ -208,6 +217,13 @@ export function StaffDashboard({
           parentId,
           replyToAuthor,
         };
+        if (scope === "COLLABORATION") {
+          return {
+            ...prev,
+            auditTrail: [newAudit, ...(prev.auditTrail || [])],
+            collaborationNotes: [...(prev.collaborationNotes || []), newNote],
+          };
+        }
         return {
           ...prev,
           auditTrail: [newAudit, ...(prev.auditTrail || [])],
@@ -224,7 +240,11 @@ export function StaffDashboard({
         }
       }
       toast.success(
-        parentId ? "Reply posted to thread." : "Internal note saved.",
+        scope === "COLLABORATION"
+          ? "Collaboration note saved."
+          : parentId
+            ? "Reply posted to thread."
+            : "Internal note saved.",
       );
       await fetchDashboardData(true);
     } catch (err) {

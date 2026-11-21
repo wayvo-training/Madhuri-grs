@@ -38,12 +38,7 @@ export function CollaborationTab({
           assignedStaff: null,
           isMyAssignment: idx === 0,
         }));
-  const crossDeptNotes =
-    grievance.collaborationNotes && grievance.collaborationNotes.length > 0
-      ? grievance.collaborationNotes
-      : (grievance.internalNotes || []).filter(
-          (n) => n.role.includes("Staff") || n.role.includes("Department Head"),
-        );
+  const crossDeptNotes = grievance.collaborationNotes || [];
 
   const [noteText, setNoteText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
