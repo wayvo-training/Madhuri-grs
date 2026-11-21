@@ -4,6 +4,8 @@ import {
   evaluateAllActiveGrievancesSla,
   evaluateGrievanceSla,
   processAutoClosures,
+  processPreExpiryReminders,
+  withSlaAdvisoryLock,
 } from "@/lib/engines/sla-engine";
 
 export async function POST(request: Request) {
@@ -52,14 +54,40 @@ export async function POST(request: Request) {
     ) {
       deptId = BigInt(user.department_id);
     }
-    const autoClosureSummary = await processAutoClosures(7);
-    const batchResult = await evaluateAllActiveGrievancesSla(deptId, true);
+
+    // Wrap the entire batch sweep (reminders + auto-closures + SLA evaluation) in PostgreSQL advisory lock
+    // Prevents concurrent executions across multiple worker instances, cron sweeps, or manual triggers
+    const lockResult = await withSlaAdvisoryLock(async () => {
+      const reminderSummary = await processPreExpiryReminders();
+      const autoClosureSummary = await processAutoClosures(7);
+      const batchResult = await evaluateAllActiveGrievancesSla(deptId, true);
+      return { reminderSummary, autoClosureSummary, batchResult };
+    });
+
+    if (!lockResult.acquired) {
+      return NextResponse.json(
+        {
+          success: false,
+          inProgress: true,
+          message:
+            "Another SLA evaluation or background sweep is currently in progress. Concurrent execution prevented.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const { reminderSummary, autoClosureSummary, batchResult } =
+      lockResult.result;
 
     return NextResponse.json({
       success: true,
       type: "batch",
       totalEvaluated: batchResult.totalEvaluated,
+      successfulCount: batchResult.successfulCount,
+      failedCount: batchResult.failedCount,
       results: batchResult.results,
+      failures: batchResult.failures,
+      reminders: reminderSummary,
       autoClosures: autoClosureSummary,
     });
   } catch (error) {

@@ -1,0 +1,15 @@
+services:
+  # GRS SLA Background Scheduler Cron Job (LLD §3.7.4 & Phase 4)
+  # Executes against existing production web service grs-madhuri
+  - type: cron
+    name: grs-sla-scheduler
+    runtime: node
+    plan: starter
+    schedule: "*/5 * * * *"
+    buildCommand: pnpm install
+    startCommand: node scripts/cron-runner.mjs
+    envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false

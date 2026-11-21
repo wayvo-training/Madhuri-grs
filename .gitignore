@@ -47,4 +47,5 @@ scratch/
 
 # DB backups and migration scripts
 database_backup*.json
-/scripts/
+/scripts/*
+!scripts/cron-runner.mjs

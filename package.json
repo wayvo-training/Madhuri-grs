@@ -15,6 +15,7 @@
     "db:push": "prisma db push",
     "db:seed": "node --no-warnings database/seed.ts",
     "db:setup": "pnpm run db:push && pnpm run db:seed",
+    "cron:scheduler": "node scripts/cron-runner.mjs",
     "prepare": "husky",
     "postinstall": "prisma generate"
   },

@@ -227,6 +227,7 @@ export function NotificationDrawer({
     if (
       type.includes("WARN") ||
       type.includes("HALF_TIME") ||
+      type.includes("REMINDER") ||
       t.includes("warning") ||
       t.includes("reminder")
     ) {
@@ -246,6 +247,7 @@ export function NotificationDrawer({
     }
     if (
       type === "ADDITIONAL_INFO_REQUESTED" ||
+      type === "INFO_REQUEST_AUTO_CLOSED" ||
       t.includes("additional info") ||
       t.includes("action required")
     ) {
@@ -260,7 +262,13 @@ export function NotificationDrawer({
     if (type === "ASSIGNMENT") {
       return <Briefcase className="h-4 w-4 text-emerald-500" />;
     }
-    if (t.includes("success") || t.includes("resolv")) {
+    if (
+      t.includes("success") ||
+      t.includes("resolv") ||
+      t.includes("closed") ||
+      type === "RESOLUTION_AUTO_CLOSED" ||
+      type === "GRIEVANCE_CLOSED"
+    ) {
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     }
     return <MessageSquare className="h-4 w-4 text-muted-foreground" />;

@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { pool, prisma } from "@/lib/prisma";
+import type { NotificationType } from "@/lib/services/notification.service";
 
 export interface SlaEvaluationResult {
   grievanceId: string;
@@ -724,15 +725,33 @@ export async function evaluateGrievanceSla(
           }
 
           // Record approved escalation event for responsible Department Head
-          const existingEscalation = await tx.escalations.findFirst({
-            where: { grievance_id: grievanceId, status: "OPEN" },
+          const existingLevel1 = await tx.escalations.findFirst({
+            where: { grievance_id: grievanceId, escalation_level: 1 },
           });
           const targetDeptHead = deptContext.deptHeads[0] || primaryDeptHead;
-          if (!existingEscalation && targetDeptHead) {
+          let escalationTarget: { user_id: bigint } | null = targetDeptHead;
+          if (!escalationTarget) {
+            const fallbackAdmin = await tx.users.findFirst({
+              where: {
+                roles: { role_name: "ADMIN" },
+                status: "ACTIVE",
+              },
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            });
+            if (fallbackAdmin) {
+              escalationTarget = fallbackAdmin;
+            }
+          }
+          if (!existingLevel1 && escalationTarget) {
             await tx.escalations.create({
               data: {
                 grievance_id: grievanceId,
-                escalated_to: targetDeptHead.user_id,
+                escalated_to: escalationTarget.user_id,
                 escalation_level: 1,
                 reason: `SLA Escalation Threshold Reached: ${deptConsumptionPercent}% of allocated SLA consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Department Head.`,
                 status: "OPEN",
@@ -823,6 +842,41 @@ export async function evaluateGrievanceSla(
               },
             });
           }
+          // Record Level 2 escalation for department breach
+          const existingLevel2 = await tx.escalations.findFirst({
+            where: { grievance_id: grievanceId, escalation_level: 2 },
+          });
+          let escalationTarget: { user_id: bigint } | null =
+            deptContext.deptHeads[0] || primaryDeptHead;
+          if (!escalationTarget) {
+            const fallbackAdmin = await tx.users.findFirst({
+              where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
+              select: {
+                user_id: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            });
+            if (fallbackAdmin) {
+              escalationTarget = fallbackAdmin;
+            }
+          }
+          if (!existingLevel2 && escalationTarget) {
+            await tx.escalations.create({
+              data: {
+                grievance_id: grievanceId,
+                escalated_to: escalationTarget.user_id,
+                escalation_level: 2,
+                reason: `Department SLA Breach: 100% of allocated SLA limit consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Level 2 (Department Head).`,
+                status: "OPEN",
+                sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+                created_at: evaluationDate,
+              },
+            });
+            didEscalate = true;
+          }
+
           await tx.audit_logs.create({
             data: {
               grievance_id: grievanceId,
@@ -881,6 +935,48 @@ export async function evaluateGrievanceSla(
         where: { sla_tracking_id: activeTracking.sla_tracking_id },
         data: { status: "BREACHED" },
       });
+    }
+
+    // Ensure formal Level 2 escalation record exists even when early-returning from department breach
+    const existingLevel2 = await prisma.escalations.findFirst({
+      where: { grievance_id: grievanceId, escalation_level: 2 },
+    });
+
+    if (!existingLevel2) {
+      let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
+      if (!escalationTargetUser) {
+        const fallbackAdmin = await prisma.users.findFirst({
+          where: {
+            roles: { role_name: "ADMIN" },
+            status: "ACTIVE",
+          },
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        });
+        if (fallbackAdmin) {
+          escalationTargetUser = fallbackAdmin;
+        }
+      }
+
+      if (escalationTargetUser) {
+        await prisma.escalations.create({
+          data: {
+            grievance_id: grievanceId,
+            escalated_to: escalationTargetUser.user_id,
+            escalation_level: 2,
+            reason:
+              "Department SLA Breach: 100% of allocated SLA limit consumed without resolution. Auto-escalated to Level 2 (Department Head).",
+            status: "OPEN",
+            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+            created_at: evaluationDate,
+          },
+        });
+        didEscalate = true;
+      }
     }
 
     return {
@@ -1095,11 +1191,11 @@ export async function evaluateGrievanceSla(
         });
       }
 
-      // Record approved escalation event for responsible Department Head
-      const existingEscalation = await tx.escalations.findFirst({
-        where: { grievance_id: grievanceId, status: "OPEN" },
+      // Record approved Level 1 escalation event for responsible Department Head
+      const existingLevel1 = await tx.escalations.findFirst({
+        where: { grievance_id: grievanceId, escalation_level: 1 },
       });
-      let escalationTargetUser = primaryDeptHead;
+      let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
       if (!escalationTargetUser) {
         const fallbackAdmin = await tx.users.findFirst({
           where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
@@ -1114,7 +1210,7 @@ export async function evaluateGrievanceSla(
           escalationTargetUser = fallbackAdmin;
         }
       }
-      if (!existingEscalation && escalationTargetUser) {
+      if (!existingLevel1 && escalationTargetUser) {
         await tx.escalations.create({
           data: {
             grievance_id: grievanceId,
@@ -1206,12 +1302,12 @@ export async function evaluateGrievanceSla(
         });
       }
 
-      // 2. Create escalation record if not exists
-      const existingEscalation = await tx.escalations.findFirst({
-        where: { grievance_id: grievanceId, status: "OPEN" },
+      // 2. Create Level 2 escalation record if not exists
+      const existingLevel2 = await tx.escalations.findFirst({
+        where: { grievance_id: grievanceId, escalation_level: 2 },
       });
 
-      let escalationTargetUser = primaryDeptHead;
+      let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
       if (!escalationTargetUser) {
         // Fallback to active Admin if primary department has no active Department Head
         const fallbackAdmin = await tx.users.findFirst({
@@ -1231,13 +1327,13 @@ export async function evaluateGrievanceSla(
         }
       }
 
-      if (!existingEscalation && escalationTargetUser) {
+      if (!existingLevel2 && escalationTargetUser) {
         await tx.escalations.create({
           data: {
             grievance_id: grievanceId,
             escalated_to: escalationTargetUser.user_id,
-            escalation_level: 1,
-            reason: `Automated SLA Breach: ${consumptionPercent}% of SLA time consumed without resolution.`,
+            escalation_level: 2,
+            reason: `Automated SLA Breach: ${consumptionPercent}% of SLA time consumed without resolution. Auto-escalated to Level 2 (Department Head).`,
             status: "OPEN",
             sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
             created_at: evaluationDate,
@@ -1346,18 +1442,98 @@ const lastEvaluationByDept = new Map<string, number>();
 const SLA_EVAL_COOLDOWN_MS = 60 * 1000; // 60 seconds debounce
 
 /**
+ * PostgreSQL 64-bit advisory lock key dedicated to the GRS SLA evaluation scheduler.
+ * Prevents concurrent scheduler sweeps across clustered or multi-instance deployments.
+ */
+export const SLA_SCHEDULER_LOCK_ID = 882026101;
+
+export type AdvisoryLockResult<T> =
+  | { acquired: true; result: T }
+  | { acquired: false; inProgress: true };
+
+export interface SlaEvaluationFailure {
+  grievanceId: string;
+  error: string;
+}
+
+export interface BatchSlaEvaluationSummary {
+  totalEvaluated: number;
+  successfulCount: number;
+  failedCount: number;
+  results: SlaEvaluationResult[];
+  failures: SlaEvaluationFailure[];
+}
+
+/**
+ * Executes a callback within a dedicated PostgreSQL session-level advisory lock.
+ * Uses a single dedicated client checked out from the connection pool so that
+ * lock acquisition and release occur on the exact same database connection.
+ * If the lock cannot be acquired (another sweep is in progress), returns
+ * { acquired: false, inProgress: true } without blocking or queuing.
+ */
+export async function withSlaAdvisoryLock<T>(
+  callback: () => Promise<T>,
+  lockId: number = SLA_SCHEDULER_LOCK_ID,
+): Promise<AdvisoryLockResult<T>> {
+  if (!pool) {
+    throw new Error("PostgreSQL connection pool is not available.");
+  }
+
+  const client = await pool.connect();
+  let hasLock = false;
+
+  try {
+    const res = await client.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_lock($1) AS locked",
+      [lockId],
+    );
+    hasLock = Boolean(res.rows[0]?.locked);
+
+    if (!hasLock) {
+      return { acquired: false, inProgress: true };
+    }
+
+    const result = await callback();
+    return { acquired: true, result };
+  } finally {
+    if (client) {
+      try {
+        if (hasLock) {
+          await client.query("SELECT pg_advisory_unlock($1)", [lockId]);
+        }
+      } catch (unlockErr) {
+        console.error(
+          "[SLA Scheduler] Failed to release PostgreSQL advisory lock:",
+          unlockErr,
+        );
+      } finally {
+        client.release();
+      }
+    }
+  }
+}
+
+/**
  * Batch evaluates all active, non-terminal grievances across the system.
+ * Isolates individual grievance failures so one corrupted case does not abort
+ * the sweep for remaining grievances.
  */
 export async function evaluateAllActiveGrievancesSla(
   departmentId?: bigint,
   force: boolean = false,
-): Promise<{ totalEvaluated: number; results: SlaEvaluationResult[] }> {
+): Promise<BatchSlaEvaluationSummary> {
   const deptKey = departmentId ? departmentId.toString() : "ALL";
   const now = Date.now();
   const lastEval = lastEvaluationByDept.get(deptKey) || 0;
 
   if (!force && now - lastEval < SLA_EVAL_COOLDOWN_MS) {
-    return { totalEvaluated: 0, results: [] };
+    return {
+      totalEvaluated: 0,
+      successfulCount: 0,
+      failedCount: 0,
+      results: [],
+      failures: [],
+    };
   }
 
   lastEvaluationByDept.set(deptKey, now);
@@ -1383,14 +1559,32 @@ export async function evaluateAllActiveGrievancesSla(
   });
 
   const results: SlaEvaluationResult[] = [];
+  const failures: SlaEvaluationFailure[] = [];
+
   for (const g of activeGrievances) {
-    const res = await evaluateGrievanceSla(g.grievance_id);
-    if (res) results.push(res);
+    try {
+      const res = await evaluateGrievanceSla(g.grievance_id);
+      if (res) results.push(res);
+    } catch (err: unknown) {
+      const safeErrorMessage =
+        err instanceof Error ? err.message : "Internal SLA evaluation failure";
+      console.error(
+        `[SLA Evaluator] Failed to evaluate grievance #${g.grievance_id}:`,
+        err,
+      );
+      failures.push({
+        grievanceId: g.grievance_id.toString(),
+        error: safeErrorMessage,
+      });
+    }
   }
 
   return {
     totalEvaluated: activeGrievances.length,
+    successfulCount: results.length,
+    failedCount: failures.length,
     results,
+    failures,
   };
 }
 
@@ -2778,6 +2972,397 @@ export interface AutoClosureSummary {
   resolvedInactivityCount: number;
   infoNonResponseCount: number;
   closedGrievanceIds: string[];
+  errors?: Array<{ grievanceId: string; error: string }>;
+}
+
+export interface ReminderSummary {
+  totalEvaluated: number;
+  totalRemindersSent: number;
+  resolutionReminders: number;
+  infoRequestReminders: number;
+  supportingDeptReminders: number;
+  investigationReminders: number;
+  remindedGrievanceIds: string[];
+  errors?: Array<{ grievanceId: string; error: string }>;
+}
+
+interface GrievanceForClosure {
+  grievance_id: bigint;
+  grievance_number: string;
+  status: string;
+  submitted_by: bigint;
+  priority: string;
+  created_at: Date;
+  due_at: Date | null;
+  updated_at: Date;
+  sla_tracking?: Array<{
+    started_at: Date;
+    due_at: Date;
+    accumulated_paused_minutes: number;
+    paused_at: Date | null;
+    cycle_number: number;
+    cycle_type: string;
+  }>;
+}
+
+/**
+ * Atomically executes all database mutations for a single auto-closed grievance:
+ * 1. Updates grievance status to 'CLOSED' and records the specific closure reason.
+ * 2. Marks active assignments as 'COMPLETED'.
+ * 3. Marks grievance departments as 'COMPLETED'.
+ * 4. Permanently completes SLA tracking (retaining paused_at).
+ * 5. Appends transition to grievance_status_history.
+ * 6. Logs structured audit_logs event retaining SLA metrics.
+ * 7. Generates non-response closure notifications to submitter, assigned staff, and department heads with idempotency protection.
+ */
+async function executeSingleAutoClosure(
+  tx: Prisma.TransactionClient,
+  g: GrievanceForClosure,
+  reason: "RESOLVED_INACTIVITY" | "INFO_REQUEST_NON_RESPONSE",
+  inactivityDays: number,
+  now: Date,
+): Promise<void> {
+  const activeTracking = g.sla_tracking?.[0];
+  const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
+    activeTracking?.started_at || g.created_at,
+    activeTracking?.due_at || g.due_at,
+    g.priority,
+    now,
+    activeTracking?.accumulated_paused_minutes || 0,
+    activeTracking?.paused_at,
+  );
+  const remainingMinutes = Math.max(0, totalDurationMinutes - elapsedMinutes);
+
+  // 1. Update grievance status and closure metadata
+  await tx.grievances.update({
+    where: { grievance_id: g.grievance_id },
+    data: {
+      status: "CLOSED",
+      closed_at: now,
+      closure_reason: reason,
+    },
+  });
+
+  // 2. Mark active assignments as COMPLETED
+  await tx.assignments.updateMany({
+    where: {
+      grievance_id: g.grievance_id,
+      assignment_status: "ASSIGNED",
+    },
+    data: {
+      assignment_status: "COMPLETED",
+      completed_at: now,
+    },
+  });
+
+  // 3. Mark involved departments as COMPLETED
+  await tx.grievance_departments.updateMany({
+    where: {
+      grievance_id: g.grievance_id,
+      status: { notIn: ["REMOVED"] },
+    },
+    data: {
+      status: "COMPLETED",
+      completed_at: now,
+    },
+  });
+
+  // 4. Permanently complete SLA tracking
+  await completeSlaTracking(g.grievance_id, tx);
+
+  // 5. Record status history
+  const historyRemarks =
+    reason === "RESOLVED_INACTIVITY"
+      ? `Auto-closed after ${inactivityDays} days without employee response to proposed resolution.`
+      : `Auto-closed after ${inactivityDays} days without response to additional information/document request.`;
+
+  await tx.grievance_status_history.create({
+    data: {
+      grievance_id: g.grievance_id,
+      old_status: g.status,
+      new_status: "CLOSED",
+      changed_by: g.submitted_by,
+      remarks: historyRemarks,
+    },
+  });
+
+  // 6. Record audit log
+  const auditNote =
+    reason === "RESOLVED_INACTIVITY"
+      ? `Automatically closed after ${inactivityDays} days of employee inactivity following resolution. SLA remains permanently paused.`
+      : `Automatically closed after ${inactivityDays} days without submission of requested information/documents. Existing SLA cycle permanently stopped.`;
+
+  await tx.audit_logs.create({
+    data: {
+      grievance_id: g.grievance_id,
+      user_id: null,
+      action: "AUTO_CLOSED",
+      entity_type: "GRIEVANCE",
+      entity_id: g.grievance_id,
+      new_value: {
+        closureReason: reason,
+        elapsedDurationMinutes: elapsedMinutes,
+        remainingDurationMinutes: remainingMinutes,
+        totalDurationMinutes,
+        accumulatedPausedMinutes:
+          activeTracking?.accumulated_paused_minutes || 0,
+        pausedAt: activeTracking?.paused_at,
+        cycleNumber: activeTracking?.cycle_number || 1,
+        cycleType: activeTracking?.cycle_type || "INITIAL",
+        note: auditNote,
+      },
+    },
+  });
+
+  // 7. Generate non-response notifications
+  const notifType: NotificationType =
+    reason === "RESOLVED_INACTIVITY"
+      ? "RESOLUTION_AUTO_CLOSED"
+      : "INFO_REQUEST_AUTO_CLOSED";
+
+  const cycleStartTime = activeTracking?.started_at || g.created_at;
+  const notifiedUserIds = new Set<string>();
+
+  // A. Submitting employee notification
+  if (g.submitted_by) {
+    const employeeTitle =
+      reason === "RESOLVED_INACTIVITY"
+        ? `Grievance Automatically Closed: ${g.grievance_number}`
+        : `Grievance Closed - Information Request Expired: ${g.grievance_number}`;
+    const employeeMessage =
+      reason === "RESOLVED_INACTIVITY"
+        ? `Your grievance ${g.grievance_number} has been automatically closed after ${inactivityDays} days without response to the proposed resolution.`
+        : `Your grievance ${g.grievance_number} has been automatically closed because the requested additional information was not provided within ${inactivityDays} days.`;
+
+    const existingEmpNotif = await tx.notifications.findFirst({
+      where: {
+        user_id: g.submitted_by,
+        grievance_id: g.grievance_id,
+        notification_type: notifType,
+        created_at: { gte: cycleStartTime },
+      },
+    });
+
+    if (!existingEmpNotif) {
+      await tx.notifications.create({
+        data: {
+          user_id: g.submitted_by,
+          grievance_id: g.grievance_id,
+          notification_type: notifType,
+          channel: "IN_APP",
+          title: employeeTitle,
+          message: employeeMessage,
+          status: "PENDING",
+        },
+      });
+    }
+    notifiedUserIds.add(g.submitted_by.toString());
+  }
+
+  // B. Assigned Investigation Staff notification
+  const assignments = await tx.assignments.findMany({
+    where: { grievance_id: g.grievance_id },
+    select: { staff_id: true },
+  });
+
+  const staffTitle =
+    reason === "RESOLVED_INACTIVITY"
+      ? `Grievance Auto-Closed (Resolution Non-Response): ${g.grievance_number}`
+      : `Grievance Auto-Closed (Information Request Expired): ${g.grievance_number}`;
+  const staffMessage =
+    reason === "RESOLVED_INACTIVITY"
+      ? `Grievance ${g.grievance_number} has been automatically closed after ${inactivityDays} days of employee inactivity following resolution.`
+      : `Grievance ${g.grievance_number} has been automatically closed because the employee did not provide requested information within ${inactivityDays} days.`;
+
+  for (const asgn of assignments) {
+    if (!asgn.staff_id) continue;
+    const staffIdStr = asgn.staff_id.toString();
+    if (notifiedUserIds.has(staffIdStr)) continue;
+    notifiedUserIds.add(staffIdStr);
+
+    const existingStaffNotif = await tx.notifications.findFirst({
+      where: {
+        user_id: asgn.staff_id,
+        grievance_id: g.grievance_id,
+        notification_type: notifType,
+        created_at: { gte: cycleStartTime },
+      },
+    });
+
+    if (!existingStaffNotif) {
+      await tx.notifications.create({
+        data: {
+          user_id: asgn.staff_id,
+          grievance_id: g.grievance_id,
+          notification_type: notifType,
+          channel: "IN_APP",
+          title: staffTitle,
+          message: staffMessage,
+          status: "PENDING",
+        },
+      });
+    }
+  }
+
+  // C. Primary & involved Department Heads notification
+  const depts = await tx.grievance_departments.findMany({
+    where: {
+      grievance_id: g.grievance_id,
+      status: { notIn: ["REMOVED"] },
+    },
+    select: { department_id: true },
+  });
+
+  const deptIds = depts.map((d) => d.department_id);
+  if (deptIds.length > 0) {
+    const deptHeads = await tx.users.findMany({
+      where: {
+        department_id: { in: deptIds },
+        roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+        status: "ACTIVE",
+      },
+      select: { user_id: true },
+    });
+
+    for (const head of deptHeads) {
+      const headIdStr = head.user_id.toString();
+      if (notifiedUserIds.has(headIdStr)) continue;
+      notifiedUserIds.add(headIdStr);
+
+      const existingHeadNotif = await tx.notifications.findFirst({
+        where: {
+          user_id: head.user_id,
+          grievance_id: g.grievance_id,
+          notification_type: notifType,
+          created_at: { gte: cycleStartTime },
+        },
+      });
+
+      if (!existingHeadNotif) {
+        await tx.notifications.create({
+          data: {
+            user_id: head.user_id,
+            grievance_id: g.grievance_id,
+            notification_type: notifType,
+            channel: "IN_APP",
+            title: staffTitle,
+            message: staffMessage,
+            status: "PENDING",
+          },
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Resolves the applicable response inactivity days for a grievance based on active reopen/lifecycle policies.
+ * Evaluates category and subcategory specificity, falling back to defaultDays (default 7 days).
+ */
+function getPolicyInactivityDays(
+  g: { category_id: bigint; subcategory_id: bigint | null },
+  activePolicies: Array<{
+    applicable_condition: unknown;
+    created_at: Date;
+  }>,
+  field: "resolution_inactivity_days" | "additional_info_days",
+  defaultDays: number,
+): number {
+  const catStr = g.category_id.toString();
+  const subcatStr = g.subcategory_id ? g.subcategory_id.toString() : null;
+
+  // Filter policies matching this grievance
+  const matching = activePolicies.filter((p) => {
+    if (!p.applicable_condition || typeof p.applicable_condition !== "object") {
+      return true; // global policy applies
+    }
+    const cond = p.applicable_condition as Record<string, unknown>;
+    const cCat = cond.category_id ? String(cond.category_id) : undefined;
+    const cSubcat = cond.subcategory_id
+      ? String(cond.subcategory_id)
+      : undefined;
+
+    if (cCat && cCat !== catStr) return false;
+    if (cSubcat && cSubcat !== subcatStr) return false;
+    return true;
+  });
+
+  // Sort matching policies by specificity descending, then newest created_at
+  matching.sort((a, b) => {
+    const condA = (a.applicable_condition as Record<string, unknown>) || {};
+    const condB = (b.applicable_condition as Record<string, unknown>) || {};
+    const scoreA = (condA.category_id ? 1 : 0) + (condA.subcategory_id ? 1 : 0);
+    const scoreB = (condB.category_id ? 1 : 0) + (condB.subcategory_id ? 1 : 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  for (const p of matching) {
+    const cond = (p.applicable_condition as Record<string, unknown>) || {};
+    if (cond[field] !== undefined && cond[field] !== null) {
+      const val = Number(cond[field]);
+      if (!Number.isNaN(val) && val > 0) {
+        return val;
+      }
+    }
+  }
+
+  return defaultDays;
+}
+
+/**
+ * Resolves the applicable reminder interval hours for a grievance based on active reopen/lifecycle policies.
+ * Evaluates category and subcategory specificity, falling back to defaultHours (default 24 hours).
+ */
+function getPolicyReminderHours(
+  g: { category_id: bigint; subcategory_id: bigint | null },
+  activePolicies: Array<{
+    applicable_condition: unknown;
+    created_at: Date;
+  }>,
+  defaultHours: number,
+): number {
+  const catStr = g.category_id.toString();
+  const subcatStr = g.subcategory_id ? g.subcategory_id.toString() : null;
+
+  const matching = activePolicies.filter((p) => {
+    if (!p.applicable_condition || typeof p.applicable_condition !== "object") {
+      return true;
+    }
+    const cond = p.applicable_condition as Record<string, unknown>;
+    const cCat = cond.category_id ? String(cond.category_id) : undefined;
+    const cSubcat = cond.subcategory_id
+      ? String(cond.subcategory_id)
+      : undefined;
+
+    if (cCat && cCat !== catStr) return false;
+    if (cSubcat && cSubcat !== subcatStr) return false;
+    return true;
+  });
+
+  matching.sort((a, b) => {
+    const condA = (a.applicable_condition as Record<string, unknown>) || {};
+    const condB = (b.applicable_condition as Record<string, unknown>) || {};
+    const scoreA = (condA.category_id ? 1 : 0) + (condA.subcategory_id ? 1 : 0);
+    const scoreB = (condB.category_id ? 1 : 0) + (condB.subcategory_id ? 1 : 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  for (const p of matching) {
+    const cond = (p.applicable_condition as Record<string, unknown>) || {};
+    if (
+      cond.reminder_interval_hours !== undefined &&
+      cond.reminder_interval_hours !== null
+    ) {
+      const val = Number(cond.reminder_interval_hours);
+      if (!Number.isNaN(val) && val > 0) {
+        return val;
+      }
+    }
+  }
+
+  return defaultHours;
 }
 
 /**
@@ -2786,6 +3371,9 @@ export interface AutoClosureSummary {
  *    Sets closure_reason = 'RESOLVED_INACTIVITY' and keeps SLA permanently paused.
  * 2. AWAITING_INFORMATION grievances where the employee has not provided requested info within responsePeriodDays (default 7 days).
  *    Sets closure_reason = 'INFO_REQUEST_NON_RESPONSE' and permanently stops the existing SLA cycle.
+ *
+ * Each grievance auto-closure executes atomically in its own database transaction.
+ * A failure on one grievance rolls back all its mutations and isolates the error without terminating the sweep.
  */
 export async function processAutoClosures(
   responsePeriodDays?: number,
@@ -2794,39 +3382,30 @@ export async function processAutoClosures(
   const client = tx || prisma;
   const now = new Date();
 
-  // Resolve active lifecycle & closure policy for configurable inactivity timers
-  const activeLifecyclePolicy = await client.reopen_policies.findFirst({
+  // Retrieve active lifecycle & closure policies for category-specific or global inactivity timers
+  const activePolicies = await client.reopen_policies.findMany({
     where: { status: "ACTIVE" },
-    orderBy: { updated_at: "desc" },
+    orderBy: { created_at: "desc" },
   });
-  const cond =
-    (activeLifecyclePolicy?.applicable_condition as Record<string, unknown>) ||
-    {};
-  const resInactivityDays =
-    Number(cond.resolution_inactivity_days) || responsePeriodDays || 7;
-  const infoInactivityDays =
-    Number(cond.additional_info_days) || responsePeriodDays || 7;
 
-  const resCutoffDate = new Date(
-    now.getTime() - resInactivityDays * 24 * 60 * 60 * 1000,
-  );
-  const infoCutoffDate = new Date(
-    now.getTime() - infoInactivityDays * 24 * 60 * 60 * 1000,
-  );
+  const defaultDays = responsePeriodDays || 7;
+  // A grievance candidate must be at least 1 day old (minimum possible configured inactivity days)
+  const minCutoffDate = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
 
   const summary: AutoClosureSummary = {
     totalProcessed: 0,
     resolvedInactivityCount: 0,
     infoNonResponseCount: 0,
     closedGrievanceIds: [],
+    errors: [],
   };
 
   // 1. Auto-close RESOLVED grievances
-  const resolvedInactivityGrievances = await client.grievances.findMany({
+  const resolvedCandidates = await client.grievances.findMany({
     where: {
       status: "RESOLVED",
       closed_at: null,
-      updated_at: { lte: resCutoffDate },
+      updated_at: { lte: minCutoffDate },
     },
     include: {
       sla_tracking: {
@@ -2836,96 +3415,66 @@ export async function processAutoClosures(
     },
   });
 
-  for (const g of resolvedInactivityGrievances) {
-    const activeTracking = g.sla_tracking?.[0];
-    const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
-      activeTracking?.started_at || g.created_at,
-      activeTracking?.due_at || g.due_at,
-      g.priority,
-      now,
-      activeTracking?.accumulated_paused_minutes || 0,
-      activeTracking?.paused_at,
+  for (const g of resolvedCandidates) {
+    const resInactivityDays = getPolicyInactivityDays(
+      g,
+      activePolicies,
+      "resolution_inactivity_days",
+      defaultDays,
     );
-    const remainingMinutes = Math.max(0, totalDurationMinutes - elapsedMinutes);
+    const grievanceCutoffDate = new Date(
+      now.getTime() - resInactivityDays * 24 * 60 * 60 * 1000,
+    );
+    // If the grievance has not yet exceeded its specific response period, skip
+    if (g.updated_at > grievanceCutoffDate) {
+      continue;
+    }
 
-    await client.grievances.update({
-      where: { grievance_id: g.grievance_id },
-      data: {
-        status: "CLOSED",
-        closed_at: now,
-        closure_reason: "RESOLVED_INACTIVITY",
-      },
-    });
+    try {
+      if (tx) {
+        await executeSingleAutoClosure(
+          tx,
+          g,
+          "RESOLVED_INACTIVITY",
+          resInactivityDays,
+          now,
+        );
+      } else {
+        await prisma.$transaction(async (innerTx) => {
+          await executeSingleAutoClosure(
+            innerTx,
+            g,
+            "RESOLVED_INACTIVITY",
+            resInactivityDays,
+            now,
+          );
+        });
+      }
 
-    await client.assignments.updateMany({
-      where: {
-        grievance_id: g.grievance_id,
-        assignment_status: "ASSIGNED",
-      },
-      data: {
-        assignment_status: "COMPLETED",
-        completed_at: now,
-      },
-    });
-
-    await client.grievance_departments.updateMany({
-      where: {
-        grievance_id: g.grievance_id,
-        status: { notIn: ["REMOVED"] },
-      },
-      data: {
-        status: "COMPLETED",
-        completed_at: now,
-      },
-    });
-
-    await completeSlaTracking(g.grievance_id, client);
-
-    await client.grievance_status_history.create({
-      data: {
-        grievance_id: g.grievance_id,
-        old_status: "RESOLVED",
-        new_status: "CLOSED",
-        changed_by: g.submitted_by,
-        remarks: `Auto-closed after ${resInactivityDays} days without employee response to proposed resolution.`,
-      },
-    });
-
-    await client.audit_logs.create({
-      data: {
-        grievance_id: g.grievance_id,
-        user_id: null,
-        action: "AUTO_CLOSED",
-        entity_type: "GRIEVANCE",
-        entity_id: g.grievance_id,
-        new_value: {
-          closureReason: "RESOLVED_INACTIVITY",
-          elapsedDurationMinutes: elapsedMinutes,
-          remainingDurationMinutes: remainingMinutes,
-          totalDurationMinutes,
-          accumulatedPausedMinutes:
-            activeTracking?.accumulated_paused_minutes || 0,
-          pausedAt: activeTracking?.paused_at,
-          cycleNumber: activeTracking?.cycle_number || 1,
-          cycleType: activeTracking?.cycle_type || "INITIAL",
-          note: `Automatically closed after ${resInactivityDays} days of employee inactivity following resolution. SLA remains permanently paused.`,
-        },
-      },
-    });
-
-    summary.totalProcessed++;
-    summary.resolvedInactivityCount++;
-    summary.closedGrievanceIds.push(g.grievance_id.toString());
+      summary.totalProcessed++;
+      summary.resolvedInactivityCount++;
+      summary.closedGrievanceIds.push(g.grievance_id.toString());
+    } catch (err) {
+      console.error(
+        `Failed to auto-close resolved grievance ${g.grievance_id}:`,
+        err,
+      );
+      if (!summary.errors) summary.errors = [];
+      summary.errors.push({
+        grievanceId: g.grievance_id.toString(),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   // 2. Auto-close AWAITING_INFORMATION / WAITING_ON_USER grievances
-  const infoNonResponseGrievances = await client.grievances.findMany({
+  const infoCandidates = await client.grievances.findMany({
     where: {
       status: {
         in: ["AWAITING_INFORMATION", "WAITING_ON_USER", "WAITING_ON_EMPLOYEE"],
       },
       closed_at: null,
-      updated_at: { lte: infoCutoffDate },
+      updated_at: { lte: minCutoffDate },
     },
     include: {
       sla_tracking: {
@@ -2935,86 +3484,668 @@ export async function processAutoClosures(
     },
   });
 
-  for (const g of infoNonResponseGrievances) {
-    const activeTracking = g.sla_tracking?.[0];
-    const { totalDurationMinutes, elapsedMinutes } = calculateSlaConsumption(
-      activeTracking?.started_at || g.created_at,
-      activeTracking?.due_at || g.due_at,
-      g.priority,
-      now,
-      activeTracking?.accumulated_paused_minutes || 0,
-      activeTracking?.paused_at,
+  for (const g of infoCandidates) {
+    const infoInactivityDays = getPolicyInactivityDays(
+      g,
+      activePolicies,
+      "additional_info_days",
+      defaultDays,
     );
-    const remainingMinutes = Math.max(0, totalDurationMinutes - elapsedMinutes);
+    const grievanceCutoffDate = new Date(
+      now.getTime() - infoInactivityDays * 24 * 60 * 60 * 1000,
+    );
+    // If the grievance has not yet exceeded its specific response period, skip
+    if (g.updated_at > grievanceCutoffDate) {
+      continue;
+    }
 
-    await client.grievances.update({
-      where: { grievance_id: g.grievance_id },
-      data: {
-        status: "CLOSED",
-        closed_at: now,
-        closure_reason: "INFO_REQUEST_NON_RESPONSE",
-      },
-    });
+    try {
+      if (tx) {
+        await executeSingleAutoClosure(
+          tx,
+          g,
+          "INFO_REQUEST_NON_RESPONSE",
+          infoInactivityDays,
+          now,
+        );
+      } else {
+        await prisma.$transaction(async (innerTx) => {
+          await executeSingleAutoClosure(
+            innerTx,
+            g,
+            "INFO_REQUEST_NON_RESPONSE",
+            infoInactivityDays,
+            now,
+          );
+        });
+      }
 
-    await client.assignments.updateMany({
+      summary.totalProcessed++;
+      summary.infoNonResponseCount++;
+      summary.closedGrievanceIds.push(g.grievance_id.toString());
+    } catch (err) {
+      console.error(
+        `Failed to auto-close awaiting info grievance ${g.grievance_id}:`,
+        err,
+      );
+      if (!summary.errors) summary.errors = [];
+      summary.errors.push({
+        grievanceId: g.grievance_id.toString(),
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return summary;
+}
+
+/**
+ * Sweeps and evaluates pre-expiry action-based reminders across active grievances (LLD §3.7.4):
+ * 1. RESOLUTION_REMINDER: Submitting Employee reminder for pending resolution review.
+ * 2. INFO_REQUEST_REMINDER: Submitting Employee reminder for pending additional information submission.
+ * 3. SUPPORTING_DEPT_REMINDER: Supporting Department Staff & Head reminder before departmental due date.
+ * 4. INVESTIGATION_REMINDER: Primary Investigation Staff reminder before departmental SLA deadline.
+ *
+ * Reminders trigger strictly within the pre-expiry window (default 24 hours before deadline).
+ * Completed, closed, expired, or cancelled actions do not receive reminders.
+ * Idempotency is action-specific and cycle-isolated, preventing duplicate notifications.
+ */
+export async function processPreExpiryReminders(options?: {
+  tx?: Prisma.TransactionClient;
+  now?: Date;
+  defaultReminderHours?: number;
+}): Promise<ReminderSummary> {
+  const client = options?.tx || prisma;
+  const now = options?.now || new Date();
+  const defaultHours = options?.defaultReminderHours || 24;
+
+  const activePolicies = await client.reopen_policies.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { created_at: "desc" },
+  });
+
+  const summary: ReminderSummary = {
+    totalEvaluated: 0,
+    totalRemindersSent: 0,
+    resolutionReminders: 0,
+    infoRequestReminders: 0,
+    supportingDeptReminders: 0,
+    investigationReminders: 0,
+    remindedGrievanceIds: [],
+    errors: [],
+  };
+
+  // ---------------------------------------------------------
+  // 1. RESOLUTION_REMINDER (Employee Resolution Review)
+  // ---------------------------------------------------------
+  try {
+    const resolvedCandidates = await client.grievances.findMany({
       where: {
-        grievance_id: g.grievance_id,
-        assignment_status: "ASSIGNED",
+        status: "RESOLVED",
+        closed_at: null,
       },
-      data: {
-        assignment_status: "COMPLETED",
-        completed_at: now,
-      },
-    });
-
-    await client.grievance_departments.updateMany({
-      where: {
-        grievance_id: g.grievance_id,
-        status: { notIn: ["REMOVED"] },
-      },
-      data: {
-        status: "COMPLETED",
-        completed_at: now,
-      },
-    });
-
-    await completeSlaTracking(g.grievance_id, client);
-
-    await client.grievance_status_history.create({
-      data: {
-        grievance_id: g.grievance_id,
-        old_status: "AWAITING_INFORMATION",
-        new_status: "CLOSED",
-        changed_by: g.submitted_by,
-        remarks: `Auto-closed after ${infoInactivityDays} days without response to additional information/document request.`,
-      },
-    });
-
-    await client.audit_logs.create({
-      data: {
-        grievance_id: g.grievance_id,
-        user_id: null,
-        action: "AUTO_CLOSED",
-        entity_type: "GRIEVANCE",
-        entity_id: g.grievance_id,
-        new_value: {
-          closureReason: "INFO_REQUEST_NON_RESPONSE",
-          elapsedDurationMinutes: elapsedMinutes,
-          remainingDurationMinutes: remainingMinutes,
-          totalDurationMinutes,
-          accumulatedPausedMinutes:
-            activeTracking?.accumulated_paused_minutes || 0,
-          pausedAt: activeTracking?.paused_at,
-          cycleNumber: activeTracking?.cycle_number || 1,
-          cycleType: activeTracking?.cycle_type || "INITIAL",
-          note: `Automatically closed after ${infoInactivityDays} days without submission of requested information/documents. Existing SLA cycle permanently stopped.`,
+      include: {
+        resolutions: {
+          orderBy: { submitted_at: "desc" },
+          take: 1,
         },
       },
     });
 
-    summary.totalProcessed++;
-    summary.infoNonResponseCount++;
-    summary.closedGrievanceIds.push(g.grievance_id.toString());
+    for (const g of resolvedCandidates) {
+      summary.totalEvaluated++;
+      try {
+        const latestRes = g.resolutions?.[0];
+        if (!latestRes?.submitted_at) continue;
+
+        const resDays = getPolicyInactivityDays(
+          g,
+          activePolicies,
+          "resolution_inactivity_days",
+          7,
+        );
+        const reminderHours = getPolicyReminderHours(
+          g,
+          activePolicies,
+          defaultHours,
+        );
+
+        const actionStartTime = latestRes.submitted_at;
+        const actionDeadline = new Date(
+          actionStartTime.getTime() + resDays * 24 * 60 * 60 * 1000,
+        );
+        const reminderWindowMs = reminderHours * 60 * 60 * 1000;
+        const reminderStartTime = new Date(
+          actionDeadline.getTime() - reminderWindowMs,
+        );
+
+        // Window check: triggers only when reminderStartTime <= now < actionDeadline
+        if (now < reminderStartTime || now >= actionDeadline) {
+          continue;
+        }
+
+        // Action-specific idempotency check
+        const existing = await client.notifications.findFirst({
+          where: {
+            user_id: g.submitted_by,
+            grievance_id: g.grievance_id,
+            notification_type: "RESOLUTION_REMINDER",
+            created_at: { gte: actionStartTime },
+          },
+        });
+        if (existing) continue;
+
+        const hoursRemaining = Math.max(
+          0,
+          (actionDeadline.getTime() - now.getTime()) / (60 * 60 * 1000),
+        );
+        const roundedHours = Math.round(hoursRemaining * 10) / 10;
+
+        const sendMutation = async (txClient: Prisma.TransactionClient) => {
+          await txClient.notifications.create({
+            data: {
+              user_id: g.submitted_by,
+              grievance_id: g.grievance_id,
+              notification_type: "RESOLUTION_REMINDER",
+              channel: "IN_APP",
+              title: `Action Required: Resolution Review Reminder (${g.grievance_number})`,
+              message: `Resolution for grievance ${g.grievance_number} was submitted for your review. Please confirm or request rework within the remaining ${roundedHours} hours before automatic closure.`,
+              status: "PENDING",
+            },
+          });
+
+          await txClient.audit_logs.create({
+            data: {
+              grievance_id: g.grievance_id,
+              user_id: null,
+              action: "ACTION_REMINDER_GENERATED",
+              entity_type: "GRIEVANCE",
+              entity_id: g.grievance_id,
+              new_value: {
+                reminderType: "RESOLUTION_REMINDER",
+                recipientUserId: g.submitted_by.toString(),
+                recipientRole: "END_USER",
+                grievanceNumber: g.grievance_number,
+                actionDeadline: actionDeadline.toISOString(),
+                hoursRemaining: roundedHours,
+                channel: "IN_APP",
+                note: "Pre-expiry reminder generated for resolution confirmation.",
+              },
+            },
+          });
+        };
+
+        if (options?.tx) {
+          await sendMutation(options.tx);
+        } else {
+          await prisma.$transaction(sendMutation);
+        }
+
+        summary.totalRemindersSent++;
+        summary.resolutionReminders++;
+        if (!summary.remindedGrievanceIds.includes(g.grievance_id.toString())) {
+          summary.remindedGrievanceIds.push(g.grievance_id.toString());
+        }
+      } catch (candErr) {
+        console.error(
+          `Failed to process resolution reminder for grievance ${g.grievance_id}:`,
+          candErr,
+        );
+        if (!summary.errors) summary.errors = [];
+        summary.errors.push({
+          grievanceId: g.grievance_id.toString(),
+          error: candErr instanceof Error ? candErr.message : String(candErr),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error querying resolution reminder candidates:", err);
+  }
+
+  // ---------------------------------------------------------
+  // 2. INFO_REQUEST_REMINDER (Employee Information Request)
+  // ---------------------------------------------------------
+  try {
+    const infoCandidates = await client.grievances.findMany({
+      where: {
+        status: {
+          in: [
+            "AWAITING_INFORMATION",
+            "WAITING_ON_USER",
+            "WAITING_ON_EMPLOYEE",
+          ],
+        },
+        closed_at: null,
+      },
+      include: {
+        grievance_status_history: {
+          where: {
+            new_status: {
+              in: [
+                "AWAITING_INFORMATION",
+                "WAITING_ON_USER",
+                "WAITING_ON_EMPLOYEE",
+              ],
+            },
+          },
+          orderBy: { changed_at: "desc" },
+          take: 1,
+        },
+      },
+    });
+
+    for (const g of infoCandidates) {
+      summary.totalEvaluated++;
+      try {
+        const latestHistory = g.grievance_status_history?.[0];
+        const actionStartTime = latestHistory?.changed_at || g.updated_at;
+        const infoDays = getPolicyInactivityDays(
+          g,
+          activePolicies,
+          "additional_info_days",
+          7,
+        );
+        const reminderHours = getPolicyReminderHours(
+          g,
+          activePolicies,
+          defaultHours,
+        );
+
+        const actionDeadline = new Date(
+          actionStartTime.getTime() + infoDays * 24 * 60 * 60 * 1000,
+        );
+        const reminderWindowMs = reminderHours * 60 * 60 * 1000;
+        const reminderStartTime = new Date(
+          actionDeadline.getTime() - reminderWindowMs,
+        );
+
+        if (now < reminderStartTime || now >= actionDeadline) {
+          continue;
+        }
+
+        const existing = await client.notifications.findFirst({
+          where: {
+            user_id: g.submitted_by,
+            grievance_id: g.grievance_id,
+            notification_type: "INFO_REQUEST_REMINDER",
+            created_at: { gte: actionStartTime },
+          },
+        });
+        if (existing) continue;
+
+        const hoursRemaining = Math.max(
+          0,
+          (actionDeadline.getTime() - now.getTime()) / (60 * 60 * 1000),
+        );
+        const roundedHours = Math.round(hoursRemaining * 10) / 10;
+
+        const sendMutation = async (txClient: Prisma.TransactionClient) => {
+          await txClient.notifications.create({
+            data: {
+              user_id: g.submitted_by,
+              grievance_id: g.grievance_id,
+              notification_type: "INFO_REQUEST_REMINDER",
+              channel: "IN_APP",
+              title: `Reminder: Additional Information Required (${g.grievance_number})`,
+              message: `Requested additional information/documents for grievance ${g.grievance_number} are pending. Please submit within the remaining ${roundedHours} hours to prevent automatic closure.`,
+              status: "PENDING",
+            },
+          });
+
+          await txClient.audit_logs.create({
+            data: {
+              grievance_id: g.grievance_id,
+              user_id: null,
+              action: "ACTION_REMINDER_GENERATED",
+              entity_type: "GRIEVANCE",
+              entity_id: g.grievance_id,
+              new_value: {
+                reminderType: "INFO_REQUEST_REMINDER",
+                recipientUserId: g.submitted_by.toString(),
+                recipientRole: "END_USER",
+                grievanceNumber: g.grievance_number,
+                actionDeadline: actionDeadline.toISOString(),
+                hoursRemaining: roundedHours,
+                channel: "IN_APP",
+                note: "Pre-expiry reminder generated for additional information request.",
+              },
+            },
+          });
+        };
+
+        if (options?.tx) {
+          await sendMutation(options.tx);
+        } else {
+          await prisma.$transaction(sendMutation);
+        }
+
+        summary.totalRemindersSent++;
+        summary.infoRequestReminders++;
+        if (!summary.remindedGrievanceIds.includes(g.grievance_id.toString())) {
+          summary.remindedGrievanceIds.push(g.grievance_id.toString());
+        }
+      } catch (candErr) {
+        console.error(
+          `Failed to process info reminder for grievance ${g.grievance_id}:`,
+          candErr,
+        );
+        if (!summary.errors) summary.errors = [];
+        summary.errors.push({
+          grievanceId: g.grievance_id.toString(),
+          error: candErr instanceof Error ? candErr.message : String(candErr),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error querying info reminder candidates:", err);
+  }
+
+  // ---------------------------------------------------------
+  // 3. SUPPORTING_DEPT_REMINDER (Department Deadline Response)
+  // ---------------------------------------------------------
+  try {
+    const suppGrievances = await client.grievances.findMany({
+      where: {
+        closed_at: null,
+        status: { notIn: ["CLOSED", "RESOLVED"] },
+        grievance_departments: {
+          some: {
+            involvement_type: { not: "PRIMARY" },
+            status: { notIn: ["COMPLETED", "REMOVED"] },
+            due_at: { not: null },
+          },
+        },
+      },
+      include: {
+        grievance_departments: {
+          where: {
+            involvement_type: { not: "PRIMARY" },
+            status: { notIn: ["COMPLETED", "REMOVED"] },
+            due_at: { not: null },
+          },
+          include: {
+            departments: true,
+            assignments: {
+              where: { assignment_status: "ASSIGNED" },
+            },
+          },
+        },
+      },
+    });
+
+    for (const g of suppGrievances) {
+      summary.totalEvaluated++;
+      for (const gd of g.grievance_departments) {
+        try {
+          if (!gd.due_at) continue;
+
+          const actionStartTime =
+            gd.activated_at || gd.assigned_at || g.created_at;
+          const actionDeadline = gd.due_at;
+          const reminderHours = getPolicyReminderHours(
+            g,
+            activePolicies,
+            defaultHours,
+          );
+          const reminderWindowMs = reminderHours * 60 * 60 * 1000;
+          const reminderStartTime = new Date(
+            actionDeadline.getTime() - reminderWindowMs,
+          );
+
+          if (now < reminderStartTime || now >= actionDeadline) {
+            continue;
+          }
+
+          const hoursRemaining = Math.max(
+            0,
+            (actionDeadline.getTime() - now.getTime()) / (60 * 60 * 1000),
+          );
+          const roundedHours = Math.round(hoursRemaining * 10) / 10;
+
+          // Recipients: Assigned staff + Department Heads
+          const recipients: Array<{ userId: bigint; role: string }> = [];
+
+          if (gd.assignments?.staff_id) {
+            recipients.push({
+              userId: gd.assignments.staff_id,
+              role: "SUPPORTING_STAFF",
+            });
+          }
+
+          const heads = await client.users.findMany({
+            where: {
+              department_id: gd.department_id,
+              roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
+              status: "ACTIVE",
+            },
+            select: { user_id: true, roles: { select: { role_name: true } } },
+          });
+
+          for (const h of heads) {
+            if (!recipients.some((r) => r.userId === h.user_id)) {
+              recipients.push({
+                userId: h.user_id,
+                role: h.roles?.role_name || "DEPARTMENT_HEAD",
+              });
+            }
+          }
+
+          const deptTag = `[Dept #${gd.department_id}]`;
+
+          for (const recipient of recipients) {
+            // Department-specific idempotency check:
+            // Uses deptTag so that a Department Head managing multiple departments on the same grievance
+            // receives independent reminders for each department without cross-department suppression.
+            const existing = await client.notifications.findFirst({
+              where: {
+                user_id: recipient.userId,
+                grievance_id: g.grievance_id,
+                notification_type: "SUPPORTING_DEPT_REMINDER",
+                message: { contains: deptTag },
+                created_at: { gte: actionStartTime },
+              },
+            });
+            if (existing) continue;
+
+            const sendMutation = async (txClient: Prisma.TransactionClient) => {
+              await txClient.notifications.create({
+                data: {
+                  user_id: recipient.userId,
+                  grievance_id: g.grievance_id,
+                  notification_type: "SUPPORTING_DEPT_REMINDER",
+                  channel: "IN_APP",
+                  title: `Upcoming Deadline: Supporting Department Response (${gd.departments.department_name})`,
+                  message: `${deptTag} Supporting departmental findings for Grievance ${g.grievance_number} (${gd.departments.department_name}) are due in ${roundedHours} hours (deadline: ${actionDeadline.toISOString()}).`,
+                  status: "PENDING",
+                },
+              });
+
+              await txClient.audit_logs.create({
+                data: {
+                  grievance_id: g.grievance_id,
+                  user_id: null,
+                  action: "ACTION_REMINDER_GENERATED",
+                  entity_type: "GRIEVANCE",
+                  entity_id: g.grievance_id,
+                  new_value: {
+                    reminderType: "SUPPORTING_DEPT_REMINDER",
+                    departmentId: gd.department_id.toString(),
+                    departmentName: gd.departments.department_name,
+                    recipientUserId: recipient.userId.toString(),
+                    recipientRole: recipient.role,
+                    grievanceNumber: g.grievance_number,
+                    actionDeadline: actionDeadline.toISOString(),
+                    hoursRemaining: roundedHours,
+                    channel: "IN_APP",
+                    note: `Pre-expiry reminder generated for supporting department ${gd.departments.department_name}.`,
+                  },
+                },
+              });
+            };
+
+            if (options?.tx) {
+              await sendMutation(options.tx);
+            } else {
+              await prisma.$transaction(sendMutation);
+            }
+
+            summary.totalRemindersSent++;
+            summary.supportingDeptReminders++;
+            if (
+              !summary.remindedGrievanceIds.includes(g.grievance_id.toString())
+            ) {
+              summary.remindedGrievanceIds.push(g.grievance_id.toString());
+            }
+          }
+        } catch (deptErr) {
+          console.error(
+            `Failed to process supporting dept reminder for grievance ${g.grievance_id}, dept ${gd.department_id}:`,
+            deptErr,
+          );
+          if (!summary.errors) summary.errors = [];
+          summary.errors.push({
+            grievanceId: g.grievance_id.toString(),
+            error: deptErr instanceof Error ? deptErr.message : String(deptErr),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error querying supporting dept reminder candidates:", err);
+  }
+
+  // ---------------------------------------------------------
+  // 4. INVESTIGATION_REMINDER (Investigation Activities)
+  // ---------------------------------------------------------
+  try {
+    const invCandidates = await client.grievances.findMany({
+      where: {
+        status: { in: ["IN_PROGRESS", "ASSIGNED", "UNDER_INVESTIGATION"] },
+        closed_at: null,
+      },
+      include: {
+        grievance_departments: {
+          where: {
+            involvement_type: "PRIMARY",
+            status: { notIn: ["COMPLETED", "REMOVED"] },
+          },
+        },
+        assignments: {
+          where: { assignment_status: "ASSIGNED" },
+        },
+      },
+    });
+
+    for (const g of invCandidates) {
+      summary.totalEvaluated++;
+      try {
+        const primaryDept = g.grievance_departments?.[0];
+        // Mandatory check: primary department's due_at must represent the applicable investigation deadline.
+        // If missing or unassigned, skip the reminder without falling back to overall SLA.
+        if (!primaryDept?.due_at) {
+          continue;
+        }
+
+        const activeAssignment = g.assignments?.[0];
+        if (!activeAssignment?.staff_id) {
+          continue;
+        }
+
+        const actionStartTime =
+          activeAssignment.assigned_at ||
+          primaryDept.activated_at ||
+          g.created_at;
+        const actionDeadline = primaryDept.due_at;
+        const reminderHours = getPolicyReminderHours(
+          g,
+          activePolicies,
+          defaultHours,
+        );
+        const reminderWindowMs = reminderHours * 60 * 60 * 1000;
+        const reminderStartTime = new Date(
+          actionDeadline.getTime() - reminderWindowMs,
+        );
+
+        if (now < reminderStartTime || now >= actionDeadline) {
+          continue;
+        }
+
+        // Action-specific idempotency check
+        const existing = await client.notifications.findFirst({
+          where: {
+            user_id: activeAssignment.staff_id,
+            grievance_id: g.grievance_id,
+            notification_type: "INVESTIGATION_REMINDER",
+            created_at: { gte: actionStartTime },
+          },
+        });
+        if (existing) continue;
+
+        const hoursRemaining = Math.max(
+          0,
+          (actionDeadline.getTime() - now.getTime()) / (60 * 60 * 1000),
+        );
+        const roundedHours = Math.round(hoursRemaining * 10) / 10;
+
+        const sendMutation = async (txClient: Prisma.TransactionClient) => {
+          await txClient.notifications.create({
+            data: {
+              user_id: activeAssignment.staff_id,
+              grievance_id: g.grievance_id,
+              notification_type: "INVESTIGATION_REMINDER",
+              channel: "IN_APP",
+              title: `SLA Reminder: Investigation Due Soon (${g.grievance_number})`,
+              message: `Investigation activities for Grievance ${g.grievance_number} are due within ${roundedHours} hours (deadline: ${actionDeadline.toISOString()}). Please finalize findings before the departmental deadline.`,
+              status: "PENDING",
+            },
+          });
+
+          await txClient.audit_logs.create({
+            data: {
+              grievance_id: g.grievance_id,
+              user_id: null,
+              action: "ACTION_REMINDER_GENERATED",
+              entity_type: "GRIEVANCE",
+              entity_id: g.grievance_id,
+              new_value: {
+                reminderType: "INVESTIGATION_REMINDER",
+                recipientUserId: activeAssignment.staff_id.toString(),
+                recipientRole: "STAFF",
+                grievanceNumber: g.grievance_number,
+                actionDeadline: actionDeadline.toISOString(),
+                hoursRemaining: roundedHours,
+                channel: "IN_APP",
+                note: "Pre-expiry reminder generated for pending investigation activities.",
+              },
+            },
+          });
+        };
+
+        if (options?.tx) {
+          await sendMutation(options.tx);
+        } else {
+          await prisma.$transaction(sendMutation);
+        }
+
+        summary.totalRemindersSent++;
+        summary.investigationReminders++;
+        if (!summary.remindedGrievanceIds.includes(g.grievance_id.toString())) {
+          summary.remindedGrievanceIds.push(g.grievance_id.toString());
+        }
+      } catch (invErr) {
+        console.error(
+          `Failed to process investigation reminder for grievance ${g.grievance_id}:`,
+          invErr,
+        );
+        if (!summary.errors) summary.errors = [];
+        summary.errors.push({
+          grievanceId: g.grievance_id.toString(),
+          error: invErr instanceof Error ? invErr.message : String(invErr),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Error querying investigation reminder candidates:", err);
   }
 
   return summary;
