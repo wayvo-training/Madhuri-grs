@@ -55,9 +55,16 @@ export function DocumentViewerModal({
     denied: boolean;
     message?: string;
   }>({ denied: false });
+  const [tryGoogleViewer, setTryGoogleViewer] = useState(false);
+  const [prevTargetUrl, setPrevTargetUrl] = useState(targetUrl);
+
+  if (prevTargetUrl !== targetUrl) {
+    setPrevTargetUrl(targetUrl);
+    setTryGoogleViewer(false);
+  }
 
   useEffect(() => {
-    if (!targetUrl || !targetUrl.startsWith("/api/attachments/")) {
+    if (!targetUrl?.startsWith("/api/attachments/")) {
       setAccessDenied({ denied: false });
       return;
     }
@@ -99,8 +106,12 @@ export function DocumentViewerModal({
     fn.endsWith(".webp") ||
     fn.endsWith(".svg");
   const isPdf = fn.endsWith(".pdf");
+  const isWord =
+    fn.endsWith(".docx") || fn.endsWith(".doc") || fn.endsWith(".rtf");
   const isExcel =
     fn.endsWith(".xlsx") || fn.endsWith(".xls") || fn.endsWith(".csv");
+  const isPpt = fn.endsWith(".pptx") || fn.endsWith(".ppt");
+  const isOfficeDoc = isWord || isExcel || isPpt;
 
   const handleDownloadClick = () => {
     const dlUrl =
@@ -239,6 +250,7 @@ export function DocumentViewerModal({
           <div className="flex-1 w-full min-h-0 bg-slate-100 flex flex-col items-center justify-center overflow-hidden">
             {isImage ? (
               <div className="w-full h-full flex items-center justify-center p-4 overflow-auto bg-slate-950/80">
+                {/* biome-ignore lint/performance/noImgElement: dynamic attachment viewer requires direct binary blob stream */}
                 <img
                   src={targetUrl}
                   alt={document.name}
@@ -251,8 +263,109 @@ export function DocumentViewerModal({
                 title={document.name}
                 className="w-full h-full flex-1 border-0"
               />
+            ) : isOfficeDoc && !tryGoogleViewer ? (
+              /* Office Document Card View (matches Employee view pattern without broken Google Docs iframe) */
+              <div className="flex-1 w-full min-h-0 bg-slate-50 flex flex-col items-center justify-center p-6 sm:p-10 overflow-y-auto">
+                <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/90 shadow-lg p-6 sm:p-8 flex flex-col items-center text-center space-y-6 animate-in zoom-in-95 duration-150">
+                  {/* Large Document Icon with Badge */}
+                  <div className="relative">
+                    <div
+                      className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-md ${
+                        isWord
+                          ? "bg-blue-50 text-blue-600 border border-blue-200"
+                          : isExcel
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : isPpt
+                              ? "bg-amber-50 text-amber-600 border border-amber-200"
+                              : "bg-teal-50 text-teal-700 border border-teal-200"
+                      }`}
+                    >
+                      {isExcel ? (
+                        <FileSpreadsheet className="h-10 w-10" />
+                      ) : (
+                        <FileText className="h-10 w-10" />
+                      )}
+                    </div>
+                    <span className="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-white shadow-xs">
+                      {fn.split(".").pop() || "DOC"}
+                    </span>
+                  </div>
+
+                  {/* Document Title & Meta */}
+                  <div className="space-y-1.5 max-w-md">
+                    <h3 className="text-base font-bold text-slate-900 break-words">
+                      {document.name}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 text-xs text-slate-500 flex-wrap">
+                      <span className="font-medium text-slate-700">
+                        {document.size || "Office Document"}
+                      </span>
+                      <span>•</span>
+                      <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                        <span>Verified Safe</span>
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 pt-1 leading-relaxed">
+                      {isWord
+                        ? "Microsoft Word document. You can open it in a new browser tab or download it directly to view with your default word processor."
+                        : isExcel
+                          ? "Spreadsheet document. You can open it in a new tab or download it to view in Excel or your spreadsheet viewer."
+                          : "Office document. Open in a new tab or download to view on your device."}
+                    </p>
+                  </div>
+
+                  {/* Primary Action Buttons (matching Employee View pattern) */}
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center pt-2">
+                    <a
+                      href={targetUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F766E] hover:bg-[#115E59] text-white text-xs font-semibold shadow-md shadow-teal-950/15 transition cursor-pointer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      <span>Open in New Tab</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadClick}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                    >
+                      <Download className="h-4 w-4 text-slate-600" />
+                      <span>Download Document</span>
+                    </button>
+                  </div>
+
+                  {/* Secondary toggle for online cloud preview */}
+                  <div className="pt-2 border-t border-slate-100 w-full flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setTryGoogleViewer(true)}
+                      className="text-[11px] text-slate-400 hover:text-teal-700 underline transition cursor-pointer"
+                    >
+                      Try Google Docs Viewer online preview
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="w-full h-full flex flex-col">
+                {isOfficeDoc && (
+                  <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-900 shrink-0">
+                    <span>
+                      Using Google Docs online previewer. If &quot;No preview
+                      available&quot; appears, return to direct view.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setTryGoogleViewer(false)}
+                      className="font-semibold underline hover:text-amber-950 cursor-pointer ml-2"
+                    >
+                      Return to Direct Card View
+                    </button>
+                  </div>
+                )}
                 <iframe
                   src={`https://docs.google.com/viewer?url=${encodeURIComponent(
                     targetUrl.startsWith("http")
