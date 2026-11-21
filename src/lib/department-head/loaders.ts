@@ -316,7 +316,7 @@ export async function fetchDepartmentHeadGrievances(
           include: {
             users: { include: { roles: true } },
           },
-          take: 15,
+          take: 50,
         },
         sla_tracking: {
           orderBy: { sla_tracking_id: "desc" },
@@ -717,6 +717,26 @@ export async function fetchDepartmentHeadGrievances(
         return true;
       })
       .map((l) => {
+        const val = l.new_value as {
+          details?: string;
+          note?: string;
+          bottleneck?: string;
+          stage?: string;
+          scope?: string;
+          who?: { name?: string; email?: string; role?: string };
+          submittedBy?: string;
+          submitted_by?: string;
+          author?: string;
+          staffName?: string;
+          headName?: string;
+          routed_by_email?: string;
+          routed_by?: string;
+          created_by?: string;
+          updated_by?: string;
+          deleted_by?: string;
+          deactivatedBy?: string;
+        } | null;
+
         const userObj = l.users;
         const userRole = userObj?.roles?.role_name;
         let actor = "System";
@@ -727,18 +747,53 @@ export async function fetchDepartmentHeadGrievances(
             actor = `Department Head — ${rawName}`;
           } else if (userRole === "STAFF") {
             actor = `Staff — ${rawName}`;
+          } else if (userRole === "ADMIN") {
+            actor = `Admin — ${rawName}`;
+          } else if (userRole === "END_USER") {
+            actor = `${rawName} (Complainant)`;
           } else {
             actor = `${rawName} (${userRole || "User"})`;
           }
-        }
+        } else {
+          const authorFromVal =
+            val?.who?.name ||
+            val?.submittedBy ||
+            val?.submitted_by ||
+            val?.author ||
+            val?.staffName ||
+            val?.headName ||
+            val?.routed_by_email ||
+            val?.routed_by ||
+            val?.created_by ||
+            val?.updated_by ||
+            val?.deleted_by ||
+            val?.deactivatedBy;
 
-        const val = l.new_value as {
-          details?: string;
-          note?: string;
-          bottleneck?: string;
-          stage?: string;
-          scope?: string;
-        } | null;
+          if (authorFromVal && typeof authorFromVal === "string") {
+            actor = authorFromVal;
+          } else if (
+            l.action.startsWith("GRIEVANCE_CREATED") ||
+            l.action.startsWith("GRIEVANCE_SUBMITTED") ||
+            l.action === "REWORK_REQUESTED" ||
+            l.action === "REOPEN_REQUESTED" ||
+            l.action === "USER_INFO_SUBMITTED" ||
+            l.action === "USER_ADDITIONAL_INFO_PROVIDED" ||
+            l.action === "ACCEPT_RESOLUTION"
+          ) {
+            const complainantName = g.users
+              ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
+              : "";
+            actor = complainantName
+              ? `${complainantName} (Complainant)`
+              : "Complainant";
+          } else if (
+            l.action.includes("SLA_") ||
+            l.action.includes("AUTO_") ||
+            l.action.includes("TIMER")
+          ) {
+            actor = "System Automated";
+          }
+        }
 
         let actionTitle = l.action.replace(/_/g, " ");
         if (l.action === "HOD_DIRECTIVE_NOTE") {
@@ -1490,32 +1545,64 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
             },
           },
           orderBy: { created_at: "desc" },
-          take: 10,
+          take: 50,
         })
       : [];
 
   const formattedAuditFeed: EscalationAuditRecord[] = recentAuditLogs.map(
     (log) => {
-      const isSystemAction =
+      const isSlaOrAuto =
         log.action.startsWith("SLA_") ||
         log.action.startsWith("AUTO_") ||
         log.action.startsWith("RULE_") ||
-        !log.users;
+        log.action.includes("TIMER");
 
-      const actorName = isSystemAction
-        ? "SLA Governance Engine"
-        : log.users
-          ? `${log.users.first_name} ${log.users.last_name || ""}`.trim()
-          : "Automated System";
+      const val = log.new_value as Record<string, unknown> | null;
+      const authorFromVal =
+        (val?.who as { name?: string })?.name ||
+        (val?.submittedBy as string) ||
+        (val?.author as string) ||
+        (val?.staffName as string) ||
+        (val?.headName as string) ||
+        (val?.routed_by_email as string) ||
+        (val?.created_by as string);
 
-      const actorRole = isSystemAction
-        ? "Automated Engine"
-        : log.users?.roles?.role_name || "System";
+      let actorName = "Automated System";
+      let actorRole = "System";
+
+      if (log.users) {
+        const rawName =
+          `${log.users.first_name} ${log.users.last_name || ""}`.trim();
+        const role = log.users.roles?.role_name;
+        if (role === "DEPARTMENT_HEAD") {
+          actorName = `Department Head — ${rawName}`;
+          actorRole = "DEPARTMENT_HEAD";
+        } else if (role === "STAFF") {
+          actorName = `Staff — ${rawName}`;
+          actorRole = "STAFF";
+        } else if (role === "ADMIN") {
+          actorName = `Admin — ${rawName}`;
+          actorRole = "ADMIN";
+        } else if (role === "END_USER") {
+          actorName = `${rawName} (Complainant)`;
+          actorRole = "END_USER";
+        } else {
+          actorName = rawName;
+          actorRole = role || "User";
+        }
+      } else if (authorFromVal && typeof authorFromVal === "string") {
+        actorName = authorFromVal;
+        actorRole = authorFromVal.toLowerCase().includes("admin")
+          ? "ADMIN"
+          : "STAFF";
+      } else if (isSlaOrAuto) {
+        actorName = "SLA Governance Engine";
+        actorRole = "Automated Engine";
+      }
 
       const ticketNum = log.grievances?.grievance_number || "Grievance";
 
       let formattedAction = `${ticketNum}: ${log.action.replace(/_/g, " ")}`;
-      const val = log.new_value as Record<string, unknown> | null;
 
       if (log.action.includes("BREACH")) {
         formattedAction = `${ticketNum}: SLA Breached & Case Escalated`;
@@ -1547,6 +1634,61 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
         formattedAction = `${ticketNum}: Case Reassigned by HOD`;
       } else if (log.action === "INTERVENTION_CROSS_DEPT") {
         formattedAction = `${ticketNum}: Cross-Department Review Initiated`;
+      } else if (log.action === "REWORK_REQUESTED") {
+        formattedAction = `${ticketNum}: Rework Requested by Complainant`;
+      } else if (log.action === "REWORK_APPROVED") {
+        formattedAction = `${ticketNum}: Rework Approved by HOD`;
+      } else if (log.action === "REWORK_REJECTED") {
+        formattedAction = `${ticketNum}: Rework Request Rejected by HOD`;
+      } else if (log.action === "REWORK_REJECTED_FINAL") {
+        formattedAction = `${ticketNum}: Rework Permanently Declined`;
+      } else if (log.action === "REOPEN_REQUESTED") {
+        formattedAction = `${ticketNum}: Reopening Requested by Complainant`;
+      } else if (log.action === "REOPEN_APPROVED") {
+        formattedAction = `${ticketNum}: Case Reopening Approved by HOD`;
+      } else if (log.action === "REOPEN_REJECTED") {
+        formattedAction = `${ticketNum}: Case Reopening Rejected by HOD`;
+      } else if (log.action === "REOPEN_REJECTED_FINAL") {
+        formattedAction = `${ticketNum}: Case Reopening Permanently Declined`;
+      } else if (
+        log.action === "RESOLUTION_SUBMITTED" ||
+        log.action === "SUBMIT_RESOLUTION"
+      ) {
+        formattedAction = `${ticketNum}: Resolution Findings Submitted`;
+      } else if (
+        log.action === "ACCEPT_RESOLUTION" ||
+        log.action === "RESOLUTION_ACCEPTED"
+      ) {
+        formattedAction = `${ticketNum}: Resolution Accepted & Case Closed`;
+      } else if (log.action === "ADDITIONAL_INFO_REQUESTED") {
+        formattedAction = `${ticketNum}: Additional Information Requested`;
+      } else if (
+        log.action === "ADDITIONAL_INFO_SUBMITTED" ||
+        log.action === "USER_INFO_SUBMITTED"
+      ) {
+        formattedAction = `${ticketNum}: Additional Information Submitted`;
+      } else if (
+        log.action === "ASSIGNED_TO_STAFF" ||
+        log.action === "STAFF_ASSIGNED"
+      ) {
+        formattedAction = `${ticketNum}: Case Assigned to Staff`;
+      } else if (log.action === "HOD_DIRECTIVE_NOTE") {
+        formattedAction = `${ticketNum}: HOD Internal Directive Note Added`;
+      } else if (
+        log.action === "INTERNAL_NOTE_ADDED" ||
+        log.action === "INVESTIGATION_NOTE_ADDED"
+      ) {
+        formattedAction = `${ticketNum}: Staff Investigation Note Added`;
+      } else if (log.action === "COLLABORATION_NOTE_ADDED") {
+        formattedAction = `${ticketNum}: Collaboration Note Added`;
+      } else if (log.action === "GRACE_PERIOD_REQUESTED") {
+        formattedAction = `${ticketNum}: SLA Extension Requested`;
+      } else if (log.action === "GRACE_PERIOD_APPROVED") {
+        formattedAction = `${ticketNum}: SLA Extension Approved`;
+      } else if (log.action === "GRACE_PERIOD_REJECTED") {
+        formattedAction = `${ticketNum}: SLA Extension Rejected`;
+      } else if (log.action === "AUTO_CLOSED") {
+        formattedAction = `${ticketNum}: Grievance Auto-Closed`;
       }
 
       let formattedDetails = "";

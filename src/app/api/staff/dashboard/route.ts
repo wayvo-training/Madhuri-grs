@@ -474,24 +474,16 @@ export async function GET(request: Request) {
           return true;
         })
         .map((log) => {
-          const user = log.users;
-          const userRole = user?.roles?.role_name;
-          let actorName = "System";
-          if (user) {
-            const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
-            if (userRole === "DEPARTMENT_HEAD") {
-              actorName = `Department Head — ${rawName}`;
-            } else if (userRole === "STAFF") {
-              actorName = `Staff — ${rawName}`;
-            } else {
-              actorName = rawName;
-            }
-          }
-
           let logVal: {
             details?: string;
             note?: string;
             author?: string;
+            who?: { name?: string; email?: string; role?: string };
+            submittedBy?: string;
+            staffName?: string;
+            headName?: string;
+            routed_by_email?: string;
+            created_by?: string;
           } | null = null;
 
           if (typeof log.new_value === "string") {
@@ -502,6 +494,58 @@ export async function GET(request: Request) {
             }
           } else if (log.new_value && typeof log.new_value === "object") {
             logVal = log.new_value as unknown as typeof logVal;
+          }
+
+          const user = log.users;
+          const userRole = user?.roles?.role_name;
+          let actorName = "System";
+          if (user) {
+            const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
+            if (userRole === "DEPARTMENT_HEAD") {
+              actorName = `Department Head — ${rawName}`;
+            } else if (userRole === "STAFF") {
+              actorName = `Staff — ${rawName}`;
+            } else if (userRole === "ADMIN") {
+              actorName = `Admin — ${rawName}`;
+            } else if (userRole === "END_USER") {
+              actorName = `${rawName} (Complainant)`;
+            } else {
+              actorName = `${rawName} (${userRole || "User"})`;
+            }
+          } else {
+            const authorFromVal =
+              logVal?.who?.name ||
+              logVal?.submittedBy ||
+              logVal?.author ||
+              logVal?.staffName ||
+              logVal?.headName ||
+              logVal?.routed_by_email ||
+              logVal?.created_by;
+
+            if (authorFromVal && typeof authorFromVal === "string") {
+              actorName = authorFromVal;
+            } else if (
+              log.action.startsWith("GRIEVANCE_CREATED") ||
+              log.action.startsWith("GRIEVANCE_SUBMITTED") ||
+              log.action === "REWORK_REQUESTED" ||
+              log.action === "REOPEN_REQUESTED" ||
+              log.action === "USER_INFO_SUBMITTED" ||
+              log.action === "USER_ADDITIONAL_INFO_PROVIDED" ||
+              log.action === "ACCEPT_RESOLUTION"
+            ) {
+              const complainantName = g.users
+                ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
+                : "";
+              actorName = complainantName
+                ? `${complainantName} (Complainant)`
+                : "Complainant";
+            } else if (
+              log.action.includes("SLA_") ||
+              log.action.includes("AUTO_") ||
+              log.action.includes("TIMER")
+            ) {
+              actorName = "System Automated";
+            }
           }
 
           const details =

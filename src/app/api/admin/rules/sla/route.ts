@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { evaluateGrievanceSla } from "@/lib/engines/sla-engine";
 import { authorizeApi } from "@/lib/permissions";
@@ -498,6 +499,14 @@ export async function PATCH(request: Request) {
         body.trigger_condition?.notification_recipients;
 
       const updated = await prisma.$transaction(async (tx) => {
+        const existingPolicy = await tx.sla_policies.findUnique({
+          where: { sla_policy_id: policyId },
+        });
+
+        if (!existingPolicy) {
+          throw new Error(`SLA policy with ID "${policyId}" was not found.`);
+        }
+
         const policy = await tx.sla_policies.update({
           where: { sla_policy_id: policyId },
           data: {
@@ -531,11 +540,32 @@ export async function PATCH(request: Request) {
             action: "UPDATE_SLA_POLICY",
             entity_type: "SLA_POLICY",
             entity_id: policy.sla_policy_id,
+            old_value: {
+              policy_name: existingPolicy.policy_name,
+              priority_level: existingPolicy.priority_level,
+              sla_type: existingPolicy.sla_type,
+              target_duration_minutes: existingPolicy.target_duration_minutes,
+              warning_threshold_percent:
+                existingPolicy.warning_threshold_percent?.toString(),
+              escalation_threshold_percent:
+                existingPolicy.escalation_threshold_percent?.toString(),
+              trigger_condition: existingPolicy.trigger_condition,
+              target_role: existingPolicy.target_role,
+              status: existingPolicy.status,
+            } as unknown as Prisma.InputJsonValue,
             new_value: {
               policy_name: policy.policy_name,
-              target_duration_minutes: policy.target_duration_minutes,
               priority_level: policy.priority_level,
-            },
+              sla_type: policy.sla_type,
+              target_duration_minutes: policy.target_duration_minutes,
+              warning_threshold_percent:
+                policy.warning_threshold_percent?.toString(),
+              escalation_threshold_percent:
+                policy.escalation_threshold_percent?.toString(),
+              trigger_condition: policy.trigger_condition,
+              target_role: policy.target_role,
+              status: policy.status,
+            } as unknown as Prisma.InputJsonValue,
           },
         });
 
@@ -712,6 +742,14 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      const existingPolicy = await tx.sla_policies.findUnique({
+        where: { sla_policy_id: policyId },
+      });
+
+      if (!existingPolicy) {
+        throw new Error(`SLA policy with ID "${policyId}" was not found.`);
+      }
+
       const policy = await tx.sla_policies.update({
         where: { sla_policy_id: policyId },
         data: { status },
@@ -723,7 +761,32 @@ export async function PATCH(request: Request) {
           action: "UPDATE_SLA_POLICY_STATUS",
           entity_type: "SLA_POLICY",
           entity_id: policy.sla_policy_id,
-          new_value: { status: policy.status },
+          old_value: {
+            policy_name: existingPolicy.policy_name,
+            priority_level: existingPolicy.priority_level,
+            sla_type: existingPolicy.sla_type,
+            target_duration_minutes: existingPolicy.target_duration_minutes,
+            warning_threshold_percent:
+              existingPolicy.warning_threshold_percent?.toString(),
+            escalation_threshold_percent:
+              existingPolicy.escalation_threshold_percent?.toString(),
+            trigger_condition: existingPolicy.trigger_condition,
+            target_role: existingPolicy.target_role,
+            status: existingPolicy.status,
+          } as unknown as Prisma.InputJsonValue,
+          new_value: {
+            policy_name: policy.policy_name,
+            priority_level: policy.priority_level,
+            sla_type: policy.sla_type,
+            target_duration_minutes: policy.target_duration_minutes,
+            warning_threshold_percent:
+              policy.warning_threshold_percent?.toString(),
+            escalation_threshold_percent:
+              policy.escalation_threshold_percent?.toString(),
+            trigger_condition: policy.trigger_condition,
+            target_role: policy.target_role,
+            status: policy.status,
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -804,11 +867,20 @@ export async function DELETE(request: Request) {
           entity_id: policyId,
           old_value: {
             policy_name: existing.policy_name,
+            priority_level: existing.priority_level,
+            sla_type: existing.sla_type,
+            target_duration_minutes: existing.target_duration_minutes,
+            warning_threshold_percent:
+              existing.warning_threshold_percent?.toString(),
+            escalation_threshold_percent:
+              existing.escalation_threshold_percent?.toString(),
+            trigger_condition: existing.trigger_condition,
+            target_role: existing.target_role,
             status: existing.status,
-          },
+          } as unknown as Prisma.InputJsonValue,
           new_value: isLinkedToHistory
-            ? { status: "INACTIVE" }
-            : { status: "DELETED" },
+            ? ({ status: "INACTIVE" } as unknown as Prisma.InputJsonValue)
+            : ({ status: "DELETED" } as unknown as Prisma.InputJsonValue),
         },
       });
     });

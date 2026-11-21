@@ -992,7 +992,112 @@ export async function GET(
 
         // Professional formatting
         const act = log.action.toUpperCase();
-        if (act.includes("ASSIGN")) {
+        if (act === "REWORK_REQUESTED") {
+          title = "Resolution Rework Requested";
+          description =
+            (val.remarks as string) ||
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Complainant requested resolution rework.";
+        } else if (act === "REWORK_APPROVED") {
+          title = "Rework Request Approved & Assigned";
+          description =
+            (val.details as string) ||
+            (val.remarks as string) ||
+            "Rework approved by Department Head and assigned for re-investigation.";
+        } else if (act === "REWORK_REJECTED") {
+          title = "Rework Request Rejected";
+          description =
+            (val.remarks as string) ||
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Rework request declined by Department Head. Proposed resolution stands.";
+        } else if (act === "REWORK_REJECTED_FINAL") {
+          title = "Rework Request Permanently Declined";
+          description =
+            (val.remarks as string) ||
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Maximum rework attempts reached. Grievance permanently closed.";
+        } else if (act === "REOPEN_REQUESTED") {
+          title = "Case Reopening Requested";
+          description =
+            (val.reason as string) ||
+            (val.remarks as string) ||
+            (val.details as string) ||
+            "Complainant requested grievance reopening within allowed window.";
+        } else if (act === "REOPEN_APPROVED") {
+          title = "Case Reopening Approved & Assigned";
+          description =
+            (val.details as string) ||
+            (val.remarks as string) ||
+            "Reopening approved by Department Head. Case reopened for re-investigation.";
+        } else if (act === "REOPEN_REJECTED") {
+          title = "Case Reopening Rejected";
+          description =
+            (val.remarks as string) ||
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Reopening request declined by Department Head. Grievance remains closed.";
+        } else if (act === "REOPEN_REJECTED_FINAL") {
+          title = "Case Reopening Permanently Declined";
+          description =
+            (val.remarks as string) ||
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Maximum reopening attempts reached. Grievance permanently closed.";
+        } else if (
+          act === "RESOLUTION_SUBMITTED" ||
+          act === "SUBMIT_RESOLUTION"
+        ) {
+          title = "Resolution Findings Submitted";
+          description =
+            (val.resolution as string) ||
+            (val.findings as string) ||
+            (val.details as string) ||
+            "Investigating officer submitted resolution findings for review.";
+        } else if (
+          act === "ACCEPT_RESOLUTION" ||
+          act === "RESOLUTION_ACCEPTED"
+        ) {
+          title = "Resolution Accepted & Case Closed";
+          description =
+            (val.details as string) ||
+            "Resolution accepted by complainant. Case successfully closed.";
+        } else if (act === "ADDITIONAL_INFO_REQUESTED") {
+          title = "Additional Information Requested";
+          description =
+            (val.details as string) ||
+            (val.note as string) ||
+            (val.remarks as string) ||
+            "Clarification and supporting documents requested from complainant.";
+        } else if (
+          act === "ADDITIONAL_INFO_SUBMITTED" ||
+          act === "USER_INFO_SUBMITTED"
+        ) {
+          title = "Additional Information Submitted";
+          description =
+            (val.details as string) ||
+            (val.note as string) ||
+            "Complainant submitted requested information and documents.";
+        } else if (act === "GRACE_PERIOD_REQUESTED") {
+          title = "SLA Extension Requested";
+          description =
+            (val.reason as string) ||
+            (val.details as string) ||
+            "Staff requested SLA extension due to investigation complexity.";
+        } else if (act === "GRACE_PERIOD_APPROVED") {
+          title = "SLA Extension Approved";
+          description =
+            (val.details as string) ||
+            "SLA extension approved by Department Head.";
+        } else if (act === "GRACE_PERIOD_REJECTED") {
+          title = "SLA Extension Rejected";
+          description =
+            (val.rejectionReason as string) ||
+            (val.reason as string) ||
+            "SLA extension request declined by Department Head.";
+        } else if (act.includes("ASSIGN")) {
           title = "Grievance Assigned";
           description = val.details
             ? String(val.details)
@@ -1026,22 +1131,6 @@ export async function GET(
             (val.note as string) ||
             (val.details as string) ||
             "Cross-department collaboration note.";
-        } else if (
-          act.includes("ACCEPT_RESOLUTION") ||
-          act.includes("APPROVE")
-        ) {
-          title = "Resolution Approved & Case Closed";
-        } else if (
-          act.includes("REJECT_RESOLUTION") ||
-          act.includes("REOPEN")
-        ) {
-          title = "Resolution Rejected — Grievance Reopened";
-          description =
-            (val.reason as string) ||
-            (val.details as string) ||
-            "Previous resolution was rejected and case reopened for re-investigation.";
-        } else if (act.includes("SUBMIT_RESOLUTION")) {
-          title = "Resolution Findings Submitted";
         } else if (act.includes("SLA_100") || act.includes("BREACH")) {
           title = "SLA Deadline Breached (Escalated)";
           description =
@@ -1107,8 +1196,51 @@ export async function GET(
             actor = `Department Head — ${rawName}`;
           } else if (actorRole === "STAFF") {
             actor = `Staff — ${rawName}`;
+          } else if (actorRole === "ADMIN") {
+            actor = `Admin — ${rawName}`;
+          } else if (actorRole === "END_USER") {
+            actor = `${rawName} (Complainant)`;
           } else {
-            actor = `${rawName} (${actorRole})`;
+            actor = `${rawName} (${actorRole || "User"})`;
+          }
+        } else {
+          const authorFromVal =
+            (val.who as { name?: string })?.name ||
+            (val.submittedBy as string) ||
+            (val.submitted_by as string) ||
+            (val.author as string) ||
+            (val.staffName as string) ||
+            (val.headName as string) ||
+            (val.routed_by_email as string) ||
+            (val.routed_by as string) ||
+            (val.created_by as string) ||
+            (val.updated_by as string) ||
+            (val.deleted_by as string) ||
+            (val.deactivatedBy as string);
+
+          if (authorFromVal && typeof authorFromVal === "string") {
+            actor = authorFromVal;
+          } else if (
+            act.startsWith("GRIEVANCE_CREATED") ||
+            act.startsWith("GRIEVANCE_SUBMITTED") ||
+            act === "REWORK_REQUESTED" ||
+            act === "REOPEN_REQUESTED" ||
+            act === "USER_INFO_SUBMITTED" ||
+            act === "USER_ADDITIONAL_INFO_PROVIDED" ||
+            act === "ACCEPT_RESOLUTION"
+          ) {
+            const complainantName = grievance.users
+              ? `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim()
+              : "";
+            actor = complainantName
+              ? `${complainantName} (Complainant)`
+              : "Complainant";
+          } else if (
+            act.includes("SLA_") ||
+            act.includes("AUTO_") ||
+            act.includes("TIMER")
+          ) {
+            actor = "System Automated";
           }
         }
 

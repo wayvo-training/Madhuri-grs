@@ -561,6 +561,14 @@ export async function PATCH(request: Request) {
       }
 
       const updated = await prisma.$transaction(async (tx) => {
+        const existing = await tx.reopen_policies.findUnique({
+          where: { reopen_policy_id: policyId },
+        });
+
+        if (!existing) {
+          throw new Error(`Reopen policy with ID "${policyId}" was not found.`);
+        }
+
         const policy = await tx.reopen_policies.update({
           where: { reopen_policy_id: policyId },
           data: {
@@ -581,11 +589,22 @@ export async function PATCH(request: Request) {
             action: "UPDATE_REOPEN_POLICY",
             entity_type: "REOPEN_POLICY",
             entity_id: policy.reopen_policy_id,
+            old_value: {
+              policy_name: existing.policy_name,
+              reopen_window_hours: existing.reopen_window_hours,
+              max_reopen_count: existing.max_reopen_count,
+              max_manual_review_count: existing.max_manual_review_count,
+              applicable_condition: existing.applicable_condition,
+              status: existing.status,
+            } as unknown as Prisma.InputJsonValue,
             new_value: {
               policy_name: policy.policy_name,
               reopen_window_hours: policy.reopen_window_hours,
               max_reopen_count: policy.max_reopen_count,
-            },
+              max_manual_review_count: policy.max_manual_review_count,
+              applicable_condition: policy.applicable_condition,
+              status: policy.status,
+            } as unknown as Prisma.InputJsonValue,
           },
         });
 
@@ -615,6 +634,14 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.reopen_policies.findUnique({
+        where: { reopen_policy_id: policyId },
+      });
+
+      if (!existing) {
+        throw new Error(`Reopen policy with ID "${policyId}" was not found.`);
+      }
+
       const policy = await tx.reopen_policies.update({
         where: { reopen_policy_id: policyId },
         data: { status },
@@ -626,7 +653,22 @@ export async function PATCH(request: Request) {
           action: "UPDATE_REOPEN_POLICY_STATUS",
           entity_type: "REOPEN_POLICY",
           entity_id: policy.reopen_policy_id,
-          new_value: { status: policy.status },
+          old_value: {
+            policy_name: existing.policy_name,
+            reopen_window_hours: existing.reopen_window_hours,
+            max_reopen_count: existing.max_reopen_count,
+            max_manual_review_count: existing.max_manual_review_count,
+            applicable_condition: existing.applicable_condition,
+            status: existing.status,
+          } as unknown as Prisma.InputJsonValue,
+          new_value: {
+            policy_name: policy.policy_name,
+            reopen_window_hours: policy.reopen_window_hours,
+            max_reopen_count: policy.max_reopen_count,
+            max_manual_review_count: policy.max_manual_review_count,
+            applicable_condition: policy.applicable_condition,
+            status: policy.status,
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -690,7 +732,19 @@ export async function DELETE(request: Request) {
           action: "DELETE_REOPEN_POLICY",
           entity_type: "REOPEN_POLICY",
           entity_id: policyId,
-          old_value: { policy_name: existing.policy_name },
+          old_value: {
+            policy_name: existing.policy_name,
+            reopen_window_hours: existing.reopen_window_hours,
+            max_reopen_count: existing.max_reopen_count,
+            max_manual_review_count: existing.max_manual_review_count,
+            applicable_condition: existing.applicable_condition,
+            status: existing.status,
+          } as unknown as Prisma.InputJsonValue,
+          new_value: {
+            status: "DELETED",
+            deleted_at: new Date().toISOString(),
+            deleted_by: user.email,
+          } as unknown as Prisma.InputJsonValue,
         },
       });
     });

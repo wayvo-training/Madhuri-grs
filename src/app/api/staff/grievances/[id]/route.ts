@@ -477,6 +477,19 @@ export async function GET(
       .map((log) => {
         const user = log.users;
         const userRole = user?.roles?.role_name;
+        const logVal = log.new_value as {
+          details?: string;
+          note?: string;
+          author?: string;
+          who?: { name?: string; email?: string; role?: string };
+          submittedBy?: string;
+          submitted_by?: string;
+          staffName?: string;
+          headName?: string;
+          routed_by_email?: string;
+          created_by?: string;
+        } | null;
+
         let actorName = "System";
         if (user) {
           const rawName = `${user.first_name} ${user.last_name || ""}`.trim();
@@ -484,16 +497,49 @@ export async function GET(
             actorName = `Department Head — ${rawName}`;
           } else if (userRole === "STAFF") {
             actorName = `Staff — ${rawName}`;
+          } else if (userRole === "ADMIN") {
+            actorName = `Admin — ${rawName}`;
+          } else if (userRole === "END_USER") {
+            actorName = `${rawName} (Complainant)`;
           } else {
-            actorName = rawName;
+            actorName = `${rawName} (${userRole || "User"})`;
+          }
+        } else {
+          const authorFromVal =
+            logVal?.who?.name ||
+            logVal?.submittedBy ||
+            logVal?.submitted_by ||
+            logVal?.author ||
+            logVal?.staffName ||
+            logVal?.headName ||
+            logVal?.routed_by_email ||
+            logVal?.created_by;
+
+          if (authorFromVal && typeof authorFromVal === "string") {
+            actorName = authorFromVal;
+          } else if (
+            log.action.startsWith("GRIEVANCE_CREATED") ||
+            log.action.startsWith("GRIEVANCE_SUBMITTED") ||
+            log.action === "REWORK_REQUESTED" ||
+            log.action === "REOPEN_REQUESTED" ||
+            log.action === "USER_INFO_SUBMITTED" ||
+            log.action === "USER_ADDITIONAL_INFO_PROVIDED" ||
+            log.action === "ACCEPT_RESOLUTION"
+          ) {
+            const complainantName = grievance.users
+              ? `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim()
+              : "";
+            actorName = complainantName
+              ? `${complainantName} (Complainant)`
+              : "Complainant";
+          } else if (
+            log.action.includes("SLA_") ||
+            log.action.includes("AUTO_") ||
+            log.action.includes("TIMER")
+          ) {
+            actorName = "System Automated";
           }
         }
-
-        const logVal = log.new_value as {
-          details?: string;
-          note?: string;
-          author?: string;
-        } | null;
         const details =
           logVal?.note || logVal?.details || formatAuditActionTitle(log.action);
         return {
