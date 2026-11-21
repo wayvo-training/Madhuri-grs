@@ -138,15 +138,33 @@ export function SubmitGrievanceForm({
         return;
       }
 
-      const newFiles = incomingFiles.filter((f) => {
+      const existingKeys = new Set(
+        files.map((f) => `${f.name.toLowerCase()}__${f.size}`),
+      );
+      const newFiles: File[] = [];
+
+      for (const f of incomingFiles) {
+        const fileKey = `${f.name.toLowerCase()}__${f.size}`;
+        if (existingKeys.has(fileKey)) {
+          toast.error(
+            `File "${f.name}" is already attached. Duplicate uploads are not permitted.`,
+          );
+          continue;
+        }
+
         const check = validateUploadedFile(f.name, f.type, f.size);
         if (!check.valid) {
           toast.error(check.error || `File "${f.name}" is not supported.`);
-          return false;
+          continue;
         }
-        return true;
-      });
-      setFiles((prev) => [...prev, ...newFiles]);
+
+        existingKeys.add(fileKey);
+        newFiles.push(f);
+      }
+
+      if (newFiles.length > 0) {
+        setFiles((prev) => [...prev, ...newFiles]);
+      }
       e.target.value = "";
     }
   };

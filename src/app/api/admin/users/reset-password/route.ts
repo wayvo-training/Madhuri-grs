@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { invalidateUserSessionCache } from "@/lib/auth";
+import { validatePasswordPolicy } from "@/lib/auth/password-policy";
 import { authorizeApi } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -20,15 +21,22 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      !new_password ||
-      typeof new_password !== "string" ||
-      new_password.length < 6
-    ) {
+    if (!new_password || typeof new_password !== "string") {
+      return NextResponse.json(
+        { success: false, message: "New password is required." },
+        { status: 400 },
+      );
+    }
+
+    const policyCheck = validatePasswordPolicy(new_password);
+    if (!policyCheck.valid) {
       return NextResponse.json(
         {
           success: false,
-          message: "New password must be at least 6 characters long.",
+          message:
+            policyCheck.errors[0] ||
+            "New password does not meet password complexity requirements.",
+          errors: policyCheck.errors,
         },
         { status: 400 },
       );
@@ -51,7 +59,7 @@ export async function POST(request: Request) {
     await prisma.$transaction(async (tx) => {
       await tx.users.update({
         where: { user_id: targetUserId },
-        data: { password_hash: passwordHash },
+        data: { password_hash: passwordHash, status: "ACTIVE" },
       });
 
       // Clear any active sessions for the targeted user so they must log in again

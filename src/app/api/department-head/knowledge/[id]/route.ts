@@ -36,14 +36,38 @@ export async function PATCH(
       );
     }
 
-    if (action === "REJECT" && !rejectionReason?.trim()) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Rejection reason is required when rejecting an article",
-        },
-        { status: 400 },
-      );
+    if (action === "REJECT") {
+      const cleanReason = (rejectionReason || "").trim();
+      if (!cleanReason) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Rejection reason is required when rejecting an article",
+          },
+          { status: 400 },
+        );
+      }
+
+      if (cleanReason.length < 15) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Rejection reason must be at least 15 characters long (currently ${cleanReason.length} characters).`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (!/[a-zA-Z]{3,}/.test(cleanReason)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Rejection reason must contain descriptive words explaining the necessary revisions.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     const existingArticle = await prisma.knowledge_articles.findUnique({

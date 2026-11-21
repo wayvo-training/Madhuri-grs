@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Logo } from "@/components/ui/logo";
+import { validatePasswordPolicy } from "@/lib/auth/password-policy";
 
 function ResetPasswordFlow() {
   const searchParams = useSearchParams();
@@ -99,8 +100,11 @@ function ResetPasswordFlow() {
       return;
     }
 
-    if (password.length < 8) {
-      setResetError("Password must be at least 8 characters long.");
+    const policy = validatePasswordPolicy(password);
+    if (!policy.valid) {
+      setResetError(
+        policy.errors[0] || "Password does not meet complexity requirements.",
+      );
       return;
     }
 
@@ -284,9 +288,36 @@ function ResetPasswordFlow() {
                   )}
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-slate-500">
-                Password must be at least 8 characters.
-              </p>
+
+              {/* Interactive Password Policy Requirements Checklist */}
+              {password.length > 0 && (
+                <div className="mt-2.5 space-y-1.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 text-xs">
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-700">
+                    <ShieldCheck className="h-3.5 w-3.5 text-teal-600" />
+                    <span>Password Requirements:</span>
+                  </div>
+                  <div className="space-y-1 pt-1">
+                    {validatePasswordPolicy(password).rules.map((rule) => (
+                      <div key={rule.id} className="flex items-center gap-2">
+                        {rule.passed ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <div className="h-3.5 w-3.5 rounded-full border border-slate-300 shrink-0" />
+                        )}
+                        <span
+                          className={
+                            rule.passed
+                              ? "text-emerald-700 font-medium"
+                              : "text-slate-500"
+                          }
+                        >
+                          {rule.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Confirm Password */}

@@ -109,7 +109,19 @@ export function KnowledgeView() {
   };
 
   const handleRejectSubmit = async () => {
-    if (!rejectingArticle || !rejectionReason.trim() || isSubmitting) return;
+    const cleanReason = rejectionReason.trim();
+    if (
+      !rejectingArticle ||
+      cleanReason.length < 15 ||
+      !/[a-zA-Z]{3,}/.test(cleanReason) ||
+      isSubmitting
+    ) {
+      toast.error("Invalid Rejection Reason", {
+        description:
+          "Please provide at least 15 characters explaining what revisions are needed.",
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
       const res = await fetch(
@@ -119,7 +131,7 @@ export function KnowledgeView() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "REJECT",
-            rejectionReason: rejectionReason.trim(),
+            rejectionReason: cleanReason,
           }),
         },
       );
@@ -302,6 +314,19 @@ export function KnowledgeView() {
                 placeholder="Explain what revisions or privacy exclusions are required before this article can be published..."
                 className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-rose-600"
               />
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Constructive feedback (minimum 15 characters)</span>
+                <span
+                  className={
+                    rejectionReason.trim().length >= 15 &&
+                    /[a-zA-Z]{3,}/.test(rejectionReason.trim())
+                      ? "text-emerald-600 font-semibold"
+                      : "text-rose-500 font-medium"
+                  }
+                >
+                  {rejectionReason.trim().length} / 15 chars
+                </span>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2.5 pt-2 border-t border-slate-100 text-xs">
@@ -318,7 +343,11 @@ export function KnowledgeView() {
               <button
                 type="button"
                 onClick={handleRejectSubmit}
-                disabled={!rejectionReason.trim() || isSubmitting}
+                disabled={
+                  rejectionReason.trim().length < 15 ||
+                  !/[a-zA-Z]{3,}/.test(rejectionReason.trim()) ||
+                  isSubmitting
+                }
                 className="px-4 py-2 rounded-xl bg-rose-600 font-semibold text-white hover:bg-rose-700 transition cursor-pointer disabled:opacity-50"
               >
                 Confirm Rejection

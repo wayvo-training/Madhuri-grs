@@ -48,8 +48,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const seenFileKeys = new Set<string>();
     for (const file of files) {
       if (file && typeof file === "object" && "name" in file) {
+        const fileKey = `${String(file.name).toLowerCase()}__${Number(file.size || 0)}`;
+        if (seenFileKeys.has(fileKey)) {
+          return NextResponse.json(
+            {
+              error: `Duplicate file detected: "${file.name}". Each uploaded attachment must be distinct.`,
+            },
+            { status: 400 },
+          );
+        }
+        seenFileKeys.add(fileKey);
+
         const check = validateUploadedFile(file.name, file.type, file.size);
         if (!check.valid) {
           return NextResponse.json({ error: check.error }, { status: 400 });

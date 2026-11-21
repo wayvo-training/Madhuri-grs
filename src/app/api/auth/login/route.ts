@@ -47,6 +47,57 @@ export async function POST(request: Request) {
       );
     }
 
+    if (user.status === "LOCKED") {
+      const lockoutWindowMs = 15 * 60 * 1000; // 15 minutes lockout window
+      const lockLog = await prisma.audit_logs.findFirst({
+        where: {
+          user_id: user.user_id,
+          action: "ACCOUNT_LOCKED",
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      const lockTime = lockLog?.created_at
+        ? new Date(lockLog.created_at).getTime()
+        : new Date(user.updated_at).getTime();
+      const elapsed = Date.now() - lockTime;
+
+      if (elapsed < lockoutWindowMs) {
+        const remainingMinutes = Math.max(
+          1,
+          Math.ceil((lockoutWindowMs - elapsed) / 60000),
+        );
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Account is temporarily locked due to consecutive failed login attempts. Please try again in ${remainingMinutes} minute(s) or reset your password.`,
+          },
+          { status: 423 },
+        );
+      }
+
+      // Auto-unlock account after 15 minutes
+      await prisma.users.update({
+        where: { user_id: user.user_id },
+        data: { status: "ACTIVE" },
+      });
+      user.status = "ACTIVE";
+
+      await prisma.audit_logs.create({
+        data: {
+          user_id: user.user_id,
+          action: "ACCOUNT_UNLOCKED",
+          entity_type: "USER",
+          entity_id: user.user_id,
+          ip_address: ip,
+          new_value: {
+            reason: "15-minute temporary lockout window elapsed",
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    }
+
     if (user.status !== "ACTIVE") {
       await logger.logSession({
         action: "LOGIN_FAILED",
@@ -78,14 +129,76 @@ export async function POST(request: Request) {
         userAgent,
       });
 
+      // Track consecutive failed attempts within 15-minute window
+      const windowStart = new Date(Date.now() - 15 * 60 * 1000);
+      const lastSuccess = await prisma.audit_logs.findFirst({
+        where: {
+          user_id: user.user_id,
+          action: "LOGIN_SUCCESS",
+          created_at: { gte: windowStart },
+        },
+        orderBy: { created_at: "desc" },
+      });
+
+      const failedCount = await prisma.audit_logs.count({
+        where: {
+          user_id: user.user_id,
+          action: "LOGIN_FAILED",
+          created_at: {
+            gte: lastSuccess ? lastSuccess.created_at : windowStart,
+          },
+        },
+      });
+
+      const MAX_FAILED_ATTEMPTS = 5;
+      if (failedCount >= MAX_FAILED_ATTEMPTS) {
+        await prisma.users.update({
+          where: { user_id: user.user_id },
+          data: { status: "LOCKED" },
+        });
+
+        await prisma.audit_logs.create({
+          data: {
+            user_id: user.user_id,
+            action: "ACCOUNT_LOCKED",
+            entity_type: "USER",
+            entity_id: user.user_id,
+            ip_address: ip,
+            new_value: {
+              reason: `${failedCount} consecutive failed login attempts`,
+              lockoutDurationMinutes: 15,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Account has been temporarily locked due to 5 consecutive failed login attempts. Please try again in 15 minutes or reset your password.",
+          },
+          { status: 423 },
+        );
+      }
+
+      const remainingAttempts = MAX_FAILED_ATTEMPTS - failedCount;
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid email or password",
+          message: `Invalid email or password. You have ${remainingAttempts} attempt${remainingAttempts === 1 ? "" : "s"} remaining before account lockout.`,
         },
         { status: 401 },
       );
     }
+
+    await logger.logSession({
+      action: "LOGIN_SUCCESS",
+      user,
+      emailAttempted: email,
+      ip,
+      userAgent,
+    });
 
     // Create a new session
     const sessionToken = randomUUID();

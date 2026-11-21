@@ -230,6 +230,45 @@ export async function POST(
 
     // Persist attachments with intelligent classification
     if (incomingFiles.length > 0) {
+      // Check for duplicates inside incoming batch
+      const incomingKeys = new Set<string>();
+      for (const f of incomingFiles) {
+        const key = `${f.fileName.toLowerCase()}__${Number(f.fileSize || 0)}`;
+        if (incomingKeys.has(key)) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `Duplicate file "${f.fileName}" detected in your attachment list.`,
+            },
+            { status: 400 },
+          );
+        }
+        incomingKeys.add(key);
+      }
+
+      // Check against existing attachments on this grievance
+      const existingAttachments = await prisma.attachments.findMany({
+        where: { grievance_id: grievanceId },
+        select: { file_name: true, file_size: true },
+      });
+      const existingKeys = new Set(
+        existingAttachments.map(
+          (a) => `${a.file_name.toLowerCase()}__${Number(a.file_size || 0)}`,
+        ),
+      );
+      for (const f of incomingFiles) {
+        const key = `${f.fileName.toLowerCase()}__${Number(f.fileSize || 0)}`;
+        if (f.fileSize && existingKeys.has(key)) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: `File "${f.fileName}" has already been uploaded to this grievance. Duplicate uploads are not permitted.`,
+            },
+            { status: 400 },
+          );
+        }
+      }
+
       const participatingDepts = await prisma.grievance_departments.findMany({
         where: { grievance_id: grievanceId },
         include: { departments: true },

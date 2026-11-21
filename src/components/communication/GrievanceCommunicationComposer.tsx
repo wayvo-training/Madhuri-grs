@@ -29,16 +29,36 @@ export function GrievanceCommunicationComposer({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles: AttachedFileItem[] = Array.from(e.target.files).map(
-        (file) => ({
+      const incoming = Array.from(e.target.files);
+      const existingKeys = new Set(
+        selectedFiles.map(
+          (item) => `${item.file.name.toLowerCase()}__${item.file.size}`,
+        ),
+      );
+      const newFiles: AttachedFileItem[] = [];
+
+      for (const file of incoming) {
+        const fileKey = `${file.name.toLowerCase()}__${file.size}`;
+        if (existingKeys.has(fileKey)) {
+          toast.error(
+            `File "${file.name}" is already selected. Duplicate uploads are not permitted.`,
+          );
+          continue;
+        }
+
+        existingKeys.add(fileKey);
+        newFiles.push({
           id:
             typeof crypto !== "undefined" && crypto.randomUUID
               ? crypto.randomUUID()
               : `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 9)}`,
           file,
-        }),
-      );
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+        });
+      }
+
+      if (newFiles.length > 0) {
+        setSelectedFiles((prev) => [...prev, ...newFiles]);
+      }
       e.target.value = "";
     }
   };
