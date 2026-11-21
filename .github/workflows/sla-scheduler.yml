@@ -1,0 +1,57 @@
+name: GRS SLA Scheduler
+
+on:
+  schedule:
+    # Runs automatically every 5 minutes
+    - cron: "*/5 * * * *"
+  # Allows triggering manually anytime from the GitHub Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-scheduler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Trigger GRS SLA Scheduler
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set +x
+
+          if [ -z "$APP_BASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::Required GitHub Actions secrets (APP_BASE_URL or CRON_SECRET) are missing."
+            exit 1
+          fi
+
+          RESPONSE=$(mktemp)
+          STATUS=$(curl -sS -o "$RESPONSE" -w "%{http_code}" \
+            --max-time 30 \
+            -X POST "${APP_BASE_URL%/}/api/sla/evaluate" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -d '{"source":"github-actions"}')
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✓ GRS scheduler sweep completed successfully (HTTP 200)."
+            echo "--- Execution Summary ---"
+            if command -v jq >/dev/null 2>&1; then
+              jq '{totalEvaluated, reminders: .reminders.totalRemindersSent, autoClosed: .autoClosures.totalProcessed}' "$RESPONSE"
+            else
+              cat "$RESPONSE"
+            fi
+          elif [ "$STATUS" = "409" ]; then
+            echo "ℹ Another scheduler execution is currently in progress. Safe skip; overlapping execution prevented."
+          else
+            echo "::error::GRS scheduler sweep failed with HTTP status $STATUS."
+            echo "--- Error Response ---"
+            cat "$RESPONSE"
+            rm -f "$RESPONSE"
+            exit 1
+          fi
+
+          rm -f "$RESPONSE"
