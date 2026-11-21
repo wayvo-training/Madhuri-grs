@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       if (category === "SESSION") {
         conditions.push({
           OR: [
-            { entity_type: "SESSION" },
+            { entity_type: { in: ["SESSION", "session"] } },
             { action: { contains: "LOGIN", mode: "insensitive" } },
             { action: { contains: "LOGOUT", mode: "insensitive" } },
           ],
@@ -30,21 +30,21 @@ export async function GET(request: Request) {
       } else if (category === "API") {
         conditions.push({
           OR: [
-            { entity_type: "API_CALL" },
+            { entity_type: { in: ["API_CALL", "api_call"] } },
             { action: { contains: "API_REQUEST", mode: "insensitive" } },
           ],
         });
       } else if (category === "NAVIGATION") {
         conditions.push({
           OR: [
-            { entity_type: "NAVIGATION" },
+            { entity_type: { in: ["NAVIGATION", "navigation"] } },
             { action: { contains: "NAVIGATION", mode: "insensitive" } },
           ],
         });
       } else if (category === "ERROR") {
         conditions.push({
           OR: [
-            { entity_type: "ERROR" },
+            { entity_type: { in: ["ERROR", "error"] } },
             { action: { contains: "ERROR", mode: "insensitive" } },
             { action: { contains: "FAILED", mode: "insensitive" } },
           ],
@@ -52,7 +52,14 @@ export async function GET(request: Request) {
       } else if (category === "CONFIG") {
         conditions.push({
           entity_type: {
-            notIn: ["SESSION", "API_CALL", "NAVIGATION"],
+            notIn: [
+              "SESSION",
+              "API_CALL",
+              "NAVIGATION",
+              "session",
+              "api_call",
+              "navigation",
+            ],
           },
         });
       }
@@ -118,11 +125,62 @@ export async function GET(request: Request) {
               ip_address?: string;
               user_agent?: string;
             };
+            submittedBy?: string;
+            submitted_by?: string;
+            author?: string;
+            staffName?: string;
+            headName?: string;
+            routed_by_email?: string;
+            routed_by?: string;
+            created_by?: string;
+            updated_by?: string;
+            deleted_by?: string;
+            reset_by?: string;
+            deactivatedBy?: string;
           }
         | null
         | undefined;
 
       const metaWho = payload?.who;
+      const rawFallbackAuthor =
+        metaWho?.name ||
+        payload?.submittedBy ||
+        payload?.submitted_by ||
+        payload?.created_by ||
+        payload?.updated_by ||
+        payload?.deleted_by ||
+        payload?.reset_by ||
+        payload?.routed_by_email ||
+        payload?.routed_by ||
+        payload?.deactivatedBy ||
+        payload?.author ||
+        payload?.headName ||
+        payload?.staffName;
+
+      const fallbackAuthorStr =
+        typeof rawFallbackAuthor === "string" ? rawFallbackAuthor : undefined;
+
+      const fallbackEmail =
+        metaWho?.email ||
+        (fallbackAuthorStr?.includes("@") ? fallbackAuthorStr : undefined);
+
+      const isFallbackAdmin =
+        fallbackEmail?.toLowerCase().includes("admin") ||
+        fallbackAuthorStr?.toLowerCase().includes("admin") ||
+        l.action.startsWith("CREATE_") ||
+        l.action.startsWith("UPDATE_") ||
+        l.action.startsWith("DELETE_") ||
+        l.action.startsWith("DEACTIVATE_") ||
+        l.action.startsWith("ACTIVATE_") ||
+        l.action.includes("ROUTING_EXCEPTION");
+
+      const isSystemEvent =
+        l.action.startsWith("SLA_") ||
+        l.action.startsWith("AUTO_") ||
+        l.action.includes("TIMER") ||
+        l.action.startsWith("API_") ||
+        l.entity_type === "API_CALL" ||
+        l.entity_type === "ERROR";
 
       return {
         audit_log_id: l.audit_log_id.toString(),
@@ -133,14 +191,30 @@ export async function GET(request: Request) {
           metaWho?.name ||
           (l.users
             ? `${l.users.first_name} ${l.users.last_name || ""}`.trim()
-            : "System Automated"),
+            : fallbackAuthorStr
+              ? fallbackAuthorStr
+              : isSystemEvent
+                ? "System Automated"
+                : "System"),
         user_email:
-          metaWho?.email || l.users?.email || "system@enterprise.internal",
+          fallbackEmail ||
+          l.users?.email ||
+          (isSystemEvent
+            ? "system@enterprise.internal"
+            : "governance@enterprise.internal"),
         employee_code: metaWho?.employee_code || l.users?.employee_code || null,
         role_name:
           metaWho?.role ||
           l.users?.roles?.role_name ||
-          (l.users ? "USER" : "SYSTEM"),
+          (l.users
+            ? "USER"
+            : fallbackAuthorStr
+              ? isFallbackAdmin
+                ? "ADMIN"
+                : "STAFF"
+              : isSystemEvent
+                ? "SYSTEM"
+                : "SYSTEM"),
         ip_address: l.ip_address || metaWho?.ip_address || "127.0.0.1",
         user_agent: metaWho?.user_agent || null,
         created_at: l.created_at.toISOString(),

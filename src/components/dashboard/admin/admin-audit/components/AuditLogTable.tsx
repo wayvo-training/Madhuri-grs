@@ -293,7 +293,7 @@ export function AuditLogTable({
                     </td>
 
                     <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right">
-                      {log.new_value ? (
+                      {log.new_value || log.old_value ? (
                         <div>
                           <button
                             type="button"
