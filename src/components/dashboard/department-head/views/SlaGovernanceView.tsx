@@ -58,9 +58,22 @@ export function SlaGovernanceView({
   onProposeKb,
 }: SlaGovernanceViewProps) {
   const escalatedList = grievances.filter((g) => {
+    const isSupportingDeptCompleted =
+      g.isPrimaryDepartment === false && g.myDepartmentStatus === "COMPLETED";
+    const isClosedOrResolved =
+      g.status === "CLOSED" ||
+      g.status === "RESOLVED" ||
+      isSupportingDeptCompleted;
+
+    if (isClosedOrResolved || g.escalationStage === "ESCALATION_CLEARED") {
+      return false;
+    }
+
     return (
+      g.escalationStage === "GRIEVANCE_ESCALATED" ||
+      Boolean(g.escalationReason) ||
       g.status === "ESCALATED" ||
-      g.hodIntervention ||
+      Boolean(g.hodIntervention) ||
       g.status === "UNDER_REVIEW" ||
       g.slaStatus === "BREACHED" ||
       (g.submittedResolution && requiresHeadResolutionReview(g))
@@ -386,12 +399,18 @@ export function SlaGovernanceView({
                           item.status === "BLOCKED" ||
                           item.myDepartmentStatus === "BLOCKED",
                       );
+                      const isSupportingDeptCompleted =
+                        item.isPrimaryDepartment === false &&
+                        item.myDepartmentStatus === "COMPLETED";
                       const isClosedOrResolved =
                         item.status === "CLOSED" ||
                         item.status === "RESOLVED" ||
-                        item.myDepartmentStatus === "COMPLETED";
+                        isSupportingDeptCompleted;
                       const isEscalated =
-                        !isItemBlocked && item.status === "ESCALATED";
+                        !isItemBlocked &&
+                        (item.status === "ESCALATED" ||
+                          item.escalationStage === "GRIEVANCE_ESCALATED" ||
+                          Boolean(item.escalationReason));
                       const hasAuthority = hasHeadResolutionAuthority(item);
                       const canSubmitResolution = canHeadSubmitResolution(item);
                       const isUnderIntervention =

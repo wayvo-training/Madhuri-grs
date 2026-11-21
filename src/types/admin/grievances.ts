@@ -26,6 +26,11 @@ export interface SerializedGrievance {
   supporting_departments?: SupportingDepartment[];
   reopen_count: number;
   manual_review_count: number;
+  feedback?: {
+    rating: number;
+    comments?: string | null;
+    submitted_at: string;
+  } | null;
 }
 
 export interface TabCounts {

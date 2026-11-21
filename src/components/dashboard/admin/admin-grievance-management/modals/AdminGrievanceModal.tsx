@@ -5,6 +5,7 @@ import {
   Building2,
   CheckCircle2,
   Loader2,
+  Star,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -277,6 +278,71 @@ export function AdminGrievanceModal({
                 This grievance was reopened following previous resolution
                 rejection.
               </p>
+            </div>
+          )}
+
+          {/* Employee Resolution Feedback */}
+          {grievance.status === "CLOSED" && (
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  Employee Resolution Feedback
+                </span>
+                {grievance.feedback && (
+                  <span className="text-[11px] text-slate-400">
+                    Submitted{" "}
+                    {new Date(
+                      grievance.feedback.submitted_at,
+                    ).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </div>
+
+              {grievance.feedback ? (
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-4 w-4 ${
+                          star <= (grievance.feedback?.rating ?? 0)
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-slate-300 dark:text-slate-600"
+                        }`}
+                      />
+                    ))}
+                    <span className="ml-2 font-bold text-xs text-slate-700 dark:text-slate-300">
+                      {grievance.feedback.rating} / 5
+                    </span>
+                  </div>
+
+                  {grievance.feedback.comments ? (
+                    <div className="mt-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2.5 text-slate-700 dark:text-slate-200 leading-relaxed text-xs">
+                      <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">
+                        Employee Comments
+                      </p>
+                      <p className="whitespace-pre-wrap">
+                        {grievance.feedback.comments}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">
+                      No additional comments provided.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 italic pt-1">
+                  No employee feedback submitted for this closed grievance.
+                </p>
+              )}
             </div>
           )}
 

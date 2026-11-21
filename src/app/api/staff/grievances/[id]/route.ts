@@ -43,6 +43,7 @@ export async function GET(
       include: {
         categories: true,
         subcategories: true,
+        grievance_feedback: true,
         grievance_departments: {
           include: {
             departments: true,
@@ -868,6 +869,14 @@ export async function GET(
       overallStatus: grievance.status,
       latestExtension,
       activeDepartmentName,
+      feedback: grievance.grievance_feedback
+        ? {
+            rating: grievance.grievance_feedback.rating,
+            comments: grievance.grievance_feedback.comments,
+            submittedAt:
+              grievance.grievance_feedback.submitted_at.toISOString(),
+          }
+        : null,
     };
 
     return NextResponse.json({

@@ -35,6 +35,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     include: {
       categories: true,
       subcategories: true,
+      grievance_feedback: true,
       attachments: {
         include: {
           users: {
@@ -436,6 +437,13 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     attachments: endUserAttachments,
     staffAttachments,
     rejectionInfo,
+    feedback: grievance.grievance_feedback
+      ? {
+          rating: grievance.grievance_feedback.rating,
+          comments: grievance.grievance_feedback.comments,
+          submittedAt: grievance.grievance_feedback.submitted_at.toISOString(),
+        }
+      : null,
     statusHistory: (grievance.grievance_status_history || []).map((h) => ({
       id: h.history_id.toString(),
       status: h.new_status,

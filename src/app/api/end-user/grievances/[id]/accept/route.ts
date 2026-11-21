@@ -5,7 +5,7 @@ import { NotificationService } from "@/lib/services/notification.service";
 import { getPrimaryDepartment } from "@/lib/utils/grievance-departments";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
@@ -17,6 +17,48 @@ export async function POST(
 
   try {
     const grievanceId = BigInt(id);
+
+    // Parse and validate optional feedback
+    const body = await request.json().catch(() => ({}));
+    const { rating, comments } = body || {};
+
+    let hasFeedback = false;
+    let validatedRating: number | null = null;
+    let validatedComments: string | null = null;
+
+    if (rating !== undefined && rating !== null && rating !== "") {
+      const numRating = Number(rating);
+      if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Rating must be an integer between 1 and 5",
+          },
+          { status: 400 },
+        );
+      }
+      validatedRating = numRating;
+      hasFeedback = true;
+    }
+
+    if (comments !== undefined && comments !== null && comments !== "") {
+      if (typeof comments !== "string") {
+        return NextResponse.json(
+          { success: false, message: "Comments must be a string" },
+          { status: 400 },
+        );
+      }
+      if (comments.trim().length > 1000) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Feedback comments must not exceed 1000 characters",
+          },
+          { status: 400 },
+        );
+      }
+      validatedComments = comments.trim();
+    }
 
     // Find the grievance
     const grievance = await prisma.grievances.findUnique({
@@ -51,97 +93,140 @@ export async function POST(
       );
     }
 
-    // Update grievance to CLOSED with closure_reason
-    await prisma.grievances.update({
-      where: { grievance_id: grievanceId },
-      data: {
-        status: "CLOSED",
-        closed_at: new Date(),
-        closure_reason: "EMPLOYEE_ACCEPTED",
-      },
-    });
-
-    // Mark assignments as completed (if not already revoked)
-    await prisma.assignments.updateMany({
-      where: {
-        grievance_id: grievanceId,
-        assignment_status: "ASSIGNED",
-      },
-      data: {
-        assignment_status: "COMPLETED",
-        completed_at: new Date(),
-      },
-    });
-
-    // Mark all involved departments as COMPLETED so their departmental status is closed
-    await prisma.grievance_departments.updateMany({
-      where: {
-        grievance_id: grievanceId,
-        status: { notIn: ["REMOVED"] },
-      },
-      data: {
-        status: "COMPLETED",
-        completed_at: new Date(),
-      },
-    });
-
-    // Mark SLA tracking as permanently completed
+    // Execute acceptance and optional feedback atomically in transaction
     const { completeSlaTracking, calculateSlaConsumption } = await import(
       "@/lib/engines/sla-engine"
     );
-    await completeSlaTracking(grievanceId);
 
-    const activeTracking = await prisma.sla_tracking.findFirst({
-      where: { grievance_id: grievanceId },
-      orderBy: { cycle_number: "desc" },
-    });
-    const now = new Date();
-    const slaMetrics = calculateSlaConsumption(
-      activeTracking?.started_at || grievance.created_at,
-      activeTracking?.due_at || grievance.due_at,
-      grievance.priority,
-      now,
-      activeTracking?.accumulated_paused_minutes || 0,
-      activeTracking?.paused_at,
-    );
-    const remainingMinutes = Math.max(
-      0,
-      slaMetrics.totalDurationMinutes - slaMetrics.elapsedMinutes,
-    );
-
-    // Log the event with SLA duration and closure reason retained
-    await prisma.audit_logs.create({
-      data: {
-        grievance_id: grievanceId,
-        user_id: user.user_id,
-        action: "CLOSED",
-        entity_type: "GRIEVANCE",
-        entity_id: grievanceId,
-        new_value: {
-          closureReason: "EMPLOYEE_ACCEPTED",
-          elapsedDurationMinutes: slaMetrics.elapsedMinutes,
-          remainingDurationMinutes: remainingMinutes,
-          totalDurationMinutes: slaMetrics.totalDurationMinutes,
-          accumulatedPausedMinutes:
-            activeTracking?.accumulated_paused_minutes || 0,
-          pausedAt: activeTracking?.paused_at,
-          cycleNumber: activeTracking?.cycle_number || 1,
-          cycleType: activeTracking?.cycle_type || "INITIAL",
-          details:
-            "Grievance resolution accepted and closed by the end user. SLA remains permanently paused.",
+    await prisma.$transaction(async (tx) => {
+      // 1. Update grievance to CLOSED with closure_reason
+      await tx.grievances.update({
+        where: { grievance_id: grievanceId },
+        data: {
+          status: "CLOSED",
+          closed_at: new Date(),
+          closure_reason: "EMPLOYEE_ACCEPTED",
         },
-      },
-    });
+      });
 
-    // Log status history
-    await prisma.grievance_status_history.create({
-      data: {
-        grievance_id: grievanceId,
-        old_status: "RESOLVED",
-        new_status: "CLOSED",
-        changed_by: user.user_id,
-        remarks: "Resolution accepted by user",
-      },
+      // 2. Mark assignments as completed (if not already revoked)
+      await tx.assignments.updateMany({
+        where: {
+          grievance_id: grievanceId,
+          assignment_status: "ASSIGNED",
+        },
+        data: {
+          assignment_status: "COMPLETED",
+          completed_at: new Date(),
+        },
+      });
+
+      // 3. Mark all involved departments as COMPLETED
+      await tx.grievance_departments.updateMany({
+        where: {
+          grievance_id: grievanceId,
+          status: { notIn: ["REMOVED"] },
+        },
+        data: {
+          status: "COMPLETED",
+          completed_at: new Date(),
+        },
+      });
+
+      // 4. Mark SLA tracking as permanently completed
+      await completeSlaTracking(grievanceId, tx);
+
+      const activeTracking = await tx.sla_tracking.findFirst({
+        where: { grievance_id: grievanceId },
+        orderBy: { cycle_number: "desc" },
+      });
+      const now = new Date();
+      const slaMetrics = calculateSlaConsumption(
+        activeTracking?.started_at || grievance.created_at,
+        activeTracking?.due_at || grievance.due_at,
+        grievance.priority,
+        now,
+        activeTracking?.accumulated_paused_minutes || 0,
+        activeTracking?.paused_at,
+      );
+      const remainingMinutes = Math.max(
+        0,
+        slaMetrics.totalDurationMinutes - slaMetrics.elapsedMinutes,
+      );
+
+      // 5. If feedback provided, insert feedback record and audit log
+      if (hasFeedback && validatedRating !== null) {
+        const existingFeedback = await tx.grievance_feedback.findUnique({
+          where: { grievance_id: grievanceId },
+        });
+
+        if (existingFeedback) {
+          throw new Error("FEEDBACK_ALREADY_SUBMITTED");
+        }
+
+        const feedbackRecord = await tx.grievance_feedback.create({
+          data: {
+            grievance_id: grievanceId,
+            employee_id: user.user_id,
+            rating: validatedRating,
+            comments: validatedComments,
+            submitted_at: now,
+          },
+        });
+
+        // Audit log for feedback submission (comments NEVER copied to audit metadata)
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: user.user_id,
+            action: "FEEDBACK_SUBMITTED",
+            entity_type: "GRIEVANCE_FEEDBACK",
+            entity_id: feedbackRecord.feedback_id,
+            new_value: {
+              rating: validatedRating,
+              hasComments: Boolean(
+                validatedComments && validatedComments.length > 0,
+              ),
+              submittedByRole: "END_USER",
+            },
+          },
+        });
+      }
+
+      // 6. Log the event with SLA duration and closure reason retained
+      await tx.audit_logs.create({
+        data: {
+          grievance_id: grievanceId,
+          user_id: user.user_id,
+          action: "CLOSED",
+          entity_type: "GRIEVANCE",
+          entity_id: grievanceId,
+          new_value: {
+            closureReason: "EMPLOYEE_ACCEPTED",
+            elapsedDurationMinutes: slaMetrics.elapsedMinutes,
+            remainingDurationMinutes: remainingMinutes,
+            totalDurationMinutes: slaMetrics.totalDurationMinutes,
+            accumulatedPausedMinutes:
+              activeTracking?.accumulated_paused_minutes || 0,
+            pausedAt: activeTracking?.paused_at,
+            cycleNumber: activeTracking?.cycle_number || 1,
+            cycleType: activeTracking?.cycle_type || "INITIAL",
+            details:
+              "Grievance resolution accepted and closed by the end user. SLA remains permanently paused.",
+          },
+        },
+      });
+
+      // 7. Log status history
+      await tx.grievance_status_history.create({
+        data: {
+          grievance_id: grievanceId,
+          old_status: "RESOLVED",
+          new_status: "CLOSED",
+          changed_by: user.user_id,
+          remarks: "Resolution accepted by user",
+        },
+      });
     });
 
     // Notifications
@@ -249,6 +334,18 @@ export async function POST(
       message: "Resolution accepted successfully",
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "FEEDBACK_ALREADY_SUBMITTED"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Feedback has already been submitted for this grievance",
+        },
+        { status: 409 },
+      );
+    }
     console.error("Error accepting resolution:", error);
     return NextResponse.json(
       { success: false, message: "Failed to accept resolution" },

@@ -183,6 +183,11 @@ export interface StaffGrievanceItem {
     reason: string;
     createdAt: string;
   } | null;
+  feedback?: {
+    rating: number;
+    comments?: string | null;
+    submittedAt: string;
+  } | null;
 }
 
 export interface StaffMemberProfile {

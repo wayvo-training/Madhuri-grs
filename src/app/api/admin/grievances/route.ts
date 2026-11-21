@@ -218,6 +218,7 @@ export async function GET(request: Request) {
         include: {
           categories: true,
           subcategories: true,
+          grievance_feedback: true,
           users: {
             select: {
               first_name: true,
@@ -342,6 +343,13 @@ export async function GET(request: Request) {
         supporting_departments: [...otherEqualDepts, ...normalSupporting],
         reopen_count: g.reopen_count,
         manual_review_count: g.manual_review_count,
+        feedback: g.grievance_feedback
+          ? {
+              rating: g.grievance_feedback.rating,
+              comments: g.grievance_feedback.comments,
+              submitted_at: g.grievance_feedback.submitted_at.toISOString(),
+            }
+          : null,
       };
     });
 

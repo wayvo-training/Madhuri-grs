@@ -184,6 +184,7 @@ export default async function AdminGrievancesPage(props: {
       include: {
         categories: true,
         subcategories: true,
+        grievance_feedback: true,
         users: {
           select: {
             first_name: true,
@@ -336,6 +337,13 @@ export default async function AdminGrievancesPage(props: {
       }),
       reopen_count: g.reopen_count,
       manual_review_count: g.manual_review_count,
+      feedback: g.grievance_feedback
+        ? {
+            rating: g.grievance_feedback.rating,
+            comments: g.grievance_feedback.comments,
+            submitted_at: g.grievance_feedback.submitted_at.toISOString(),
+          }
+        : null,
     };
   });
 

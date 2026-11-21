@@ -114,6 +114,11 @@ export interface CaseHubGrievance {
     reason: string;
     rejectedAt: string;
   } | null;
+  feedback?: {
+    rating: number;
+    comments?: string | null;
+    submittedAt: string;
+  } | null;
 }
 
 interface EndUserCaseHubProps {
@@ -1622,6 +1627,7 @@ export function EndUserCaseHub({
                 reopenWindowDays={grievance.reopenWindowDays}
                 maxReopenAttempts={grievance.maxReopenAttempts}
                 maxRejections={grievance.maxRejections}
+                feedback={grievance.feedback}
                 showDownloadButton={true}
               />
             ) : grievance.status === "CLOSED" ? (

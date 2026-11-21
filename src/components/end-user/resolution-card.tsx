@@ -5,14 +5,27 @@ import {
   Download,
   Eye,
   FileText,
+  Loader2,
   RotateCcw,
   ShieldCheck,
+  Star,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { submitFeedbackAction } from "@/actions";
 import { AcceptResolutionButton } from "@/components/end-user/accept-resolution-button";
 import { PrintSectionButton } from "@/components/end-user/print-button";
 import { ReopenButton } from "@/components/end-user/reopen-button";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface ResolutionAttachment {
   id: string;
@@ -44,6 +57,11 @@ interface ResolutionCardProps {
   maxReopenAttempts?: number;
   reopenWindowDays?: number;
   maxRejections?: number;
+  feedback?: {
+    rating: number;
+    comments?: string | null;
+    submittedAt: string;
+  } | null;
   allowActions?: boolean;
   showDownloadButton?: boolean;
 }
@@ -60,9 +78,48 @@ export function ResolutionCard({
   maxReopenAttempts = 3,
   reopenWindowDays = 14,
   maxRejections = 3,
+  feedback = null,
   allowActions = true,
   showDownloadButton = true,
 }: ResolutionCardProps) {
+  const [currentFeedback, setCurrentFeedback] = useState(feedback);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [selectedRating, setSelectedRating] = useState<number>(5);
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const [feedbackComments, setFeedbackComments] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+
+  const handlePostClosureFeedback = async () => {
+    if (!selectedRating || selectedRating < 1 || selectedRating > 5) {
+      toast.error("Please select a rating between 1 and 5 stars");
+      return;
+    }
+    if (feedbackComments.trim().length > 1000) {
+      toast.error("Comments must not exceed 1000 characters");
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      await submitFeedbackAction(grievanceId, {
+        rating: selectedRating,
+        comments: feedbackComments.trim() || undefined,
+      });
+      setCurrentFeedback({
+        rating: selectedRating,
+        comments: feedbackComments.trim() || null,
+        submittedAt: new Date().toISOString(),
+      });
+      setIsFeedbackModalOpen(false);
+      toast.success("Feedback submitted successfully. Thank you!");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to submit feedback";
+      toast.error(message);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
   const isResolved =
     status === "RESOLVED" ||
     status === "UNDER_REVIEW" ||
@@ -303,6 +360,88 @@ export function ResolutionCard({
         </div>
       )}
 
+      {/* Closed Resolution Feedback Display & Submission */}
+      {isClosed && (
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+          {currentFeedback ? (
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/20 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5 text-xs">
+                  <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  Your Resolution Feedback
+                </span>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                  Submitted{" "}
+                  {new Date(currentFeedback.submittedAt).toLocaleDateString(
+                    "en-IN",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1 pt-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`h-4 w-4 ${
+                      star <= currentFeedback.rating
+                        ? "text-amber-500 fill-amber-500"
+                        : "text-slate-300 dark:text-slate-600"
+                    }`}
+                  />
+                ))}
+                <span className="ml-2 font-bold text-xs text-slate-800 dark:text-slate-200">
+                  {currentFeedback.rating} / 5
+                </span>
+              </div>
+
+              {currentFeedback.comments ? (
+                <div className="mt-2 rounded-lg bg-white/90 dark:bg-slate-900/80 border border-emerald-200/60 dark:border-emerald-900/40 p-2.5 text-slate-800 dark:text-slate-200 text-xs leading-relaxed">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                    Your Remarks
+                  </p>
+                  <p className="whitespace-pre-wrap">
+                    {currentFeedback.comments}
+                  </p>
+                </div>
+              ) : null}
+
+              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 italic pt-1">
+                Feedback recorded. Thank you for helping us improve our service.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Star className="h-4 w-4 text-amber-500" />
+                  Resolution Feedback
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  This grievance is closed. Share your evaluation of the
+                  resolution to help us improve service quality.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFeedbackModalOpen(true)}
+                className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300 font-semibold text-xs shrink-0 cursor-pointer"
+              >
+                <Star className="mr-1.5 h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                Provide Feedback
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Closed Confirmation Banner & Reopen Option */}
       {isClosed && (
         <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -350,6 +489,113 @@ export function ResolutionCard({
           </div>
         </div>
       )}
+
+      {/* Post-Closure Feedback Submission Dialog */}
+      <Dialog open={isFeedbackModalOpen} onOpenChange={setIsFeedbackModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100">
+              <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+              Provide Resolution Feedback
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 dark:text-slate-400">
+              Please rate your experience with how grievance{" "}
+              {grievanceNumber || grievanceId} was investigated and resolved.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-4">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="post-closure-rating"
+                className="text-xs font-semibold text-slate-800 dark:text-slate-200"
+              >
+                Rating <span className="text-rose-500">*</span>
+              </label>
+              <div id="post-closure-rating" className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((s) => {
+                  const filled = (hoveredStar ?? selectedRating) >= s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-label={`Select ${s} stars`}
+                      onClick={() => setSelectedRating(s)}
+                      onMouseEnter={() => setHoveredStar(s)}
+                      onMouseLeave={() => setHoveredStar(null)}
+                      className="p-1 rounded-md transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                    >
+                      <Star
+                        className={`h-7 w-7 ${
+                          filled
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-slate-300 dark:text-slate-600"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-2">
+                  {hoveredStar ?? selectedRating} / 5
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="post-closure-comments"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300"
+                >
+                  Comments (Optional)
+                </label>
+                <span
+                  className={`text-[10px] ${
+                    feedbackComments.length > 1000
+                      ? "text-rose-600 font-bold"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {feedbackComments.length} / 1000
+                </span>
+              </div>
+              <textarea
+                id="post-closure-comments"
+                value={feedbackComments}
+                onChange={(e) => setFeedbackComments(e.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder="Share your feedback, remarks or observations about the resolution process (optional)..."
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsFeedbackModalOpen(false)}
+              disabled={isSubmittingFeedback}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePostClosureFeedback}
+              disabled={isSubmittingFeedback || feedbackComments.length > 1000}
+              className="bg-amber-600 hover:bg-amber-700 text-white cursor-pointer"
+            >
+              {isSubmittingFeedback ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Feedback"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

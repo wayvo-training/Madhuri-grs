@@ -262,6 +262,7 @@ export async function fetchDepartmentHeadGrievances(
         },
         categories: true,
         subcategories: true,
+        grievance_feedback: true,
         grievance_departments: {
           include: {
             departments: true,
@@ -416,6 +417,7 @@ export async function fetchDepartmentHeadGrievances(
       activeAssignment?.users_assignments_staff_idTousers || null;
 
     const latestEscalation = g.escalations[0];
+    const isEscalationActive = latestEscalation?.status === "OPEN";
     const latestResolution = g.resolutions[0];
 
     let resolvedAssignedStaffName: string | null = null;
@@ -1279,21 +1281,20 @@ export async function fetchDepartmentHeadGrievances(
         myDeptRecord?.status ||
         (assignedStaff ? "ASSIGNED" : "PENDING_ASSIGNMENT"),
       isBlocked: myDeptRecord?.status === "BLOCKED",
-      escalationReason: latestEscalation?.reason || undefined,
-      escalationLevel: latestEscalation?.escalation_level || undefined,
-      escalationStage:
-        g.status === "ESCALATED" ||
-        g.sla_status === "BREACHED" ||
-        latestEscalation?.status === "OPEN" ||
-        resolvedSlaStatus === "BREACHED" ||
-        resolvedSlaStatus === "AT_RISK"
-          ? ("GRIEVANCE_ESCALATED" as const)
+      escalationReason: isEscalationActive
+        ? latestEscalation?.reason
+        : undefined,
+      escalationLevel: isEscalationActive
+        ? latestEscalation?.escalation_level
+        : undefined,
+      escalationStage: isEscalationActive
+        ? ("GRIEVANCE_ESCALATED" as const)
+        : latestEscalation?.status === "RESOLVED" || g.status === "CLOSED"
+          ? ("ESCALATION_CLEARED" as const)
           : g.status === "RESOLUTION_PENDING_APPROVAL" ||
               g.status === "UNDER_REVIEW"
             ? ("RESOLUTION_SUBMITTED" as const)
-            : g.status === "CLOSED"
-              ? ("ESCALATION_CLEARED" as const)
-              : ("IN_PROGRESS" as const),
+            : ("IN_PROGRESS" as const),
       hodIntervention,
       submittedResolution: latestResolution
         ? {
@@ -1375,6 +1376,13 @@ export async function fetchDepartmentHeadGrievances(
       internalNotes,
       collaborationNotes,
       supportingFindings,
+      feedback: g.grievance_feedback
+        ? {
+            rating: g.grievance_feedback.rating,
+            comments: g.grievance_feedback.comments,
+            submittedAt: g.grievance_feedback.submitted_at.toISOString(),
+          }
+        : null,
     };
   });
 
@@ -1454,15 +1462,33 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
           grievance_departments: {
             select: { department_id: true, involvement_type: true },
           },
+          escalations: {
+            select: {
+              escalation_id: true,
+              escalation_level: true,
+              status: true,
+            },
+          },
         },
       },
     },
   });
 
-  const grievances = deptGrievances.map((dg) => dg.grievances);
-  const grievanceIds = grievances.map((g) => g.grievance_id);
+  const uniqueGrievancesMap = new Map<
+    string,
+    (typeof deptGrievances)[0]["grievances"]
+  >();
+  for (const dg of deptGrievances) {
+    const id = dg.grievances.grievance_id.toString();
+    if (!uniqueGrievancesMap.has(id)) {
+      uniqueGrievancesMap.set(id, dg.grievances);
+    }
+  }
+  const uniqueGrievanceIds = Array.from(uniqueGrievancesMap.keys()).map((id) =>
+    BigInt(id),
+  );
 
-  const totalGrievances = grievances.length;
+  const totalGrievances = uniqueGrievancesMap.size;
   let unassignedCount = 0;
   let inProgressCount = 0;
   let atRiskCount = 0;
@@ -1473,8 +1499,16 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
   let highCriticalCount = 0;
   let closedCount = 0;
 
+  const seenGrievanceIds = new Set<string>();
+
   for (const dg of deptGrievances) {
     const g = dg.grievances;
+    const gIdStr = g.grievance_id.toString();
+    if (seenGrievanceIds.has(gIdStr)) {
+      continue;
+    }
+    seenGrievanceIds.add(gIdStr);
+
     const isClosed = g.status === "CLOSED" || g.status === "RESOLVED";
 
     if (isClosed) {
@@ -1502,10 +1536,14 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
     ) {
       inProgressCount++;
     }
-    if (g.sla_status === "AT_RISK" && g.status !== "ESCALATED") {
+    if (g.sla_status === "AT_RISK") {
       atRiskCount++;
     }
-    if (g.status === "ESCALATED") {
+
+    const hasActiveEscalation = Boolean(
+      g.escalations?.some((e) => e.status === "OPEN"),
+    );
+    if (hasActiveEscalation) {
       escalatedCount++;
     }
     if (
@@ -1527,10 +1565,10 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
   }
 
   const recentAuditLogs =
-    grievanceIds.length > 0
+    uniqueGrievanceIds.length > 0
       ? await prisma.audit_logs.findMany({
           where: {
-            grievance_id: { in: grievanceIds },
+            grievance_id: { in: uniqueGrievanceIds },
           },
           include: {
             users: {

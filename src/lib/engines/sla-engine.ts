@@ -697,9 +697,13 @@ export async function evaluateGrievanceSla(
         });
       }
 
-      // Record approved escalation event for responsible Department Head if not exists
+      // Record approved escalation event for responsible Department Head if not exists in current active cycle
       const existingLevel1 = await prisma.escalations.findFirst({
-        where: { grievance_id: grievanceId, escalation_level: 1 },
+        where: {
+          grievance_id: grievanceId,
+          escalation_level: 1,
+          OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+        },
       });
       const targetDeptHead = deptContext.deptHeads[0] || primaryDeptHead;
       let escalationTarget: { user_id: bigint } | null = targetDeptHead;
@@ -818,6 +822,45 @@ export async function evaluateGrievanceSla(
         });
       }
 
+      // Record Level 2 escalation for department breach independently of notification recipients in current active cycle
+      const existingLevel2 = await prisma.escalations.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          escalation_level: 2,
+          OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+        },
+      });
+      let escalationTarget: { user_id: bigint } | null =
+        deptContext.deptHeads[0] || primaryDeptHead;
+      if (!escalationTarget) {
+        const fallbackAdmin = await prisma.users.findFirst({
+          where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
+          select: {
+            user_id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        });
+        if (fallbackAdmin) {
+          escalationTarget = fallbackAdmin;
+        }
+      }
+      if (!existingLevel2 && escalationTarget) {
+        await prisma.escalations.create({
+          data: {
+            grievance_id: grievanceId,
+            escalated_to: escalationTarget.user_id,
+            escalation_level: 2,
+            reason: `Department SLA Breach: 100% of allocated SLA limit consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Level 2 (Department Head).`,
+            status: "OPEN",
+            sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
+            created_at: evaluationDate,
+          },
+        });
+        didEscalate = true;
+      }
+
       const notifType = `DEPT_SLA_BREACH_${deptRec.department_id}`;
       const targetUsers = await resolveDesignatedUsers(
         escalationDesignations,
@@ -842,40 +885,6 @@ export async function evaluateGrievanceSla(
                 created_at: evaluationDate,
               },
             });
-          }
-          // Record Level 2 escalation for department breach
-          const existingLevel2 = await tx.escalations.findFirst({
-            where: { grievance_id: grievanceId, escalation_level: 2 },
-          });
-          let escalationTarget: { user_id: bigint } | null =
-            deptContext.deptHeads[0] || primaryDeptHead;
-          if (!escalationTarget) {
-            const fallbackAdmin = await tx.users.findFirst({
-              where: { roles: { role_name: "ADMIN" }, status: "ACTIVE" },
-              select: {
-                user_id: true,
-                first_name: true,
-                last_name: true,
-                email: true,
-              },
-            });
-            if (fallbackAdmin) {
-              escalationTarget = fallbackAdmin;
-            }
-          }
-          if (!existingLevel2 && escalationTarget) {
-            await tx.escalations.create({
-              data: {
-                grievance_id: grievanceId,
-                escalated_to: escalationTarget.user_id,
-                escalation_level: 2,
-                reason: `Department SLA Breach: 100% of allocated SLA limit consumed in ${deptName} (${deptAllocatedMinutes} mins allotted). Auto-escalated to Level 2 (Department Head).`,
-                status: "OPEN",
-                sla_policy_id: activeSlaPolicy?.sla_policy_id || null,
-                created_at: evaluationDate,
-              },
-            });
-            didEscalate = true;
           }
 
           await tx.audit_logs.create({
@@ -938,12 +947,20 @@ export async function evaluateGrievanceSla(
       });
     }
 
-    // Ensure formal Level 1 and Level 2 escalation records exist even when early-returning from department breach
+    // Ensure formal Level 1 and Level 2 escalation records exist even when early-returning from department breach in current cycle
     const existingLevel1 = await prisma.escalations.findFirst({
-      where: { grievance_id: grievanceId, escalation_level: 1 },
+      where: {
+        grievance_id: grievanceId,
+        escalation_level: 1,
+        OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+      },
     });
     const existingLevel2 = await prisma.escalations.findFirst({
-      where: { grievance_id: grievanceId, escalation_level: 2 },
+      where: {
+        grievance_id: grievanceId,
+        escalation_level: 2,
+        OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+      },
     });
 
     let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
@@ -1217,9 +1234,13 @@ export async function evaluateGrievanceSla(
         });
       }
 
-      // Record approved Level 1 escalation event for responsible Department Head
+      // Record approved Level 1 escalation event for responsible Department Head in current active cycle
       const existingLevel1 = await tx.escalations.findFirst({
-        where: { grievance_id: grievanceId, escalation_level: 1 },
+        where: {
+          grievance_id: grievanceId,
+          escalation_level: 1,
+          OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+        },
       });
       let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;
       if (!escalationTargetUser) {
@@ -1331,9 +1352,13 @@ export async function evaluateGrievanceSla(
         });
       }
 
-      // 2. Create Level 2 escalation record if not exists
+      // 2. Create Level 2 escalation record if not exists in current active cycle
       const existingLevel2 = await tx.escalations.findFirst({
-        where: { grievance_id: grievanceId, escalation_level: 2 },
+        where: {
+          grievance_id: grievanceId,
+          escalation_level: 2,
+          OR: [{ status: "OPEN" }, { created_at: { gte: effectiveStart } }],
+        },
       });
 
       let escalationTargetUser: { user_id: bigint } | null = primaryDeptHead;

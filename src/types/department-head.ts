@@ -201,6 +201,11 @@ export interface GrievanceItem {
     consumptionPercent?: number;
     timeRemaining?: string;
   }[];
+  feedback?: {
+    rating: number;
+    comments?: string | null;
+    submittedAt: string;
+  } | null;
 }
 
 export interface StaffMember {

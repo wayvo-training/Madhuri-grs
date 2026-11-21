@@ -175,10 +175,16 @@ export async function reopenGrievanceAction(params: ReopenGrievanceParams) {
 
 /**
  * Accept resolution and close grievance (End User)
+ * Optionally submits feedback with rating (1-5) and comments (max 1000 chars)
  */
-export async function acceptResolutionAction(grievanceId: string) {
+export async function acceptResolutionAction(
+  grievanceId: string,
+  feedback?: { rating?: number; comments?: string },
+) {
   const res = await fetch(`/api/end-user/grievances/${grievanceId}/accept`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(feedback || {}),
   });
 
   const data = await res.json().catch(() => ({}));
@@ -186,6 +192,26 @@ export async function acceptResolutionAction(grievanceId: string) {
     throw new Error(
       data.message || data.error || "Failed to accept resolution",
     );
+  }
+  return data;
+}
+
+/**
+ * Submit feedback for a closed grievance (End User)
+ */
+export async function submitFeedbackAction(
+  grievanceId: string,
+  feedback: { rating: number; comments?: string },
+) {
+  const res = await fetch(`/api/end-user/grievances/${grievanceId}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(feedback),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || data.error || "Failed to submit feedback");
   }
   return data;
 }
