@@ -2,6 +2,7 @@
 
 import { BookOpen, Clock, Eye, FileCheck2, Inbox, Play, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
@@ -620,32 +621,15 @@ export function GrievanceQueue({
 
                         {/* Priority */}
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                          <span className="text-[13px] font-medium text-slate-900 dark:text-slate-200 whitespace-nowrap">
-                            {item.priority === "CRITICAL"
-                              ? "Critical"
-                              : item.priority === "HIGH"
-                                ? "High"
-                                : item.priority === "MEDIUM"
-                                  ? "Medium"
-                                  : "Low"}
-                          </span>
+                          <PriorityBadge priority={item.priority} />
                         </td>
 
                         {/* Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                          {item.status === "CLOSED" ||
-                          item.overallStatus === "CLOSED" ? (
-                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800 whitespace-nowrap">
-                              Closed
-                            </span>
-                          ) : item.status === "RESOLVED" ||
-                            item.overallStatus === "RESOLVED" ? (
-                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200/60 dark:border-teal-800 whitespace-nowrap">
-                              Resolved
-                            </span>
-                          ) : item.isMyDepartmentCompleted ||
-                            item.status === "COMPLETED" ? (
-                            <span
+                          {item.isMyDepartmentCompleted ||
+                          item.status === "COMPLETED" ? (
+                            <StatusBadge
+                              status="COMPLETED"
                               title={
                                 item.overallStatus &&
                                 item.overallStatus !== "COMPLETED" &&
@@ -656,33 +640,24 @@ export function GrievanceQueue({
                                     ? "Department Findings Submitted"
                                     : "Work Completed"
                               }
-                              className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap cursor-default"
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                              {item.myInvolvementType === "SUPPORTING"
-                                ? "Findings Done"
-                                : "Work Completed"}
-                            </span>
-                          ) : item.status === "WAITING_ON_USER" ||
-                            item.status === "AWAITING_INFORMATION" ? (
-                            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
-                              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                              Awaiting Info
-                            </span>
+                              label={
+                                item.myInvolvementType === "SUPPORTING"
+                                  ? "Findings Done"
+                                  : "Work Completed"
+                              }
+                            />
                           ) : (
-                            <span className="inline-block text-[13px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800 whitespace-nowrap">
-                              {item.status === "IN_PROGRESS"
-                                ? "In Progress"
-                                : item.status === "ASSIGNED"
-                                  ? "Assigned"
-                                  : item.status === "UNDER_REVIEW" ||
-                                      item.status ===
-                                        "RESOLUTION_PENDING_APPROVAL"
-                                    ? "Under Review"
-                                    : item.status === "REWORK"
-                                      ? "Rework"
-                                      : item.status}
-                            </span>
+                            <StatusBadge
+                              status={
+                                item.status === "CLOSED" ||
+                                item.overallStatus === "CLOSED"
+                                  ? "CLOSED"
+                                  : item.status === "RESOLVED" ||
+                                      item.overallStatus === "RESOLVED"
+                                    ? "RESOLVED"
+                                    : item.status
+                              }
+                            />
                           )}
                         </td>
 

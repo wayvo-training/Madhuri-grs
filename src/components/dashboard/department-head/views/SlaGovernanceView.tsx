@@ -286,13 +286,13 @@ export function SlaGovernanceView({
             <table className="w-full text-left text-sm table-fixed border-collapse shrink-0 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
               <colgroup>
                 <col className="w-[110px]" />
-                <col className="w-[230px]" />
+                <col className="w-[195px]" />
                 <col className="w-[140px]" />
                 <col className="w-[130px]" />
                 <col className="w-[150px]" />
                 <col className="w-[150px]" />
                 <col className="w-[140px]" />
-                <col className="w-[100px]" />
+                <col className="w-[135px]" />
                 <col className="w-[90px]" />
               </colgroup>
               <thead className="text-sm font-semibold text-slate-600 dark:text-slate-400">
@@ -373,13 +373,13 @@ export function SlaGovernanceView({
               <table className="w-full text-left text-sm table-fixed border-collapse">
                 <colgroup>
                   <col className="w-[110px]" />
-                  <col className="w-[230px]" />
+                  <col className="w-[195px]" />
                   <col className="w-[140px]" />
                   <col className="w-[130px]" />
                   <col className="w-[150px]" />
                   <col className="w-[150px]" />
                   <col className="w-[140px]" />
-                  <col className="w-[100px]" />
+                  <col className="w-[135px]" />
                   <col className="w-[90px]" />
                 </colgroup>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-transparent text-slate-700 dark:text-slate-300">

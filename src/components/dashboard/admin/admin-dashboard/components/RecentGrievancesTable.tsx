@@ -60,10 +60,10 @@ export function RecentGrievancesTable({
         {/* Header Table */}
         <table className="w-full text-left text-sm table-fixed border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 shrink-0">
           <colgroup>
-            <col className="w-[30%]" />
-            <col className="w-[36%]" />
-            <col className="w-[17%]" />
-            <col className="w-[17%]" />
+            <col className="w-[24%]" />
+            <col className="w-[32%]" />
+            <col className="w-[18%]" />
+            <col className="w-[26%]" />
           </colgroup>
           <TableHeader className="bg-transparent shadow-none">
             <TableRow className="border-none hover:bg-transparent">
@@ -107,10 +107,10 @@ export function RecentGrievancesTable({
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <table className="w-full text-left text-sm table-fixed">
             <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[36%]" />
-              <col className="w-[17%]" />
-              <col className="w-[17%]" />
+              <col className="w-[24%]" />
+              <col className="w-[32%]" />
+              <col className="w-[18%]" />
+              <col className="w-[26%]" />
             </colgroup>
             <TableBody>
               {recentGrievances.length === 0 ? (
@@ -137,7 +137,7 @@ export function RecentGrievancesTable({
                     <TableCell className="py-2 px-2.5">
                       <PriorityBadge priority={g.priority} />
                     </TableCell>
-                    <TableCell className="py-2 px-2.5">
+                    <TableCell className="py-2 px-2.5 overflow-hidden">
                       <StatusBadge status={g.status} />
                     </TableCell>
                   </TableRow>

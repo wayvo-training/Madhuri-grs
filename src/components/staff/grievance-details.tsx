@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { StatusBadge } from "@/components/dashboard/badges";
+import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { DepartmentFindingsTab } from "@/components/dashboard/DepartmentFindingsTab";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
 import {
@@ -222,15 +222,7 @@ export function GrievanceDetails({
                 <span className="text-slate-300">&bull;</span>
                 <span>{grievance.subcategory}</span>
                 <span className="text-slate-300">&bull;</span>
-                <span className="text-slate-900 font-semibold">
-                  {grievance.priority === "CRITICAL"
-                    ? "Critical"
-                    : grievance.priority === "HIGH"
-                      ? "High"
-                      : grievance.priority === "MEDIUM"
-                        ? "Medium"
-                        : "Low"}
-                </span>
+                <PriorityBadge priority={grievance.priority} />
                 <StatusBadge status={grievance.status} />
                 {grievance.isSupportingStaff ? (
                   <span className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800">

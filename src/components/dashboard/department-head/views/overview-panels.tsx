@@ -338,7 +338,7 @@ export function AttentionRequiredPanel({
             <div className="w-16 sm:w-20 shrink-0">
               {renderSortHeader("Priority", "priority")}
             </div>
-            <div className="w-24 sm:w-28 shrink-0">
+            <div className="w-32 sm:w-36 shrink-0">
               {renderSortHeader("Status", "status")}
             </div>
             <div className="w-26 sm:w-30 shrink-0 flex justify-center">
@@ -408,7 +408,7 @@ export function AttentionRequiredPanel({
                     <div className="w-16 sm:w-20 shrink-0">
                       <PriorityBadge priority={item.priority} />
                     </div>
-                    <div className="w-24 sm:w-28 shrink-0">
+                    <div className="w-32 sm:w-36 shrink-0">
                       <StatusBadge status={item.status} />
                     </div>
                     <div className="w-26 sm:w-30 shrink-0 text-center">
