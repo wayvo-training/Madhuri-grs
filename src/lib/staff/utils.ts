@@ -289,6 +289,31 @@ export function formatAuditActionTitle(action: string): string {
     case "RESOLUTION_REJECTED":
     case "REJECT_RESOLUTION":
       return "Resolution Rejected";
+    case "REWORK_REQUESTED":
+      return "Resolution Rework Requested";
+    case "REWORK_APPROVED":
+      return "Rework Approved & Assigned";
+    case "REWORK_REJECTED":
+      return "Rework Request Rejected";
+    case "REWORK_REJECTED_FINAL":
+      return "Rework Request Permanently Declined";
+    case "REOPEN_REQUESTED":
+      return "Case Reopening Requested";
+    case "REOPEN_APPROVED":
+      return "Case Reopened & Assigned";
+    case "REOPEN_REJECTED":
+      return "Case Reopening Rejected";
+    case "REOPEN_REJECTED_FINAL":
+      return "Case Reopening Permanently Declined";
+    case "GRACE_PERIOD_REQUESTED":
+      return "SLA Extension Requested";
+    case "GRACE_PERIOD_APPROVED":
+      return "SLA Extension Approved";
+    case "GRACE_PERIOD_REJECTED":
+      return "SLA Extension Rejected";
+    case "AUTO_CLOSED":
+    case "CASE_CLOSED":
+      return "Case Closed";
     case "GRIEVANCE_REOPENED":
       return "Grievance Reopened";
     case "STATUS_CHANGED":

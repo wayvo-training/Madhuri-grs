@@ -658,7 +658,7 @@ export async function evaluateGrievanceSla(
               grievance_id: grievanceId,
               user_id: null,
               action: "DEPARTMENT_SLA_WARNING",
-              entity_type: "grievance_department",
+              entity_type: "GRIEVANCE_DEPARTMENT",
               entity_id: deptRec.grievance_department_id,
               new_value: {
                 department: deptName,
@@ -748,7 +748,7 @@ export async function evaluateGrievanceSla(
               grievance_id: grievanceId,
               user_id: null,
               action: "DEPARTMENT_SLA_ESCALATION_WARNING",
-              entity_type: "grievance_department",
+              entity_type: "GRIEVANCE_DEPARTMENT",
               entity_id: deptRec.grievance_department_id,
               new_value: {
                 department: deptName,
@@ -828,7 +828,7 @@ export async function evaluateGrievanceSla(
               grievance_id: grievanceId,
               user_id: null,
               action: "DEPARTMENT_SLA_BREACHED",
-              entity_type: "grievance_department",
+              entity_type: "GRIEVANCE_DEPARTMENT",
               entity_id: deptRec.grievance_department_id,
               new_value: {
                 department: deptName,
@@ -1008,7 +1008,7 @@ export async function evaluateGrievanceSla(
             grievance_id: grievanceId,
             user_id: null,
             action: `SLA_${warningThreshold}_PERCENT_WARNING`,
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               consumptionPercent,
@@ -1145,7 +1145,7 @@ export async function evaluateGrievanceSla(
             grievance_id: grievanceId,
             user_id: null,
             action: `SLA_${atRiskThreshold}_PERCENT_ALERT`,
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               consumptionPercent,
@@ -1296,7 +1296,7 @@ export async function evaluateGrievanceSla(
             grievance_id: grievanceId,
             user_id: null,
             action: "SLA_100_BREACH_ESCALATED",
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: grievanceId,
             new_value: {
               consumptionPercent,
@@ -2896,7 +2896,7 @@ export async function processAutoClosures(
         grievance_id: g.grievance_id,
         user_id: null,
         action: "AUTO_CLOSED",
-        entity_type: "grievance",
+        entity_type: "GRIEVANCE",
         entity_id: g.grievance_id,
         new_value: {
           closureReason: "RESOLVED_INACTIVITY",
@@ -2995,7 +2995,7 @@ export async function processAutoClosures(
         grievance_id: g.grievance_id,
         user_id: null,
         action: "AUTO_CLOSED",
-        entity_type: "grievance",
+        entity_type: "GRIEVANCE",
         entity_id: g.grievance_id,
         new_value: {
           closureReason: "INFO_REQUEST_NON_RESPONSE",

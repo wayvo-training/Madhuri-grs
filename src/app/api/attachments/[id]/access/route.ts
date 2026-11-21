@@ -40,7 +40,7 @@ export async function GET(
       },
     });
 
-    if (!attachment || !attachment.grievances) {
+    if (!attachment?.grievances) {
       return NextResponse.json(
         { error: "Attachment not found" },
         { status: 404 },
@@ -128,7 +128,7 @@ export async function POST(
       },
     });
 
-    if (!attachment || !attachment.grievances) {
+    if (!attachment?.grievances) {
       return NextResponse.json(
         { error: "Attachment not found" },
         { status: 404 },
@@ -153,7 +153,7 @@ export async function POST(
     }
 
     const body = await request.json().catch(() => null);
-    if (!body || !body.departmentId) {
+    if (!body?.departmentId) {
       return NextResponse.json(
         { error: "Missing departmentId in request body" },
         { status: 400 },
@@ -209,7 +209,7 @@ export async function POST(
         user_id: BigInt(user.user_id),
         grievance_id: grievance.grievance_id,
         action: "ATTACHMENT_ACCESS_GRANTED",
-        entity_type: "attachment_department_grants",
+        entity_type: "ATTACHMENT_DEPARTMENT_GRANTS",
         entity_id: createdGrantId,
         new_value: JSON.stringify({
           attachment_id: attachmentId.toString(),
@@ -293,7 +293,7 @@ export async function DELETE(
       },
     });
 
-    if (!attachment || !attachment.grievances) {
+    if (!attachment?.grievances) {
       return NextResponse.json(
         { error: "Attachment not found" },
         { status: 404 },
@@ -352,7 +352,7 @@ export async function DELETE(
         user_id: BigInt(user.user_id),
         grievance_id: grievance.grievance_id,
         action: "ATTACHMENT_ACCESS_REVOKED",
-        entity_type: "attachment_department_grants",
+        entity_type: "ATTACHMENT_DEPARTMENT_GRANTS",
         new_value: JSON.stringify({
           attachment_id: attachmentId.toString(),
           department_id: targetDeptId.toString(),

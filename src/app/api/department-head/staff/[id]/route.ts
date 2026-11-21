@@ -57,7 +57,7 @@ export async function PATCH(
       data: {
         user_id: user.user_id,
         action: "STAFF_AVAILABILITY_CHANGED",
-        entity_type: "user",
+        entity_type: "USER",
         entity_id: staffId,
         new_value: {
           staff_id: staffId.toString(),
@@ -243,7 +243,7 @@ export async function POST(
             grievance_id: assign.grievance_id,
             user_id: user.user_id,
             action: "LEAVE_REASSIGNMENT",
-            entity_type: "grievance",
+            entity_type: "GRIEVANCE",
             entity_id: assign.grievance_id,
             new_value: {
               from_staff: fromName,
@@ -269,7 +269,7 @@ export async function POST(
         data: {
           user_id: user.user_id,
           action: "STAFF_MARKED_ON_LEAVE_WITH_REASSIGNMENT",
-          entity_type: "user",
+          entity_type: "USER",
           entity_id: fromStaffId,
           new_value: {
             officer: fromName,

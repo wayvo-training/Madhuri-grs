@@ -76,14 +76,56 @@ export function formatAuditActionTitle(action: string): string {
   if (act === "CREATE" || act === "SUBMITTED") {
     return "Grievance Submitted";
   }
+  if (act === "REWORK_REQUESTED") {
+    return "Resolution Rework Requested";
+  }
+  if (act === "REWORK_APPROVED") {
+    return "Rework Request Approved & Assigned";
+  }
+  if (act === "REWORK_REJECTED") {
+    return "Rework Request Rejected";
+  }
+  if (act === "REWORK_REJECTED_FINAL") {
+    return "Rework Request Permanently Declined";
+  }
+  if (act === "REOPEN_REQUESTED") {
+    return "Case Reopening Requested";
+  }
+  if (act === "REOPEN_APPROVED") {
+    return "Case Reopened & Assigned";
+  }
+  if (act === "REOPEN_REJECTED") {
+    return "Case Reopening Rejected";
+  }
+  if (act === "REOPEN_REJECTED_FINAL") {
+    return "Case Reopening Permanently Declined";
+  }
   if (act.includes("ASSIGN")) {
     return "Assigned to Investigating Staff";
   }
-  if (act.includes("SUBMIT_RESOLUTION")) {
+  if (act.includes("SUBMIT_RESOLUTION") || act === "RESOLUTION_SUBMITTED") {
     return "Resolution Findings Submitted";
   }
-  if (act.includes("ACCEPT_RESOLUTION")) {
+  if (act.includes("ACCEPT_RESOLUTION") || act === "RESOLUTION_ACCEPTED") {
     return "Resolution Approved & Accepted";
+  }
+  if (act === "ADDITIONAL_INFO_REQUESTED") {
+    return "Additional Information Requested";
+  }
+  if (act === "ADDITIONAL_INFO_SUBMITTED" || act === "USER_INFO_SUBMITTED") {
+    return "Additional Information Submitted";
+  }
+  if (act === "GRACE_PERIOD_REQUESTED") {
+    return "SLA Extension Requested";
+  }
+  if (act === "GRACE_PERIOD_APPROVED") {
+    return "SLA Extension Approved";
+  }
+  if (act === "GRACE_PERIOD_REJECTED") {
+    return "SLA Extension Rejected";
+  }
+  if (act === "AUTO_CLOSED" || act === "CASE_CLOSED") {
+    return "Case Closed";
   }
   if (act.includes("HOD_INTERVENTION")) {
     return "Department Head Intervention Directive";
@@ -157,6 +199,44 @@ export function formatAuditLogContent(
           ? `${parsed.threshold} threshold`
           : "warning threshold";
         return `SLA reached ${threshold}. Priority alert dispatched to assigned staff member.`;
+      }
+
+      if (act.includes("REWORK")) {
+        if (parsed.remarks) return String(parsed.remarks);
+        if (parsed.reason) return String(parsed.reason);
+        if (act === "REWORK_APPROVED") {
+          return "Rework request approved by Department Head and assigned for re-investigation.";
+        }
+        if (act === "REWORK_REJECTED") {
+          return "Rework request declined by Department Head.";
+        }
+        if (act === "REWORK_REJECTED_FINAL") {
+          return "Maximum rework attempts reached. Grievance permanently closed.";
+        }
+      }
+
+      if (act.includes("REOPEN")) {
+        if (parsed.reason) return String(parsed.reason);
+        if (parsed.remarks) return String(parsed.remarks);
+        if (act === "REOPEN_APPROVED") {
+          return "Reopening approved by Department Head. Case reopened for re-investigation.";
+        }
+        if (act === "REOPEN_REJECTED") {
+          return "Reopening request declined by Department Head.";
+        }
+        if (act === "REOPEN_REJECTED_FINAL") {
+          return "Maximum reopening attempts reached. Grievance permanently closed.";
+        }
+      }
+
+      if (act.includes("GRACE_PERIOD")) {
+        if (parsed.reason) return String(parsed.reason);
+        if (parsed.rejectionReason) return String(parsed.rejectionReason);
+      }
+
+      if (act.includes("ADDITIONAL_INFO")) {
+        if (parsed.details) return String(parsed.details);
+        if (parsed.notes) return String(parsed.notes);
       }
 
       if (act.includes("ROUTE") || parsed.status === "ROUTED") {
