@@ -254,9 +254,12 @@ export function DashboardSidebar({
     };
 
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    const interval = setInterval(fetchUnread, 10000);
 
     const handleNotificationsChanged = () => {
+      fetchUnread();
+    };
+    const handleFocus = () => {
       fetchUnread();
     };
     if (typeof window !== "undefined") {
@@ -264,6 +267,7 @@ export function DashboardSidebar({
         "notifications-changed",
         handleNotificationsChanged,
       );
+      window.addEventListener("focus", handleFocus);
     }
 
     return () => {
@@ -274,6 +278,7 @@ export function DashboardSidebar({
           "notifications-changed",
           handleNotificationsChanged,
         );
+        window.removeEventListener("focus", handleFocus);
       }
     };
   }, []);

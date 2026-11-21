@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   AlignLeft,
@@ -72,6 +73,7 @@ export function SubmitGrievanceForm({
   subcategories,
 }: SubmitGrievanceFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Wizard Step (1, 2, or 3)
   const [currentStep, setCurrentStep] = useState(1);
@@ -267,6 +269,12 @@ export function SubmitGrievanceForm({
       toast.success(
         `Grievance ${data.grievance_number} submitted successfully!`,
       );
+
+      // Immediately invalidate notifications query and trigger refresh
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("notifications-changed"));
+      }
     } catch (error) {
       console.error(error);
       toast.error("An error occurred while submitting your grievance.");

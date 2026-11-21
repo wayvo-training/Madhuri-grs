@@ -302,6 +302,7 @@ export function NotificationsPageView({
     gcTime: 15 * 60 * 1000,
     refetchInterval: 10 * 1000,
     refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   // Filter States
