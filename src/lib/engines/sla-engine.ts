@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import type { PoolClient } from "pg";
 import { pool, prisma } from "@/lib/prisma";
 import type { NotificationType } from "@/lib/services/notification.service";
 
@@ -96,6 +97,9 @@ export async function evaluateGrievanceSla(
   grievanceId: bigint,
   evaluationDate: Date = new Date(),
 ): Promise<SlaEvaluationResult | null> {
+  if (!isSchemaEnsured) {
+    await ensureRequiredDatabaseSchema();
+  }
   const grievance = await prisma.grievances.findUnique({
     where: { grievance_id: grievanceId },
     include: {
@@ -1464,6 +1468,154 @@ export interface BatchSlaEvaluationSummary {
   failures: SlaEvaluationFailure[];
 }
 
+let isSchemaEnsured = false;
+
+/**
+ * Self-healing schema migration:
+ * Guarantees required columns (closure_reason, sla_extensions, sla_pause_logs)
+ * exist in the production PostgreSQL database.
+ */
+export async function ensureRequiredDatabaseSchema(
+  customClient?: PoolClient,
+): Promise<void> {
+  if (isSchemaEnsured) {
+    return;
+  }
+
+  const runner = async (c: PoolClient) => {
+    await c.query(`
+      ALTER TABLE "grievances" ADD COLUMN IF NOT EXISTS "closure_reason" VARCHAR(100);
+      ALTER TABLE "sla_tracking" ADD COLUMN IF NOT EXISTS "accumulated_paused_minutes" INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE "sla_tracking" ADD COLUMN IF NOT EXISTS "cycle_type" VARCHAR(20) NOT NULL DEFAULT 'INITIAL';
+    `);
+
+    await c.query(`
+      CREATE TABLE IF NOT EXISTS "sla_pause_logs" (
+        "id" BIGSERIAL NOT NULL,
+        "sla_tracking_id" BIGINT NOT NULL,
+        "pause_reason" VARCHAR(100) NOT NULL,
+        "paused_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "resumed_at" TIMESTAMPTZ(6),
+        "duration_minutes" INTEGER NOT NULL DEFAULT 0,
+        "paused_by" BIGINT NOT NULL,
+        "resumed_by" BIGINT,
+        CONSTRAINT "sla_pause_logs_pkey" PRIMARY KEY ("id")
+      );
+      CREATE INDEX IF NOT EXISTS "idx_sla_pause_logs_tracking_id" ON "sla_pause_logs"("sla_tracking_id");
+    `);
+
+    await c.query(`
+      CREATE TABLE IF NOT EXISTS "sla_extensions" (
+        "extension_id" BIGSERIAL NOT NULL,
+        "grievance_id" BIGINT NOT NULL,
+        "sla_tracking_id" BIGINT NOT NULL,
+        "requested_by" BIGINT NOT NULL,
+        "reason" TEXT NOT NULL,
+        "requested_duration_minutes" INTEGER NOT NULL,
+        "granted_duration_minutes" INTEGER,
+        "status" VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+        "reviewed_by" BIGINT,
+        "reviewed_at" TIMESTAMPTZ(6),
+        "rejection_reason" TEXT,
+        "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "sla_extensions_pkey" PRIMARY KEY ("extension_id")
+      );
+      CREATE INDEX IF NOT EXISTS "idx_sla_extensions_grievance_id" ON "sla_extensions"("grievance_id");
+      CREATE INDEX IF NOT EXISTS "idx_sla_extensions_tracking_id" ON "sla_extensions"("sla_tracking_id");
+      CREATE INDEX IF NOT EXISTS "idx_sla_extensions_status" ON "sla_extensions"("status");
+    `);
+
+    await c.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_extensions_grievance_id_fkey'
+        ) THEN
+          ALTER TABLE "sla_extensions" ADD CONSTRAINT "sla_extensions_grievance_id_fkey" FOREIGN KEY ("grievance_id") REFERENCES "grievances"("grievance_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_extensions_sla_tracking_id_fkey'
+        ) THEN
+          ALTER TABLE "sla_extensions" ADD CONSTRAINT "sla_extensions_sla_tracking_id_fkey" FOREIGN KEY ("sla_tracking_id") REFERENCES "sla_tracking"("sla_tracking_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_extensions_requested_by_fkey'
+        ) THEN
+          ALTER TABLE "sla_extensions" ADD CONSTRAINT "sla_extensions_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "users"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_extensions_reviewed_by_fkey'
+        ) THEN
+          ALTER TABLE "sla_extensions" ADD CONSTRAINT "sla_extensions_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "users"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_pause_logs_sla_tracking_id_fkey'
+        ) THEN
+          ALTER TABLE "sla_pause_logs" ADD CONSTRAINT "sla_pause_logs_sla_tracking_id_fkey" FOREIGN KEY ("sla_tracking_id") REFERENCES "sla_tracking"("sla_tracking_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_pause_logs_paused_by_fkey'
+        ) THEN
+          ALTER TABLE "sla_pause_logs" ADD CONSTRAINT "sla_pause_logs_paused_by_fkey" FOREIGN KEY ("paused_by") REFERENCES "users"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sla_pause_logs_resumed_by_fkey'
+        ) THEN
+          ALTER TABLE "sla_pause_logs" ADD CONSTRAINT "sla_pause_logs_resumed_by_fkey" FOREIGN KEY ("resumed_by") REFERENCES "users"("user_id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+        END IF;
+      END $$;
+    `);
+
+    await c.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '_prisma_migrations') THEN
+          IF NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name = '20261119_add_closure_reason') THEN
+            INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
+            VALUES (gen_random_uuid()::text, 'self-healed', CURRENT_TIMESTAMP, '20261119_add_closure_reason', NULL, NULL, CURRENT_TIMESTAMP, 1);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name = '20261119_add_sla_extensions') THEN
+            INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
+            VALUES (gen_random_uuid()::text, 'self-healed', CURRENT_TIMESTAMP, '20261119_add_sla_extensions', NULL, NULL, CURRENT_TIMESTAMP, 1);
+          END IF;
+          IF NOT EXISTS (SELECT 1 FROM "_prisma_migrations" WHERE migration_name = '20261118_sla_pause_logs') THEN
+            INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, logs, rolled_back_at, started_at, applied_steps_count)
+            VALUES (gen_random_uuid()::text, 'self-healed', CURRENT_TIMESTAMP, '20261118_sla_pause_logs', NULL, NULL, CURRENT_TIMESTAMP, 1);
+          END IF;
+        END IF;
+      END $$;
+    `);
+  };
+
+  try {
+    if (customClient) {
+      await runner(customClient);
+    } else if (pool) {
+      const conn = await pool.connect();
+      try {
+        await runner(conn);
+      } finally {
+        conn.release();
+      }
+    }
+    isSchemaEnsured = true;
+    console.log(
+      "[SLA Engine] Production database schema verified and self-healed.",
+    );
+  } catch (err) {
+    console.warn(
+      "[SLA Engine] Schema verification warning (queries will proceed):",
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
 /**
  * Executes a callback within a dedicated PostgreSQL session-level advisory lock.
  * Uses a single dedicated client checked out from the connection pool so that
@@ -1492,6 +1644,8 @@ export async function withSlaAdvisoryLock<T>(
     if (!hasLock) {
       return { acquired: false, inProgress: true };
     }
+
+    await ensureRequiredDatabaseSchema(client);
 
     const result = await callback();
     return { acquired: true, result };

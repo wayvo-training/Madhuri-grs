@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import {
+  ensureRequiredDatabaseSchema,
   evaluateAllActiveGrievancesSla,
   evaluateGrievanceSla,
   processAutoClosures,
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    // Ensure physical database schema has closure_reason and extension tables
+    await ensureRequiredDatabaseSchema();
 
     let body: { grievanceId?: string; departmentId?: string } = {};
     try {

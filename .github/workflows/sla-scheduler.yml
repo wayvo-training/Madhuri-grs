@@ -13,7 +13,7 @@ permissions:
 jobs:
   run-scheduler:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
 
     steps:
       - name: Trigger GRS SLA Scheduler
@@ -30,7 +30,10 @@ jobs:
 
           RESPONSE=$(mktemp)
           STATUS=$(curl -sS -o "$RESPONSE" -w "%{http_code}" \
-            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            --max-time 90 \
             -X POST "${APP_BASE_URL%/}/api/sla/evaluate" \
             -H "Content-Type: application/json" \
             -H "x-cron-secret: $CRON_SECRET" \

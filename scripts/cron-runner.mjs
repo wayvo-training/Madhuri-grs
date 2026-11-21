@@ -43,7 +43,7 @@ async function runScheduler() {
   const baseUrl = normalizedBase.replace(/\/+$/, "");
   const targetUrl = `${baseUrl}/api/sla/evaluate`;
 
-  const timeoutMs = 30000; // 30-second timeout
+  const timeoutMs = 60000; // 60-second timeout to accommodate cold starts
   const startTime = Date.now();
 
   console.log(`[CRON START] Triggering GRS SLA background scheduler sweep...`);

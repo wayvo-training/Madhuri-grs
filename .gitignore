@@ -49,3 +49,4 @@ scratch/
 database_backup*.json
 /scripts/*
 !scripts/cron-runner.mjs
+!scripts/deploy-migrations.mjs
