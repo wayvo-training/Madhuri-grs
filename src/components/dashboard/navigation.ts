@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart3,
   Bell,
   BookOpen,
   Building2,
@@ -8,6 +9,8 @@ import {
   MessageSquare,
   ShieldCheck,
   Sliders,
+  Timer,
+  TrendingUp,
   User,
   Users,
 } from "lucide-react";
@@ -41,6 +44,24 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Executive Overview",
           href: "/admin/dashboard",
           icon: LayoutDashboard,
+        },
+        {
+          title: "Operational Reports",
+          href: "/admin/reports/operational",
+          icon: BarChart3,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Resolution Analytics (TAT)",
+          href: "/admin/reports/resolution",
+          icon: Timer,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Trend & Pattern Analysis",
+          href: "/admin/reports/trends",
+          icon: TrendingUp,
+          requiredPermission: "VIEW_REPORTS",
         },
         {
           title: "Grievances & Exceptions",
@@ -144,6 +165,24 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Activity",
           href: "/department-head/activity",
           icon: Activity,
+        },
+        {
+          title: "Operational Reports",
+          href: "/department-head/reports/operational",
+          icon: BarChart3,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Resolution Analytics (TAT)",
+          href: "/department-head/reports/resolution",
+          icon: Timer,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Trend & Pattern Analysis",
+          href: "/department-head/reports/trends",
+          icon: TrendingUp,
+          requiredPermission: "VIEW_REPORTS",
         },
       ],
     },
