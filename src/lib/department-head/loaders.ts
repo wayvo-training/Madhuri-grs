@@ -1033,6 +1033,16 @@ export async function fetchDepartmentHeadGrievances(
             a.assignment_status === "CO_ASSIGNED"),
       );
       const primaryAssignment =
+        deptAssignments.find(
+          (a) =>
+            a.assignment_role === "PRIMARY" &&
+            a.assignment_status === "ASSIGNED",
+        ) ||
+        deptAssignments.find(
+          (a) =>
+            a.assignment_status === "ASSIGNED" &&
+            a.assignment_role !== "SUPPORTING",
+        ) ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         deptAssignments[0];
       const supportingAssignments = deptAssignments.filter(

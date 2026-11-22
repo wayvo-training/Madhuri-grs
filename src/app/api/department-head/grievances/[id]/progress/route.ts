@@ -69,7 +69,7 @@ export async function GET(
 
         assignments: {
           where: { assignment_status: { in: ["ASSIGNED", "COMPLETED"] } },
-          orderBy: { assigned_at: "desc" },
+          orderBy: { assigned_at: "asc" },
           include: {
             users_assignments_staff_idTousers: {
               select: {
@@ -208,7 +208,7 @@ export async function GET(
           },
         },
       },
-      orderBy: { assigned_at: "desc" },
+      orderBy: { assigned_at: "asc" },
     });
 
     // Security check: belongs to head's department unless admin preview
@@ -271,6 +271,16 @@ export async function GET(
           a.assignment_status === "CO_ASSIGNED",
       );
       const primaryAssignment =
+        activeAssignments.find(
+          (a) =>
+            a.assignment_role === "PRIMARY" &&
+            a.assignment_status === "ASSIGNED",
+        ) ||
+        activeAssignments.find(
+          (a) =>
+            a.assignment_status === "ASSIGNED" &&
+            a.assignment_role !== "SUPPORTING",
+        ) ||
         activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         activeAssignments[0] ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||

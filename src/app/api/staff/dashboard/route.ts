@@ -665,8 +665,19 @@ export async function GET(request: Request) {
         );
         const primaryAssignment =
           activeAssignments.find(
+            (assign) =>
+              assign.assignment_role === "PRIMARY" &&
+              assign.assignment_status === "ASSIGNED",
+          ) ||
+          activeAssignments.find(
+            (assign) =>
+              assign.assignment_status === "ASSIGNED" &&
+              assign.assignment_role !== "SUPPORTING",
+          ) ||
+          activeAssignments.find(
             (assign) => assign.assignment_role === "PRIMARY",
-          ) || activeAssignments[0];
+          ) ||
+          activeAssignments[0];
         const supportingAssignments = activeAssignments.filter(
           (assign) => assign !== primaryAssignment,
         );

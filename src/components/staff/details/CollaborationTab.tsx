@@ -107,14 +107,21 @@ export function CollaborationTab({
                       {dept.assignedStaff || "Unassigned"}
                     </span>
                   </div>
-                  {dept.supportingStaff && dept.supportingStaff.length > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span>Co-Staff:</span>
-                      <span className="font-medium text-teal-800">
-                        {dept.supportingStaff.map((s) => s.name).join(", ")}
-                      </span>
-                    </div>
-                  )}
+                  {dept.supportingStaff &&
+                    dept.supportingStaff.length > 0 &&
+                    dept.supportingStaff.some(
+                      (s) => s.name !== dept.assignedStaff,
+                    ) && (
+                      <div className="flex items-center justify-between">
+                        <span>Co-Staff:</span>
+                        <span className="font-medium text-teal-800">
+                          {dept.supportingStaff
+                            .filter((s) => s.name !== dept.assignedStaff)
+                            .map((s) => s.name)
+                            .join(", ")}
+                        </span>
+                      </div>
+                    )}
                   <div className="flex items-center justify-between">
                     <span>Status:</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-900">

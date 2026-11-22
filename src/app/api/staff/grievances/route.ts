@@ -218,12 +218,24 @@ export async function GET(req: NextRequest) {
           const activeAssignments = (gd.assignments || []).filter(
             (assign) =>
               assign.assignment_status === "ASSIGNED" ||
+              assign.assignment_status === "CO_ASSIGNED" ||
               assign.assignment_status === "COMPLETED",
           );
           const primaryAssignment =
             activeAssignments.find(
+              (assign) =>
+                assign.assignment_role === "PRIMARY" &&
+                assign.assignment_status === "ASSIGNED",
+            ) ||
+            activeAssignments.find(
+              (assign) =>
+                assign.assignment_status === "ASSIGNED" &&
+                assign.assignment_role !== "SUPPORTING",
+            ) ||
+            activeAssignments.find(
               (assign) => assign.assignment_role === "PRIMARY",
-            ) || activeAssignments[0];
+            ) ||
+            activeAssignments[0];
           const supportingAssignments = activeAssignments.filter(
             (assign) => assign !== primaryAssignment,
           );

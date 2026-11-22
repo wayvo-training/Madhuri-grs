@@ -163,60 +163,60 @@ export function CaseCollaborationTab({
                   </div>
 
                   <div className="space-y-1 text-slate-600 dark:text-slate-300 text-[11px]">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500 dark:text-slate-400">
-                        Staff Assigned:
-                      </span>
-                      <span className="font-medium text-slate-800 dark:text-slate-100">
-                        {dept.assignedStaff || "Unassigned"}
-                      </span>
-                    </div>
                     {(() => {
-                      const coStaffNames =
+                      const iv = currentGrievance.hodIntervention;
+                      const matchAssist = iv?.actionLabel?.match(
+                        /Secondary Staff Co-Assigned \(([^)]+)\) to assist ([^(]+)/,
+                      );
+                      const coStaffFromLabel = matchAssist?.[1]?.trim();
+                      const primaryStaffFromLabel = matchAssist?.[2]?.trim();
+
+                      let rawAssigned = dept.assignedStaff || "Unassigned";
+                      let rawCoStaff =
                         dept.supportingStaff && dept.supportingStaff.length > 0
                           ? dept.supportingStaff.map((s) => s.name).join(", ")
-                          : (() => {
-                              const iv = currentGrievance.hodIntervention;
-                              if (
-                                (iv?.actionType === "CO_ASSIGN" ||
-                                  iv?.actionLabel?.includes(
-                                    "Secondary Staff Co-Assigned",
-                                  )) &&
-                                (iv?.targetDepartment
-                                  ? dept.departmentName
-                                      ?.toLowerCase()
-                                      .includes(
-                                        iv.targetDepartment.toLowerCase(),
-                                      )
-                                  : true)
-                              ) {
-                                if (
-                                  iv.targetStaffName &&
-                                  iv.targetStaffName !== "Unassigned"
-                                ) {
-                                  return iv.targetStaffName;
-                                }
-                                const match = iv.actionLabel?.match(
-                                  /Secondary Staff Co-Assigned \(([^)]+)\)/,
-                                );
-                                if (match?.[1] && match[1] !== "Unassigned") {
-                                  return match[1];
-                                }
-                              }
-                              return null;
-                            })();
+                          : coStaffFromLabel || null;
 
-                      if (!coStaffNames) return null;
+                      // If the assignment list was inverted where co-assigned staff was mapped as assignedStaff
+                      if (
+                        coStaffFromLabel &&
+                        primaryStaffFromLabel &&
+                        rawAssigned.toLowerCase() ===
+                          coStaffFromLabel.toLowerCase()
+                      ) {
+                        rawAssigned = primaryStaffFromLabel;
+                        rawCoStaff = coStaffFromLabel;
+                      }
+
+                      // Ensure Co-Staff is not identical to Staff Assigned
+                      if (
+                        rawCoStaff &&
+                        rawCoStaff.toLowerCase() === rawAssigned.toLowerCase()
+                      ) {
+                        rawCoStaff = null;
+                      }
 
                       return (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500 dark:text-slate-400">
-                            Co-Staff:
-                          </span>
-                          <span className="font-medium text-teal-800 dark:text-teal-300">
-                            {coStaffNames}
-                          </span>
-                        </div>
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 dark:text-slate-400">
+                              Staff Assigned:
+                            </span>
+                            <span className="font-medium text-slate-800 dark:text-slate-100">
+                              {rawAssigned}
+                            </span>
+                          </div>
+                          {rawCoStaff && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-slate-500 dark:text-slate-400">
+                                Co-Staff:
+                              </span>
+                              <span className="font-medium text-teal-800 dark:text-teal-300">
+                                {rawCoStaff}
+                              </span>
+                            </div>
+                          )}
+                        </>
                       );
                     })()}
                     <div className="flex items-center justify-between">

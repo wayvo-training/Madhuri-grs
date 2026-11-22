@@ -573,7 +573,7 @@ export async function GET(
           select: { first_name: true, last_name: true },
         },
       },
-      orderBy: { assigned_at: "desc" },
+      orderBy: { assigned_at: "asc" },
     });
 
     const departmentsInvolved = rawDepartments.map((rawD) => {
@@ -587,6 +587,16 @@ export async function GET(
           a.assignment_status === "CO_ASSIGNED",
       );
       const primaryAssignment =
+        activeAssignments.find(
+          (a) =>
+            a.assignment_role === "PRIMARY" &&
+            a.assignment_status === "ASSIGNED",
+        ) ||
+        activeAssignments.find(
+          (a) =>
+            a.assignment_status === "ASSIGNED" &&
+            a.assignment_role !== "SUPPORTING",
+        ) ||
         activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         activeAssignments[0] ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
