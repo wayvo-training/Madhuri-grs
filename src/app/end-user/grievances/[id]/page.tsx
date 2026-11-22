@@ -72,6 +72,15 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
       resolutions: {
         include: {
           attachments: true,
+          users: {
+            select: {
+              first_name: true,
+              last_name: true,
+              departments: {
+                select: { department_name: true },
+              },
+            },
+          },
         },
         orderBy: { submitted_at: "desc" },
         take: 1,
@@ -168,6 +177,12 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
   const isCaseClosedOrResolved =
     grievance.status === "CLOSED" || grievance.status === "RESOLVED";
 
+  const resUser = latestResolution?.users;
+  const resUserName = resUser
+    ? `${resUser.first_name} ${resUser.last_name || ""}`.trim()
+    : undefined;
+  const resDeptName = resUser?.departments?.department_name || undefined;
+
   const resolutionData: EndUserResolutionData | null = latestResolution
     ? {
         id: latestResolution.resolution_id.toString(),
@@ -176,6 +191,8 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         findings: latestResolution.findings,
         problemSummary: latestResolution.problem_summary,
         submittedAt: latestResolution.submitted_at.toISOString(),
+        submittedByName: resUserName,
+        submittedByDept: resDeptName,
         attachments: (latestResolution.attachments || []).map((att) => ({
           id: att.attachment_id.toString(),
           name: att.file_name,
@@ -201,7 +218,16 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
       : null;
 
   const supportingFindings = (grievance.audit_logs || [])
-    .filter((l) => l.action === "SUPPORTING_FINDINGS_SUBMITTED")
+    .filter((l) => {
+      if (l.action !== "SUPPORTING_FINDINGS_SUBMITTED") return false;
+      const rawVal = l.new_value;
+      const val =
+        typeof rawVal === "string"
+          ? (JSON.parse(rawVal) as Record<string, unknown>)
+          : (rawVal as Record<string, unknown> | null);
+      if (val?.isResolution === true) return false;
+      return true;
+    })
     .map((l) => {
       const rawVal = l.new_value;
       const val =

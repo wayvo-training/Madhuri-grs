@@ -43,6 +43,8 @@ export interface EndUserResolutionData {
   problemSummary?: string;
   submittedAt: string;
   attachments?: ResolutionAttachment[];
+  submittedByName?: string;
+  submittedByDept?: string;
 }
 
 interface ResolutionCardProps {
@@ -320,6 +322,12 @@ export function ResolutionCard({
               Request Rework (Not Satisfied)
             </span>{" "}
             to return it for re-investigation.
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                Attempt {reopenCount} of {maxReopenAttempts} used (
+                {Math.max(0, maxReopenAttempts - reopenCount)} remaining)
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto justify-end">
             <AcceptResolutionButton grievanceId={grievanceId} />
@@ -332,6 +340,7 @@ export function ResolutionCard({
               }
               maxReopenAttempts={maxReopenAttempts}
               reopenWindowDays={reopenWindowDays}
+              reopenCount={reopenCount}
               limitReason={
                 isPermanentlyClosed
                   ? `This grievance has been permanently closed following ${maxRejections} review rejections by the Department Head. You cannot request rework on this case.`
@@ -478,6 +487,7 @@ export function ResolutionCard({
               isLimitReached={!canReopenClosedCase}
               maxReopenAttempts={maxReopenAttempts}
               reopenWindowDays={reopenWindowDays}
+              reopenCount={reopenCount}
               limitReason={
                 isPermanentlyClosed
                   ? `This grievance has been permanently closed following ${maxRejections} review rejections by the Department Head. You cannot reopen this case.`

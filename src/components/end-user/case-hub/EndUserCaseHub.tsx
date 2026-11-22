@@ -350,17 +350,50 @@ export function EndUserCaseHub({
         : []),
     ];
 
-    // Departmental findings submitted by supporting departments (e.g. HR submitted to Finance)
-    const supportingFindingStages: TimelineStageItem[] = (
-      grievance.supportingFindings || []
-    ).map((f) => ({
-      id: `FINDINGS_${f.department.replace(/\s+/g, "_").toUpperCase()}_${f.id}`,
-      title: `${f.department} Findings Submitted`,
-      defaultDesc: `${f.department} completed investigation and submitted findings to ${grievance.departmentName || "Lead Department"}${f.submittedBy ? ` (by ${f.submittedBy})` : ""}`,
-      icon: FileCheck,
-      customDate: f.submittedAt,
-      isCustomCompleted: true,
-    }));
+    // Departmental findings submitted by collaborating departments (deduplicated by department; excluding primary lead to prevent duplicate steps)
+    const primaryDeptName = (grievance.departmentName || "")
+      .trim()
+      .toLowerCase();
+    const isMultiDept =
+      (grievance.departments && grievance.departments.length > 1) ||
+      Boolean(
+        grievance.supportingFindings && grievance.supportingFindings.length > 0,
+      );
+    const uniqueFindingsMap = new Map<
+      string,
+      NonNullable<typeof grievance.supportingFindings>[0]
+    >();
+    for (const f of grievance.supportingFindings || []) {
+      const key = f.department.trim().toLowerCase();
+      // If multi-department, skip primary lead dept findings here because Lead submits "Final Consolidated Resolution"
+      if (isMultiDept && key === primaryDeptName) {
+        continue;
+      }
+      if (!uniqueFindingsMap.has(key)) {
+        uniqueFindingsMap.set(key, f);
+      }
+    }
+    const uniqueFindings = Array.from(uniqueFindingsMap.values());
+
+    const supportingFindingStages: TimelineStageItem[] = uniqueFindings.map(
+      (f) => {
+        const isSameDept =
+          f.department.trim().toLowerCase() ===
+          (grievance.departmentName || "").trim().toLowerCase();
+        const defaultDesc = isSameDept
+          ? `${f.department} completed investigation stage and submitted findings${f.submittedBy ? ` (by ${f.submittedBy})` : ""}`
+          : `${f.department} completed investigation and submitted findings to ${grievance.departmentName || "Lead Department"}${f.submittedBy ? ` (by ${f.submittedBy})` : ""}`;
+
+        return {
+          id: `FINDINGS_${f.department.replace(/\s+/g, "_").toUpperCase()}_${f.id}`,
+          title: `${f.department} Findings Submitted`,
+          defaultDesc,
+          icon: FileCheck,
+          customDate: f.submittedAt,
+          isCustomCompleted: true,
+        };
+      },
+    );
 
     const leadDept =
       (grievance.departments || []).find(
@@ -689,7 +722,7 @@ export function EndUserCaseHub({
               : "Resolution Submitted",
           defaultDesc:
             grievance.departments && grievance.departments.length > 1
-              ? `${grievance.departmentName || "Lead Department"} compiled departmental findings and filed resolution`
+              ? `${resolution?.submittedByDept || grievance.departmentName || "Lead Department"} compiled departmental findings and filed resolution${resolution?.submittedByName ? ` (by ${resolution.submittedByName})` : ""}`
               : "Department filed findings and action outcome",
           icon: FileCheck,
         },
@@ -1128,7 +1161,12 @@ export function EndUserCaseHub({
         isReopenedStage: Boolean(hasReopened),
       };
     });
-  }, [grievance, resolution?.submittedAt]);
+  }, [
+    grievance,
+    resolution?.submittedAt,
+    resolution?.submittedByName,
+    resolution?.submittedByDept,
+  ]);
 
   // Separate documents into End User Documents and Investigation Staff Documents
   const endUserDocuments = useMemo(() => {
@@ -1680,6 +1718,7 @@ export function EndUserCaseHub({
                         isLimitReached={!canReopen}
                         reopenWindowDays={reopenWindowDays}
                         maxReopenAttempts={maxReopenAttempts}
+                        reopenCount={grievance.reopenCount ?? 0}
                         limitReason={
                           isPermanentlyClosed
                             ? `This case is permanently closed following ${maxRejections} review rejections by the Department Head. You cannot reopen this grievance.`

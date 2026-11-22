@@ -32,6 +32,7 @@ interface ReopenButtonProps {
   limitReason?: string;
   maxReopenAttempts?: number;
   reopenWindowDays?: number;
+  reopenCount?: number;
 }
 
 export function ReopenButton({
@@ -44,6 +45,7 @@ export function ReopenButton({
   limitReason,
   maxReopenAttempts = 3,
   reopenWindowDays = 14,
+  reopenCount = 0,
 }: ReopenButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -159,8 +161,8 @@ export function ReopenButton({
                     <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
                       {limitReason ||
                         (isRework
-                          ? "You have already reached the maximum limit of 3 combined rework and reopening attempts for this grievance. In accordance with organizational governance, no further rework requests can be submitted."
-                          : "You have already reached the maximum limit of 3 combined rework and reopening attempts for this grievance. In accordance with organizational governance, no further reopening requests can be submitted.")}
+                          ? `You have already reached the maximum limit of ${maxReopenAttempts} combined rework and reopening attempts for this grievance. In accordance with organizational governance, no further rework requests can be submitted.`
+                          : `You have already reached the maximum limit of ${maxReopenAttempts} combined rework and reopening attempts for this grievance. In accordance with organizational governance, no further reopening requests can be submitted.`)}
                     </p>
                   </div>
                 </div>
@@ -196,6 +198,19 @@ export function ReopenButton({
             </DialogHeader>
 
             <div className="grid gap-3 py-3">
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">
+                  {isRework
+                    ? "Rework Request Tracker:"
+                    : "Reopening Request Tracker:"}
+                </span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  Attempt {reopenCount + 1} of {maxReopenAttempts} (Used:{" "}
+                  {reopenCount} · Remaining:{" "}
+                  {Math.max(0, maxReopenAttempts - reopenCount)})
+                </span>
+              </div>
+
               <Textarea
                 id="reopen-reason"
                 maxLength={MAX_REOPEN_REASON_LENGTH}
