@@ -64,7 +64,7 @@ export async function GET(
         },
         assignments: {
           where: {
-            assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
             ...(isAdmin ? {} : { staff_id: staffId }),
           },
         },
@@ -566,7 +566,7 @@ export async function GET(
     const allDeptAssignments = await prisma.assignments.findMany({
       where: {
         grievance_id: grievanceId,
-        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
       },
       include: {
         users_assignments_staff_idTousers: {
@@ -581,17 +581,25 @@ export async function GET(
       const deptAssignments = allDeptAssignments.filter(
         (a) => a.grievance_department_id === d.grievance_department_id,
       );
+      const activeAssignments = deptAssignments.filter(
+        (a) =>
+          a.assignment_status === "ASSIGNED" ||
+          a.assignment_status === "CO_ASSIGNED",
+      );
       const primaryAssignment =
+        activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        activeAssignments[0] ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         deptAssignments[0];
-      const supportingAssignments = deptAssignments.filter(
+      const supportingAssignments = activeAssignments.filter(
         (a) => a !== primaryAssignment,
       );
 
       let deptStatus = d.status;
       if (
         primaryAssignment &&
-        primaryAssignment.assignment_status === "ASSIGNED"
+        (primaryAssignment.assignment_status === "ASSIGNED" ||
+          primaryAssignment.assignment_status === "CO_ASSIGNED")
       ) {
         if (deptStatus === "PENDING_ASSIGNMENT") {
           deptStatus = "ASSIGNED";
@@ -606,6 +614,7 @@ export async function GET(
           ? null
           : staffUser &&
               (primaryAssignment?.assignment_status === "ASSIGNED" ||
+                primaryAssignment?.assignment_status === "CO_ASSIGNED" ||
                 primaryAssignment?.assignment_status === "COMPLETED")
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
@@ -814,11 +823,17 @@ export async function GET(
           isFinalSequentialDept: false,
         };
 
-    const isPrimaryStaff =
-      currentAssignment?.assignment_role === "PRIMARY" ||
-      (!currentAssignment?.assignment_role && isPrimaryOwner);
+    const myAssignment =
+      allDeptAssignments.find((a) => a.staff_id === staffId) ||
+      currentAssignment;
+
     const isSupportingStaff =
-      currentAssignment?.assignment_role === "SUPPORTING";
+      myAssignment?.assignment_role === "SUPPORTING" ||
+      myAssignment?.assignment_status === "CO_ASSIGNED";
+    const isPrimaryStaff =
+      !isSupportingStaff &&
+      (myAssignment?.assignment_role === "PRIMARY" ||
+        (!myAssignment?.assignment_role && isPrimaryOwner));
 
     const canSubmitFinalResolution =
       !isSupportingStaff && (isAdmin || resolutionAuth.canResolve);

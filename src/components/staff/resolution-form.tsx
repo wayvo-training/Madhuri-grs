@@ -370,12 +370,8 @@ export function ResolutionForm({
                           Supporting Investigator
                         </span>
                       ) : !isResolving ? (
-                        <span className="ml-1 text-amber-600 font-medium">
-                          (Sequential Stage Hand-off)
-                        </span>
-                      ) : grievance.isFinalSequentialDepartment ? (
-                        <span className="ml-1 text-emerald-600 font-medium">
-                          (Final Sequential Department Authority)
+                        <span className="ml-1 text-teal-700 font-medium">
+                          (Department Findings)
                         </span>
                       ) : null}
                     </p>
@@ -405,12 +401,10 @@ export function ResolutionForm({
                 <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Stage Hand-off:</strong> Submitting your
+                    <strong>Department Findings:</strong> Submitting your
                     departmental findings completes your investigation and
                     updates your departmental status to{" "}
-                    <strong>COMPLETED</strong>. This will activate the
-                    downstream sequential departments or hand over to the final
-                    resolution stage.
+                    <strong>COMPLETED</strong> for final resolution review.
                   </span>
                 </div>
               ) : null}

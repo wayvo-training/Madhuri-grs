@@ -84,6 +84,9 @@ export async function GET(request: Request) {
             grievance_departments: {
               include: {
                 departments: true,
+                assignments: {
+                  include: { users_assignments_staff_idTousers: true },
+                },
               },
             },
             attachments: {
@@ -653,20 +656,57 @@ export async function GET(request: Request) {
         });
 
       const rawDepts = g.grievance_departments || [];
-      const departmentsInvolved = rawDepts.map((d) => ({
-        id: d.grievance_department_id.toString(),
-        departmentName: d.departments?.department_name || "Unknown Department",
-        involvementType:
-          (d.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
-          "PRIMARY",
-        status: d.status,
-        slaPercentAllocation: d.sla_percent_allocation
-          ? Number(d.sla_percent_allocation)
-          : null,
-        allocatedDurationMinutes: d.allocated_duration_minutes || null,
-        executionOrder: d.execution_order || 1,
-        isMyAssignment: a.grievance_department_id === d.grievance_department_id,
-      }));
+      const departmentsInvolved = rawDepts.map((gd) => {
+        const activeAssignments = (gd.assignments || []).filter(
+          (assign) =>
+            assign.assignment_status === "ASSIGNED" ||
+            assign.assignment_status === "CO_ASSIGNED" ||
+            assign.assignment_status === "COMPLETED",
+        );
+        const primaryAssignment =
+          activeAssignments.find(
+            (assign) => assign.assignment_role === "PRIMARY",
+          ) || activeAssignments[0];
+        const supportingAssignments = activeAssignments.filter(
+          (assign) => assign !== primaryAssignment,
+        );
+
+        const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
+        const assignedStaff = staffUser
+          ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
+          : null;
+
+        return {
+          id: gd.grievance_department_id.toString(),
+          departmentName:
+            gd.departments?.department_name || "Unknown Department",
+          involvementType:
+            (gd.involvement_type as "PRIMARY" | "SUPPORTING" | "EQUAL") ||
+            "PRIMARY",
+          status: gd.status,
+          assignedStaff,
+          primaryStaff: staffUser
+            ? {
+                id: primaryAssignment.staff_id.toString(),
+                name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+              }
+            : null,
+          supportingStaff: supportingAssignments.map((sa) => {
+            const su = sa.users_assignments_staff_idTousers;
+            return {
+              id: sa.staff_id.toString(),
+              name: `${su.first_name} ${su.last_name || ""}`.trim(),
+            };
+          }),
+          slaPercentAllocation: gd.sla_percent_allocation
+            ? Number(gd.sla_percent_allocation)
+            : null,
+          allocatedDurationMinutes: gd.allocated_duration_minutes || null,
+          executionOrder: gd.execution_order || 1,
+          isMyAssignment:
+            gd.grievance_department_id === a.grievance_department_id,
+        };
+      });
 
       const activeDept = rawDepts.find(
         (gd) =>
@@ -689,8 +729,11 @@ export async function GET(request: Request) {
             isFinalSequentialDept: false,
           };
 
-      const isSupportingStaff = a.assignment_role === "SUPPORTING";
-      const isPrimaryStaff = a.assignment_role === "PRIMARY";
+      const isSupportingStaff =
+        a.assignment_role === "SUPPORTING" ||
+        a.assignment_status === "CO_ASSIGNED";
+      const isPrimaryStaff =
+        !isSupportingStaff && a.assignment_role === "PRIMARY";
 
       const canSubmitFinalResolution =
         !isSupportingStaff && (isAdmin || resolutionAuth.canResolve);
