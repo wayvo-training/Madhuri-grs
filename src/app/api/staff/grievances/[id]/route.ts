@@ -576,6 +576,19 @@ export async function GET(
       orderBy: { assigned_at: "asc" },
     });
 
+    const earlyInterventionLog = (grievance.audit_logs || []).find(
+      (l) =>
+        l.action === "HOD_INTERVENTION_TAKEN" ||
+        l.action.includes("INTERVENTION"),
+    );
+    const ivRawStr = earlyInterventionLog?.new_value
+      ? typeof earlyInterventionLog.new_value === "string"
+        ? earlyInterventionLog.new_value
+        : JSON.stringify(earlyInterventionLog.new_value)
+      : "";
+    const assistedStaffMatch = ivRawStr.match(/to assist ([^(",\n]+)/);
+    const assistedStaffName = assistedStaffMatch?.[1]?.trim();
+
     const departmentsInvolved = rawDepartments.map((rawD) => {
       const d = rawD;
       const deptAssignments = allDeptAssignments.filter(
@@ -587,6 +600,13 @@ export async function GET(
           a.assignment_status === "CO_ASSIGNED",
       );
       const primaryAssignment =
+        (assistedStaffName
+          ? activeAssignments.find((a) => {
+              const su = a.users_assignments_staff_idTousers;
+              const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
+              return name.toLowerCase() === assistedStaffName.toLowerCase();
+            })
+          : null) ||
         activeAssignments.find(
           (a) =>
             a.assignment_role === "PRIMARY" &&
@@ -630,7 +650,7 @@ export async function GET(
             : null;
 
       const isMyAssignment = deptAssignments.some(
-        (a) => a.staff_id === staffId,
+        (a) => a.staff_id.toString() === staffId.toString(),
       );
 
       return {
@@ -834,12 +854,25 @@ export async function GET(
         };
 
     const myAssignment =
-      allDeptAssignments.find((a) => a.staff_id === staffId) ||
-      currentAssignment;
+      allDeptAssignments.find(
+        (a) => a.staff_id.toString() === staffId.toString(),
+      ) || currentAssignment;
 
-    const isSupportingStaff =
+    const userFullName = `${user.first_name} ${user.last_name || ""}`.trim();
+    const deptPrimaryAssigned = departmentsInvolved.find(
+      (d) => d.id === myAssignment?.grievance_department_id?.toString(),
+    )?.primaryStaff;
+
+    const isSupportingStaff = Boolean(
       myAssignment?.assignment_role === "SUPPORTING" ||
-      myAssignment?.assignment_status === "CO_ASSIGNED";
+        myAssignment?.assignment_status === "CO_ASSIGNED" ||
+        (deptPrimaryAssigned &&
+          deptPrimaryAssigned.id !== staffId.toString() &&
+          !isAdmin) ||
+        (assistedStaffName &&
+          userFullName.toLowerCase() !== assistedStaffName.toLowerCase() &&
+          !isAdmin),
+    );
     const isPrimaryStaff =
       !isSupportingStaff &&
       (myAssignment?.assignment_role === "PRIMARY" ||
@@ -935,6 +968,7 @@ export async function GET(
       departmentsInvolved,
       myInvolvementType,
       isPrimaryOwner,
+      currentStaffName: userFullName,
       myDepartmentStatus: myDept?.status || "ASSIGNED",
       isMyDepartmentCompleted: isMyDeptCompleted,
       canSubmitFinalResolution,

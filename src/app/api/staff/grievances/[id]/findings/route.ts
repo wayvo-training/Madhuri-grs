@@ -140,7 +140,8 @@ export async function POST(
       .find(
         (a) =>
           a.staff_id.toString() === staffId.toString() &&
-          a.assignment_status === "ASSIGNED",
+          (a.assignment_status === "ASSIGNED" ||
+            a.assignment_status === "CO_ASSIGNED"),
       );
 
     if (!myAssignment && !isAdmin) {
@@ -221,7 +222,7 @@ export async function POST(
           await tx.assignments.updateMany({
             where: {
               grievance_department_id: myDeptRecord.grievance_department_id,
-              assignment_status: "ASSIGNED",
+              assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
             },
             data: {
               assignment_status: "COMPLETED",

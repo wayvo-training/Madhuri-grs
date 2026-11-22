@@ -177,21 +177,43 @@ export function CaseCollaborationTab({
                           ? dept.supportingStaff.map((s) => s.name).join(", ")
                           : coStaffFromLabel || null;
 
-                      // If the assignment list was inverted where co-assigned staff was mapped as assignedStaff
-                      if (
-                        coStaffFromLabel &&
-                        primaryStaffFromLabel &&
-                        rawAssigned.toLowerCase() ===
-                          coStaffFromLabel.toLowerCase()
-                      ) {
-                        rawAssigned = primaryStaffFromLabel;
-                        rawCoStaff = coStaffFromLabel;
+                      // If the intervention designated a primary staff to assist:
+                      if (primaryStaffFromLabel) {
+                        if (
+                          rawAssigned.toLowerCase() !==
+                          primaryStaffFromLabel.toLowerCase()
+                        ) {
+                          rawCoStaff =
+                            rawAssigned !== "Unassigned"
+                              ? rawAssigned
+                              : coStaffFromLabel &&
+                                  coStaffFromLabel.toLowerCase() !==
+                                    "unassigned"
+                                ? coStaffFromLabel
+                                : rawCoStaff;
+                          rawAssigned = primaryStaffFromLabel;
+                        } else if (
+                          (!rawCoStaff ||
+                            rawCoStaff.toLowerCase() === "unassigned") &&
+                          coStaffFromLabel &&
+                          coStaffFromLabel.toLowerCase() !== "unassigned"
+                        ) {
+                          rawCoStaff = coStaffFromLabel;
+                        }
                       }
 
                       // Ensure Co-Staff is not identical to Staff Assigned
                       if (
                         rawCoStaff &&
                         rawCoStaff.toLowerCase() === rawAssigned.toLowerCase()
+                      ) {
+                        rawCoStaff = null;
+                      }
+
+                      // If Co-Staff is literal "Unassigned", omit it
+                      if (
+                        rawCoStaff &&
+                        rawCoStaff.toLowerCase() === "unassigned"
                       ) {
                         rawCoStaff = null;
                       }

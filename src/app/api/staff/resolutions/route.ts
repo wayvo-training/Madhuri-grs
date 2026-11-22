@@ -360,7 +360,7 @@ export async function POST(request: Request) {
       where: {
         grievance_id: gId,
         staff_id: staffId,
-        assignment_status: "ASSIGNED",
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
       },
       data: {
         assignment_status: "COMPLETED",

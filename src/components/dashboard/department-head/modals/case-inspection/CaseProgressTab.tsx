@@ -638,25 +638,25 @@ export function CaseProgressTab({
                     )}
 
                     {dept.supportingStaff &&
-                      dept.supportingStaff.length > 0 && (
+                      dept.supportingStaff.length > 0 &&
+                      dept.supportingStaff.some(
+                        (s) =>
+                          s.name !== dept.assignedStaff &&
+                          s.name.toLowerCase() !== "unassigned",
+                      ) && (
                         <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
                           <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
                             Co-Staff:
                           </span>
                           <span className="font-medium text-teal-700 dark:text-teal-300 text-right truncate">
-                            {dept.supportingStaff.map((s) => s.name).join(", ")}
-                          </span>
-                        </div>
-                      )}
-
-                    {dept.supportingStaff &&
-                      dept.supportingStaff.length > 0 && (
-                        <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
-                          <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
-                            Co-Staff:
-                          </span>
-                          <span className="font-medium text-teal-700 dark:text-teal-300 text-right truncate">
-                            {dept.supportingStaff.map((s) => s.name).join(", ")}
+                            {dept.supportingStaff
+                              .filter(
+                                (s) =>
+                                  s.name !== dept.assignedStaff &&
+                                  s.name.toLowerCase() !== "unassigned",
+                              )
+                              .map((s) => s.name)
+                              .join(", ")}
                           </span>
                         </div>
                       )}

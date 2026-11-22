@@ -260,6 +260,19 @@ export async function GET(
         DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
     );
 
+    const earlyInterventionLog = (grievance.audit_logs || []).find(
+      (l) =>
+        l.action === "HOD_INTERVENTION_TAKEN" ||
+        l.action.includes("INTERVENTION"),
+    );
+    const ivRawStr = earlyInterventionLog?.new_value
+      ? typeof earlyInterventionLog.new_value === "string"
+        ? earlyInterventionLog.new_value
+        : JSON.stringify(earlyInterventionLog.new_value)
+      : "";
+    const assistedStaffMatch = ivRawStr.match(/to assist ([^(",\n]+)/);
+    const assistedStaffName = assistedStaffMatch?.[1]?.trim();
+
     const departmentsInvolved = rawDepartments.map((rawD) => {
       const d = rawD;
       const deptAssignments = allDeptAssignments.filter(
@@ -271,6 +284,13 @@ export async function GET(
           a.assignment_status === "CO_ASSIGNED",
       );
       const primaryAssignment =
+        (assistedStaffName
+          ? activeAssignments.find((a) => {
+              const su = a.users_assignments_staff_idTousers;
+              const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
+              return name.toLowerCase() === assistedStaffName.toLowerCase();
+            })
+          : null) ||
         activeAssignments.find(
           (a) =>
             a.assignment_role === "PRIMARY" &&

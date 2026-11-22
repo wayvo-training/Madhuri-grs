@@ -172,6 +172,7 @@ export interface StaffGrievanceItem {
   isPrimaryOwner?: boolean;
   isPrimaryStaff?: boolean;
   isSupportingStaff?: boolean;
+  currentStaffName?: string;
   primaryStaff?: { id: string; name: string; email: string } | null;
   supportingStaff?: Array<{
     id: string;

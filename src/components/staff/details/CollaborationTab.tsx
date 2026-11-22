@@ -110,13 +110,19 @@ export function CollaborationTab({
                   {dept.supportingStaff &&
                     dept.supportingStaff.length > 0 &&
                     dept.supportingStaff.some(
-                      (s) => s.name !== dept.assignedStaff,
+                      (s) =>
+                        s.name !== dept.assignedStaff &&
+                        s.name.toLowerCase() !== "unassigned",
                     ) && (
                       <div className="flex items-center justify-between">
                         <span>Co-Staff:</span>
                         <span className="font-medium text-teal-800">
                           {dept.supportingStaff
-                            .filter((s) => s.name !== dept.assignedStaff)
+                            .filter(
+                              (s) =>
+                                s.name !== dept.assignedStaff &&
+                                s.name.toLowerCase() !== "unassigned",
+                            )
                             .map((s) => s.name)
                             .join(", ")}
                         </span>

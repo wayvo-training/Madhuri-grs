@@ -59,7 +59,7 @@ export async function POST(
       where: {
         grievance_id: grievanceId,
         staff_id: staffId,
-        assignment_status: "ASSIGNED",
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
       },
       include: {
         grievance_departments: {
@@ -68,6 +68,44 @@ export async function POST(
         grievances: true,
       },
     });
+
+    if (!assignment && !isAdmin) {
+      // Check if user is an active staff member of any active department assigned to this grievance
+      const deptRecord = await prisma.grievance_departments.findFirst({
+        where: {
+          grievance_id: grievanceId,
+          ...(departmentId ? { department_id: departmentId } : {}),
+        },
+        include: {
+          departments: true,
+          grievances: true,
+        },
+      });
+
+      if (deptRecord) {
+        // Auto-link active supporting assignment for this staff member
+        assignment = await prisma.assignments.create({
+          data: {
+            grievance_id: grievanceId,
+            grievance_department_id: deptRecord.grievance_department_id,
+            staff_id: staffId,
+            assigned_by: user.user_id,
+            assigned_at: new Date(),
+            assignment_role: "SUPPORTING",
+            assignment_status: "ASSIGNED",
+            recommendation_reasons: {
+              reason: "Supporting investigator findings submission",
+            },
+          },
+          include: {
+            grievance_departments: {
+              include: { departments: true },
+            },
+            grievances: true,
+          },
+        });
+      }
+    }
 
     if (!assignment && !isAdmin) {
       return NextResponse.json(
@@ -85,7 +123,7 @@ export async function POST(
       const primaryAssignment = await prisma.assignments.findFirst({
         where: {
           grievance_id: grievanceId,
-          assignment_status: "ASSIGNED",
+          assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
         },
         include: {
           grievance_departments: {
@@ -154,7 +192,7 @@ export async function POST(
     const primaryAssignment = await prisma.assignments.findFirst({
       where: {
         grievance_department_id: grievanceDeptId,
-        assignment_status: "ASSIGNED",
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
         assignment_role: "PRIMARY",
       },
     });

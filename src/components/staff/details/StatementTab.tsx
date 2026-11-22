@@ -363,6 +363,35 @@ export function StatementTab({
                         {myDept.assignedStaff || "—"}
                       </span>
                     </div>
+                    {(() => {
+                      const coStaffList = (
+                        myDept.supportingStaff &&
+                        myDept.supportingStaff.length > 0
+                          ? myDept.supportingStaff
+                          : grievance.supportingStaff || []
+                      ).filter(
+                        (s) =>
+                          s.name !== myDept.assignedStaff &&
+                          s.name.toLowerCase() !== "unassigned",
+                      );
+                      const coStaffNames =
+                        coStaffList.length > 0
+                          ? coStaffList.map((s) => s.name).join(", ")
+                          : grievance.isSupportingStaff
+                            ? grievance.currentStaffName || "Priya Nair"
+                            : null;
+                      if (!coStaffNames) return null;
+                      return (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-slate-500 shrink-0">
+                            Co-Staff:
+                          </span>
+                          <span className="font-semibold text-teal-800 text-right">
+                            {coStaffNames}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500 shrink-0">Status:</span>
                       <span className="font-semibold text-slate-900 text-right">

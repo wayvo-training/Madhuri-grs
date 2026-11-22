@@ -356,7 +356,7 @@ export async function fetchDepartmentHeadGrievances(
     prisma.assignments.findMany({
       where: {
         grievance_id: { in: gIds },
-        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
       },
       include: {
         users_assignments_staff_idTousers: {
@@ -364,7 +364,7 @@ export async function fetchDepartmentHeadGrievances(
         },
         grievance_departments: { include: { departments: true } },
       },
-      orderBy: { assigned_at: "desc" },
+      orderBy: { assigned_at: "asc" },
     }),
     prisma.staff_investigation_findings.findMany({
       where: { grievance_id: { in: gIds } },
@@ -1032,7 +1032,19 @@ export async function fetchDepartmentHeadGrievances(
           (a.assignment_status === "ASSIGNED" ||
             a.assignment_status === "CO_ASSIGNED"),
       );
+      const assistedStaffMatch = hodIntervention?.actionLabel?.match(
+        /to assist ([^(",\n]+)/,
+      );
+      const assistedStaffName = assistedStaffMatch?.[1]?.trim();
+
       const primaryAssignment =
+        (assistedStaffName
+          ? deptAssignments.find((a) => {
+              const su = a.users_assignments_staff_idTousers;
+              const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
+              return name.toLowerCase() === assistedStaffName.toLowerCase();
+            })
+          : null) ||
         deptAssignments.find(
           (a) =>
             a.assignment_role === "PRIMARY" &&
