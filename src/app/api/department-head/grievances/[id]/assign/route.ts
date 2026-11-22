@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DEFAULT_ASSIGNMENT_CONFIG } from "@/lib/constants/assignment";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import { prisma } from "@/lib/prisma";
+import { NotificationService } from "@/lib/services/notification.service";
 
 export async function POST(
   request: Request,
@@ -28,6 +29,17 @@ export async function POST(
       replaceStaffId,
       replaceAssignmentId,
     } = body;
+
+    if ((rawAssignmentRole || role || "").toUpperCase() === "SUPPORTING") {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Supportive staff can only be assigned during Department Head Intervention.",
+        },
+        { status: 400 },
+      );
+    }
 
     const assignmentRole: "PRIMARY" | "SUPPORTING" =
       (rawAssignmentRole || role || "PRIMARY").toUpperCase() === "SUPPORTING"
@@ -195,6 +207,8 @@ export async function POST(
 
     let priorAssignment: { assignment_id: bigint; staff_id: bigint } | null =
       null;
+    let shouldStartReworkCycle = false;
+    let shouldStartReopenedCycle = false;
 
     // 3. Database transaction: Complete prior active assignment, create new assignment, update status and logs
     await prisma.$transaction(async (tx) => {
@@ -342,8 +356,8 @@ export async function POST(
       // Update grievance status to ASSIGNED if unassigned, or progress REWORK/REOPENED workflows
       let newStatus = grievance.status;
       let shouldIncrementReopenCount = false;
-      let shouldStartReworkCycle = false;
-      let shouldStartReopenedCycle = false;
+      shouldStartReworkCycle = false;
+      shouldStartReopenedCycle = false;
 
       if (
         grievance.status === "SUBMITTED" ||
@@ -356,19 +370,13 @@ export async function POST(
         newStatus = "IN_PROGRESS";
         shouldIncrementReopenCount = true;
         shouldStartReworkCycle = true;
-      } else if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
-        const hasBeenClosed =
-          Boolean(grievance.closed_at) ||
-          Boolean(
-            await tx.grievance_status_history.findFirst({
-              where: { grievance_id: grievanceId, old_status: "CLOSED" },
-            }),
-          );
-        if (hasBeenClosed) {
-          newStatus = "REOPENED";
-          shouldIncrementReopenCount = true;
-          shouldStartReopenedCycle = true;
-        }
+      } else if (
+        grievance.status === "REOPENED" ||
+        grievance.status === "RESOLUTION_PENDING_APPROVAL"
+      ) {
+        newStatus = "IN_PROGRESS";
+        shouldIncrementReopenCount = true;
+        shouldStartReopenedCycle = true;
       }
 
       await tx.grievances.update({
@@ -392,6 +400,65 @@ export async function POST(
           "@/lib/engines/sla-engine"
         );
         await initiateReopenedSlaCycle(grievanceId, grievance.priority, tx);
+      }
+
+      // Multi-department handling for collaborating/supportive departments on rework/reopen:
+      if (shouldStartReworkCycle || shouldStartReopenedCycle) {
+        const allDepts = await tx.grievance_departments.findMany({
+          where: { grievance_id: grievanceId },
+        });
+
+        const isSequential = allDepts.some(
+          (d) =>
+            d.dependency_type === "SEQUENTIAL" ||
+            Number(d.execution_order || 1) > 1,
+        );
+
+        const supportingDepts = allDepts.filter(
+          (d) =>
+            d.grievance_department_id !== grievanceDept.grievance_department_id,
+        );
+
+        for (const sDept of supportingDepts) {
+          if (!isSequential) {
+            // In parallel workflow: Reactivate supportive departments into PENDING_ASSIGNMENT
+            await tx.grievance_departments.update({
+              where: {
+                grievance_department_id: sDept.grievance_department_id,
+              },
+              data: {
+                status: "PENDING_ASSIGNMENT",
+                activated_at: new Date(),
+                completed_at: null,
+                sla_status: "ON_TRACK",
+              },
+            });
+          } else {
+            // In sequential workflow: Reset downstream to BLOCKED
+            await tx.grievance_departments.update({
+              where: {
+                grievance_department_id: sDept.grievance_department_id,
+              },
+              data: {
+                status: "BLOCKED",
+                completed_at: null,
+                sla_status: "ON_TRACK",
+              },
+            });
+          }
+
+          // Complete prior active assignments for supporting departments so they appear unassigned
+          await tx.assignments.updateMany({
+            where: {
+              grievance_department_id: sDept.grievance_department_id,
+              assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
+            },
+            data: {
+              assignment_status: "REASSIGNED",
+              completed_at: new Date(),
+            },
+          });
+        }
       }
 
       // Record audit log
@@ -432,6 +499,48 @@ export async function POST(
         },
       });
     });
+
+    // If rework or reopen cycle started, notify supportive department heads
+    if (shouldStartReworkCycle || shouldStartReopenedCycle) {
+      const otherDepts = await prisma.grievance_departments.findMany({
+        where: {
+          grievance_id: grievanceId,
+          grievance_department_id: {
+            not: grievanceDept.grievance_department_id,
+          },
+        },
+      });
+
+      if (otherDepts.length > 0) {
+        const isSequentialFlow = otherDepts.some(
+          (d) =>
+            d.dependency_type === "SEQUENTIAL" ||
+            Number(d.execution_order || 1) > 1,
+        );
+        const otherDeptIds = otherDepts.map((d) => d.department_id);
+        const supportiveHeads = await prisma.users.findMany({
+          where: {
+            department_id: { in: otherDeptIds },
+            roles: { role_name: "DEPARTMENT_HEAD" },
+            status: "ACTIVE",
+          },
+          select: { user_id: true, department_id: true },
+        });
+
+        const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
+        for (const sHead of supportiveHeads) {
+          await NotificationService.send({
+            userId: sHead.user_id,
+            grievanceId,
+            type: shouldStartReworkCycle
+              ? "REWORK_REQUIRED"
+              : "GRIEVANCE_REOPENED",
+            title: `Grievance ${shouldStartReworkCycle ? "Rework" : "Reopening"} Approved: ${grievance.grievance_number}`,
+            message: `Lead Department Head (${hodFullName}) approved the ${shouldStartReworkCycle ? "rework" : "reopening"} request for grievance ${grievance.grievance_number}. A new SLA cycle has started. ${!isSequentialFlow ? "Your department stage is in Pending Assignment — you can directly investigate or assign an officer in your queue." : "Your department stage is queued and will activate once upstream prerequisites complete."}`,
+          });
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,

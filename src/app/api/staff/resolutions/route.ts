@@ -381,19 +381,17 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!requiresHeadReview) {
-      // Resolution finalized and sent to user; mark all remaining active involved departments as COMPLETED
-      await prisma.grievance_departments.updateMany({
-        where: {
-          grievance_id: gId,
-          status: { notIn: ["COMPLETED", "REMOVED"] },
-        },
-        data: {
-          status: "COMPLETED",
-          completed_at: new Date(),
-        },
-      });
-    }
+    // Resolution submitted: mark all remaining active involved departments as COMPLETED
+    await prisma.grievance_departments.updateMany({
+      where: {
+        grievance_id: gId,
+        status: { notIn: ["COMPLETED", "REMOVED"] },
+      },
+      data: {
+        status: "COMPLETED",
+        completed_at: new Date(),
+      },
+    });
 
     // Unblock any downstream sequential departments if applicable
     await activateNextSequentialDepartments(gId);

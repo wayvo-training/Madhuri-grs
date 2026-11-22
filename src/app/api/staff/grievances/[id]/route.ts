@@ -109,6 +109,17 @@ export async function GET(
           orderBy: { created_at: "desc" },
           take: 1,
         },
+        staff_investigation_findings: {
+          include: {
+            users: {
+              select: {
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -368,7 +379,9 @@ export async function GET(
         const val = l.new_value as {
           isFindings?: boolean;
           note?: string;
+          isResolution?: boolean;
         } | null;
+        if (val?.isResolution === true) return false;
         return (
           l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
           val?.isFindings === true ||
@@ -597,10 +610,21 @@ export async function GET(
       const activeAssignments = deptAssignments.filter(
         (a) =>
           a.assignment_status === "ASSIGNED" ||
-          a.assignment_status === "CO_ASSIGNED",
+          a.assignment_status === "CO_ASSIGNED" ||
+          a.assignment_status === "COMPLETED",
       );
+      const isInterventionForThisDept = Boolean(
+        assistedStaffName &&
+          (ivRawStr
+            .toLowerCase()
+            .includes((d.departments?.department_name || "").toLowerCase()) ||
+            (d.departments?.department_name || "")
+              .toLowerCase()
+              .includes("human resources")),
+      );
+
       const primaryAssignment =
-        (assistedStaffName
+        (isInterventionForThisDept && assistedStaffName
           ? activeAssignments.find((a) => {
               const su = a.users_assignments_staff_idTousers;
               const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
@@ -620,6 +644,7 @@ export async function GET(
         activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         activeAssignments[0] ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments.find((a) => a.assignment_status === "COMPLETED") ||
         deptAssignments[0];
       const supportingAssignments = activeAssignments.filter(
         (a) => a !== primaryAssignment,
@@ -639,7 +664,7 @@ export async function GET(
       }
 
       const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
-      const assignedStaff =
+      let assignedStaff =
         deptStatus === "PENDING_ASSIGNMENT" && !primaryAssignment
           ? null
           : staffUser &&
@@ -648,6 +673,42 @@ export async function GET(
                 primaryAssignment?.assignment_status === "COMPLETED")
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
+
+      // Fallback: If findings are submitted or department is completed, resolve author from findings or audit logs
+      if (
+        !assignedStaff &&
+        (deptStatus === "COMPLETED" || d.status === "COMPLETED")
+      ) {
+        const findingAuthor = (
+          grievance.staff_investigation_findings || []
+        ).find(
+          (sf) => sf.grievance_department_id === d.grievance_department_id,
+        )?.users;
+        if (findingAuthor) {
+          assignedStaff =
+            `${findingAuthor.first_name} ${findingAuthor.last_name || ""}`.trim();
+        } else {
+          const deptFindingLog = (grievance.audit_logs || []).find((l) => {
+            const val = l.new_value as {
+              department_id?: string | number;
+              details?: string;
+              note?: string;
+            } | null;
+            return (
+              ((val?.department_id &&
+                String(val.department_id) === String(d.department_id)) ||
+                String(val?.details || val?.note || "").includes(
+                  d.departments?.department_name || "",
+                )) &&
+              (l.action.includes("FINDING") || l.action.includes("SUBMITTED"))
+            );
+          });
+          if (deptFindingLog?.users) {
+            assignedStaff =
+              `${deptFindingLog.users.first_name} ${deptFindingLog.users.last_name || ""}`.trim();
+          }
+        }
+      }
 
       const isMyAssignment = deptAssignments.some(
         (a) => a.staff_id.toString() === staffId.toString(),
@@ -859,19 +920,18 @@ export async function GET(
       ) || currentAssignment;
 
     const userFullName = `${user.first_name} ${user.last_name || ""}`.trim();
-    const deptPrimaryAssigned = departmentsInvolved.find(
+    const myDeptRecord = departmentsInvolved.find(
       (d) => d.id === myAssignment?.grievance_department_id?.toString(),
-    )?.primaryStaff;
+    );
+    const deptPrimaryAssigned = myDeptRecord?.primaryStaff;
 
     const isSupportingStaff = Boolean(
-      myAssignment?.assignment_role === "SUPPORTING" ||
-        myAssignment?.assignment_status === "CO_ASSIGNED" ||
-        (deptPrimaryAssigned &&
-          deptPrimaryAssigned.id !== staffId.toString() &&
-          !isAdmin) ||
-        (assistedStaffName &&
-          userFullName.toLowerCase() !== assistedStaffName.toLowerCase() &&
-          !isAdmin),
+      !isAdmin &&
+        myAssignment?.assignment_role !== "PRIMARY" &&
+        (myAssignment?.assignment_role === "SUPPORTING" ||
+          myAssignment?.assignment_status === "CO_ASSIGNED" ||
+          (deptPrimaryAssigned &&
+            deptPrimaryAssigned.id !== staffId.toString())),
     );
     const isPrimaryStaff =
       !isSupportingStaff &&
@@ -974,6 +1034,10 @@ export async function GET(
       canSubmitFinalResolution,
       canSubmitFindings,
       isFinalSequentialDepartment,
+      hasPendingSupportingDepartments:
+        resolutionAuth.hasPendingSupporting ?? false,
+      pendingSupportingDepartmentNames:
+        resolutionAuth.pendingSupportingDeptNames ?? [],
       overallStatus: grievance.status,
       latestExtension,
       activeDepartmentName,

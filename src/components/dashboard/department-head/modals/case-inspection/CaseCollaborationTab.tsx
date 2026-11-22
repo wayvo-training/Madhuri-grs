@@ -102,6 +102,7 @@ export function CaseCollaborationTab({
           involvementType: "SUPPORTING" as const,
           status: "IN_PROGRESS",
           assignedStaff: null,
+          primaryStaff: null as { id: string; name: string } | null,
           supportingStaff: [] as Array<{ id: string; name: string }>,
         }));
   const notes = currentGrievance.collaborationNotes || [];
@@ -177,8 +178,27 @@ export function CaseCollaborationTab({
                           ? dept.supportingStaff.map((s) => s.name).join(", ")
                           : coStaffFromLabel || null;
 
-                      // If the intervention designated a primary staff to assist:
-                      if (primaryStaffFromLabel) {
+                      const targetDeptFromIv =
+                        iv?.targetDepartment ||
+                        iv?.actionLabel?.match(/\(([^)]+)\)$/)?.[1]?.trim();
+
+                      const isInterventionForThisDept = Boolean(
+                        targetDeptFromIv
+                          ? dept.departmentName
+                              ?.toLowerCase()
+                              .includes(targetDeptFromIv.toLowerCase()) ||
+                              targetDeptFromIv
+                                .toLowerCase()
+                                .includes(
+                                  (dept.departmentName || "").toLowerCase(),
+                                )
+                          : dept.departmentName
+                              ?.toLowerCase()
+                              .includes("human resources"),
+                      );
+
+                      // Only override for the specific department that had the co-assignment intervention
+                      if (isInterventionForThisDept && primaryStaffFromLabel) {
                         if (
                           rawAssigned.toLowerCase() !==
                           primaryStaffFromLabel.toLowerCase()
@@ -199,6 +219,58 @@ export function CaseCollaborationTab({
                           coStaffFromLabel.toLowerCase() !== "unassigned"
                         ) {
                           rawCoStaff = coStaffFromLabel;
+                        }
+                      }
+
+                      // Fallback: If department completed / findings submitted but rawAssigned is still Unassigned
+                      if (
+                        rawAssigned === "Unassigned" &&
+                        (dept.status === "COMPLETED" ||
+                          dept.status === "RESOLVED")
+                      ) {
+                        const finding =
+                          currentGrievance.supportingFindings?.find(
+                            (f) =>
+                              f.departmentName
+                                ?.toLowerCase()
+                                .includes(
+                                  (dept.departmentName || "").toLowerCase(),
+                                ) ||
+                              (dept.departmentName || "")
+                                .toLowerCase()
+                                .includes(
+                                  (f.departmentName || "").toLowerCase(),
+                                ),
+                          );
+                        if (finding?.submittedBy) {
+                          rawAssigned = finding.submittedBy;
+                        } else if (
+                          dept.primaryStaff?.name &&
+                          dept.primaryStaff.name !== "Unassigned"
+                        ) {
+                          rawAssigned = dept.primaryStaff.name;
+                        }
+                      }
+
+                      // Fallback: If Human Resources co-staff is missing from card, resolve from department supporting staff
+                      if (
+                        !rawCoStaff &&
+                        isInterventionForThisDept &&
+                        (dept.departmentName || "")
+                          .toLowerCase()
+                          .includes("human resources")
+                      ) {
+                        const suppStaff =
+                          dept.supportingStaff?.[0]?.name ||
+                          currentGrievance.supportingStaff?.[0]?.name ||
+                          currentGrievance.departmentsInvolved?.flatMap(
+                            (d) => d.supportingStaff || [],
+                          )?.[0]?.name;
+                        if (
+                          suppStaff &&
+                          suppStaff.toLowerCase() !== rawAssigned.toLowerCase()
+                        ) {
+                          rawCoStaff = suppStaff;
                         }
                       }
 

@@ -274,7 +274,7 @@ export async function POST(
 
     await prisma.$transaction(async (tx) => {
       // Increment shared counter strictly upon Department Head approval
-      const newStatus = isRework ? "IN_PROGRESS" : "REOPENED";
+      const newStatus = "IN_PROGRESS";
 
       await tx.grievances.update({
         where: { grievance_id: grievanceId },
@@ -310,6 +310,60 @@ export async function POST(
             assigned_by: user.user_id,
             assigned_at: new Date(),
             assignment_status: "ASSIGNED",
+          },
+        });
+      }
+
+      // Multi-department handling for collaborating/supportive departments:
+      const supportingDepts = grievance.grievance_departments.filter(
+        (d) =>
+          d.grievance_department_id !== primaryDept?.grievance_department_id,
+      );
+
+      const isSequential = grievance.grievance_departments.some(
+        (d) =>
+          d.dependency_type === "SEQUENTIAL" ||
+          Number(d.execution_order || 1) > 1,
+      );
+
+      for (const sDept of supportingDepts) {
+        if (!isSequential) {
+          // In parallel workflow: Reactivate supportive departments into PENDING_ASSIGNMENT
+          // so supportive department head can directly investigate or assign staff.
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: sDept.grievance_department_id,
+            },
+            data: {
+              status: "PENDING_ASSIGNMENT",
+              activated_at: new Date(),
+              completed_at: null,
+              sla_status: "ON_TRACK",
+            },
+          });
+        } else {
+          // In sequential workflow: Dependent stages are reset to BLOCKED until upstream completes
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: sDept.grievance_department_id,
+            },
+            data: {
+              status: "BLOCKED",
+              completed_at: null,
+              sla_status: "ON_TRACK",
+            },
+          });
+        }
+
+        // Complete prior active assignments for supporting departments so they appear unassigned
+        await tx.assignments.updateMany({
+          where: {
+            grievance_department_id: sDept.grievance_department_id,
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
+          },
+          data: {
+            assignment_status: "REASSIGNED",
+            completed_at: new Date(),
           },
         });
       }
@@ -356,6 +410,38 @@ export async function POST(
       title: `${isRework ? "Rework" : "Reopening"} Request Approved`,
       message: `Your ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number} has been approved by the Department Head. Department investigation is now active.`,
     });
+
+    // Notify Supportive Department Heads (both parallel and sequential)
+    const otherDepts = grievance.grievance_departments.filter(
+      (d) => d.grievance_department_id !== primaryDept?.grievance_department_id,
+    );
+    if (otherDepts.length > 0) {
+      const isSequentialFlow = grievance.grievance_departments.some(
+        (d) =>
+          d.dependency_type === "SEQUENTIAL" ||
+          Number(d.execution_order || 1) > 1,
+      );
+      const otherDeptIds = otherDepts.map((d) => d.department_id);
+      const supportiveHeads = await prisma.users.findMany({
+        where: {
+          department_id: { in: otherDeptIds },
+          roles: { role_name: "DEPARTMENT_HEAD" },
+          status: "ACTIVE",
+        },
+        select: { user_id: true, department_id: true },
+      });
+
+      const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
+      for (const sHead of supportiveHeads) {
+        await NotificationService.send({
+          userId: sHead.user_id,
+          grievanceId,
+          type: isRework ? "REWORK_REQUIRED" : "GRIEVANCE_REOPENED",
+          title: `Grievance ${isRework ? "Rework" : "Reopening"} Approved: ${grievance.grievance_number}`,
+          message: `Lead Department Head (${hodFullName}) approved the ${isRework ? "rework" : "reopening"} request for grievance ${grievance.grievance_number}. A new SLA cycle has started. ${!isSequentialFlow ? "Your department stage is in Pending Assignment — you can directly investigate or assign an officer in your queue." : "Your department stage is queued and will activate once upstream prerequisites complete."}`,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

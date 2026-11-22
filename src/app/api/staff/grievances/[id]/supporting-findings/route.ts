@@ -54,12 +54,11 @@ export async function POST(
       );
     }
 
-    // Verify staff has an active assignment for this grievance
+    // Verify staff has an assignment for this grievance
     let assignment = await prisma.assignments.findFirst({
       where: {
         grievance_id: grievanceId,
         staff_id: staffId,
-        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
       },
       include: {
         grievance_departments: {
@@ -71,7 +70,7 @@ export async function POST(
 
     if (!assignment && !isAdmin) {
       // Check if user is an active staff member of any active department assigned to this grievance
-      const deptRecord = await prisma.grievance_departments.findFirst({
+      let deptRecord = await prisma.grievance_departments.findFirst({
         where: {
           grievance_id: grievanceId,
           ...(departmentId ? { department_id: departmentId } : {}),
@@ -81,6 +80,16 @@ export async function POST(
           grievances: true,
         },
       });
+
+      if (!deptRecord) {
+        deptRecord = await prisma.grievance_departments.findFirst({
+          where: { grievance_id: grievanceId },
+          include: {
+            departments: true,
+            grievances: true,
+          },
+        });
+      }
 
       if (deptRecord) {
         // Auto-link active supporting assignment for this staff member

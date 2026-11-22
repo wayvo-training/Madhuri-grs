@@ -356,7 +356,9 @@ export async function fetchDepartmentHeadGrievances(
     prisma.assignments.findMany({
       where: {
         grievance_id: { in: gIds },
-        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
+        assignment_status: {
+          in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED", "REVOKED", "REASSIGNED"],
+        },
       },
       include: {
         users_assignments_staff_idTousers: {
@@ -364,7 +366,7 @@ export async function fetchDepartmentHeadGrievances(
         },
         grievance_departments: { include: { departments: true } },
       },
-      orderBy: { assigned_at: "asc" },
+      orderBy: { assigned_at: "desc" },
     }),
     prisma.staff_investigation_findings.findMany({
       where: { grievance_id: { in: gIds } },
@@ -429,6 +431,15 @@ export async function fetchDepartmentHeadGrievances(
           null
       : null;
 
+    const myDeptAssignments = departmentId
+      ? grievanceAssignments.filter(
+          (a) =>
+            a.grievance_departments?.department_id &&
+            BigInt(a.grievance_departments.department_id) ===
+              BigInt(departmentId),
+        )
+      : grievanceAssignments;
+
     const myDeptSupportingAssignments = departmentId
       ? grievanceAssignments.filter(
           (a) =>
@@ -465,23 +476,40 @@ export async function fetchDepartmentHeadGrievances(
 
     let resolvedAssignedStaffName: string | null = null;
     if (departmentId) {
-      if (
-        myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
-        isDeptPendingAssignment
-      ) {
-        resolvedAssignedStaffName = "Unassigned";
-      } else if (myDeptRecord?.status === "BLOCKED") {
-        resolvedAssignedStaffName = "Blocked";
-      } else if (myDeptAssignment) {
+      const priorStaff = myDeptAssignments.find(
+        (a) =>
+          a.users_assignments_staff_idTousers &&
+          a.users_assignments_staff_idTousers.roles?.role_name !==
+            "DEPARTMENT_HEAD",
+      )?.users_assignments_staff_idTousers;
+
+      if (myDeptAssignment) {
         const myStaff = myDeptAssignment.users_assignments_staff_idTousers;
         resolvedAssignedStaffName =
           `${myStaff.first_name} ${myStaff.last_name || ""}`.trim();
+      } else if (
+        myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
+        isDeptPendingAssignment
+      ) {
+        // If prior staff assignment existed (e.g. before HOD assumed authority or on rework), preserve it!
+        if (priorStaff) {
+          resolvedAssignedStaffName =
+            `${priorStaff.first_name} ${priorStaff.last_name || ""}`.trim();
+        } else {
+          resolvedAssignedStaffName = "Unassigned";
+        }
+      } else if (myDeptRecord?.status === "BLOCKED") {
+        resolvedAssignedStaffName = "Blocked";
       } else if (
         ["CLOSED", "RESOLVED"].includes(g.status) &&
         (latestResolution?.users ||
           grievanceAssignments[0]?.users_assignments_staff_idTousers)
       ) {
-        if (latestResolution?.users) {
+        // When closed or resolved, prefer displaying the prior assigned staff or resolution submitter
+        if (priorStaff) {
+          resolvedAssignedStaffName =
+            `${priorStaff.first_name} ${priorStaff.last_name || ""}`.trim();
+        } else if (latestResolution?.users) {
           const resolver = latestResolution.users;
           const role = resolver.roles?.role_name;
           resolvedAssignedStaffName =
@@ -496,7 +524,13 @@ export async function fetchDepartmentHeadGrievances(
             `${otherStaff.first_name} ${otherStaff.last_name || ""}`.trim();
         }
       } else {
-        resolvedAssignedStaffName = "Unassigned";
+        const fallbackPriorStaff =
+          priorStaff ||
+          myDeptAssignments.find((a) => a.users_assignments_staff_idTousers)
+            ?.users_assignments_staff_idTousers;
+        resolvedAssignedStaffName = fallbackPriorStaff
+          ? `${fallbackPriorStaff.first_name} ${fallbackPriorStaff.last_name || ""}`.trim()
+          : "Unassigned";
       }
     } else {
       if (isDeptPendingAssignment) {
@@ -627,6 +661,7 @@ export async function fetchDepartmentHeadGrievances(
     const supportingFindings: SupportingDepartmentFinding[] = g.audit_logs
       .filter((l) => {
         const val = parseLogVal(l);
+        if (val.isResolution === true) return false;
         return (
           l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
           val.isFindings === true ||
@@ -942,27 +977,57 @@ export async function fetchDepartmentHeadGrievances(
       let actionLabel = (iv.actionLabel as string) || "HOD Intervention";
       let resolvedTargetStaffName = iv.targetStaffName as string | undefined;
 
-      // Self-healing: if actionLabel contains "(Unassigned)" for CO_ASSIGN
+      const assistedStaffMatch = actionLabel.match(/to assist ([^(",\n]+)/);
+      const assistedStaff = assistedStaffMatch?.[1]?.trim();
+
+      // Dynamic resolution: Ensure the co-assigned staff name in actionLabel matches the department's actual co-assigned staff
       if (
-        (iv.actionType === "CO_ASSIGN" ||
-          actionLabel.includes("Secondary Staff Co-Assigned")) &&
-        (actionLabel.includes("(Unassigned)") ||
-          !resolvedTargetStaffName ||
-          resolvedTargetStaffName === "Unassigned")
+        iv.actionType === "CO_ASSIGN" ||
+        actionLabel.includes("Secondary Staff Co-Assigned")
       ) {
-        const supportingAssignment = grievanceAssignments.find(
-          (a) =>
-            (a.assignment_role === "SUPPORTING" ||
-              a.assignment_status === "CO_ASSIGNED") &&
-            (a.assignment_status === "ASSIGNED" ||
-              a.assignment_status === "CO_ASSIGNED") &&
-            a.users_assignments_staff_idTousers,
+        // Find Human Resources department records
+        const hrDeptRecord = allDeptRecords.find(
+          (d) =>
+            (d.departments?.department_name || "")
+              .toLowerCase()
+              .includes("human resources") ||
+            (iv.targetDepartment &&
+              (d.departments?.department_name || "")
+                .toLowerCase()
+                .includes(String(iv.targetDepartment).toLowerCase())),
         );
+
+        const hrAssignments = grievanceAssignments.filter(
+          (a) =>
+            hrDeptRecord &&
+            a.grievance_department_id === hrDeptRecord.grievance_department_id,
+        );
+
+        const supportingAssignment = hrAssignments.find((a) => {
+          const su = a.users_assignments_staff_idTousers;
+          if (!su) return false;
+          const name = `${su.first_name} ${su.last_name || ""}`.trim();
+          if (
+            assistedStaff &&
+            name.toLowerCase() === assistedStaff.toLowerCase()
+          )
+            return false;
+          return true;
+        });
+
         if (supportingAssignment?.users_assignments_staff_idTousers) {
           const su = supportingAssignment.users_assignments_staff_idTousers;
           const foundName = `${su.first_name} ${su.last_name || ""}`.trim();
           resolvedTargetStaffName = foundName;
-          actionLabel = actionLabel.replace("(Unassigned)", `(${foundName})`);
+          actionLabel = actionLabel.replace(
+            /Secondary Staff Co-Assigned( \([^)]+\))?/,
+            `Secondary Staff Co-Assigned (${foundName})`,
+          );
+        } else {
+          actionLabel = actionLabel.replace(
+            /Secondary Staff Co-Assigned( \([^)]+\))?/,
+            "Secondary Staff Co-Assigned",
+          );
         }
       }
 
@@ -1030,15 +1095,27 @@ export async function fetchDepartmentHeadGrievances(
         (a) =>
           a.grievance_department_id === d.grievance_department_id &&
           (a.assignment_status === "ASSIGNED" ||
-            a.assignment_status === "CO_ASSIGNED"),
+            a.assignment_status === "CO_ASSIGNED" ||
+            a.assignment_status === "COMPLETED"),
       );
       const assistedStaffMatch = hodIntervention?.actionLabel?.match(
         /to assist ([^(",\n]+)/,
       );
       const assistedStaffName = assistedStaffMatch?.[1]?.trim();
+      const isInterventionForThisDept = Boolean(
+        assistedStaffName &&
+          (Boolean(
+            hodIntervention?.actionLabel
+              ?.toLowerCase()
+              .includes((d.departments?.department_name || "").toLowerCase()),
+          ) ||
+            (d.departments?.department_name || "")
+              .toLowerCase()
+              .includes("human resources")),
+      );
 
       const primaryAssignment =
-        (assistedStaffName
+        (isInterventionForThisDept && assistedStaffName
           ? deptAssignments.find((a) => {
               const su = a.users_assignments_staff_idTousers;
               const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
@@ -1056,6 +1133,7 @@ export async function fetchDepartmentHeadGrievances(
             a.assignment_role !== "SUPPORTING",
         ) ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments.find((a) => a.assignment_status === "COMPLETED") ||
         deptAssignments[0];
       const supportingAssignments = deptAssignments.filter(
         (a) => a !== primaryAssignment,
@@ -1063,12 +1141,26 @@ export async function fetchDepartmentHeadGrievances(
 
       const deptStatus = d.status;
       const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
-      const assignedStaffUser =
+      let assignedStaffUser =
         deptStatus === "PENDING_ASSIGNMENT" || !primaryAssignment
           ? null
           : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
+
+      // Fallback: If findings are submitted or department is completed, resolve author from findings
+      if (
+        !assignedStaffUser &&
+        (deptStatus === "COMPLETED" || d.status === "COMPLETED")
+      ) {
+        const findingAuthor = allStaffFindings.find(
+          (sf) => sf.grievance_department_id === d.grievance_department_id,
+        )?.users;
+        if (findingAuthor) {
+          assignedStaffUser =
+            `${findingAuthor.first_name} ${findingAuthor.last_name || ""}`.trim();
+        }
+      }
 
       return {
         id: d.grievance_department_id.toString(),
@@ -1535,6 +1627,7 @@ export async function fetchDepartmentHeadStaff(departmentId: bigint) {
   const rawStaff = await prisma.users.findMany({
     where: {
       department_id: departmentId,
+      status: "ACTIVE",
       roles: {
         role_name: "STAFF",
       },

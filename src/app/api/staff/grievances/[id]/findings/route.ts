@@ -160,14 +160,24 @@ export async function POST(
       myAssignment.assignment_role === "SUPPORTING" &&
       !isAdmin
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Forbidden: Supporting Staff cannot submit department findings. Please submit your findings via Supporting Findings.",
+      const savedFinding = await prisma.staff_investigation_findings.create({
+        data: {
+          grievance_id: grievanceId,
+          grievance_department_id:
+            myAssignment.grievance_department_id ||
+            allInvolvedDepts[0]?.grievance_department_id,
+          assignment_id: myAssignment.assignment_id,
+          staff_id: staffId,
+          finding_content: findings.trim(),
+          action_taken: actionTaken.trim() || undefined,
+          notes: notes.trim() || undefined,
         },
-        { status: 403 },
-      );
+      });
+      return NextResponse.json({
+        success: true,
+        message: "Supporting findings submitted successfully!",
+        data: { id: savedFinding.finding_id.toString() },
+      });
     }
 
     const myDeptRecord =

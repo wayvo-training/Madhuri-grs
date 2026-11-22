@@ -368,83 +368,89 @@ export function CaseFileInspectionModal({
           </div>
         )}
 
-        {currentGrievance.status === "REWORK" && (
-          <div className="mx-6 mt-3 rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0 mt-0.5">
-                  <RotateCcw className="h-4 w-4" />
+        {(currentGrievance.status === "REWORK" ||
+          currentGrievance.status === "REOPENED") &&
+          (currentGrievance.isPrimaryDepartment ?? true) && (
+            <div className="mx-6 mt-3 rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 text-xs shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1.5 bg-amber-100 rounded-lg text-amber-800 shrink-0 mt-0.5">
+                    <RotateCcw className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
+                      {isBannerReworkAccepted
+                        ? `${currentGrievance.status === "REOPENED" ? "Reopening" : "Rework"} Request Accepted · Select Action`
+                        : `Citizen ${currentGrievance.status === "REOPENED" ? "Reopening" : "Rework"} Request Awaiting Your Action`}
+                    </h4>
+                    <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
+                      {isBannerReworkAccepted
+                        ? `You accepted the ${currentGrievance.status === "REOPENED" ? "reopening" : "rework"} request. Choose to assign an eligible staff member for investigation, or assume direct authority to resolve personally.`
+                        : `The citizen requested to ${currentGrievance.status === "REOPENED" ? "reopen this closed grievance" : "rework this grievance"}. Please Accept the request to proceed with staff assignment or direct intervention, or Decline the request.`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-                    {isBannerReworkAccepted
-                      ? "Rework Request Accepted · Select Action"
-                      : "Citizen Rework Request Awaiting Your Action"}
-                  </h4>
-                  <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
-                    {isBannerReworkAccepted
-                      ? "You accepted the rework request. Choose to assign an eligible staff member for investigation, or assume direct authority to resolve personally."
-                      : "The citizen was unsatisfied with the initial resolution. Please Accept the request to proceed with staff assignment or direct intervention, or Decline the request."}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                {!isBannerReworkAccepted ? (
-                  <>
-                    {onDeclineRequestClick && (
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  {!isBannerReworkAccepted ? (
+                    <>
+                      {onDeclineRequestClick && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onDeclineRequestClick(currentGrievance)
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+                          <span>Decline Request</span>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => onDeclineRequestClick(currentGrievance)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition cursor-pointer shadow-2xs"
-                      >
-                        <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
-                        <span>Decline Request</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsBannerReworkAccepted(true)}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Accept Request</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {onAssignClick && (
-                      <button
-                        type="button"
-                        onClick={() => onAssignClick(currentGrievance)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50 transition cursor-pointer shadow-2xs"
-                      >
-                        <UserCheck className="h-3.5 w-3.5 text-teal-600" />
-                        <span>Assign Staff</span>
-                      </button>
-                    )}
-                    {onDirectInterveneClick && (
-                      <button
-                        type="button"
-                        onClick={() => onDirectInterveneClick(currentGrievance)}
+                        onClick={() => setIsBannerReworkAccepted(true)}
                         className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
                       >
-                        <Shield className="h-3.5 w-3.5" />
-                        <span>Assume Authority</span>
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Accept Request</span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setIsBannerReworkAccepted(false)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
-                    >
-                      <span>Back</span>
-                    </button>
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      {onAssignClick && (
+                        <button
+                          type="button"
+                          onClick={() => onAssignClick(currentGrievance)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-50 transition cursor-pointer shadow-2xs"
+                        >
+                          <UserCheck className="h-3.5 w-3.5 text-teal-600" />
+                          <span>Assign Staff</span>
+                        </button>
+                      )}
+                      {onDirectInterveneClick && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onDirectInterveneClick(currentGrievance)
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#115E59] transition cursor-pointer shadow-xs"
+                        >
+                          <Shield className="h-3.5 w-3.5" />
+                          <span>Assume Authority</span>
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsBannerReworkAccepted(false)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        <span>Back</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Navigation Tabs */}
         <div className="flex items-center border-b border-slate-200 px-6 bg-white gap-6 text-sm font-semibold shrink-0 overflow-x-auto custom-scrollbar">

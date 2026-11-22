@@ -183,8 +183,20 @@ export function CaseInspectionHeader({
                   <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>
-                      Current Head Intervention &ndash;{" "}
-                      {hodIntervention.actionLabel}
+                      Current Head Intervention &ndash; {(() => {
+                        const label = hodIntervention.actionLabel || "";
+                        if (!label.includes("(Unassigned)")) return label;
+                        if (
+                          hodIntervention.targetStaffName &&
+                          hodIntervention.targetStaffName !== "Unassigned"
+                        ) {
+                          return label.replace(
+                            /\(Unassigned\)/g,
+                            `(${hodIntervention.targetStaffName})`,
+                          );
+                        }
+                        return label.replace(" (Unassigned)", "");
+                      })()}
                       {hodIntervention.targetDepartment
                         ? ` (${hodIntervention.targetDepartment})`
                         : ""}

@@ -143,7 +143,9 @@ export function CaseInspectionFooter({
             </button>
           )}
 
-          {currentGrievance.status === "REWORK" ? (
+          {(currentGrievance.status === "REWORK" ||
+            currentGrievance.status === "REOPENED") &&
+          (currentGrievance.isPrimaryDepartment ?? true) ? (
             !isReworkAccepted ? (
               <>
                 {onDeclineRequestClick && (
@@ -151,7 +153,7 @@ export function CaseInspectionFooter({
                     type="button"
                     onClick={() => onDeclineRequestClick(currentGrievance)}
                     className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300 bg-rose-50/80 px-3.5 py-2 text-xs font-semibold text-rose-700 shadow-2xs hover:bg-rose-100 transition cursor-pointer"
-                    title="Decline rework request and maintain original resolution"
+                    title={`Decline ${currentGrievance.status === "REOPENED" ? "reopening" : "rework"} request`}
                   >
                     <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
                     <span>Decline Request</span>
@@ -161,7 +163,7 @@ export function CaseInspectionFooter({
                   type="button"
                   onClick={() => setIsReworkAccepted(true)}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
-                  title="Accept rework request to assign staff or assume direct authority"
+                  title={`Accept ${currentGrievance.status === "REOPENED" ? "reopening" : "rework"} request to assign staff or assume direct authority`}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>Accept Request</span>
@@ -206,7 +208,8 @@ export function CaseInspectionFooter({
             !isClosedOrResolved &&
             currentGrievance.status !== "COMPLETED" &&
             currentGrievance.status !== "UNDER_REVIEW" &&
-            currentGrievance.myDepartmentStatus !== "COMPLETED" &&
+            (currentGrievance.myDepartmentStatus !== "COMPLETED" ||
+              Boolean(currentGrievance.isReopened)) &&
             !hasHeadResolutionAuthority(currentGrievance) && (
               <button
                 type="button"
@@ -215,15 +218,17 @@ export function CaseInspectionFooter({
               >
                 <UserCheck className="h-3.5 w-3.5 text-slate-500" />
                 <span>
-                  {currentGrievance.assignedStaffId &&
-                  currentGrievance.assignedStaffName !== "Unassigned" &&
-                  currentGrievance.myDepartmentStatus !==
-                    "PENDING_ASSIGNMENT" &&
-                  currentGrievance.status !== "PENDING_ASSIGNMENT" &&
-                  currentGrievance.status !== "ROUTED" &&
-                  currentGrievance.status !== "SUBMITTED"
-                    ? "Change Assignment"
-                    : "Assign Staff"}
+                  {currentGrievance.myDepartmentStatus === "PENDING_ASSIGNMENT"
+                    ? "Assign Staff"
+                    : currentGrievance.assignedStaffId &&
+                        currentGrievance.assignedStaffName !== "Unassigned" &&
+                        currentGrievance.myDepartmentStatus !==
+                          "PENDING_ASSIGNMENT" &&
+                        currentGrievance.status !== "PENDING_ASSIGNMENT" &&
+                        currentGrievance.status !== "ROUTED" &&
+                        currentGrievance.status !== "SUBMITTED"
+                      ? "Change Assignment"
+                      : "Assign Staff"}
                 </span>
               </button>
             )
@@ -232,14 +237,18 @@ export function CaseInspectionFooter({
           {!isClosedOrResolved &&
             currentGrievance.status !== "COMPLETED" &&
             currentGrievance.status !== "REWORK" &&
-            currentGrievance.myDepartmentStatus !== "COMPLETED" &&
+            currentGrievance.status !== "REOPENED" &&
+            (currentGrievance.myDepartmentStatus !== "COMPLETED" ||
+              Boolean(currentGrievance.isReopened)) &&
             !hasHeadResolutionAuthority(currentGrievance) &&
             onEscalateClick &&
             (currentGrievance.slaStatus === "AT_RISK" ||
               currentGrievance.slaStatus === "BREACHED" ||
               currentGrievance.status === "ESCALATED" ||
               Boolean(currentGrievance.escalationReason) ||
-              currentGrievance.escalationStage === "GRIEVANCE_ESCALATED") && (
+              currentGrievance.escalationStage === "GRIEVANCE_ESCALATED" ||
+              currentGrievance.myDepartmentStatus === "PENDING_ASSIGNMENT" ||
+              Boolean(currentGrievance.isReopened)) && (
               <button
                 type="button"
                 onClick={() => onEscalateClick(currentGrievance)}
@@ -252,6 +261,7 @@ export function CaseInspectionFooter({
             )}
 
           {currentGrievance.status !== "REWORK" &&
+          currentGrievance.status !== "REOPENED" &&
           canHeadSubmitResolution(currentGrievance) ? (
             currentGrievance.canSubmitFinalResolution !== false ? (
               <button

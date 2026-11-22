@@ -37,6 +37,7 @@ export function CollaborationTab({
           status: "IN_PROGRESS",
           assignedStaff: null,
           isMyAssignment: idx === 0,
+          primaryStaff: null as { id: string; name: string } | null,
           supportingStaff: [] as Array<{ id: string; name: string }>,
         }));
   const crossDeptNotes = grievance.collaborationNotes || [];
@@ -104,30 +105,72 @@ export function CollaborationTab({
                   <div className="flex items-center justify-between">
                     <span>Staff Assigned:</span>
                     <span className="font-medium text-slate-900">
-                      {dept.assignedStaff || "Unassigned"}
+                      {(() => {
+                        if (
+                          dept.assignedStaff &&
+                          dept.assignedStaff !== "Unassigned"
+                        ) {
+                          return dept.assignedStaff;
+                        }
+                        if (
+                          dept.primaryStaff?.name &&
+                          dept.primaryStaff.name !== "Unassigned"
+                        ) {
+                          return dept.primaryStaff.name;
+                        }
+                        const finding = grievance.supportingFindings?.find(
+                          (f) =>
+                            f.departmentName
+                              ?.toLowerCase()
+                              .includes(
+                                (dept.departmentName || "").toLowerCase(),
+                              ) ||
+                            (dept.departmentName || "")
+                              .toLowerCase()
+                              .includes((f.departmentName || "").toLowerCase()),
+                        );
+                        if (finding?.submittedBy) {
+                          return finding.submittedBy;
+                        }
+                        if (
+                          (dept.departmentName || "")
+                            .toLowerCase()
+                            .includes("human resources") &&
+                          grievance.primaryStaff?.name
+                        ) {
+                          return grievance.primaryStaff.name;
+                        }
+                        return "Unassigned";
+                      })()}
                     </span>
                   </div>
-                  {dept.supportingStaff &&
-                    dept.supportingStaff.length > 0 &&
-                    dept.supportingStaff.some(
+                  {(() => {
+                    const validSupporting = (dept.supportingStaff || []).filter(
                       (s) =>
                         s.name !== dept.assignedStaff &&
                         s.name.toLowerCase() !== "unassigned",
-                    ) && (
+                    );
+                    const coStaffNames =
+                      validSupporting.length > 0
+                        ? validSupporting.map((s) => s.name).join(", ")
+                        : (dept.departmentName || "")
+                              .toLowerCase()
+                              .includes("human resources")
+                          ? grievance.supportingStaff?.[0]?.name ||
+                            (grievance.isSupportingStaff
+                              ? grievance.currentStaffName
+                              : null)
+                          : null;
+                    if (!coStaffNames) return null;
+                    return (
                       <div className="flex items-center justify-between">
                         <span>Co-Staff:</span>
                         <span className="font-medium text-teal-800">
-                          {dept.supportingStaff
-                            .filter(
-                              (s) =>
-                                s.name !== dept.assignedStaff &&
-                                s.name.toLowerCase() !== "unassigned",
-                            )
-                            .map((s) => s.name)
-                            .join(", ")}
+                          {coStaffNames}
                         </span>
                       </div>
-                    )}
+                    );
+                  })()}
                   <div className="flex items-center justify-between">
                     <span>Status:</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-900">

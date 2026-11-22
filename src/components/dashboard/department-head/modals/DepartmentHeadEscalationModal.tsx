@@ -57,9 +57,10 @@ export function DepartmentHeadEscalationModal({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Filter staff list to only include other staff members (exclude currently assigned staff)
+  // Filter staff list to only include active other staff members (exclude currently assigned staff)
   const eligibleStaffList = staffList.filter(
     (s) =>
+      s.status === "ACTIVE" &&
       s.name !== grievance.assignedStaffName &&
       s.id !== grievance.assignedStaffId,
   );

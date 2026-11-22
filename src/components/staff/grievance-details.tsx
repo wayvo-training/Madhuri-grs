@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   ArrowLeft,
   BookOpen,
   CheckCircle2,
@@ -113,6 +114,27 @@ export function GrievanceDetails({
   const [hasProposedKb, setHasProposedKb] = useState(
     Boolean(grievance.hasProposedKb),
   );
+  const [showPendingSupportingModal, setShowPendingSupportingModal] =
+    useState(false);
+
+  const triggerOpenResolution = () => {
+    if (onOpenResolutionForm) {
+      onOpenResolutionForm(grievance);
+    } else {
+      onOpenResolveModal?.();
+    }
+  };
+
+  const handleOpenFinalResolution = () => {
+    if (
+      grievance.hasPendingSupportingDepartments &&
+      (grievance.pendingSupportingDepartmentNames?.length ?? 0) > 0
+    ) {
+      setShowPendingSupportingModal(true);
+    } else {
+      triggerOpenResolution();
+    }
+  };
 
   useEffect(() => {
     if (grievance.latestExtension !== undefined) {
@@ -223,29 +245,19 @@ export function GrievanceDetails({
                 <span>{grievance.subcategory}</span>
                 <span className="text-slate-300">&bull;</span>
                 <PriorityBadge priority={grievance.priority} />
-                <StatusBadge status={grievance.status} />
+                <StatusBadge
+                  status={grievance.status}
+                  label={
+                    grievance.status === "COMPLETED"
+                      ? "Findings Submitted"
+                      : undefined
+                  }
+                />
                 {grievance.isSupportingStaff ? (
                   <span className="inline-flex items-center gap-1 rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800">
                     Supporting Investigator
                   </span>
-                ) : grievance.isPrimaryStaff ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                    Primary Investigator
-                  </span>
                 ) : null}
-                {grievance.overallStatus &&
-                  (grievance.isMyDepartmentCompleted ||
-                    grievance.status === "COMPLETED") &&
-                  grievance.overallStatus !== "COMPLETED" &&
-                  grievance.overallStatus !== "CLOSED" &&
-                  grievance.overallStatus !== "RESOLVED" && (
-                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                      Case: {grievance.overallStatus.replace(/_/g, " ")}
-                      {grievance.activeDepartmentName
-                        ? ` (${grievance.activeDepartmentName})`
-                        : ""}
-                    </span>
-                  )}
               </div>
             </div>
 
@@ -257,20 +269,32 @@ export function GrievanceDetails({
               )}
               {grievance.slaStatus && (
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900">
-                  {grievance.slaStatus === "BREACHED" && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                  {grievance.status === "COMPLETED" ||
+                  grievance.isMyDepartmentCompleted ? (
+                    <>
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      {grievance.slaStatus === "BREACHED"
+                        ? "Completed Past SLA"
+                        : "Completed On Track"}
+                    </>
+                  ) : (
+                    <>
+                      {grievance.slaStatus === "BREACHED" && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                      )}
+                      {grievance.slaStatus === "AT_RISK" && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      )}
+                      {grievance.slaStatus === "ON_TRACK" && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      )}
+                      {grievance.slaStatus === "BREACHED"
+                        ? "SLA Breached"
+                        : grievance.slaStatus === "AT_RISK"
+                          ? "SLA At Risk"
+                          : "Within SLA"}
+                    </>
                   )}
-                  {grievance.slaStatus === "AT_RISK" && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                  )}
-                  {grievance.slaStatus === "ON_TRACK" && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  )}
-                  {grievance.slaStatus === "BREACHED"
-                    ? "SLA Breached"
-                    : grievance.slaStatus === "AT_RISK"
-                      ? "SLA At Risk"
-                      : "Within SLA"}
                 </span>
               )}
             </div>
@@ -513,16 +537,12 @@ export function GrievanceDetails({
                   <FileCheck2 className="h-3.5 w-3.5" />
                   <span>Submit Investigation Findings</span>
                 </button>
-              ) : grievance.canSubmitFinalResolution ? (
+              ) : grievance.canSubmitFinalResolution ||
+                (grievance.isFinalSequentialDepartment &&
+                  !grievance.isSupportingStaff) ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (onOpenResolutionForm) {
-                      onOpenResolutionForm(grievance);
-                    } else {
-                      onOpenResolveModal?.();
-                    }
-                  }}
+                  onClick={handleOpenFinalResolution}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
                 >
                   <FileCheck2 className="h-3.5 w-3.5" />
@@ -584,13 +604,7 @@ export function GrievanceDetails({
                   return (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (onOpenResolutionForm) {
-                          onOpenResolutionForm(grievance);
-                        } else {
-                          onOpenResolveModal?.();
-                        }
-                      }}
+                      onClick={handleOpenFinalResolution}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
                     >
                       <FileCheck2 className="h-3.5 w-3.5" />
@@ -622,6 +636,7 @@ export function GrievanceDetails({
               grievance.status !== "ASSIGNED" &&
               grievance.myDepartmentStatus !== "BLOCKED" &&
               !grievance.isSupportingStaff &&
+              grievance.myInvolvementType !== "SUPPORTING" &&
               (localExtension?.status === "PENDING" ? (
                 <span
                   className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-2xs"
@@ -773,6 +788,54 @@ export function GrievanceDetails({
             });
           }}
         />
+        {/* Early Resolution Confirmation Modal when Supporting Findings are Pending */}
+        {showPendingSupportingModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+              <div className="flex items-start gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-slate-900">
+                    Supporting Findings Still Pending
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Supporting department(s){" "}
+                    <strong className="text-slate-900 font-semibold">
+                      {grievance.pendingSupportingDepartmentNames?.join(", ")}
+                    </strong>{" "}
+                    have not submitted their investigation findings yet.
+                  </p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Are you sure you want to proceed and finalize the customer
+                    resolution without their findings?
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowPendingSupportingModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition cursor-pointer"
+                >
+                  Wait for Findings
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPendingSupportingModal(false);
+                    triggerOpenResolution();
+                  }}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#0F766E] rounded-xl hover:bg-[#115E59] shadow-xs transition cursor-pointer"
+                >
+                  Yes, Submit Final Resolution
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

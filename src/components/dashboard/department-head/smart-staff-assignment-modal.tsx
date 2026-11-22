@@ -14,6 +14,7 @@ import {
   Loader2,
   Scale,
   Send,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   User,
@@ -281,9 +282,7 @@ export function SmartStaffAssignmentModal({
   const [recommendations, setRecommendations] = useState<
     StaffRecommendationResult[]
   >([]);
-  const [assignmentRole, setAssignmentRole] = useState<
-    "PRIMARY" | "SUPPORTING"
-  >("PRIMARY");
+  const assignmentRole: "PRIMARY" | "SUPPORTING" = "PRIMARY";
   const [replaceStaffId, setReplaceStaffId] = useState<string | null>(null);
   const [replaceStaffName, setReplaceStaffName] = useState<string | null>(null);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
@@ -294,8 +293,9 @@ export function SmartStaffAssignmentModal({
 
   // Fetch recommendations from API
   const fallbackFromStaffList = useCallback(() => {
-    const fallbackList: StaffRecommendationResult[] = staffList.map(
-      (s, index) => {
+    const fallbackList: StaffRecommendationResult[] = staffList
+      .filter((s) => s.status === "ACTIVE")
+      .map((s, index) => {
         const effectiveMax = 10;
         const isAtCap = s.activeTickets >= effectiveMax;
         const isTop = index === 0 && s.status === "ACTIVE" && !isAtCap;
@@ -403,8 +403,7 @@ export function SmartStaffAssignmentModal({
             slaScore,
           },
         };
-      },
-    );
+      });
     setRecommendations(fallbackList);
   }, [staffList, grievance.priority]);
 
@@ -475,7 +474,7 @@ export function SmartStaffAssignmentModal({
     recommendedCandidates[0];
 
   const manualCandidates = [...staffList]
-    .filter((s) => s.id !== topCandidate?.staffId && s.status !== "ON_LEAVE")
+    .filter((s) => s.id !== topCandidate?.staffId && s.status === "ACTIVE")
     .sort((a, b) => {
       const recA = recommendations.find((r) => r.staffId === a.id);
       const recB = recommendations.find((r) => r.staffId === b.id);
@@ -579,14 +578,9 @@ export function SmartStaffAssignmentModal({
         return;
       }
 
-      const successToast =
-        assignmentRole === "SUPPORTING"
-          ? replaceStaffId
-            ? `Supporting Investigator reassigned to ${selectedCandidate.name}`
-            : `Added ${selectedCandidate.name} as Supporting Investigator`
-          : isReassignment
-            ? `Primary Investigator reassigned to ${selectedCandidate.name}`
-            : `Grievance assigned to ${selectedCandidate.name}`;
+      const successToast = isReassignment
+        ? `Primary Investigator reassigned to ${selectedCandidate.name}`
+        : `Grievance assigned to ${selectedCandidate.name}`;
 
       toast.success(successToast, {
         id: `assign-${selectedCandidate.staffId}`,
@@ -744,18 +738,9 @@ export function SmartStaffAssignmentModal({
                 <Users className="h-3.5 w-3.5 text-teal-600" />
                 <span>Department Staff Team</span>
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setAssignmentRole("SUPPORTING");
-                  setReplaceStaffId(null);
-                  setReplaceStaffName(null);
-                  setSelectedStaffId("");
-                }}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-lg hover:bg-teal-100 transition cursor-pointer"
-              >
-                + Add Supporting Staff
-              </button>
+              <span className="text-[11px] text-slate-400">
+                Supportive staff is co-assigned via Head SLA Intervention
+              </span>
             </div>
 
             {/* Primary Investigator */}
@@ -788,20 +773,17 @@ export function SmartStaffAssignmentModal({
                 <button
                   type="button"
                   onClick={() => {
-                    setAssignmentRole("PRIMARY");
                     setReplaceStaffId(null);
                     setReplaceStaffName(null);
                     setSelectedStaffId("");
                   }}
                   className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                    assignmentRole === "PRIMARY" && !replaceStaffId
+                    !replaceStaffId
                       ? "bg-teal-700 text-white border-teal-700"
                       : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
                   }`}
                 >
-                  {assignmentRole === "PRIMARY" && !replaceStaffId
-                    ? "Reassigning..."
-                    : "Reassign"}
+                  {!replaceStaffId ? "Reassigning..." : "Reassign"}
                 </button>
               )}
             </div>
@@ -828,24 +810,9 @@ export function SmartStaffAssignmentModal({
                             {staff.email}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAssignmentRole("SUPPORTING");
-                            setReplaceStaffId(staff.id);
-                            setReplaceStaffName(staff.name);
-                            setSelectedStaffId("");
-                          }}
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded border transition cursor-pointer shrink-0 ${
-                            replaceStaffId === staff.id
-                              ? "bg-amber-600 text-white border-amber-600"
-                              : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          {replaceStaffId === staff.id
-                            ? "Replacing..."
-                            : "Reassign"}
-                        </button>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                          Co-Assigned
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -853,50 +820,19 @@ export function SmartStaffAssignmentModal({
               )}
           </div>
 
-          {/* Role selector tabs */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">
-                Assignment Target Role:
+          {/* Primary Lead Investigator Notice */}
+          <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-teal-700" />
+                <span>Primary Lead Investigator Assignment</span>
               </span>
-              <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAssignmentRole("PRIMARY");
-                    setReplaceStaffId(null);
-                    setReplaceStaffName(null);
-                  }}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
-                    assignmentRole === "PRIMARY"
-                      ? "bg-white text-teal-800 shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Primary Investigator
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAssignmentRole("SUPPORTING");
-                  }}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
-                    assignmentRole === "SUPPORTING"
-                      ? "bg-white text-teal-800 shadow-xs"
-                      : "text-slate-600 hover:text-slate-900"
-                  }`}
-                >
-                  Supporting Investigator
-                </button>
-              </div>
+              <p className="text-[11px] text-teal-800/80 mt-0.5">
+                Primary Investigator holds primary case ownership and resolution
+                authority. Supportive staff can be co-assigned during Department
+                Head SLA Intervention.
+              </p>
             </div>
-            <p className="text-[11px] text-slate-500">
-              {assignmentRole === "PRIMARY"
-                ? "Primary Investigator holds overall ownership of the grievance and submits the final resolution proposal."
-                : replaceStaffId
-                  ? `Reassigning Supporting Investigator (${replaceStaffName}). The replaced staff member will immediately lose access.`
-                  : "Supporting Investigators assist by submitting investigation findings within the department."}
-            </p>
           </div>
 
           {/* 3. Smart Staff Recommendations Section */}
@@ -1350,22 +1286,14 @@ export function SmartStaffAssignmentModal({
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">
-                  {assignmentRole === "SUPPORTING"
-                    ? replaceStaffId
-                      ? "Confirm Supporting Staff Reassignment"
-                      : "Confirm Supporting Staff Assignment"
-                    : isReassignment
-                      ? "Confirm Primary Investigator Reassignment"
-                      : "Confirm Primary Staff Assignment"}
+                  {isReassignment
+                    ? "Confirm Primary Investigator Reassignment"
+                    : "Confirm Primary Staff Assignment"}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  {assignmentRole === "SUPPORTING"
-                    ? replaceStaffId
-                      ? `Are you sure you want to replace ${replaceStaffName} with ${selectedCandidate.name} as Supporting Investigator? The previous staff member's access will be revoked.`
-                      : `Are you sure you want to add ${selectedCandidate.name} as Supporting Investigator on grievance ${grievance.ticketCode}?`
-                    : isReassignment
-                      ? `Are you sure you want to reassign primary ownership of grievance ${grievance.ticketCode} to ${selectedCandidate.name}? The previous primary staff member's access will be revoked.`
-                      : `Are you sure you want to assign grievance ${grievance.ticketCode} to ${selectedCandidate.name} as Primary Investigator?`}
+                  {isReassignment
+                    ? `Are you sure you want to reassign primary ownership of grievance ${grievance.ticketCode} to ${selectedCandidate.name}? The previous primary staff member's access will be revoked.`
+                    : `Are you sure you want to assign grievance ${grievance.ticketCode} to ${selectedCandidate.name} as Primary Investigator?`}
                 </p>
               </div>
             </div>

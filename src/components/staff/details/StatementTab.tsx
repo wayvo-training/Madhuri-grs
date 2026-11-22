@@ -350,17 +350,47 @@ export function StatementTab({
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500 shrink-0">Role:</span>
                       <span className="font-semibold text-slate-900 capitalize text-right">
-                        {myDept.involvementType === "SUPPORTING"
-                          ? "Supportive"
-                          : myDept.involvementType
-                            ? myDept.involvementType.toLowerCase()
-                            : "—"}
+                        {grievance.isSupportingStaff
+                          ? "Supporting Investigator"
+                          : myDept.involvementType === "PRIMARY"
+                            ? "Primary Lead"
+                            : "Department Lead"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500 shrink-0">Staff:</span>
                       <span className="font-semibold text-slate-900 text-right">
-                        {myDept.assignedStaff || "—"}
+                        {(() => {
+                          if (
+                            myDept.assignedStaff &&
+                            myDept.assignedStaff !== "Unassigned"
+                          ) {
+                            return myDept.assignedStaff;
+                          }
+                          if (
+                            myDept.primaryStaff?.name &&
+                            myDept.primaryStaff.name !== "Unassigned"
+                          ) {
+                            return myDept.primaryStaff.name;
+                          }
+                          const finding = grievance.supportingFindings?.find(
+                            (f) =>
+                              f.departmentName
+                                ?.toLowerCase()
+                                .includes(
+                                  (myDept.departmentName || "").toLowerCase(),
+                                ) ||
+                              (myDept.departmentName || "")
+                                .toLowerCase()
+                                .includes(
+                                  (f.departmentName || "").toLowerCase(),
+                                ),
+                          );
+                          if (finding?.submittedBy) {
+                            return finding.submittedBy;
+                          }
+                          return "—";
+                        })()}
                       </span>
                     </div>
                     {(() => {
@@ -378,7 +408,7 @@ export function StatementTab({
                         coStaffList.length > 0
                           ? coStaffList.map((s) => s.name).join(", ")
                           : grievance.isSupportingStaff
-                            ? grievance.currentStaffName || "Priya Nair"
+                            ? grievance.currentStaffName || null
                             : null;
                       if (!coStaffNames) return null;
                       return (

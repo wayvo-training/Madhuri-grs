@@ -841,6 +841,8 @@ export interface DepartmentResolutionAuthority {
   canSubmitFindings: boolean;
   isFinalSequentialDept: boolean;
   reason?: string;
+  hasPendingSupporting?: boolean;
+  pendingSupportingDeptNames?: string[];
 }
 
 /**
@@ -889,6 +891,10 @@ export function canDepartmentSubmitFinalResolution(
     };
   }
 
+  const isCurrentDeptCompleted =
+    currentDept.status === "COMPLETED" || currentDept.status === "RESOLVED";
+  const isCurrentDeptBlocked = currentDept.status === "BLOCKED";
+
   const isPrimaryOrEqual =
     currentDept.involvement_type === "PRIMARY" ||
     currentDept.involvement_type === "EQUAL";
@@ -901,54 +907,107 @@ export function canDepartmentSubmitFinalResolution(
       d.status !== "RESOLVED",
   );
 
-  // If Primary/Equal and all supporting departments have finished
-  if (isPrimaryOrEqual && pendingSupporting.length === 0) {
+  // Check if all OTHER departments on the grievance have already finished
+  const otherActiveDepts = activeDepts.filter(
+    (d) => d.department_id.toString() !== deptIdStr,
+  );
+  const otherIncompleteDepts = otherActiveDepts.filter(
+    (d) => d.status !== "COMPLETED" && d.status !== "RESOLVED",
+  );
+
+  // Check sequential or staged workflow execution order
+  const hasSequential = activeDepts.some(
+    (d) =>
+      d.dependency_type === "SEQUENTIAL" ||
+      Number(d.execution_order || 1) > 1 ||
+      (Array.isArray(d.prerequisite_department_ids) &&
+        d.prerequisite_department_ids.length > 0),
+  );
+
+  // In parallel workflow:
+  // Primary/Equal lead has overall authority to finalize the resolution.
+  // If supporting departments haven't finished, Primary can still resolve early,
+  // but we flag hasPendingSupporting so the UI prompts for user confirmation.
+  if (isPrimaryOrEqual && !hasSequential) {
+    const pendingNames = pendingSupporting.map(
+      (d) =>
+        (d as { departments?: { department_name?: string } }).departments
+          ?.department_name || `Department ${d.department_id.toString()}`,
+    );
+
     return {
-      canResolve: true,
+      canResolve: !isCurrentDeptCompleted && !isCurrentDeptBlocked,
       canSubmitFindings: false,
       isFinalSequentialDept: true,
+      hasPendingSupporting: pendingSupporting.length > 0,
+      pendingSupportingDeptNames: pendingNames,
+      reason: isCurrentDeptCompleted
+        ? "Department investigation stage has already completed."
+        : pendingSupporting.length > 0
+          ? `Supporting department(s) (${pendingNames.join(", ")}) have not submitted findings yet.`
+          : undefined,
     };
   }
 
-  // Check sequential workflow execution order
-  const hasSequential = activeDepts.some(
-    (d) => d.dependency_type === "SEQUENTIAL",
+  // If Primary/Equal in sequential and all supporting departments have finished
+  if (isPrimaryOrEqual && pendingSupporting.length === 0) {
+    return {
+      canResolve: !isCurrentDeptCompleted && !isCurrentDeptBlocked,
+      canSubmitFindings: false,
+      isFinalSequentialDept: true,
+      hasPendingSupporting: false,
+      reason: isCurrentDeptCompleted
+        ? "Department investigation stage has already completed."
+        : undefined,
+    };
+  }
+
+  const currentOrder = Number(currentDept.execution_order || 1);
+  const precedingIncomplete = activeDepts.filter(
+    (d) =>
+      d.department_id.toString() !== deptIdStr &&
+      Number(d.execution_order || 1) < currentOrder &&
+      d.status !== "COMPLETED" &&
+      d.status !== "RESOLVED",
   );
 
-  if (hasSequential) {
-    // Check if any preceding departments in execution order are not completed
-    const precedingIncomplete = activeDepts.filter(
-      (d) =>
-        d.department_id.toString() !== deptIdStr &&
-        d.execution_order < currentDept.execution_order &&
-        d.status !== "COMPLETED" &&
-        d.status !== "RESOLVED",
-    );
+  const downstreamDepts = activeDepts.filter(
+    (d) =>
+      d.department_id.toString() !== deptIdStr &&
+      Number(d.execution_order || 1) > currentOrder,
+  );
 
-    // Check if there are downstream departments with higher execution order
-    const downstreamDepts = activeDepts.filter(
-      (d) =>
-        d.department_id.toString() !== deptIdStr &&
-        d.execution_order > currentDept.execution_order,
-    );
+  // If this is the final sequential department in the workflow chain
+  // (no preceding incomplete and no downstream departments waiting),
+  // OR all other collaborating departments have already completed:
+  if (
+    (hasSequential &&
+      precedingIncomplete.length === 0 &&
+      downstreamDepts.length === 0) ||
+    (otherActiveDepts.length > 0 && otherIncompleteDepts.length === 0)
+  ) {
+    return {
+      canResolve: !isCurrentDeptCompleted && !isCurrentDeptBlocked,
+      canSubmitFindings: false,
+      isFinalSequentialDept: true,
+      reason: isCurrentDeptCompleted
+        ? "Department investigation stage has already completed."
+        : undefined,
+    };
+  }
 
-    // If this is the final sequential department in the workflow chain
-    // (no preceding incomplete and no downstream departments waiting)
-    if (precedingIncomplete.length === 0 && downstreamDepts.length === 0) {
-      return {
-        canResolve: true,
-        canSubmitFindings: false,
-        isFinalSequentialDept: true,
-      };
-    }
+  // If there are downstream departments waiting in the sequence:
+  if (downstreamDepts.length > 0) {
+    return {
+      canResolve: false,
+      canSubmitFindings: !isCurrentDeptCompleted && !isCurrentDeptBlocked,
+      isFinalSequentialDept: false,
+      reason:
+        "Department findings must be submitted to advance to the next sequential department stage.",
+    };
   }
 
   // If not authorized for final resolution yet:
-  // Can it submit findings? Yes, if not blocked and not already completed!
-  const isCurrentDeptCompleted =
-    currentDept.status === "COMPLETED" || currentDept.status === "RESOLVED";
-  const isCurrentDeptBlocked = currentDept.status === "BLOCKED";
-
   const canSubmitFindings = !isCurrentDeptCompleted && !isCurrentDeptBlocked;
 
   let reason = "Awaiting upstream stages.";

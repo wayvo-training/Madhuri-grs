@@ -28,6 +28,14 @@ export function AcceptReworkModal({
 }: AcceptReworkModalProps) {
   if (!isOpen || !grievance) return null;
 
+  const isRework = grievance.status === "REWORK";
+  const modalTitle = isRework
+    ? "Accept Citizen Rework Request"
+    : "Accept Citizen Reopening Request";
+  const summaryDesc = isRework
+    ? "The citizen was unsatisfied with the earlier resolution and has requested rework. By accepting, a new SLA cycle begins for your department. Choose how this rework investigation will be handled:"
+    : "The citizen requested to reopen this closed grievance. By accepting, a new SLA cycle begins for your department. Choose how this investigation will be handled:";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
@@ -39,7 +47,7 @@ export function AcceptReworkModal({
             </div>
             <div>
               <h3 className="text-sm font-semibold text-slate-900">
-                Accept Citizen Rework Request
+                {modalTitle}
               </h3>
               <p className="text-xs text-slate-500">
                 Ticket:{" "}
@@ -70,9 +78,7 @@ export function AcceptReworkModal({
               <PriorityBadge priority={grievance.priority} />
             </div>
             <p className="text-[11px] text-teal-800 leading-relaxed">
-              The citizen was unsatisfied with the earlier resolution and has
-              requested rework. By accepting, a new SLA cycle begins for your
-              department. Choose how this rework investigation will be handled:
+              {summaryDesc}
             </p>
           </div>
 

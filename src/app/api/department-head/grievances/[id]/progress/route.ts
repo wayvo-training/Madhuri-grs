@@ -154,6 +154,17 @@ export async function GET(
             },
           },
         },
+        staff_investigation_findings: {
+          include: {
+            users: {
+              select: {
+                first_name: true,
+                last_name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -281,10 +292,21 @@ export async function GET(
       const activeAssignments = deptAssignments.filter(
         (a) =>
           a.assignment_status === "ASSIGNED" ||
-          a.assignment_status === "CO_ASSIGNED",
+          a.assignment_status === "CO_ASSIGNED" ||
+          a.assignment_status === "COMPLETED",
       );
+      const isInterventionForThisDept = Boolean(
+        assistedStaffName &&
+          (ivRawStr
+            .toLowerCase()
+            .includes((d.departments?.department_name || "").toLowerCase()) ||
+            (d.departments?.department_name || "")
+              .toLowerCase()
+              .includes("human resources")),
+      );
+
       const primaryAssignment =
-        (assistedStaffName
+        (isInterventionForThisDept && assistedStaffName
           ? activeAssignments.find((a) => {
               const su = a.users_assignments_staff_idTousers;
               const name = `${su?.first_name} ${su?.last_name || ""}`.trim();
@@ -304,6 +326,7 @@ export async function GET(
         activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         activeAssignments[0] ||
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments.find((a) => a.assignment_status === "COMPLETED") ||
         deptAssignments[0];
       const supportingAssignments = activeAssignments.filter(
         (a) => a !== primaryAssignment,
@@ -323,15 +346,52 @@ export async function GET(
       }
 
       const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
-      const assignedStaff =
+      let assignedStaff =
         deptStatus === "PENDING_ASSIGNMENT" ||
         !primaryAssignment ||
         (primaryAssignment.assignment_status !== "ASSIGNED" &&
-          primaryAssignment.assignment_status !== "CO_ASSIGNED")
+          primaryAssignment.assignment_status !== "CO_ASSIGNED" &&
+          primaryAssignment.assignment_status !== "COMPLETED")
           ? null
           : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
+
+      // Fallback: If findings are submitted or department is completed, resolve author from findings or audit logs
+      if (
+        !assignedStaff &&
+        (deptStatus === "COMPLETED" || d.status === "COMPLETED")
+      ) {
+        const findingAuthor = (
+          grievance.staff_investigation_findings || []
+        ).find(
+          (sf) => sf.grievance_department_id === d.grievance_department_id,
+        )?.users;
+        if (findingAuthor) {
+          assignedStaff =
+            `${findingAuthor.first_name} ${findingAuthor.last_name || ""}`.trim();
+        } else {
+          const deptFindingLog = (grievance.audit_logs || []).find((l) => {
+            const val = l.new_value as {
+              department_id?: string | number;
+              details?: string;
+              note?: string;
+            } | null;
+            return (
+              ((val?.department_id &&
+                String(val.department_id) === String(d.department_id)) ||
+                String(val?.details || val?.note || "").includes(
+                  d.departments?.department_name || "",
+                )) &&
+              (l.action.includes("FINDING") || l.action.includes("SUBMITTED"))
+            );
+          });
+          if (deptFindingLog?.users) {
+            assignedStaff =
+              `${deptFindingLog.users.first_name} ${deptFindingLog.users.last_name || ""}`.trim();
+          }
+        }
+      }
 
       const primaryStaff = staffUser
         ? {
@@ -1457,6 +1517,7 @@ export async function GET(
       let resolvedTargetStaffName = (iv.targetStaffName as string) || undefined;
 
       // Self-healing: if actionLabel or targetStaffName contains "(Unassigned)" for CO_ASSIGN
+      // Dynamic resolution: Ensure the co-assigned staff name in actionLabel matches the department's actual co-assigned staff
       if (
         (iv.actionType === "CO_ASSIGN" ||
           actionLabel.includes("Secondary Staff Co-Assigned")) &&
@@ -1464,19 +1525,69 @@ export async function GET(
           !resolvedTargetStaffName ||
           resolvedTargetStaffName === "Unassigned")
       ) {
-        const supportingAssignment = allDeptAssignments.find(
+        // Target the specific department of this intervention (e.g. Human Resources)
+        const targetDeptRecord =
+          rawDepartments.find(
+            (d) =>
+              (iv.departmentId &&
+                String(d.grievance_department_id) ===
+                  String(iv.departmentId)) ||
+              (iv.targetDepartment &&
+                (d.departments?.department_name || "")
+                  .toLowerCase()
+                  .includes(String(iv.targetDepartment).toLowerCase())) ||
+              (d.departments?.department_name || "")
+                .toLowerCase()
+                .includes("human resources"),
+          ) || rawDepartments[0];
+
+        // Find assignments belonging to THIS department only (excluding other departments like Legal)
+        const deptSpecificAssignments = allDeptAssignments.filter(
           (a) =>
+            a.users_assignments_staff_idTousers &&
             (a.assignment_role === "SUPPORTING" ||
-              a.assignment_status === "CO_ASSIGNED") &&
-            (a.assignment_status === "ASSIGNED" ||
-              a.assignment_status === "CO_ASSIGNED") &&
-            a.users_assignments_staff_idTousers,
+              a.assignment_status === "CO_ASSIGNED" ||
+              (assistedStaffName &&
+                `${a.users_assignments_staff_idTousers.first_name} ${a.users_assignments_staff_idTousers.last_name || ""}`
+                  .trim()
+                  .toLowerCase() !== assistedStaffName.toLowerCase())) &&
+            Boolean(
+              targetDeptRecord &&
+                String(a.grievance_department_id) ===
+                  String(targetDeptRecord.grievance_department_id),
+            ),
         );
+
+        const supportingAssignment = deptSpecificAssignments.find((a) => {
+          const su = a.users_assignments_staff_idTousers;
+          if (!su) return false;
+          const name = `${su.first_name} ${su.last_name || ""}`.trim();
+          if (
+            assistedStaffName &&
+            name.toLowerCase() === assistedStaffName.toLowerCase()
+          )
+            return false;
+          return true;
+        });
+
         if (supportingAssignment?.users_assignments_staff_idTousers) {
           const su = supportingAssignment.users_assignments_staff_idTousers;
           const foundName = `${su.first_name} ${su.last_name || ""}`.trim();
           resolvedTargetStaffName = foundName;
-          actionLabel = actionLabel.replace("(Unassigned)", `(${foundName})`);
+          actionLabel = actionLabel.replace(
+            /\(Unassigned\)/g,
+            `(${foundName})`,
+          );
+          actionLabel = actionLabel.replace(
+            /Secondary Staff Co-Assigned( \([^)]+\))?/,
+            `Secondary Staff Co-Assigned (${foundName})`,
+          );
+        } else {
+          actionLabel = actionLabel.replace(" (Unassigned)", "");
+          actionLabel = actionLabel.replace(
+            /Secondary Staff Co-Assigned( \([^)]+\))?/,
+            "Secondary Staff Co-Assigned",
+          );
         }
       }
 
@@ -1522,6 +1633,7 @@ export async function GET(
           typeof l.new_value === "string"
             ? (JSON.parse(l.new_value || "{}") as Record<string, unknown>)
             : (l.new_value as Record<string, unknown> | null);
+        if (val?.isResolution === true) return false;
         return (
           l.action === "SUPPORTING_FINDINGS_SUBMITTED" ||
           val?.isFindings === true ||

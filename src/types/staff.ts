@@ -194,6 +194,8 @@ export interface StaffGrievanceItem {
   canSubmitFinalResolution?: boolean;
   canSubmitFindings?: boolean;
   isFinalSequentialDepartment?: boolean;
+  hasPendingSupportingDepartments?: boolean;
+  pendingSupportingDepartmentNames?: string[];
   overallStatus?: string;
   activeDepartmentName?: string;
   latestExtension?: {

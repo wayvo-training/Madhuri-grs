@@ -584,11 +584,12 @@ export function CaseProgressTab({
                         )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {dept.slaPercentAllocation != null && (
-                          <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                            {dept.slaPercentAllocation}% SLA
-                          </span>
-                        )}
+                        {dept.slaPercentAllocation != null &&
+                          dept.slaPercentAllocation < 100 && (
+                            <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                              {dept.slaPercentAllocation}% Allocated
+                            </span>
+                          )}
                         <span
                           className={`text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold shrink-0 ${
                             dept.involvementType === "PRIMARY"
@@ -632,7 +633,38 @@ export function CaseProgressTab({
                           Assigned Staff:
                         </span>
                         <span className="font-medium text-slate-700 dark:text-slate-200 text-right truncate">
-                          {dept.assignedStaff || "Unassigned"}
+                          {(() => {
+                            if (
+                              dept.assignedStaff &&
+                              dept.assignedStaff !== "Unassigned"
+                            ) {
+                              return dept.assignedStaff;
+                            }
+                            if (
+                              dept.primaryStaff?.name &&
+                              dept.primaryStaff.name !== "Unassigned"
+                            ) {
+                              return dept.primaryStaff.name;
+                            }
+                            const findingForDept =
+                              currentGrievance.supportingFindings?.find(
+                                (f) =>
+                                  f.departmentName
+                                    ?.toLowerCase()
+                                    .includes(
+                                      (dept.departmentName || "").toLowerCase(),
+                                    ) ||
+                                  (dept.departmentName || "")
+                                    .toLowerCase()
+                                    .includes(
+                                      (f.departmentName || "").toLowerCase(),
+                                    ),
+                              );
+                            if (findingForDept?.submittedBy) {
+                              return findingForDept.submittedBy;
+                            }
+                            return "Unassigned";
+                          })()}
                         </span>
                       </div>
                     )}

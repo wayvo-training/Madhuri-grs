@@ -152,12 +152,10 @@ export async function POST(
     // If grievance was in RESOLVED (citizen rejects proposed resolution before closure):
     // -> Target status is REWORK (awaiting mandatory Department Head review; SLA remains paused)
     // If grievance was in CLOSED (post-closure reopening within 14 days):
-    // -> Target status is RESOLUTION_PENDING_APPROVAL (awaiting mandatory Department Head review)
+    // -> Target status is REOPENED (awaiting mandatory Department Head review)
     // IMPORTANT: Shared attempt counter (reopen_count) is NOT incremented upon citizen request!
     // It is incremented ONLY after Department Head successfully reviews and approves the request.
-    const newStatus = isPostClosureReopen
-      ? "RESOLUTION_PENDING_APPROVAL"
-      : "REWORK";
+    const newStatus = isPostClosureReopen ? "REOPENED" : "REWORK";
 
     // Resolve all participating departments and their Department Heads
     const allInvolvedDepts = await prisma.grievance_departments.findMany({

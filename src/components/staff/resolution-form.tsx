@@ -199,7 +199,8 @@ export function ResolutionForm({
       const isResolving =
         !grievance.isSupportingStaff &&
         (grievance.canSubmitFinalResolution ??
-          grievance.isPrimaryOwner !== false);
+          (grievance.isPrimaryOwner !== false ||
+            Boolean(grievance.isFinalSequentialDepartment)));
 
       if (grievance.isSupportingStaff) {
         // Supporting Investigator Findings submission (In-Department)
@@ -253,9 +254,7 @@ export function ResolutionForm({
             data.message || "Failed to submit department findings",
           );
         }
-        toast.success(
-          "Department findings submitted! Next sequential department stage activated.",
-        );
+        toast.success("Department findings submitted successfully!");
       } else if (onSubmit) {
         await onSubmit(grievance.id, {
           problemSummary: problemSummary.trim(),
@@ -339,7 +338,8 @@ export function ResolutionForm({
           const isResolving =
             !grievance.isSupportingStaff &&
             (grievance.canSubmitFinalResolution ??
-              grievance.isPrimaryOwner !== false);
+              (grievance.isPrimaryOwner !== false ||
+                Boolean(grievance.isFinalSequentialDepartment)));
           return (
             <>
               <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
@@ -405,6 +405,19 @@ export function ResolutionForm({
                     departmental findings completes your investigation and
                     updates your departmental status to{" "}
                     <strong>COMPLETED</strong> for final resolution review.
+                  </span>
+                </div>
+              ) : grievance.hasPendingSupportingDepartments &&
+                (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
+                  0 ? (
+                <div className="bg-amber-50/90 border-b border-amber-200/80 px-5 py-2.5 text-[11px] text-amber-950 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Proceeding Without Supporting Findings:</strong>{" "}
+                    Supporting department(s) (
+                    {grievance.pendingSupportingDepartmentNames?.join(", ")})
+                    have not submitted findings. You are finalizing the
+                    resolution directly as Primary Lead.
                   </span>
                 </div>
               ) : null}
@@ -794,8 +807,10 @@ export function ResolutionForm({
         {/* Footer Actions (Pinned) */}
         {(() => {
           const isResolving =
-            grievance.canSubmitFinalResolution ??
-            grievance.isPrimaryOwner !== false;
+            !grievance.isSupportingStaff &&
+            (grievance.canSubmitFinalResolution ??
+              (grievance.isPrimaryOwner !== false ||
+                Boolean(grievance.isFinalSequentialDepartment)));
           return (
             <div className="flex items-center justify-end gap-2.5 p-4 border-t border-slate-100 bg-slate-50/80 rounded-b-2xl shrink-0">
               <button
@@ -868,8 +883,10 @@ export function ResolutionForm({
       {showConfirmModal &&
         (() => {
           const isResolving =
-            grievance.canSubmitFinalResolution ??
-            grievance.isPrimaryOwner !== false;
+            !grievance.isSupportingStaff &&
+            (grievance.canSubmitFinalResolution ??
+              (grievance.isPrimaryOwner !== false ||
+                Boolean(grievance.isFinalSequentialDepartment)));
           return (
             <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
               <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
