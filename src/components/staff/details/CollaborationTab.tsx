@@ -37,6 +37,7 @@ export function CollaborationTab({
           status: "IN_PROGRESS",
           assignedStaff: null,
           isMyAssignment: idx === 0,
+          supportingStaff: [] as Array<{ id: string; name: string }>,
         }));
   const crossDeptNotes = grievance.collaborationNotes || [];
 
@@ -106,6 +107,14 @@ export function CollaborationTab({
                       {dept.assignedStaff || "Unassigned"}
                     </span>
                   </div>
+                  {dept.supportingStaff && dept.supportingStaff.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span>Co-Staff:</span>
+                      <span className="font-medium text-teal-800">
+                        {dept.supportingStaff.map((s) => s.name).join(", ")}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span>Status:</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-900">

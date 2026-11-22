@@ -637,6 +637,30 @@ export function CaseProgressTab({
                       </div>
                     )}
 
+                    {dept.supportingStaff &&
+                      dept.supportingStaff.length > 0 && (
+                        <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
+                            Co-Staff:
+                          </span>
+                          <span className="font-medium text-teal-700 dark:text-teal-300 text-right truncate">
+                            {dept.supportingStaff.map((s) => s.name).join(", ")}
+                          </span>
+                        </div>
+                      )}
+
+                    {dept.supportingStaff &&
+                      dept.supportingStaff.length > 0 && (
+                        <div className="flex items-baseline justify-between gap-1 text-[11px] pt-0.5">
+                          <span className="text-slate-500 dark:text-slate-400 font-medium shrink-0">
+                            Co-Staff:
+                          </span>
+                          <span className="font-medium text-teal-700 dark:text-teal-300 text-right truncate">
+                            {dept.supportingStaff.map((s) => s.name).join(", ")}
+                          </span>
+                        </div>
+                      )}
+
                     <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
                       <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium shrink-0">
                         Status:

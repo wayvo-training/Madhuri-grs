@@ -102,6 +102,7 @@ export function CaseCollaborationTab({
           involvementType: "SUPPORTING" as const,
           status: "IN_PROGRESS",
           assignedStaff: null,
+          supportingStaff: [] as Array<{ id: string; name: string }>,
         }));
   const notes = currentGrievance.collaborationNotes || [];
   const isClosed = currentGrievance.status === "CLOSED";
@@ -170,6 +171,54 @@ export function CaseCollaborationTab({
                         {dept.assignedStaff || "Unassigned"}
                       </span>
                     </div>
+                    {(() => {
+                      const coStaffNames =
+                        dept.supportingStaff && dept.supportingStaff.length > 0
+                          ? dept.supportingStaff.map((s) => s.name).join(", ")
+                          : (() => {
+                              const iv = currentGrievance.hodIntervention;
+                              if (
+                                (iv?.actionType === "CO_ASSIGN" ||
+                                  iv?.actionLabel?.includes(
+                                    "Secondary Staff Co-Assigned",
+                                  )) &&
+                                (iv?.targetDepartment
+                                  ? dept.departmentName
+                                      ?.toLowerCase()
+                                      .includes(
+                                        iv.targetDepartment.toLowerCase(),
+                                      )
+                                  : true)
+                              ) {
+                                if (
+                                  iv.targetStaffName &&
+                                  iv.targetStaffName !== "Unassigned"
+                                ) {
+                                  return iv.targetStaffName;
+                                }
+                                const match = iv.actionLabel?.match(
+                                  /Secondary Staff Co-Assigned \(([^)]+)\)/,
+                                );
+                                if (match?.[1] && match[1] !== "Unassigned") {
+                                  return match[1];
+                                }
+                              }
+                              return null;
+                            })();
+
+                      if (!coStaffNames) return null;
+
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500 dark:text-slate-400">
+                            Co-Staff:
+                          </span>
+                          <span className="font-medium text-teal-800 dark:text-teal-300">
+                            {coStaffNames}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500 dark:text-slate-400">
                         Progress Status:

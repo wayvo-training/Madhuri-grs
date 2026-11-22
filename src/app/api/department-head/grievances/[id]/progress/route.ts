@@ -190,11 +190,11 @@ export async function GET(
       orderBy: { involvement_type: "asc" },
     });
 
-    // Fetch all assignments directly from assignments table so staff names persist whether status is ASSIGNED or COMPLETED
+    // Fetch all assignments directly from assignments table so staff names persist whether status is ASSIGNED, CO_ASSIGNED, or COMPLETED
     const allDeptAssignments = await prisma.assignments.findMany({
       where: {
         grievance_id: grievanceId,
-        assignment_status: { in: ["ASSIGNED", "COMPLETED"] },
+        assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED", "COMPLETED"] },
       },
       include: {
         users_assignments_staff_idTousers: {
@@ -262,27 +262,65 @@ export async function GET(
 
     const departmentsInvolved = rawDepartments.map((rawD) => {
       const d = rawD;
-      const deptAssignment = allDeptAssignments.find(
+      const deptAssignments = allDeptAssignments.filter(
         (a) => a.grievance_department_id === d.grievance_department_id,
       );
+      const activeAssignments = deptAssignments.filter(
+        (a) =>
+          a.assignment_status === "ASSIGNED" ||
+          a.assignment_status === "CO_ASSIGNED",
+      );
+      const primaryAssignment =
+        activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        activeAssignments[0] ||
+        deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
+        deptAssignments[0];
+      const supportingAssignments = activeAssignments.filter(
+        (a) => a !== primaryAssignment,
+      );
+
       let deptStatus = d.status;
-      if (deptAssignment && deptAssignment.assignment_status === "ASSIGNED") {
+      if (
+        primaryAssignment &&
+        (primaryAssignment.assignment_status === "ASSIGNED" ||
+          primaryAssignment.assignment_status === "CO_ASSIGNED")
+      ) {
         if (deptStatus === "PENDING_ASSIGNMENT") {
           deptStatus = "ASSIGNED";
         }
-      } else if (!deptAssignment && deptStatus === "ASSIGNED") {
+      } else if (!primaryAssignment && deptStatus === "ASSIGNED") {
         deptStatus = "PENDING_ASSIGNMENT";
       }
 
-      const staffUser = deptAssignment?.users_assignments_staff_idTousers;
+      const staffUser = primaryAssignment?.users_assignments_staff_idTousers;
       const assignedStaff =
         deptStatus === "PENDING_ASSIGNMENT" ||
-        !deptAssignment ||
-        deptAssignment.assignment_status !== "ASSIGNED"
+        !primaryAssignment ||
+        (primaryAssignment.assignment_status !== "ASSIGNED" &&
+          primaryAssignment.assignment_status !== "CO_ASSIGNED")
           ? null
           : staffUser
             ? `${staffUser.first_name} ${staffUser.last_name || ""}`.trim()
             : null;
+
+      const primaryStaff = staffUser
+        ? {
+            id: staffUser.user_id.toString(),
+            name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+          }
+        : null;
+
+      const supportingStaff = supportingAssignments
+        .map((sa) => {
+          const su = sa.users_assignments_staff_idTousers;
+          return su
+            ? {
+                id: su.user_id.toString(),
+                name: `${su.first_name} ${su.last_name || ""}`.trim(),
+              }
+            : null;
+        })
+        .filter((s): s is { id: string; name: string } => Boolean(s));
 
       // Calculate individual SLA metrics for this department
       const dIsBlocked = deptStatus === "BLOCKED";
@@ -419,6 +457,8 @@ export async function GET(
           | "EQUAL",
         status: deptStatus,
         assignedStaff,
+        primaryStaff,
+        supportingStaff,
         slaPercentAllocation: d.sla_percent_allocation
           ? Number(d.sla_percent_allocation)
           : null,
@@ -1383,9 +1423,36 @@ export async function GET(
           iv.actionType === "DIRECT_OVERSIGHT",
       );
 
+      let actionLabel = (iv.actionLabel as string) || "HOD Intervention";
+      let resolvedTargetStaffName = (iv.targetStaffName as string) || undefined;
+
+      // Self-healing: if actionLabel or targetStaffName contains "(Unassigned)" for CO_ASSIGN
+      if (
+        (iv.actionType === "CO_ASSIGN" ||
+          actionLabel.includes("Secondary Staff Co-Assigned")) &&
+        (actionLabel.includes("(Unassigned)") ||
+          !resolvedTargetStaffName ||
+          resolvedTargetStaffName === "Unassigned")
+      ) {
+        const supportingAssignment = allDeptAssignments.find(
+          (a) =>
+            (a.assignment_role === "SUPPORTING" ||
+              a.assignment_status === "CO_ASSIGNED") &&
+            (a.assignment_status === "ASSIGNED" ||
+              a.assignment_status === "CO_ASSIGNED") &&
+            a.users_assignments_staff_idTousers,
+        );
+        if (supportingAssignment?.users_assignments_staff_idTousers) {
+          const su = supportingAssignment.users_assignments_staff_idTousers;
+          const foundName = `${su.first_name} ${su.last_name || ""}`.trim();
+          resolvedTargetStaffName = foundName;
+          actionLabel = actionLabel.replace("(Unassigned)", `(${foundName})`);
+        }
+      }
+
       hodIntervention = {
         actionType: (iv.actionType as string) || "MONITOR",
-        actionLabel: (iv.actionLabel as string) || "HOD Intervention",
+        actionLabel,
         note: (iv.note as string) || "",
         intervenedAt: formatRelativeTime(interventionLog.created_at),
         intervenedBy:
@@ -1394,6 +1461,7 @@ export async function GET(
             ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
             : "Department Head"),
         isResolutionAuthority: isResAuth,
+        targetStaffName: resolvedTargetStaffName,
         departmentId:
           (iv.departmentId as string) ||
           (iv.department_id as string) ||

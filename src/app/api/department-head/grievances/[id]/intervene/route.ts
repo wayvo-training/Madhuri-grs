@@ -109,7 +109,10 @@ export async function POST(
         parsedTargetStaffId = null;
       }
 
-      if (parsedTargetStaffId && interventionType === "REASSIGN") {
+      if (
+        parsedTargetStaffId &&
+        (interventionType === "REASSIGN" || interventionType === "CO_ASSIGN")
+      ) {
         const targetStaff = await prisma.users.findUnique({
           where: { user_id: parsedTargetStaffId },
           include: { roles: true },
@@ -136,7 +139,7 @@ export async function POST(
         const activeCount = await prisma.assignments.count({
           where: {
             staff_id: parsedTargetStaffId,
-            assignment_status: "ASSIGNED",
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
             grievance_id: { not: grievanceId },
             grievances: {
               status: { notIn: ["CLOSED", "RESOLVED"] },
@@ -465,7 +468,8 @@ export async function POST(
               staff_id: parsedTargetStaffId,
               assigned_by: user.user_id,
               assigned_at: new Date(),
-              assignment_status: "CO_ASSIGNED",
+              assignment_role: "SUPPORTING",
+              assignment_status: "ASSIGNED",
               recommendation_reasons: {
                 reason:
                   "Department Head Escalation: Co-assigned to assist with grievance",
@@ -720,6 +724,9 @@ export async function POST(
               ? user.user_id.toString()
               : undefined,
             targetStaffName: targetStaffName || undefined,
+            targetStaffId: parsedTargetStaffId
+              ? parsedTargetStaffId.toString()
+              : undefined,
             departmentId: grievanceDept.department_id.toString(),
             department_id: grievanceDept.department_id.toString(),
             targetDepartment:

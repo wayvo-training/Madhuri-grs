@@ -147,7 +147,7 @@ export function useGrievanceActions({
         NOTIFY_STAFF: `Operational Direction Provided to ${targetStaffName}`,
         CROSS_DEPT: `Supportive Department Added (${targetDept})`,
         REASSIGN: `Reassigned to ${targetStaffName}`,
-        CO_ASSIGN: `Secondary Staff Co-Assigned (${targetStaffName}) to assist`,
+        CO_ASSIGN: `Secondary Staff Co-Assigned (${targetStaffName}) to assist ${grievance.assignedStaffName || "Assigned Officer"}`,
         ASSUME_RESOLUTION_AUTHORITY: `Resolution Authority Assumed by ${currentHodName}`,
         DIRECT_OVERSIGHT: `Resolution Authority Assumed by ${currentHodName}`,
         REQUEST_ADDITIONAL_INFO: "Request Additional Information Dispatched",

@@ -414,7 +414,8 @@ export async function fetchDepartmentHeadGrievances(
               a.grievance_departments?.department_id &&
               BigInt(a.grievance_departments.department_id) ===
                 BigInt(departmentId) &&
-              a.assignment_status === "ASSIGNED" &&
+              (a.assignment_status === "ASSIGNED" ||
+                a.assignment_status === "CO_ASSIGNED") &&
               a.assignment_role === "PRIMARY",
           ) ||
           grievanceAssignments.find(
@@ -422,7 +423,8 @@ export async function fetchDepartmentHeadGrievances(
               a.grievance_departments?.department_id &&
               BigInt(a.grievance_departments.department_id) ===
                 BigInt(departmentId) &&
-              a.assignment_status === "ASSIGNED",
+              (a.assignment_status === "ASSIGNED" ||
+                a.assignment_status === "CO_ASSIGNED"),
           ) ||
           null
       : null;
@@ -433,7 +435,8 @@ export async function fetchDepartmentHeadGrievances(
             a.grievance_departments?.department_id &&
             BigInt(a.grievance_departments.department_id) ===
               BigInt(departmentId) &&
-            a.assignment_status === "ASSIGNED" &&
+            (a.assignment_status === "ASSIGNED" ||
+              a.assignment_status === "CO_ASSIGNED") &&
             a.assignment_role === "SUPPORTING",
         )
       : [];
@@ -936,6 +939,33 @@ export async function fetchDepartmentHeadGrievances(
           iv.actionType === "DIRECT_OVERSIGHT",
       );
 
+      let actionLabel = (iv.actionLabel as string) || "HOD Intervention";
+      let resolvedTargetStaffName = iv.targetStaffName as string | undefined;
+
+      // Self-healing: if actionLabel contains "(Unassigned)" for CO_ASSIGN
+      if (
+        (iv.actionType === "CO_ASSIGN" ||
+          actionLabel.includes("Secondary Staff Co-Assigned")) &&
+        (actionLabel.includes("(Unassigned)") ||
+          !resolvedTargetStaffName ||
+          resolvedTargetStaffName === "Unassigned")
+      ) {
+        const supportingAssignment = grievanceAssignments.find(
+          (a) =>
+            (a.assignment_role === "SUPPORTING" ||
+              a.assignment_status === "CO_ASSIGNED") &&
+            (a.assignment_status === "ASSIGNED" ||
+              a.assignment_status === "CO_ASSIGNED") &&
+            a.users_assignments_staff_idTousers,
+        );
+        if (supportingAssignment?.users_assignments_staff_idTousers) {
+          const su = supportingAssignment.users_assignments_staff_idTousers;
+          const foundName = `${su.first_name} ${su.last_name || ""}`.trim();
+          resolvedTargetStaffName = foundName;
+          actionLabel = actionLabel.replace("(Unassigned)", `(${foundName})`);
+        }
+      }
+
       hodIntervention = {
         actionType:
           (iv.actionType as
@@ -951,7 +981,7 @@ export async function fetchDepartmentHeadGrievances(
             | "EXPEDITE"
             | "OVERRIDE"
             | "SLA_EXTENSION") || "MONITOR",
-        actionLabel: (iv.actionLabel as string) || "HOD Intervention",
+        actionLabel,
         note: (iv.note as string) || "",
         intervenedAt: formatRelativeTime(interventionLog.created_at),
         intervenedBy:
@@ -959,7 +989,7 @@ export async function fetchDepartmentHeadGrievances(
           (interventionLog.users
             ? `${interventionLog.users.first_name} ${interventionLog.users.last_name || ""}`.trim()
             : "Department Head"),
-        targetStaffName: iv.targetStaffName as string | undefined,
+        targetStaffName: resolvedTargetStaffName,
         departmentId:
           (iv.departmentId as string) ||
           (iv.department_id as string) ||
@@ -999,7 +1029,8 @@ export async function fetchDepartmentHeadGrievances(
       const deptAssignments = grievanceAssignments.filter(
         (a) =>
           a.grievance_department_id === d.grievance_department_id &&
-          a.assignment_status === "ASSIGNED",
+          (a.assignment_status === "ASSIGNED" ||
+            a.assignment_status === "CO_ASSIGNED"),
       );
       const primaryAssignment =
         deptAssignments.find((a) => a.assignment_role === "PRIMARY") ||
