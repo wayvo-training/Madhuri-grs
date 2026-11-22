@@ -148,10 +148,6 @@ export default async function AdminRulesPage() {
           tc.at_risk_threshold_percent !== undefined
             ? String(tc.at_risk_threshold_percent)
             : "75",
-        critical_threshold_percent:
-          tc.critical_threshold_percent !== undefined
-            ? String(tc.critical_threshold_percent)
-            : "90",
         escalation_threshold_percent:
           tc.escalation_threshold_percent !== undefined
             ? String(tc.escalation_threshold_percent)

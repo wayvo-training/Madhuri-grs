@@ -34,7 +34,6 @@ export interface UseRuleActionsParams {
 export interface SlaNotificationRecipients {
   warning: string[];
   at_risk: string[];
-  critical?: string[];
   escalation: string[];
 }
 
@@ -285,7 +284,6 @@ export function useRuleActions({
   const [durationHours, setDurationHours] = useState("24");
   const [warningPercent, setWarningPercent] = useState("50");
   const [atRiskPercent, setAtRiskPercent] = useState("75");
-  const [criticalPercent, setCriticalPercent] = useState("90");
   const [escalationPercent, setEscalationPercent] = useState("100");
   const [departmentalAllocationMode, setDepartmentalAllocationMode] = useState<
     "FULL" | "EQUAL_SPLIT" | "LEAD_WEIGHTED"
@@ -323,7 +321,6 @@ export function useRuleActions({
     setDurationHours("24");
     setWarningPercent("50");
     setAtRiskPercent("75");
-    setCriticalPercent("90");
     setEscalationPercent("100");
     setDepartmentalAllocationMode("FULL");
     setSlaRecipients(DEFAULT_SLA_RECIPIENTS);
@@ -850,8 +847,6 @@ export function useRuleActions({
     setWarningPercent,
     atRiskPercent,
     setAtRiskPercent,
-    criticalPercent,
-    setCriticalPercent,
     escalationPercent,
     setEscalationPercent,
     departmentalAllocationMode,

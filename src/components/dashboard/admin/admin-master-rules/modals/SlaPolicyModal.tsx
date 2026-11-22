@@ -40,7 +40,6 @@ export function SlaPolicyModal({
   setWarningPercent,
   atRiskPercent = "75",
   setAtRiskPercent,
-  criticalPercent: _criticalPercent,
   escalationPercent: _escalationPercent = "100",
   slaRecipients,
   setSlaRecipients,

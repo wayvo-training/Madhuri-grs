@@ -7,12 +7,7 @@ export interface SlaEvaluationResult {
   grievanceId: string;
   grievanceNumber: string;
   consumptionPercent: number;
-  threshold:
-    | "BELOW_WARNING"
-    | "AT_WARNING"
-    | "AT_RISK"
-    | "AT_CRITICAL"
-    | "AT_BREACH";
+  threshold: "BELOW_WARNING" | "AT_WARNING" | "AT_RISK" | "AT_BREACH";
   slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED";
   status: string;
   notificationsSent: string[];
@@ -1048,7 +1043,6 @@ export async function evaluateGrievanceSla(
       | "BELOW_WARNING"
       | "AT_WARNING"
       | "AT_RISK"
-      | "AT_CRITICAL"
       | "AT_BREACH" =
       mappedSlaStatus === "BREACHED"
         ? "AT_BREACH"

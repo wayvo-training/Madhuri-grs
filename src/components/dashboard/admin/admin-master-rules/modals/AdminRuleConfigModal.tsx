@@ -95,8 +95,6 @@ export function AdminRuleConfigModal(props: AdminRuleConfigModalProps) {
           setWarningPercent={props.setWarningPercent}
           atRiskPercent={props.atRiskPercent}
           setAtRiskPercent={props.setAtRiskPercent}
-          criticalPercent={props.criticalPercent}
-          setCriticalPercent={props.setCriticalPercent}
           escalationPercent={props.escalationPercent}
           setEscalationPercent={props.setEscalationPercent}
           slaRecipients={props.slaRecipients}

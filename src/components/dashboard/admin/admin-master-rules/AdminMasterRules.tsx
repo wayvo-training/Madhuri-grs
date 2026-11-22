@@ -110,8 +110,6 @@ export function AdminMasterRules({
     setWarningPercent,
     atRiskPercent,
     setAtRiskPercent,
-    criticalPercent,
-    setCriticalPercent,
     escalationPercent,
     setEscalationPercent,
     reopenWindowHours,
@@ -625,9 +623,6 @@ export function AdminMasterRules({
                 p.warning_threshold_percent?.toString() || "50",
               );
               setAtRiskPercent(p.at_risk_threshold_percent?.toString() || "75");
-              setCriticalPercent(
-                p.critical_threshold_percent?.toString() || "90",
-              );
               setEscalationPercent(
                 p.escalation_threshold_percent?.toString() || "100",
               );
@@ -638,7 +633,6 @@ export function AdminMasterRules({
                       notification_recipients?: {
                         warning: string[];
                         at_risk: string[];
-                        critical: string[];
                         escalation: string[];
                       };
                     }
@@ -751,8 +745,6 @@ export function AdminMasterRules({
         setWarningPercent={setWarningPercent}
         atRiskPercent={atRiskPercent}
         setAtRiskPercent={setAtRiskPercent}
-        criticalPercent={criticalPercent}
-        setCriticalPercent={setCriticalPercent}
         escalationPercent={escalationPercent}
         setEscalationPercent={setEscalationPercent}
         reopenWindowHours={reopenWindowHours}

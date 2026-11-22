@@ -139,8 +139,6 @@ export interface SlaPolicyModalProps {
   setWarningPercent: Dispatch<SetStateAction<string>>;
   atRiskPercent?: string;
   setAtRiskPercent?: Dispatch<SetStateAction<string>>;
-  criticalPercent?: string;
-  setCriticalPercent?: Dispatch<SetStateAction<string>>;
   escalationPercent: string;
   setEscalationPercent: Dispatch<SetStateAction<string>>;
   slaRecipients?: SlaNotificationRecipients;
@@ -230,8 +228,6 @@ export interface AdminRuleConfigModalProps {
   setWarningPercent: Dispatch<SetStateAction<string>>;
   atRiskPercent?: string;
   setAtRiskPercent?: Dispatch<SetStateAction<string>>;
-  criticalPercent?: string;
-  setCriticalPercent?: Dispatch<SetStateAction<string>>;
   escalationPercent: string;
   setEscalationPercent: Dispatch<SetStateAction<string>>;
   reopenWindowHours: string;

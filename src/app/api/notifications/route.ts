@@ -22,7 +22,6 @@ export async function GET() {
       "SLA_100_BREACH_ESCALATED",
       "SLA_50_STAFF_WARNING",
       "SLA_75_STAFF_WARNING",
-      "SLA_90_STAFF_WARNING",
       "SLA_100_BREACH_STAFF",
     ];
 
@@ -104,11 +103,7 @@ export async function GET() {
           ) {
             message =
               "Your grievance has been escalated for department-level review and intervention directives.";
-          } else if (
-            message.includes("50%") ||
-            message.includes("75%") ||
-            message.includes("90%")
-          ) {
+          } else if (message.includes("50%") || message.includes("75%")) {
             message =
               "Your grievance is progressing and has been prioritized for department investigation.";
           }
