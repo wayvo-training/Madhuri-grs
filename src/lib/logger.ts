@@ -70,6 +70,26 @@ export interface NavigationLogOptions {
   userAgent?: string | null;
 }
 
+export interface ReportExportLogOptions {
+  reportType: "OPERATIONAL" | "RESOLUTION" | "PATTERNS";
+  format: "CSV" | "EXCEL" | "PDF";
+  outcome: "SUCCESS" | "FAILED";
+  user: {
+    user_id: bigint;
+    first_name?: string;
+    last_name?: string | null;
+    email: string;
+    employee_code?: string;
+    roles?: { role_name: string };
+  };
+  filters: Record<string, unknown>;
+  fileName?: string;
+  recordCount?: number;
+  errorMessage?: string;
+  ip?: string | null;
+  userAgent?: string | null;
+}
+
 /**
  * Extract Client IP and User-Agent from Next.js Headers safely
  */
@@ -264,6 +284,49 @@ class EnterpriseLogger {
       });
     } catch (err) {
       console.error("Failed to write error log:", err);
+    }
+  }
+
+  /**
+   * Log report export operations (Section 4.7 / 3.10.6)
+   */
+  async logReportExport(opts: ReportExportLogOptions): Promise<void> {
+    const who: WhoMetadata = {
+      user_id: opts.user.user_id.toString(),
+      name: `${opts.user.first_name || ""} ${opts.user.last_name || ""}`.trim(),
+      email: opts.user.email,
+      role: opts.user.roles?.role_name || "UNKNOWN",
+      employee_code: opts.user.employee_code || null,
+      ip_address: opts.ip || "127.0.0.1",
+      user_agent: opts.userAgent || "Unknown Agent",
+    };
+
+    const action =
+      opts.outcome === "SUCCESS" ? "REPORT_EXPORTED" : "REPORT_EXPORT_FAILED";
+
+    try {
+      await prisma.audit_logs.create({
+        data: {
+          user_id: opts.user.user_id,
+          action,
+          entity_type: "REPORT_EXPORT",
+          ip_address: who.ip_address,
+          new_value: {
+            category: "REPORT_EXPORT",
+            reportType: opts.reportType,
+            format: opts.format,
+            outcome: opts.outcome,
+            filters: opts.filters,
+            fileName: opts.fileName || null,
+            recordCount: opts.recordCount ?? null,
+            errorMessage: opts.errorMessage || null,
+            who,
+            timestamp: new Date().toISOString(),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to write report export audit log:", err);
     }
   }
 }
