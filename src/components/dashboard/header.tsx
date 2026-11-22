@@ -11,6 +11,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 const ROUTE_TITLES: Record<string, string> = {
   // Admin
   "/admin/dashboard": "Admin Control Center",
+  "/admin/reports/operational": "Operational & Performance Reports",
+  "/admin/reports/resolution": "Resolution Analytics",
+  "/admin/reports/trends": "Trend & Pattern Analysis",
   "/admin/users": "User Directory & Access Control",
   "/admin/roles": "Roles & Security Permissions",
   "/admin/departments": "Department & Organization Management",
@@ -22,6 +25,9 @@ const ROUTE_TITLES: Record<string, string> = {
 
   // Department Head
   "/department-head/dashboard": "Department Overview",
+  "/department-head/reports/operational": "Operational & Performance Reports",
+  "/department-head/reports/resolution": "Resolution Analytics",
+  "/department-head/reports/trends": "Trend & Pattern Analysis",
   "/department-head/queue": "Department Grievance Queue",
   "/department-head/workload": "Staff Workload & Capacity",
   "/department-head/activity": "Department Governance Activity",

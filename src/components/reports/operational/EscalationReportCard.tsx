@@ -1,6 +1,13 @@
 "use client";
 
 import { ShieldAlert } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import {
+  AdvancedTableSearch,
+  type FilterMode,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,20 +16,57 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type { EscalationsReport } from "@/types/reports";
 
 export interface EscalationReportCardProps {
   escalations: EscalationsReport;
 }
 
+const searchFields: SearchFieldDef[] = [
+  { id: "ticketCode", label: "Grievance #", type: "text" },
+  { id: "title", label: "Grievance Title", type: "text" },
+  { id: "name", label: "Escalated To", type: "text" },
+  { id: "reason", label: "Reason", type: "text" },
+  { id: "status", label: "Status", type: "text" },
+];
+
 export function EscalationReportCard({
   escalations,
 }: EscalationReportCardProps) {
+  const [conditions, setConditions] = useState<SearchCondition[]>([]);
+  const [filterMode, setFilterMode] = useState<FilterMode>("AND");
   const { totalEscalationsInPeriod, byLevel, events } = escalations;
 
+  const filteredEvents = useMemo(() => {
+    if (!conditions || conditions.length === 0) return events;
+    return events.filter((e) =>
+      evaluateSearchConditions(
+        {
+          ...e,
+          ticketCode: e.grievanceNumber,
+          title: e.grievanceTitle,
+          name: e.escalatedToName,
+          reason: e.reason,
+          status: e.status,
+        },
+        conditions,
+        filterMode,
+      ),
+    );
+  }, [events, conditions, filterMode]);
+
   return (
-    <Card className="border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-2xs">
-      <CardHeader className="pb-3 pt-4 px-4 sm:px-5">
+    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+      <CardHeader className="pb-3 pt-4 px-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-md bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
@@ -30,11 +74,11 @@ export function EscalationReportCard({
             </div>
             <div>
               <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Recorded Escalation Events
+                Recorded Governance Escalations
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
-                Governance escalation history recorded during this reporting
-                period ({totalEscalationsInPeriod} total events)
+                Escalation events recorded during this reporting period (
+                {totalEscalationsInPeriod} total)
               </CardDescription>
             </div>
           </div>
@@ -45,7 +89,7 @@ export function EscalationReportCard({
               <Badge
                 key={lvl.level}
                 variant="outline"
-                className="text-xs border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 font-medium"
+                className="text-xs border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 font-semibold"
               >
                 Level {lvl.level}: {lvl.count}
               </Badge>
@@ -54,29 +98,64 @@ export function EscalationReportCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 sm:px-5 pt-0">
+      <CardContent className="px-5 pb-5 pt-0 space-y-3">
+        {/* Standard Search Bar */}
+        {events.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-100 dark:border-slate-800">
+            <div className="w-full sm:w-80">
+              <AdvancedTableSearch
+                fields={searchFields}
+                onSearch={(conds, mode) => {
+                  setConditions(conds);
+                  setFilterMode(mode);
+                }}
+                className="w-full"
+              />
+            </div>
+            <span className="text-[11px] text-slate-500 font-mono">
+              Showing {filteredEvents.length} of {events.length} events
+            </span>
+          </div>
+        )}
+
         {events.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div className="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
             No escalation events recorded within the selected reporting period.
           </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
+            No escalation events matching search criteria.
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                  <th className="pb-2 font-medium">Grievance #</th>
-                  <th className="pb-2 font-medium">Grievance Title</th>
-                  <th className="pb-2 font-medium text-center">Level</th>
-                  <th className="pb-2 font-medium">Escalated To</th>
-                  <th className="pb-2 font-medium">Reason</th>
-                  <th className="pb-2 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">
-                    Escalated Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {events.map((esc) => {
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-700">
+                  <TableHead className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Grievance #
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Grievance Title
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 text-center font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Level
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Escalated To
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Reason
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Status
+                  </TableHead>
+                  <TableHead className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300">
+                    Escalation Date
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {filteredEvents.map((esc) => {
                   const dateFormatted = new Date(esc.createdAt).toLocaleString(
                     "en-US",
                     {
@@ -89,49 +168,49 @@ export function EscalationReportCard({
                   );
 
                   return (
-                    <tr
+                    <TableRow
                       key={esc.escalationId}
-                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                     >
-                      <td className="py-2.5 pr-2 font-mono text-[11px] font-semibold text-slate-900 dark:text-slate-100">
+                      <TableCell className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">
                         {esc.grievanceNumber}
-                      </td>
-                      <td className="py-2.5 px-2 max-w-xs truncate text-slate-800 dark:text-slate-200">
+                      </TableCell>
+                      <TableCell className="py-2.5 px-3 max-w-xs truncate font-medium text-slate-800 dark:text-slate-200">
                         {esc.grievanceTitle}
-                      </td>
-                      <td className="py-2.5 px-2 text-center">
+                      </TableCell>
+                      <TableCell className="py-2.5 px-3 text-center">
                         <Badge
                           variant="secondary"
-                          className="font-semibold text-purple-700 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-300"
+                          className="font-bold text-purple-700 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-300 font-mono"
                         >
                           L{esc.escalationLevel}
                         </Badge>
-                      </td>
-                      <td className="py-2.5 px-2 text-slate-700 dark:text-slate-300 font-medium">
+                      </TableCell>
+                      <TableCell className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">
                         {esc.escalatedToName}
-                      </td>
-                      <td
-                        className="py-2.5 px-2 max-w-sm truncate text-slate-600 dark:text-slate-400"
+                      </TableCell>
+                      <TableCell
+                        className="py-2.5 px-3 max-w-sm truncate text-slate-600 dark:text-slate-400"
                         title={esc.reason}
                       >
                         {esc.reason}
-                      </td>
-                      <td className="py-2.5 px-2">
+                      </TableCell>
+                      <TableCell className="py-2.5 px-3">
                         <Badge
                           variant="outline"
-                          className="text-[11px] border-slate-200 font-normal"
+                          className="text-[11px] border-slate-200 dark:border-slate-700 font-normal"
                         >
                           {esc.status}
                         </Badge>
-                      </td>
-                      <td className="py-2.5 pl-2 text-right text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                      </TableCell>
+                      <TableCell className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 font-mono text-[11px] tabular-nums">
                         {dateFormatted}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>

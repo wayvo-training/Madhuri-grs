@@ -2,14 +2,27 @@
 
 import {
   AlertCircle,
+  BarChart3,
   CheckCircle2,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
+  FileText,
   FolderTree,
-  LayoutDashboard,
+  RefreshCw,
   ShieldAlert,
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReportExport } from "@/hooks/useReportExport";
 import type {
@@ -20,11 +33,8 @@ import type {
 } from "@/types/reports";
 import { CategoryDistributionCard } from "./CategoryDistributionCard";
 import { DepartmentDistributionCard } from "./DepartmentDistributionCard";
-import { EscalationReportCard } from "./EscalationReportCard";
-import { GrievanceVolumeCard } from "./GrievanceVolumeCard";
 import { PriorityDistributionCard } from "./PriorityDistributionCard";
 import { ReportFilterBar } from "./ReportFilterBar";
-import { ReportMetadataHeader } from "./ReportMetadataHeader";
 import { SlaMonitoringCard } from "./SlaMonitoringCard";
 import { StaffAssignmentReportCard } from "./StaffAssignmentReportCard";
 import { StatusDistributionCard } from "./StatusDistributionCard";
@@ -33,6 +43,8 @@ export interface OperationalReportViewProps {
   userRole: "ADMIN" | "DEPARTMENT_HEAD";
   departmentName?: string;
 }
+
+type OperationalTab = "overview" | "departments" | "sla" | "staff" | "taxonomy";
 
 export function OperationalReportView({
   userRole,
@@ -53,9 +65,8 @@ export function OperationalReportView({
     };
   });
 
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "taxonomy" | "staff" | "sla"
-  >("overview");
+  // Default active tab is "overview" (Status & Priority), "all" option removed per user instruction
+  const [activeTab, setActiveTab] = useState<OperationalTab>("overview");
 
   const [data, setData] = useState<OperationalReportData | null>(null);
   const [filterOptions, setFilterOptions] =
@@ -111,6 +122,9 @@ export function OperationalReportView({
         ) {
           query.set("assignmentStatus", currentFilters.assignmentStatus);
         }
+        if (currentFilters.search) {
+          query.set("search", currentFilters.search);
+        }
 
         const res = await fetch(`/api/reports/operational?${query.toString()}`);
         const json: OperationalReportApiResponse = await res.json();
@@ -161,25 +175,80 @@ export function OperationalReportView({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-3 sm:gap-4 p-3 sm:p-5 max-w-7xl mx-auto w-full">
-      {/* 1. Report Metadata & Generation Header */}
-      {data ? (
-        <ReportMetadataHeader
-          metadata={data.metadata}
-          isLoading={isLoading}
-          onRefresh={() => fetchReport(filters)}
-          onExport={(format) => handleExport(filters, format)}
-          isExporting={isExporting}
-        />
-      ) : (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 shadow-2xs">
-          <Skeleton className="h-10 w-full" />
+    <div className="flex-1 flex flex-col min-h-0 gap-3 sm:gap-3.5 pt-2 sm:pt-3 pb-10 px-3 sm:px-5 max-w-7xl mx-auto w-full">
+      {/* 1. Header Row (Clean, uncluttered, compact) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Operational &amp; Performance Reports
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+            Operational statistics on grievance intake volumes, workflow
+            lifecycle distribution, department workloads, SLA compliance, and
+            escalations.
+          </p>
         </div>
-      )}
 
-      {/* Export Success Notification Banner */}
+        {/* Action Buttons: Refresh + Export */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchReport(filters)}
+            disabled={isLoading || isExporting}
+            className="h-8 px-2.5 gap-1.5 text-xs font-medium cursor-pointer"
+          >
+            <RefreshCw
+              className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`}
+            />
+            <span>Refresh</span>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={isLoading || isExporting}
+              className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-blue-700 hover:bg-blue-800 text-white shadow-xs focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
+            >
+              <Download
+                className={`h-3 w-3 ${isExporting ? "animate-spin" : ""}`}
+              />
+              <span>{isExporting ? "Exporting..." : "Export Report"}</span>
+              <ChevronDown className="h-3 w-3 opacity-80" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 text-xs">
+              <DropdownMenuLabel className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+                Export Format
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "CSV")}
+                className="gap-2 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-600" />
+                <span>CSV Spreadsheet (.csv)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "EXCEL")}
+                className="gap-2 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Excel Workbook (.xlsx)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "PDF")}
+                className="gap-2 cursor-pointer"
+              >
+                <FileText className="h-3.5 w-3.5 text-rose-600" />
+                <span>PDF Document (.pdf)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Export Notifications */}
       {exportSuccessMessage && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span className="font-medium">{exportSuccessMessage}</span>
@@ -187,16 +256,15 @@ export function OperationalReportView({
           <button
             type="button"
             onClick={clearExportMessages}
-            className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 text-xs font-semibold cursor-pointer"
+            className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 text-xs font-semibold cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Export Error Notification Banner */}
       {exportErrorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>Export Failed: {exportErrorMessage}</span>
@@ -225,7 +293,7 @@ export function OperationalReportView({
 
       {/* Error State Banner */}
       {errorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{errorMessage}</span>
@@ -243,74 +311,95 @@ export function OperationalReportView({
 
       {/* 3. Loading Skeletons */}
       {isLoading && !data && (
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-            {Array.from({ length: 8 }).map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: Loading skeleton
-              <Skeleton key={i} className="h-20 w-full rounded-xl" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <Skeleton className="h-72 w-full rounded-xl" />
-            <Skeleton className="h-72 w-full rounded-xl" />
+        <div className="flex flex-col gap-5">
+          <Skeleton className="h-10 w-80 rounded-lg" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Skeleton className="h-80 w-full rounded-lg" />
+            <Skeleton className="h-80 w-full rounded-lg" />
           </div>
         </div>
       )}
 
       {/* 4. Loaded Data Content */}
       {data && (
-        <div className="flex flex-col gap-3.5 sm:gap-4">
-          {/* Executive Summary Cards */}
-          <GrievanceVolumeCard summary={data.summary} />
-
-          {/* Navigation Sub-Tabs */}
-          <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1 print:hidden">
-            <Button
-              type="button"
-              variant={activeTab === "overview" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("overview")}
-              className="h-8 text-xs font-medium rounded-lg gap-1.5 px-3"
+        <div className="flex flex-col gap-3.5">
+          {/* Domain Focus Navigation Tabs */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5 overflow-x-auto print:hidden">
+            <div
+              role="tablist"
+              aria-label="Operational Analytics Views"
+              className="inline-flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
             >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Overview & Distribution
-            </Button>
-            <Button
-              type="button"
-              variant={activeTab === "taxonomy" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("taxonomy")}
-              className="h-8 text-xs font-medium rounded-lg gap-1.5 px-3"
-            >
-              <FolderTree className="h-3.5 w-3.5" />
-              Departments & Categories
-            </Button>
-            <Button
-              type="button"
-              variant={activeTab === "staff" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("staff")}
-              className="h-8 text-xs font-medium rounded-lg gap-1.5 px-3"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Staff & Caseload
-            </Button>
-            <Button
-              type="button"
-              variant={activeTab === "sla" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("sla")}
-              className="h-8 text-xs font-medium rounded-lg gap-1.5 px-3"
-            >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              SLA & Escalations
-            </Button>
+              {(
+                [
+                  {
+                    id: "overview",
+                    label: "Status & Priority",
+                    icon: BarChart3,
+                  },
+                  {
+                    id: "departments",
+                    label: "Department Workload",
+                    icon: Users,
+                  },
+                  { id: "sla", label: "SLA & Escalations", icon: ShieldAlert },
+                  { id: "staff", label: "Staff Caseload", icon: Users },
+                  {
+                    id: "taxonomy",
+                    label: "Category Taxonomy",
+                    icon: FolderTree,
+                  },
+                ] as Array<{
+                  id: OperationalTab;
+                  label: string;
+                  icon: typeof BarChart3;
+                }>
+              ).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    type="button"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Tab 1: Executive Overview */}
+          {/* TAB 1: Status & Priority Distribution */}
           {activeTab === "overview" && (
-            <div className="flex flex-col gap-3.5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-status-priority"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-status-priority"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Status & Priority Analytics
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Lifecycle stage distribution and severity breakdown for
+                    received grievances
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <StatusDistributionCard
                   statusDistribution={data.statusDistribution}
                   totalUniqueGrievances={data.summary.totalUniqueGrievances}
@@ -320,44 +409,119 @@ export function OperationalReportView({
                   totalUniqueGrievances={data.summary.totalUniqueGrievances}
                 />
               </div>
-              <DepartmentDistributionCard
-                departmentDistribution={data.departmentDistribution}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
-            </div>
+            </section>
           )}
 
-          {/* Tab 2: Departments & Categories */}
-          {activeTab === "taxonomy" && (
-            <div className="flex flex-col gap-3.5">
+          {/* TAB 2: Department Workload Distribution */}
+          {activeTab === "departments" && (
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-dept-workload"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-dept-workload"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Department Workload & Routing Analytics
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Primary vs Supporting department involvements with
+                    deduplication accounting
+                  </p>
+                </div>
+              </div>
+
               <DepartmentDistributionCard
                 departmentDistribution={data.departmentDistribution}
                 totalUniqueGrievances={data.summary.totalUniqueGrievances}
               />
+            </section>
+          )}
+
+          {/* TAB 3: SLA Performance & Escalations (Unified Single Table Card) */}
+          {activeTab === "sla" && (
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-sla-escalations"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-sla-escalations"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    SLA Compliance &amp; Escalations
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Active operational deadline tracking and governance
+                    escalation records
+                  </p>
+                </div>
+              </div>
+
+              <SlaMonitoringCard
+                slaMonitoring={data.slaMonitoring}
+                escalations={data.escalations}
+                totalUniqueGrievances={data.summary.totalUniqueGrievances}
+              />
+            </section>
+          )}
+
+          {/* TAB 4: Staff Workload Caseload */}
+          {activeTab === "staff" && (
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-staff-caseload"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-staff-caseload"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Staff Caseload & Handover Governance
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Investigation caseload per active grievance staff member
+                  </p>
+                </div>
+              </div>
+
+              <StaffAssignmentReportCard
+                staffAssignments={data.staffAssignments}
+                totalUniqueGrievances={data.summary.totalUniqueGrievances}
+              />
+            </section>
+          )}
+
+          {/* TAB 5: Category & Taxonomy Breakdown */}
+          {activeTab === "taxonomy" && (
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-taxonomy"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-taxonomy"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Category Taxonomy Breakdown
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Volume distribution across master grievance categories and
+                    subcategories
+                  </p>
+                </div>
+              </div>
+
               <CategoryDistributionCard
                 categoryDistribution={data.categoryDistribution}
                 totalUniqueGrievances={data.summary.totalUniqueGrievances}
               />
-            </div>
-          )}
-
-          {/* Tab 3: Staff & Workload */}
-          {activeTab === "staff" && (
-            <StaffAssignmentReportCard
-              staffAssignments={data.staffAssignments}
-              totalUniqueGrievances={data.summary.totalUniqueGrievances}
-            />
-          )}
-
-          {/* Tab 4: SLA & Escalations */}
-          {activeTab === "sla" && (
-            <div className="flex flex-col gap-3.5">
-              <SlaMonitoringCard
-                slaMonitoring={data.slaMonitoring}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
-              <EscalationReportCard escalations={data.escalations} />
-            </div>
+            </section>
           )}
         </div>
       )}

@@ -10,117 +10,166 @@ import {
   ShieldAlert,
   UserX,
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import type { ElementType } from "react";
 import type { GrievanceVolumeSummary } from "@/types/reports";
 
 export interface GrievanceVolumeCardProps {
   summary: GrievanceVolumeSummary;
+  onCardClick?: (metricKey: string) => void;
 }
 
-export function GrievanceVolumeCard({ summary }: GrievanceVolumeCardProps) {
-  const cards = [
+interface VolumeMetricItem {
+  key: string;
+  label: string;
+  value: number;
+  description: string;
+  icon: ElementType;
+  color: string;
+  bg: string;
+  border: string;
+  valueColor: string;
+}
+
+export function GrievanceVolumeCard({
+  summary,
+  onCardClick,
+}: GrievanceVolumeCardProps) {
+  const metrics: VolumeMetricItem[] = [
     {
-      label: "Total Unique Grievances",
+      key: "total",
+      label: "Total Received",
       value: summary.totalUniqueGrievances,
-      description: "Deduplicated received volume",
+      description: "Deduplicated unique cases",
       icon: FileText,
       color: "text-blue-600 dark:text-blue-400",
       bg: "bg-blue-50 dark:bg-blue-950/40",
-      border: "border-blue-200/80 dark:border-blue-900/40",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-slate-900 dark:text-slate-100",
     },
     {
-      label: "Active / In Workflow",
+      key: "active",
+      label: "Active In-Flight",
       value: summary.activeGrievances,
       description: "Under active investigation",
       icon: Clock,
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-50 dark:bg-amber-950/40",
-      border: "border-amber-200/80 dark:border-amber-900/40",
+      color: "text-sky-600 dark:text-sky-400",
+      bg: "bg-sky-50 dark:bg-sky-950/40",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-sky-700 dark:text-sky-300",
     },
     {
+      key: "resolved",
       label: "Resolved",
       value: summary.resolvedGrievances,
-      description: "Resolution approved/issued",
+      description: "Resolution issued/approved",
       icon: CheckCircle2,
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-50 dark:bg-emerald-950/40",
-      border: "border-emerald-200/80 dark:border-emerald-900/40",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-emerald-700 dark:text-emerald-300",
     },
     {
+      key: "closed",
       label: "Closed",
       value: summary.closedGrievances,
       description: "Final closed state",
       icon: FileCheck,
       color: "text-slate-600 dark:text-slate-400",
       bg: "bg-slate-100 dark:bg-slate-800",
-      border: "border-slate-200/80 dark:border-slate-700",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-slate-700 dark:text-slate-300",
     },
     {
-      label: "Active Approaching SLA",
+      key: "sla_at_risk",
+      label: "SLA At Risk",
       value: summary.slaApproachingGrievances,
-      description: "At risk open cases",
+      description: "Approaching deadline (50-99%)",
       icon: AlertTriangle,
-      color: "text-orange-600 dark:text-orange-400",
-      bg: "bg-orange-50 dark:bg-orange-950/40",
-      border: "border-orange-200/80 dark:border-orange-900/40",
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-950/40",
+      border: "border-amber-200/80 dark:border-amber-900/40",
+      valueColor:
+        summary.slaApproachingGrievances > 0
+          ? "text-amber-700 dark:text-amber-400"
+          : "text-slate-900 dark:text-slate-100",
     },
     {
-      label: "Active SLA Breached",
+      key: "sla_breached",
+      label: "SLA Breached",
       value: summary.slaBreachedGrievances,
-      description: "Exceeded target open cases",
+      description: "Exceeded SLA (≥ 100%)",
       icon: AlertCircle,
       color: "text-rose-600 dark:text-rose-400",
       bg: "bg-rose-50 dark:bg-rose-950/40",
       border: "border-rose-200/80 dark:border-rose-900/40",
+      valueColor:
+        summary.slaBreachedGrievances > 0
+          ? "text-rose-700 dark:text-rose-400"
+          : "text-slate-900 dark:text-slate-100",
     },
     {
-      label: "Recorded Escalations",
+      key: "escalated",
+      label: "Escalated",
       value: summary.escalatedGrievances,
-      description: "Cases with active escalations",
+      description: "Recorded escalation events",
       icon: ShieldAlert,
       color: "text-purple-600 dark:text-purple-400",
       bg: "bg-purple-50 dark:bg-purple-950/40",
-      border: "border-purple-200/80 dark:border-purple-900/40",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-purple-700 dark:text-purple-300",
     },
     {
-      label: "Unassigned Cases",
+      key: "unassigned",
+      label: "Unassigned",
       value: summary.unassignedGrievances,
       description: "Awaiting staff assignment",
       icon: UserX,
       color: "text-indigo-600 dark:text-indigo-400",
       bg: "bg-indigo-50 dark:bg-indigo-950/40",
-      border: "border-indigo-200/80 dark:border-indigo-900/40",
+      border: "border-slate-200 dark:border-slate-800",
+      valueColor: "text-indigo-700 dark:text-indigo-300",
     },
   ];
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-        {cards.map((c) => {
-          const Icon = c.icon;
+    <section aria-label="Executive KPI Summary">
+      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
           return (
-            <Card
-              key={c.label}
-              className={`p-3 border ${c.border} bg-white dark:bg-slate-900 shadow-2xs hover:shadow-xs transition-shadow`}
+            <button
+              type="button"
+              key={metric.key}
+              onClick={() => onCardClick?.(metric.key)}
+              disabled={!onCardClick}
+              className={`text-left bg-white dark:bg-slate-900 border ${metric.border} rounded-lg p-3.5 transition-all shadow-xs hover:shadow-sm ${
+                onCardClick
+                  ? "cursor-pointer hover:border-slate-300 dark:hover:border-slate-700"
+                  : "cursor-default"
+              }`}
             >
-              <div className="flex items-center justify-between gap-1 mb-1.5">
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-1">
-                  {c.label}
+              <div className="flex items-center justify-between gap-1 mb-2">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">
+                  {metric.label}
                 </span>
-                <div className={`p-1 rounded-md ${c.bg} shrink-0`}>
-                  <Icon className={`h-3.5 w-3.5 ${c.color}`} />
+                <div className={`p-1 rounded-md ${metric.bg} shrink-0`}>
+                  <Icon className={`h-3.5 w-3.5 ${metric.color}`} />
                 </div>
               </div>
-              <div className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                {c.value.toLocaleString()}
+
+              <div
+                className={`text-2xl font-bold font-mono tracking-tight tabular-nums ${metric.valueColor}`}
+              >
+                {metric.value.toLocaleString()}
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                {c.description}
+
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {metric.description}
               </p>
-            </Card>
+            </button>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

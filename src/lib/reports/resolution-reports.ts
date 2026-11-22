@@ -946,7 +946,12 @@ export async function generateResolutionAnalytics(
   };
 
   const filterOptions: ResolutionAnalyticsFilterOptions = {
-    departments: allDepartments.map((d) => ({
+    departments: (scope.authorizedDepartmentId
+      ? allDepartments.filter(
+          (d) => d.department_id === scope.authorizedDepartmentId,
+        )
+      : allDepartments
+    ).map((d) => ({
       id: d.department_id.toString(),
       name: d.department_name,
     })),

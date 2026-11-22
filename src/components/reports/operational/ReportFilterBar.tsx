@@ -1,8 +1,13 @@
 "use client";
 
-import { Calendar, Filter, RotateCcw, Search, X } from "lucide-react";
-import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Calendar, RotateCcw } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import {
+  AdvancedTableSearch,
+  type FilterMode,
+  type SearchCondition,
+  type SearchFieldDef,
+} from "@/components/ui/advanced-table-search";
 import { Button } from "@/components/ui/button";
 import type {
   OperationalReportFilterOptions,
@@ -22,15 +27,115 @@ export function ReportFilterBar({
   filters,
   filterOptions,
   isOrganizationWide,
-  isLoading = false,
+  isLoading: _isLoading = false,
   onApplyFilters,
   onResetFilters,
 }: ReportFilterBarProps) {
   const [localFilters, setLocalFilters] =
     useState<OperationalReportFilters>(filters);
   const [activePreset, setActivePreset] = useState<string>("30d");
+  const [searchKey, setSearchKey] = useState<number>(0);
 
-  // Date Presets Handler
+  // Define Search & Filter Fields for the Standard AdvancedTableSearch
+  const searchFields: SearchFieldDef[] = useMemo(() => {
+    const fields: SearchFieldDef[] = [
+      {
+        id: "search",
+        label: "Search (Keywords / Ticket #)",
+        type: "text",
+      },
+    ];
+
+    if (isOrganizationWide && filterOptions.departments.length > 0) {
+      fields.push({
+        id: "department",
+        label: "Department",
+        type: "select",
+        options: filterOptions.departments.map((dept) => ({
+          value: dept.id,
+          label: dept.name,
+        })),
+      });
+    }
+
+    if (filterOptions.categories.length > 0) {
+      fields.push({
+        id: "category",
+        label: "Category",
+        type: "select",
+        options: filterOptions.categories.map((cat) => ({
+          value: cat.id,
+          label: cat.name,
+        })),
+      });
+
+      const allSubcategories: { value: string; label: string }[] = [];
+      filterOptions.categories.forEach((cat) => {
+        cat.subcategories.forEach((sub) => {
+          allSubcategories.push({
+            value: sub.id,
+            label: `${sub.name} (${cat.name})`,
+          });
+        });
+      });
+
+      if (allSubcategories.length > 0) {
+        fields.push({
+          id: "subcategory",
+          label: "Subcategory",
+          type: "select",
+          options: allSubcategories,
+        });
+      }
+    }
+
+    fields.push({
+      id: "priority",
+      label: "Priority",
+      type: "select",
+      options: filterOptions.priorities.map((p) => ({
+        value: p,
+        label: p.charAt(0) + p.slice(1).toLowerCase(),
+      })),
+    });
+
+    if (filterOptions.statuses.length > 0) {
+      fields.push({
+        id: "status",
+        label: "Status",
+        type: "select",
+        options: filterOptions.statuses.map((st) => ({
+          value: st,
+          label: st.replace(/_/g, " "),
+        })),
+      });
+    }
+
+    fields.push({
+      id: "slaStatus",
+      label: "SLA Health",
+      type: "select",
+      options: [
+        { value: "ON_TRACK", label: "On Track (< 50%)" },
+        { value: "AT_RISK", label: "Approaching Deadline (50-99%)" },
+        { value: "BREACHED", label: "Exceeded SLA (≥ 100%)" },
+      ],
+    });
+
+    fields.push({
+      id: "assignmentStatus",
+      label: "Assignment State",
+      type: "select",
+      options: [
+        { value: "ASSIGNED", label: "Assigned" },
+        { value: "UNASSIGNED", label: "Unassigned" },
+      ],
+    });
+
+    return fields;
+  }, [filterOptions, isOrganizationWide]);
+
+  // Handle Preset Selection (Date Presets)
   const handlePresetSelect = (preset: "7d" | "30d" | "month" | "90d") => {
     setActivePreset(preset);
     const now = new Date();
@@ -48,7 +153,7 @@ export function ReportFilterBar({
     }
 
     const startStr = start.toISOString().split("T")[0];
-    const updated = {
+    const updated: OperationalReportFilters = {
       ...localFilters,
       startDate: startStr,
       endDate: endStr,
@@ -57,29 +162,83 @@ export function ReportFilterBar({
     onApplyFilters(updated);
   };
 
-  const handleInputChange = (
-    field: keyof OperationalReportFilters,
-    value: string,
-  ) => {
+  // Handle Custom Date Change
+  const handleDateChange = (field: "startDate" | "endDate", value: string) => {
     setActivePreset("custom");
     const updated: OperationalReportFilters = {
       ...localFilters,
-      [field]: value === "ALL" || value === "" ? undefined : value,
+      [field]: value || undefined,
     };
+    setLocalFilters(updated);
+    onApplyFilters(updated);
+  };
 
-    // If changing category, reset subcategory
-    if (field === "categoryId") {
-      updated.subcategoryId = undefined;
+  // Handle AdvancedTableSearch condition changes
+  const handleAdvancedSearch = (
+    conditions: SearchCondition[],
+    _mode: FilterMode,
+  ) => {
+    let departmentId: string | undefined;
+    let categoryId: string | undefined;
+    let subcategoryId: string | undefined;
+    let priority: string | undefined;
+    let status: string | undefined;
+    let slaStatus: string | undefined;
+    let assignmentStatus: "ALL" | "ASSIGNED" | "UNASSIGNED" | undefined;
+    let search: string | undefined;
+
+    for (const condition of conditions) {
+      const val = Array.isArray(condition.value)
+        ? condition.value[0]
+        : condition.value;
+      if (!val) continue;
+
+      if (condition.field === "department") {
+        departmentId = String(val);
+      } else if (condition.field === "category") {
+        categoryId = String(val);
+      } else if (condition.field === "subcategory") {
+        subcategoryId = String(val);
+      } else if (condition.field === "priority") {
+        priority = String(val);
+      } else if (condition.field === "status") {
+        status = String(val);
+      } else if (condition.field === "slaStatus") {
+        slaStatus = String(val);
+      } else if (condition.field === "assignmentStatus") {
+        const strVal = String(val).toUpperCase();
+        if (
+          strVal === "ASSIGNED" ||
+          strVal === "UNASSIGNED" ||
+          strVal === "ALL"
+        ) {
+          assignmentStatus = strVal;
+        }
+      } else if (condition.field === "search") {
+        const textVal = Array.isArray(condition.value)
+          ? condition.value.join(" ")
+          : condition.value;
+        if (textVal) search = String(textVal).trim();
+      }
     }
 
+    const updated: OperationalReportFilters = {
+      ...localFilters,
+      departmentId,
+      categoryId,
+      subcategoryId,
+      priority,
+      status,
+      slaStatus,
+      assignmentStatus,
+      search,
+    };
+
     setLocalFilters(updated);
+    onApplyFilters(updated);
   };
 
-  const handleApply = (e: React.FormEvent) => {
-    e.preventDefault();
-    onApplyFilters(localFilters);
-  };
-
+  // Reset all filters and search conditions
   const handleReset = () => {
     setActivePreset("30d");
     const now = new Date();
@@ -98,411 +257,122 @@ export function ReportFilterBar({
       status: undefined,
       slaStatus: undefined,
       assignmentStatus: undefined,
+      search: undefined,
     };
+
     setLocalFilters(resetFilters);
+    setSearchKey((k) => k + 1);
     onResetFilters();
   };
 
-  // Find subcategories for selected category
-  const selectedCategory = filterOptions.categories.find(
-    (c) => c.id === localFilters.categoryId,
-  );
-  const availableSubcategories = selectedCategory
-    ? selectedCategory.subcategories
-    : [];
-
-  // Count active non-default filters
-  const hasActiveFilters = Boolean(
-    localFilters.departmentId ||
-      localFilters.categoryId ||
-      localFilters.subcategoryId ||
-      localFilters.priority ||
-      localFilters.status ||
-      localFilters.slaStatus ||
-      (localFilters.assignmentStatus &&
-        localFilters.assignmentStatus !== "ALL"),
-  );
-
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900/60 print:hidden">
-      <form onSubmit={handleApply} className="flex flex-col gap-3">
-        {/* Top Row: Presets & Date Inputs */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              Period:
-            </span>
-            <Button
-              type="button"
-              variant={activePreset === "7d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePresetSelect("7d")}
-              className="h-7 text-xs px-2.5 rounded-md"
-            >
-              Last 7 Days
-            </Button>
-            <Button
-              type="button"
-              variant={activePreset === "30d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePresetSelect("30d")}
-              className="h-7 text-xs px-2.5 rounded-md"
-            >
-              Last 30 Days
-            </Button>
-            <Button
-              type="button"
-              variant={activePreset === "month" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePresetSelect("month")}
-              className="h-7 text-xs px-2.5 rounded-md"
-            >
-              This Month
-            </Button>
-            <Button
-              type="button"
-              variant={activePreset === "90d" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handlePresetSelect("90d")}
-              className="h-7 text-xs px-2.5 rounded-md"
-            >
-              Last 90 Days
-            </Button>
-          </div>
-
-          {/* Date Picker Inputs */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5">
-              <label
-                htmlFor="rep-start-date"
-                className="text-slate-500 dark:text-slate-400 font-medium"
-              >
-                From:
-              </label>
-              <input
-                id="rep-start-date"
-                type="date"
-                value={
-                  localFilters.startDate
-                    ? localFilters.startDate.split("T")[0]
-                    : ""
-                }
-                onChange={(e) => handleInputChange("startDate", e.target.value)}
-                className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <label
-                htmlFor="rep-end-date"
-                className="text-slate-500 dark:text-slate-400 font-medium"
-              >
-                To:
-              </label>
-              <input
-                id="rep-end-date"
-                type="date"
-                value={
-                  localFilters.endDate ? localFilters.endDate.split("T")[0] : ""
-                }
-                onChange={(e) => handleInputChange("endDate", e.target.value)}
-                className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </div>
-          </div>
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex flex-col gap-2.5">
+      {/* Date Presets and Date Range Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Period:
+          </span>
+          <Button
+            type="button"
+            variant={activePreset === "7d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePresetSelect("7d")}
+            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+          >
+            Last 7 Days
+          </Button>
+          <Button
+            type="button"
+            variant={activePreset === "30d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePresetSelect("30d")}
+            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+          >
+            Last 30 Days
+          </Button>
+          <Button
+            type="button"
+            variant={activePreset === "month" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePresetSelect("month")}
+            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+          >
+            This Month
+          </Button>
+          <Button
+            type="button"
+            variant={activePreset === "90d" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handlePresetSelect("90d")}
+            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+          >
+            Last 90 Days
+          </Button>
         </div>
 
-        {/* Second Row: Dimensional Filters Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
-          {/* Department Filter (Admin Only) */}
-          {isOrganizationWide && (
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="filter-dept"
-                className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
-              >
-                Department
-              </label>
-              <select
-                id="filter-dept"
-                value={localFilters.departmentId || "ALL"}
-                onChange={(e) =>
-                  handleInputChange("departmentId", e.target.value)
-                }
-                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                <option value="ALL">All Departments</option>
-                {filterOptions.departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Category Filter */}
-          <div className="flex flex-col gap-1">
+        {/* Date Picker Inputs + Reset Button */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex items-center gap-1.5">
             <label
-              htmlFor="filter-cat"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
+              htmlFor="rep-start-date"
+              className="text-slate-500 dark:text-slate-400 font-medium"
             >
-              Category
+              From:
             </label>
-            <select
-              id="filter-cat"
-              value={localFilters.categoryId || "ALL"}
-              onChange={(e) => handleInputChange("categoryId", e.target.value)}
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <option value="ALL">All Categories</option>
-              {filterOptions.categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Subcategory Filter */}
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="filter-subcat"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
-            >
-              Subcategory
-            </label>
-            <select
-              id="filter-subcat"
-              value={localFilters.subcategoryId || "ALL"}
-              disabled={!localFilters.categoryId}
-              onChange={(e) =>
-                handleInputChange("subcategoryId", e.target.value)
+            <input
+              id="rep-start-date"
+              type="date"
+              value={
+                localFilters.startDate
+                  ? localFilters.startDate.split("T")[0]
+                  : ""
               }
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:disabled:bg-slate-800/40"
-            >
-              <option value="ALL">All Subcategories</option>
-              {availableSubcategories.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.name}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => handleDateChange("startDate", e.target.value)}
+              className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
           </div>
-
-          {/* Priority Filter */}
-          <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
             <label
-              htmlFor="filter-prio"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
+              htmlFor="rep-end-date"
+              className="text-slate-500 dark:text-slate-400 font-medium"
             >
-              Priority
+              To:
             </label>
-            <select
-              id="filter-prio"
-              value={localFilters.priority || "ALL"}
-              onChange={(e) => handleInputChange("priority", e.target.value)}
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <option value="ALL">All Priorities</option>
-              {filterOptions.priorities.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Grievance Status Filter */}
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="filter-status"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
-            >
-              Status
-            </label>
-            <select
-              id="filter-status"
-              value={localFilters.status || "ALL"}
-              onChange={(e) => handleInputChange("status", e.target.value)}
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <option value="ALL">All Statuses</option>
-              {filterOptions.statuses.map((st) => (
-                <option key={st} value={st}>
-                  {st.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* SLA Status Filter */}
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="filter-sla"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
-            >
-              SLA Health
-            </label>
-            <select
-              id="filter-sla"
-              value={localFilters.slaStatus || "ALL"}
-              onChange={(e) => handleInputChange("slaStatus", e.target.value)}
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              <option value="ALL">All SLA States</option>
-              <option value="ON_TRACK">On Track</option>
-              <option value="AT_RISK">Approaching Deadline (At Risk)</option>
-              <option value="BREACHED">Exceeding Deadline (Breached)</option>
-            </select>
-          </div>
-
-          {/* Assignment Status Filter */}
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="filter-assign"
-              className="text-[11px] font-medium text-slate-600 dark:text-slate-300"
-            >
-              Assignment
-            </label>
-            <select
-              id="filter-assign"
-              value={localFilters.assignmentStatus || "ALL"}
-              onChange={(e) =>
-                handleInputChange("assignmentStatus", e.target.value)
+            <input
+              id="rep-end-date"
+              type="date"
+              value={
+                localFilters.endDate ? localFilters.endDate.split("T")[0] : ""
               }
-              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            >
-              {filterOptions.assignmentStatuses.map((as) => (
-                <option key={as.value} value={as.value}>
-                  {as.label}
-                </option>
-              ))}
-            </select>
+              onChange={(e) => handleDateChange("endDate", e.target.value)}
+              className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="h-7 px-2 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 gap-1 cursor-pointer"
+            title="Reset period & filters"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </Button>
         </div>
+      </div>
 
-        {/* Action Controls & Active Badges */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            {hasActiveFilters ? (
-              <>
-                <span className="font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                  <Filter className="h-3 w-3" />
-                  Active Filters:
-                </span>
-                {localFilters.departmentId && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[11px] py-0.5 font-normal"
-                  >
-                    Dept:{" "}
-                    {filterOptions.departments.find(
-                      (d) => d.id === localFilters.departmentId,
-                    )?.name || localFilters.departmentId}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                      onClick={() => handleInputChange("departmentId", "ALL")}
-                    />
-                  </Badge>
-                )}
-                {localFilters.categoryId && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[11px] py-0.5 font-normal"
-                  >
-                    Cat:{" "}
-                    {filterOptions.categories.find(
-                      (c) => c.id === localFilters.categoryId,
-                    )?.name || localFilters.categoryId}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                      onClick={() => handleInputChange("categoryId", "ALL")}
-                    />
-                  </Badge>
-                )}
-                {localFilters.priority && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[11px] py-0.5 font-normal"
-                  >
-                    Prio: {localFilters.priority}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                      onClick={() => handleInputChange("priority", "ALL")}
-                    />
-                  </Badge>
-                )}
-                {localFilters.status && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[11px] py-0.5 font-normal"
-                  >
-                    Status: {localFilters.status}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                      onClick={() => handleInputChange("status", "ALL")}
-                    />
-                  </Badge>
-                )}
-                {localFilters.slaStatus && (
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 text-[11px] py-0.5 font-normal"
-                  >
-                    SLA: {localFilters.slaStatus}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                      onClick={() => handleInputChange("slaStatus", "ALL")}
-                    />
-                  </Badge>
-                )}
-                {localFilters.assignmentStatus &&
-                  localFilters.assignmentStatus !== "ALL" && (
-                    <Badge
-                      variant="secondary"
-                      className="gap-1 text-[11px] py-0.5 font-normal"
-                    >
-                      {localFilters.assignmentStatus}
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-rose-500"
-                        onClick={() =>
-                          handleInputChange("assignmentStatus", "ALL")
-                        }
-                      />
-                    </Badge>
-                  )}
-              </>
-            ) : (
-              <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
-                Showing all grievances for reporting period
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              className="h-8 px-2.5 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 gap-1"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Reset
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={isLoading}
-              className="h-8 px-3.5 text-xs font-medium gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Search className="h-3 w-3" />
-              Apply Filters
-            </Button>
-          </div>
-        </div>
-      </form>
+      {/* Advanced Table Search Bar (Mana Standard Search) */}
+      <div className="w-full">
+        <AdvancedTableSearch
+          key={searchKey}
+          fields={searchFields}
+          onSearch={handleAdvancedSearch}
+          className="w-full"
+        />
+      </div>
     </div>
   );
 }

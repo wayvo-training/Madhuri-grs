@@ -8,6 +8,7 @@ export interface OperationalReportFilters {
   status?: string;
   slaStatus?: string;
   assignmentStatus?: "ALL" | "ASSIGNED" | "UNASSIGNED";
+  search?: string;
 }
 
 export interface ReportMetadata {

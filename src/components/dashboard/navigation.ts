@@ -46,24 +46,6 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           icon: LayoutDashboard,
         },
         {
-          title: "Operational Reports",
-          href: "/admin/reports/operational",
-          icon: BarChart3,
-          requiredPermission: "VIEW_REPORTS",
-        },
-        {
-          title: "Resolution Analytics (TAT)",
-          href: "/admin/reports/resolution",
-          icon: Timer,
-          requiredPermission: "VIEW_REPORTS",
-        },
-        {
-          title: "Trend & Pattern Analysis",
-          href: "/admin/reports/trends",
-          icon: TrendingUp,
-          requiredPermission: "VIEW_REPORTS",
-        },
-        {
           title: "Grievances & Exceptions",
           href: "/admin/grievances",
           icon: FileText,
@@ -77,6 +59,29 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Notifications",
           href: "/admin/notifications",
           icon: Bell,
+        },
+      ],
+    },
+    {
+      label: "Reports & Analytics",
+      items: [
+        {
+          title: "Operational & Performance Reports",
+          href: "/admin/reports/operational",
+          icon: BarChart3,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Resolution Analytics",
+          href: "/admin/reports/resolution",
+          icon: Timer,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Trend & Pattern Analysis",
+          href: "/admin/reports/trends",
+          icon: TrendingUp,
+          requiredPermission: "VIEW_REPORTS",
         },
       ],
     },
@@ -154,6 +159,29 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
       ],
     },
     {
+      label: "Reports & Analytics",
+      items: [
+        {
+          title: "Operational & Performance Reports",
+          href: "/department-head/reports/operational",
+          icon: BarChart3,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Resolution Analytics",
+          href: "/department-head/reports/resolution",
+          icon: Timer,
+          requiredPermission: "VIEW_REPORTS",
+        },
+        {
+          title: "Trend & Pattern Analysis",
+          href: "/department-head/reports/trends",
+          icon: TrendingUp,
+          requiredPermission: "VIEW_REPORTS",
+        },
+      ],
+    },
+    {
       label: "Team & Performance",
       items: [
         {
@@ -165,24 +193,6 @@ export const ROLE_NAVIGATION: Record<UserRole, NavGroup[]> = {
           title: "Activity",
           href: "/department-head/activity",
           icon: Activity,
-        },
-        {
-          title: "Operational Reports",
-          href: "/department-head/reports/operational",
-          icon: BarChart3,
-          requiredPermission: "VIEW_REPORTS",
-        },
-        {
-          title: "Resolution Analytics (TAT)",
-          href: "/department-head/reports/resolution",
-          icon: Timer,
-          requiredPermission: "VIEW_REPORTS",
-        },
-        {
-          title: "Trend & Pattern Analysis",
-          href: "/department-head/reports/trends",
-          icon: TrendingUp,
-          requiredPermission: "VIEW_REPORTS",
         },
       ],
     },

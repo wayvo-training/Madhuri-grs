@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
           | "ALL"
           | "ASSIGNED"
           | "UNASSIGNED") || undefined,
+      search: searchParams.get("search") || undefined,
     };
 
     // 3. Generate Report Data and Filter Options in Parallel

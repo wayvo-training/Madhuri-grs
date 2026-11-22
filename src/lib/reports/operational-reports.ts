@@ -266,6 +266,21 @@ export async function generateOperationalReport(
     }
   }
 
+  // Dimension: Global Search Query
+  if (filters.search && filters.search.trim() !== "") {
+    const q = filters.search.trim();
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+      {
+        OR: [
+          { grievance_number: { contains: q, mode: "insensitive" } },
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } },
+        ],
+      },
+    ];
+  }
+
   // 5. Query Filtered Grievances (Unique Grievances in Scope)
   const grievances = await prisma.grievances.findMany({
     where,
@@ -434,13 +449,23 @@ export async function generateOperationalReport(
       },
       ...(authorizedDepartmentId !== null
         ? {
-            grievances: {
-              grievance_departments: {
-                some: {
+            OR: [
+              {
+                users: {
                   department_id: authorizedDepartmentId,
                 },
               },
-            },
+              {
+                grievances: {
+                  grievance_departments: {
+                    some: {
+                      department_id: authorizedDepartmentId,
+                      involvement_type: "PRIMARY",
+                    },
+                  },
+                },
+              },
+            ],
           }
         : {}),
     },
@@ -559,10 +584,36 @@ export async function generateOperationalReport(
     }
 
     // SLA tracking
-    const slaUpper = (g.sla_status || "ON_TRACK").toUpperCase();
-    if (slaUpper === "BREACHED") {
+    let slaUpper = (g.sla_status || "ON_TRACK").toUpperCase();
+    let effectiveDueAt = g.due_at;
+    let effectiveStatusUpper = statusUpper;
+
+    if (authorizedDepartmentId !== null) {
+      const myDeptGd = g.grievance_departments.find(
+        (gd) => gd.department_id === authorizedDepartmentId,
+      );
+      if (myDeptGd) {
+        if (myDeptGd.sla_status) {
+          slaUpper = myDeptGd.sla_status.toUpperCase();
+        }
+        if (myDeptGd.due_at) {
+          effectiveDueAt = myDeptGd.due_at;
+        }
+        if (myDeptGd.status) {
+          effectiveStatusUpper = myDeptGd.status.toUpperCase();
+        }
+      }
+    }
+
+    const isDeptCompleted =
+      effectiveStatusUpper === "RESOLVED" ||
+      effectiveStatusUpper === "CLOSED" ||
+      effectiveStatusUpper === "COMPLETED" ||
+      effectiveStatusUpper === "FINDINGS_SUBMITTED";
+
+    if (slaUpper === "BREACHED" && !isDeptCompleted) {
       slaBreachedCount++;
-    } else if (slaUpper === "AT_RISK") {
+    } else if (slaUpper === "AT_RISK" && !isDeptCompleted) {
       slaApproachingCount++;
     }
 
@@ -653,30 +704,28 @@ export async function generateOperationalReport(
     }
 
     // SLA Monitoring lists
-    if (
-      slaUpper === "AT_RISK" &&
-      statusUpper !== "RESOLVED" &&
-      statusUpper !== "CLOSED"
-    ) {
+    if (slaUpper === "AT_RISK" && !isDeptCompleted) {
       approachingGrievancesList.push({
         grievanceId: g.grievance_id.toString(),
         grievanceNumber: g.grievance_number,
         title: g.title,
         priority: g.priority,
-        status: g.status,
+        status:
+          authorizedDepartmentId !== null ? effectiveStatusUpper : g.status,
         slaStatus: "AT_RISK",
-        dueAt: g.due_at ? g.due_at.toISOString() : null,
+        dueAt: effectiveDueAt ? effectiveDueAt.toISOString() : null,
         primaryDepartmentName: primaryDeptName,
       });
-    } else if (slaUpper === "BREACHED" && statusUpper !== "CLOSED") {
+    } else if (slaUpper === "BREACHED" && !isDeptCompleted) {
       breachedGrievancesList.push({
         grievanceId: g.grievance_id.toString(),
         grievanceNumber: g.grievance_number,
         title: g.title,
         priority: g.priority,
-        status: g.status,
+        status:
+          authorizedDepartmentId !== null ? effectiveStatusUpper : g.status,
         slaStatus: "BREACHED",
-        dueAt: g.due_at ? g.due_at.toISOString() : null,
+        dueAt: effectiveDueAt ? effectiveDueAt.toISOString() : null,
         primaryDepartmentName: primaryDeptName,
       });
     }
