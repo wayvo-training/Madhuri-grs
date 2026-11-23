@@ -119,7 +119,7 @@ export function PatternSummaryCards({ summary }: PatternSummaryCardsProps) {
               &gt; {summary.minThreshold} Cases
             </div>
             <CardDescription className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              LLD §3.10.5 rule: &gt; 7 occurrences in 30 days
+              Threshold rule: &gt; 7 occurrences in 30 days
             </CardDescription>
           </CardContent>
         </Card>

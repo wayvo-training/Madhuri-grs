@@ -31,7 +31,7 @@ export function CategoryPatternsCard({
             </div>
             <div>
               <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Recurring Category Patterns (LLD §3.10.5)
+                Recurring Category Patterns
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
                 Category clusters exceeding 7 cases within the 30-calendar-day

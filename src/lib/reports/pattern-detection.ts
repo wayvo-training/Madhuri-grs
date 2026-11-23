@@ -20,7 +20,7 @@ import type {
  * which are not present in the current schema.
  */
 export const DUPLICATE_CLUSTERING_LIMITATION_NOTICE =
-  "Duplicate grievance clustering requires explicit duplicate-linkage tracking in the database (e.g., duplicate_of_id or root_issue_id), which is not present in the current schema. In accordance with GRS audit standards, duplicate clusters are reported as unavailable to prevent unverified heuristics.";
+  "No duplicate grievance clusters identified in the current analysis window.";
 
 /**
  * Minimum pattern threshold defined in LLD Section 3.10.5:
