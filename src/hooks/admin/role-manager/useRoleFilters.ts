@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import {
   filterPermissions,
   filterRoles,
@@ -21,6 +25,8 @@ export function useRoleFilters(
 
   // Filter & Search states for Roles
   const [roleSearch, setRoleSearch] = useState("");
+  const [roleConditions, setRoleConditions] = useState<SearchCondition[]>([]);
+  const [roleFilterMode, setRoleFilterMode] = useState<FilterMode>("AND");
   const [roleStatusFilter, setRoleStatusFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -28,13 +34,21 @@ export function useRoleFilters(
 
   // Filter & Search states for Permissions
   const [permSearch, setPermSearch] = useState("");
+  const [permConditions, setPermConditions] = useState<SearchCondition[]>([]);
+  const [permFilterMode, setPermFilterMode] = useState<FilterMode>("AND");
   const [permStatusFilter, setPermStatusFilter] = useState<string[]>([]);
   const [permCurrentPage, setPermCurrentPage] = useState(1);
   const [permPageSize, setPermPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filteredRoles = useMemo(() => {
-    return filterRoles(roles, roleSearch, roleStatusFilter);
-  }, [roles, roleSearch, roleStatusFilter]);
+    return filterRoles(
+      roles,
+      roleSearch,
+      roleStatusFilter,
+      roleConditions,
+      roleFilterMode,
+    );
+  }, [roles, roleSearch, roleStatusFilter, roleConditions, roleFilterMode]);
 
   const totalPages = Math.ceil(filteredRoles.length / rolePageSize) || 1;
 
@@ -54,8 +68,20 @@ export function useRoleFilters(
   );
 
   const filteredPermissions = useMemo(() => {
-    return filterPermissions(permissionsList, permSearch, permStatusFilter);
-  }, [permissionsList, permSearch, permStatusFilter]);
+    return filterPermissions(
+      permissionsList,
+      permSearch,
+      permStatusFilter,
+      permConditions,
+      permFilterMode,
+    );
+  }, [
+    permissionsList,
+    permSearch,
+    permStatusFilter,
+    permConditions,
+    permFilterMode,
+  ]);
 
   const permTotalPages =
     Math.ceil(filteredPermissions.length / permPageSize) || 1;
@@ -75,6 +101,15 @@ export function useRoleFilters(
     [permissionsList],
   );
 
+  const handleRoleConditionsChange = (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => {
+    setRoleConditions(conditions);
+    setRoleFilterMode(mode || "AND");
+    setCurrentPage(1);
+  };
+
   const handleRoleSearchChange = (value: string) => {
     setRoleSearch(value);
     setCurrentPage(1);
@@ -83,6 +118,15 @@ export function useRoleFilters(
   const handleRoleStatusChange = (statuses: string[]) => {
     setRoleStatusFilter(statuses);
     setCurrentPage(1);
+  };
+
+  const handlePermConditionsChange = (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => {
+    setPermConditions(conditions);
+    setPermFilterMode(mode || "AND");
+    setPermCurrentPage(1);
   };
 
   const handlePermSearchChange = (value: string) => {
@@ -100,6 +144,9 @@ export function useRoleFilters(
     setActiveTab,
     roleSearch,
     setRoleSearch: handleRoleSearchChange,
+    roleConditions,
+    roleFilterMode,
+    handleRoleConditionsChange,
     roleStatusFilter,
     setRoleStatusFilter: handleRoleStatusChange,
     currentPage,
@@ -113,6 +160,9 @@ export function useRoleFilters(
     inactiveRolesCount,
     permSearch,
     setPermSearch: handlePermSearchChange,
+    permConditions,
+    permFilterMode,
+    handlePermConditionsChange,
     permStatusFilter,
     setPermStatusFilter: handlePermStatusChange,
     filteredPermissions,

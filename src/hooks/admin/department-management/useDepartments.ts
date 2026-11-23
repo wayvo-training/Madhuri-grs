@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type {
+  FilterMode,
+  SearchCondition,
+} from "@/components/ui/advanced-table-search";
 import { filterDepartments } from "@/lib/admin/department-management/department-filters";
 import type { SerializedDepartment } from "@/types/admin/departments";
 
@@ -9,14 +13,24 @@ const DEFAULT_PAGE_SIZE = 10;
 export function useDepartments(initialDepartments: SerializedDepartment[]) {
   const [departments, setDepartments] =
     useState<SerializedDepartment[]>(initialDepartments);
+  const [searchConditions, setSearchConditions] = useState<SearchCondition[]>(
+    [],
+  );
+  const [filterMode, setFilterMode] = useState<FilterMode>("AND");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const filteredDepartments = useMemo(() => {
-    return filterDepartments(departments, searchQuery, statusFilter);
-  }, [departments, statusFilter, searchQuery]);
+    return filterDepartments(
+      departments,
+      searchQuery,
+      statusFilter,
+      searchConditions,
+      filterMode,
+    );
+  }, [departments, statusFilter, searchQuery, searchConditions, filterMode]);
 
   const totalPages = Math.ceil(filteredDepartments.length / pageSize) || 1;
 
@@ -24,6 +38,15 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
     const start = (currentPage - 1) * pageSize;
     return filteredDepartments.slice(start, start + pageSize);
   }, [filteredDepartments, currentPage, pageSize]);
+
+  const handleConditionsChange = (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => {
+    setSearchConditions(conditions);
+    setFilterMode(mode || "AND");
+    setCurrentPage(1);
+  };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -36,6 +59,8 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
   };
 
   const handleResetFilters = () => {
+    setSearchConditions([]);
+    setFilterMode("AND");
     setSearchQuery("");
     setStatusFilter([]);
     setCurrentPage(1);
@@ -74,6 +99,9 @@ export function useDepartments(initialDepartments: SerializedDepartment[]) {
   return {
     departments,
     setDepartments,
+    searchConditions,
+    filterMode,
+    handleConditionsChange,
     statusFilter,
     setStatusFilter: handleStatusFilterChange,
     searchQuery,

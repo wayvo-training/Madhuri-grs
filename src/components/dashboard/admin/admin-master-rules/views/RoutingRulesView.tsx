@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   CheckCircle2,
   FileText,
   GitBranch,
@@ -17,6 +18,7 @@ import type {
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
+  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -224,6 +226,7 @@ export function RoutingRulesView({
                 } | null
               )?.priority_level ||
               "";
+
             const target = (
               field === "rule_name"
                 ? r.rule_name
@@ -240,23 +243,39 @@ export function RoutingRulesView({
 
             switch (op) {
               case "equals":
-                return target === valStr;
+              case "is_in":
+                return valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "not_equals":
-                return target !== valStr;
+              case "is_not_in":
+                return !valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "contains":
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "does_not_contain":
-                return !target.includes(valStr);
+                return !valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "starts_with":
-                return target.startsWith(valStr);
+                return valArray.some((v) =>
+                  target.startsWith(String(v).trim().toLowerCase()),
+                );
               case "ends_with":
-                return target.endsWith(valStr);
+                return valArray.some((v) =>
+                  target.endsWith(String(v).trim().toLowerCase()),
+                );
               case "is_empty":
                 return target === "" || target === "all" || target === "—";
               case "is_not_empty":
                 return target !== "" && target !== "all" && target !== "—";
               default:
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
             }
           }
 
@@ -283,7 +302,10 @@ export function RoutingRulesView({
 
       // 5. Fallback Search Query
       const effectiveSearch = (externalSearch || "").toLowerCase().trim();
-      if (effectiveSearch) {
+      if (
+        (!searchConditions || searchConditions.length === 0) &&
+        effectiveSearch
+      ) {
         const matchName = r.rule_name.toLowerCase().includes(effectiveSearch);
         const matchCat = ruleCat.toLowerCase().includes(effectiveSearch);
         const matchSubcat = (r.subcategory_name || "")

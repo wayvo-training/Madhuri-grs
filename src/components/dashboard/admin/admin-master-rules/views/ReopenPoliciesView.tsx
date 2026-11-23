@@ -126,23 +126,39 @@ export function ReopenPoliciesView({
 
             switch (op) {
               case "equals":
-                return target === valStr;
+              case "is_in":
+                return valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "not_equals":
-                return target !== valStr;
+              case "is_not_in":
+                return !valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "contains":
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "does_not_contain":
-                return !target.includes(valStr);
+                return !valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "starts_with":
-                return target.startsWith(valStr);
+                return valArray.some((v) =>
+                  target.startsWith(String(v).trim().toLowerCase()),
+                );
               case "ends_with":
-                return target.endsWith(valStr);
+                return valArray.some((v) =>
+                  target.endsWith(String(v).trim().toLowerCase()),
+                );
               case "is_empty":
                 return target === "" || target === "all" || target === "—";
               case "is_not_empty":
                 return target !== "" && target !== "all" && target !== "—";
               default:
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
             }
           }
 
@@ -246,7 +262,10 @@ export function ReopenPoliciesView({
       }
 
       // 3. Fallback generic text searchQuery
-      if (searchQuery.trim()) {
+      if (
+        (!searchConditions || searchConditions.length === 0) &&
+        searchQuery.trim()
+      ) {
         const q = searchQuery.toLowerCase().trim();
         const rawHours = item.reopen_window_hours ?? 336;
         const days = rawHours / 24;
@@ -379,7 +398,7 @@ export function ReopenPoliciesView({
                             currentSort={sortState}
                             onSort={handleSort}
                             className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
-                            title="Auto-close if citizen does not confirm resolution"
+                            title="Auto-close if employee does not confirm resolution"
                           >
                             Res. Auto-Close
                           </SortableTableHead>
@@ -388,7 +407,7 @@ export function ReopenPoliciesView({
                             currentSort={sortState}
                             onSort={handleSort}
                             className="w-[160px] px-3 py-3 text-[12px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap align-middle"
-                            title="Auto-close if citizen does not provide requested information"
+                            title="Auto-close if employee does not provide requested information"
                           >
                             Info Auto-Close
                           </SortableTableHead>

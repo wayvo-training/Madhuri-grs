@@ -115,11 +115,13 @@ const ConditionPill = ({
   condition,
   onChange,
   onRemove,
+  onApply,
   fields,
 }: {
   condition: SearchCondition & { internalId: string };
   onChange: (updates: Partial<SearchCondition>) => void;
   onRemove: () => void;
+  onApply?: () => void;
   fields: SearchFieldDef[];
 }) => {
   const fieldDef = fields.find((f) => f.id === condition.field);
@@ -186,6 +188,11 @@ const ConditionPill = ({
         className="h-full bg-transparent outline-none px-3 text-xs min-w-30 w-30 font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors"
         value={condition.value as string}
         onChange={(e) => onChange({ value: e.target.value })}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && onApply) {
+            onApply();
+          }
+        }}
         placeholder="Enter value..."
       />
     );
@@ -255,30 +262,15 @@ export function AdvancedTableSearch({
       currentConditions: (SearchCondition & { internalId: string })[],
       currentMode: FilterMode,
     ) => {
-      // Map conditions and apply the inversion hack for legacy table support
-      const mapped = currentConditions.map((c) => {
-        let val = c.value;
-        let op = c.operator;
-        const fieldDef = fields.find((f) => f.id === c.field);
-        if (
-          fieldDef?.type === "select" &&
-          (c.operator === "not_equals" || c.operator === "is_not_in")
-        ) {
-          const allOps = fieldDef.options?.map((o) => o.value) || [];
-          const selVals = Array.isArray(val) ? val : val ? [val] : [];
-          val = allOps.filter((o) => !selVals.includes(o));
-          op = "is_in";
-        }
-        return {
-          id: c.id,
-          field: c.field,
-          operator: op,
-          value: val,
-        };
-      });
+      const mapped = currentConditions.map((c) => ({
+        id: c.id,
+        field: c.field,
+        operator: c.operator,
+        value: c.value,
+      }));
       onSearch(mapped, currentMode);
     },
-    [fields, onSearch],
+    [onSearch],
   );
 
   const addCondition = (fieldId: string) => {
@@ -314,8 +306,8 @@ export function AdvancedTableSearch({
     setConditions(newConditions);
     if (newConditions.length === 0) {
       setIsSearching(false);
-      triggerApply(newConditions, filterMode);
     }
+    triggerApply(newConditions, filterMode);
   };
 
   const handleModeChange = (mode: FilterMode) => {
@@ -513,6 +505,7 @@ export function AdvancedTableSearch({
           fields={fields}
           onChange={(updates) => updateCondition(c.internalId, updates)}
           onRemove={() => removeCondition(c.internalId)}
+          onApply={() => triggerApply(conditions, filterMode)}
         />
       ))}
 

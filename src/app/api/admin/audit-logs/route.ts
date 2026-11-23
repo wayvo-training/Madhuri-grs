@@ -67,23 +67,63 @@ export async function GET(request: Request) {
 
     // Search filtering
     if (search) {
-      conditions.push({
-        OR: [
-          { action: { contains: search, mode: "insensitive" } },
-          { entity_type: { contains: search, mode: "insensitive" } },
-          { ip_address: { contains: search, mode: "insensitive" } },
-          {
-            users: {
+      if (search.startsWith("!")) {
+        const negSearch = search.slice(1).trim();
+        if (negSearch) {
+          conditions.push({
+            NOT: {
               OR: [
-                { first_name: { contains: search, mode: "insensitive" } },
-                { last_name: { contains: search, mode: "insensitive" } },
-                { email: { contains: search, mode: "insensitive" } },
-                { employee_code: { contains: search, mode: "insensitive" } },
+                { action: { contains: negSearch, mode: "insensitive" } },
+                { entity_type: { contains: negSearch, mode: "insensitive" } },
+                { ip_address: { contains: negSearch, mode: "insensitive" } },
+                {
+                  users: {
+                    OR: [
+                      {
+                        first_name: {
+                          contains: negSearch,
+                          mode: "insensitive",
+                        },
+                      },
+                      {
+                        last_name: {
+                          contains: negSearch,
+                          mode: "insensitive",
+                        },
+                      },
+                      { email: { contains: negSearch, mode: "insensitive" } },
+                      {
+                        employee_code: {
+                          contains: negSearch,
+                          mode: "insensitive",
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
-          },
-        ],
-      });
+          });
+        }
+      } else {
+        conditions.push({
+          OR: [
+            { action: { contains: search, mode: "insensitive" } },
+            { entity_type: { contains: search, mode: "insensitive" } },
+            { ip_address: { contains: search, mode: "insensitive" } },
+            {
+              users: {
+                OR: [
+                  { first_name: { contains: search, mode: "insensitive" } },
+                  { last_name: { contains: search, mode: "insensitive" } },
+                  { email: { contains: search, mode: "insensitive" } },
+                  { employee_code: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            },
+          ],
+        });
+      }
     }
 
     const where = conditions.length > 0 ? { AND: conditions } : {};

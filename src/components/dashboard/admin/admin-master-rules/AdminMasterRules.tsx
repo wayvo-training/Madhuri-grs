@@ -422,8 +422,6 @@ export function AdminMasterRules({
             onSearch={(conditions: SearchCondition[], mode: FilterMode) => {
               setSearchConditions(conditions);
               setFilterMode(mode || "AND");
-              setStatusFilter([]);
-              setSearchQuery("");
               const newStatus: string[] = [];
               let newSearch = "";
 
@@ -434,14 +432,13 @@ export function AdminMasterRules({
 
                 if (condition.field === "status") {
                   newStatus.push(...valArray);
-                } else {
-                  // Any other field is treated as a generic search term for the view
+                } else if (condition.field === "search") {
                   newSearch = valArray[0] || newSearch;
                 }
               });
 
-              if (newStatus.length > 0) setStatusFilter(newStatus);
-              if (newSearch) setSearchQuery(newSearch);
+              setStatusFilter(newStatus);
+              setSearchQuery(newSearch);
             }}
             className="w-full"
           />

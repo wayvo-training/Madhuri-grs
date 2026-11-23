@@ -29,6 +29,7 @@ export function AdminRolesManager({
     setActiveTab,
     roleSearch,
     setRoleSearch,
+    handleRoleConditionsChange,
     roleStatusFilter,
     setRoleStatusFilter,
     currentPage,
@@ -42,6 +43,7 @@ export function AdminRolesManager({
     inactiveRolesCount,
     permSearch,
     setPermSearch,
+    handlePermConditionsChange,
     permStatusFilter,
     setPermStatusFilter,
     filteredPermissions,
@@ -105,6 +107,7 @@ export function AdminRolesManager({
           inactiveRolesCount={inactiveRolesCount}
           roleSearch={roleSearch}
           onRoleSearchChange={setRoleSearch}
+          onConditionsChange={handleRoleConditionsChange}
           roleStatusFilter={roleStatusFilter}
           onRoleStatusChange={setRoleStatusFilter}
           currentPage={currentPage}
@@ -128,6 +131,7 @@ export function AdminRolesManager({
           inactivePermsCount={inactivePermsCount}
           permSearch={permSearch}
           onPermSearchChange={setPermSearch}
+          onConditionsChange={handlePermConditionsChange}
           permStatusFilter={permStatusFilter}
           onPermStatusChange={setPermStatusFilter}
           togglingPermId={togglingPermId}

@@ -17,10 +17,10 @@ export async function GET(request: Request) {
     );
     const tab = (searchParams.get("tab") || "ALL").toUpperCase();
     const search = searchParams.get("search")?.trim() || "";
-    const department = searchParams.get("department") || "ALL";
-    const priority = searchParams.get("priority") || "ALL";
-    const status = searchParams.get("status") || "ALL";
-    const slaStatus = searchParams.get("sla_status") || "ALL";
+    const department = searchParams.get("department")?.trim() || "ALL";
+    const priority = searchParams.get("priority")?.trim() || "ALL";
+    const status = searchParams.get("status")?.trim() || "ALL";
+    const slaStatus = searchParams.get("sla_status")?.trim() || "ALL";
 
     const conditions: Prisma.grievancesWhereInput[] = [];
 
@@ -76,55 +76,127 @@ export async function GET(request: Request) {
 
     // 2. Search keyword condition
     if (search) {
-      conditions.push({
-        OR: [
-          { grievance_number: { contains: search, mode: "insensitive" } },
-          { title: { contains: search, mode: "insensitive" } },
-          { description: { contains: search, mode: "insensitive" } },
-          { users: { first_name: { contains: search, mode: "insensitive" } } },
-          { users: { last_name: { contains: search, mode: "insensitive" } } },
-          { users: { email: { contains: search, mode: "insensitive" } } },
-          {
-            categories: {
-              category_name: { contains: search, mode: "insensitive" },
+      if (search.startsWith("!")) {
+        const neg = search.slice(1).trim();
+        if (neg) {
+          conditions.push({
+            NOT: {
+              OR: [
+                { grievance_number: { contains: neg, mode: "insensitive" } },
+                { title: { contains: neg, mode: "insensitive" } },
+                { description: { contains: neg, mode: "insensitive" } },
+                {
+                  users: {
+                    first_name: { contains: neg, mode: "insensitive" },
+                  },
+                },
+                {
+                  users: { last_name: { contains: neg, mode: "insensitive" } },
+                },
+                { users: { email: { contains: neg, mode: "insensitive" } } },
+                {
+                  categories: {
+                    category_name: { contains: neg, mode: "insensitive" },
+                  },
+                },
+                {
+                  subcategories: {
+                    subcategory_name: { contains: neg, mode: "insensitive" },
+                  },
+                },
+              ],
             },
-          },
-          {
-            subcategories: {
-              subcategory_name: { contains: search, mode: "insensitive" },
+          });
+        }
+      } else {
+        conditions.push({
+          OR: [
+            { grievance_number: { contains: search, mode: "insensitive" } },
+            { title: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+            {
+              users: { first_name: { contains: search, mode: "insensitive" } },
             },
-          },
-        ],
-      });
+            { users: { last_name: { contains: search, mode: "insensitive" } } },
+            { users: { email: { contains: search, mode: "insensitive" } } },
+            {
+              categories: {
+                category_name: { contains: search, mode: "insensitive" },
+              },
+            },
+            {
+              subcategories: {
+                subcategory_name: { contains: search, mode: "insensitive" },
+              },
+            },
+          ],
+        });
+      }
     }
 
     // 3. Department filter
-    if (department !== "ALL") {
-      const depts = department.split(",");
-      conditions.push({
-        grievance_departments: {
-          some: {
-            departments: {
-              department_name: { in: depts },
+    if (department && department !== "ALL") {
+      const depts = department
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
+      const pos = depts.filter((d) => !d.startsWith("!"));
+      const neg = depts.filter((d) => d.startsWith("!")).map((d) => d.slice(1));
+      if (pos.length > 0) {
+        conditions.push({
+          grievance_departments: {
+            some: {
+              departments: {
+                department_name: { in: pos },
+              },
             },
           },
-        },
-      });
+        });
+      }
+      if (neg.length > 0) {
+        conditions.push({
+          grievance_departments: {
+            none: {
+              departments: {
+                department_name: { in: neg },
+              },
+            },
+          },
+        });
+      }
     }
 
     // 4. Priority filter
-    if (priority !== "ALL") {
-      const prios = priority.split(",");
-      conditions.push({ priority: { in: prios } });
+    if (priority && priority !== "ALL") {
+      const prios = priority
+        .split(",")
+        .map((p) => p.trim().toUpperCase())
+        .filter(Boolean);
+      const pos = prios.filter((p) => !p.startsWith("!"));
+      const neg = prios.filter((p) => p.startsWith("!")).map((p) => p.slice(1));
+      if (pos.length > 0) {
+        conditions.push({ priority: { in: pos } });
+      }
+      if (neg.length > 0) {
+        conditions.push({ priority: { notIn: neg } });
+      }
     }
 
     // 5. Status filter
-    if (status !== "ALL") {
-      let stats = status.split(",").map((s) => s.trim().toUpperCase());
+    if (status && status !== "ALL") {
+      const stats = status
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
+
+      const negRaw = stats
+        .filter((s) => s.startsWith("!"))
+        .map((s) => s.slice(1));
+      let pos = stats.filter((s) => !s.startsWith("!"));
 
       // Expand UNASSIGNED to SUBMITTED, AWAITING_ROUTING, and AWAITING_ASSIGNMENT
-      if (stats.includes("UNASSIGNED")) {
-        stats = stats
+      if (pos.includes("UNASSIGNED")) {
+        pos = pos
           .filter((s) => s !== "UNASSIGNED")
           .concat([
             "SUBMITTED",
@@ -134,34 +206,51 @@ export async function GET(request: Request) {
           ]);
       }
       // Expand IN_PROGRESS to include AWAITING_INFORMATION, REWORK, RESOLUTION_PENDING_APPROVAL
-      if (stats.includes("IN_PROGRESS")) {
-        if (!stats.includes("AWAITING_INFORMATION"))
-          stats.push("AWAITING_INFORMATION");
-        if (!stats.includes("REWORK")) stats.push("REWORK");
-        if (!stats.includes("RESOLUTION_PENDING_APPROVAL"))
-          stats.push("RESOLUTION_PENDING_APPROVAL");
-        if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
+      if (pos.includes("IN_PROGRESS")) {
+        if (!pos.includes("AWAITING_INFORMATION"))
+          pos.push("AWAITING_INFORMATION");
+        if (!pos.includes("REWORK")) pos.push("REWORK");
+        if (!pos.includes("RESOLUTION_PENDING_APPROVAL"))
+          pos.push("RESOLUTION_PENDING_APPROVAL");
+        if (!pos.includes("UNDER_REVIEW")) pos.push("UNDER_REVIEW");
       }
       // Expand REOPENED to include RESOLUTION_PENDING_APPROVAL and REWORK
-      if (stats.includes("REOPENED")) {
-        if (!stats.includes("REWORK")) stats.push("REWORK");
-        if (!stats.includes("RESOLUTION_PENDING_APPROVAL"))
-          stats.push("RESOLUTION_PENDING_APPROVAL");
-        if (!stats.includes("REOPEN_REVIEW")) stats.push("REOPEN_REVIEW");
+      if (pos.includes("REOPENED")) {
+        if (!pos.includes("REWORK")) pos.push("REWORK");
+        if (!pos.includes("RESOLUTION_PENDING_APPROVAL"))
+          pos.push("RESOLUTION_PENDING_APPROVAL");
+        if (!pos.includes("REOPEN_REVIEW")) pos.push("REOPEN_REVIEW");
       }
 
-      conditions.push({ status: { in: stats } });
+      if (pos.length > 0) {
+        conditions.push({ status: { in: pos } });
+      }
+      if (negRaw.length > 0) {
+        conditions.push({ status: { notIn: negRaw } });
+      }
     }
 
     // 6. SLA Status filter
-    if (slaStatus !== "ALL") {
-      let slas = slaStatus.split(",").map((s) => s.trim().toUpperCase());
+    if (slaStatus && slaStatus !== "ALL") {
+      let slas = slaStatus
+        .split(",")
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean);
       slas = slas.map((s) => {
-        if (s === "SLA_CRITICAL") return "BREACHED";
-        if (s === "SLA_RISK") return "AT_RISK";
+        if (s.endsWith("SLA_CRITICAL"))
+          return s.startsWith("!") ? "!BREACHED" : "BREACHED";
+        if (s.endsWith("SLA_RISK"))
+          return s.startsWith("!") ? "!AT_RISK" : "AT_RISK";
         return s;
       });
-      conditions.push({ sla_status: { in: slas } });
+      const pos = slas.filter((s) => !s.startsWith("!"));
+      const neg = slas.filter((s) => s.startsWith("!")).map((s) => s.slice(1));
+      if (pos.length > 0) {
+        conditions.push({ sla_status: { in: pos } });
+      }
+      if (neg.length > 0) {
+        conditions.push({ sla_status: { notIn: neg } });
+      }
     }
 
     const where: Prisma.grievancesWhereInput =

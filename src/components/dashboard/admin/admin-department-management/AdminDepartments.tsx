@@ -16,6 +16,7 @@ export function AdminDepartments({
   const {
     departments,
     setDepartments,
+    handleConditionsChange,
     statusFilter,
     setStatusFilter,
     searchQuery,
@@ -81,6 +82,7 @@ export function AdminDepartments({
         onStatusFilterChange={setStatusFilter}
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
+        onConditionsChange={handleConditionsChange}
         onResetFilters={handleResetFilters}
         currentPage={currentPage}
         pageSize={pageSize}

@@ -61,6 +61,7 @@ export function useAdminGrievances(
     useState<SerializedGrievance | null>(null);
 
   const isInitialMount = useRef(true);
+  const lastUrlQueryRef = useRef<string>(searchParams?.toString() || "");
 
   // Debounce search query to avoid frequent server hits
   useEffect(() => {
@@ -70,9 +71,15 @@ export function useAdminGrievances(
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Sync with reactive Next.js searchParams
+  // Sync from browser URL navigation ONLY when the URL search parameters actually change
   useEffect(() => {
     if (!searchParams) return;
+    const currentQuery = searchParams.toString();
+    if (currentQuery === lastUrlQueryRef.current) {
+      return;
+    }
+    lastUrlQueryRef.current = currentQuery;
+
     const tabParam =
       (searchParams.get("tab")?.toUpperCase() as TableTab) || "ALL";
     const statusParam = searchParams.get("status");
@@ -108,40 +115,23 @@ export function useAdminGrievances(
       parsedSla = slas;
     }
     const q = searchParams.get("search")?.trim() || "";
+    const deptParam = searchParams.get("department");
+    const parsedDept =
+      deptParam && deptParam !== "ALL"
+        ? deptParam
+            .split(",")
+            .map((d) => d.trim())
+            .filter(Boolean)
+        : [];
 
-    const tabChanged = tabParam !== activeTab;
-    const statusChanged =
-      JSON.stringify(parsedStatus) !== JSON.stringify(selectedStatus);
-    const priorityChanged =
-      JSON.stringify(parsedPriority) !== JSON.stringify(selectedPriority);
-    const slaChanged =
-      JSON.stringify(parsedSla) !== JSON.stringify(selectedSla);
-    const searchChanged = q !== searchQuery;
-
-    if (
-      tabChanged ||
-      statusChanged ||
-      priorityChanged ||
-      slaChanged ||
-      searchChanged
-    ) {
-      if (tabChanged) setActiveTab(tabParam);
-      if (statusChanged) setSelectedStatus(parsedStatus);
-      if (priorityChanged) setSelectedPriority(parsedPriority);
-      if (slaChanged) setSelectedSla(parsedSla);
-      if (searchChanged) {
-        setSearchQuery(q);
-        setDebouncedSearch(q);
-      }
-    }
-  }, [
-    searchParams,
-    activeTab,
-    selectedStatus,
-    selectedPriority,
-    selectedSla,
-    searchQuery,
-  ]);
+    setActiveTab(tabParam);
+    setSelectedStatus(parsedStatus);
+    setSelectedPriority(parsedPriority);
+    setSelectedSla(parsedSla);
+    setSelectedDept(parsedDept);
+    setSearchQuery(q);
+    setDebouncedSearch(q);
+  }, [searchParams]);
 
   // Listen to global header search events
   useEffect(() => {
@@ -182,6 +172,22 @@ export function useAdminGrievances(
         if (status.length > 0) params.append("status", status.join(","));
         if (dept.length > 0) params.append("department", dept.join(","));
         if (sla.length > 0) params.append("sla_status", sla.join(","));
+
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams();
+          if (tab !== "ALL") urlParams.set("tab", tab);
+          if (search.trim()) urlParams.set("search", search.trim());
+          if (priority.length > 0)
+            urlParams.set("priority", priority.join(","));
+          if (status.length > 0) urlParams.set("status", status.join(","));
+          if (dept.length > 0) urlParams.set("department", dept.join(","));
+          if (sla.length > 0) urlParams.set("sla_status", sla.join(","));
+
+          const newQuery = urlParams.toString();
+          lastUrlQueryRef.current = newQuery;
+          const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash}`;
+          window.history.replaceState(null, "", newUrl);
+        }
 
         const res = await fetch(`/api/admin/grievances?${params.toString()}`);
         if (!res.ok) {

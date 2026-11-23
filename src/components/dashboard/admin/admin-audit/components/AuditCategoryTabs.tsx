@@ -29,19 +29,24 @@ export function AuditCategoryTabs({
   ];
 
   const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
-    onSearchChange("");
     let newSearch = "";
 
     conditions.forEach((condition) => {
+      const isNegative =
+        condition.operator === "not_equals" ||
+        condition.operator === "is_not_in" ||
+        condition.operator === "does_not_contain";
       const valArray = Array.isArray(condition.value)
         ? condition.value
         : [condition.value as string];
 
-      // All field searches collapse into the unified text search for this view
-      newSearch = valArray[0] || newSearch;
+      const firstVal = valArray[0] || "";
+      if (firstVal) {
+        newSearch = isNegative ? `!${firstVal}` : firstVal;
+      }
     });
 
-    if (newSearch) onSearchChange(newSearch);
+    onSearchChange(newSearch);
   };
 
   return (

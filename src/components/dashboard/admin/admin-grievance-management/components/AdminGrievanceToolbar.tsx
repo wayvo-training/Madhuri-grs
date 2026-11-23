@@ -116,12 +116,6 @@ export function AdminGrievanceToolbar({
   ];
 
   const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
-    setSelectedDept([]);
-    setSelectedPriority([]);
-    setSelectedStatus([]);
-    setSelectedSla([]);
-    setSearchQuery("");
-
     const newDept: string[] = [];
     const newPriority: string[] = [];
     const newStatus: string[] = [];
@@ -129,24 +123,32 @@ export function AdminGrievanceToolbar({
     let newSearch = "";
 
     conditions.forEach((condition) => {
+      const isNegative =
+        condition.operator === "not_equals" ||
+        condition.operator === "is_not_in" ||
+        condition.operator === "does_not_contain";
       const valArray = Array.isArray(condition.value)
         ? condition.value
         : [condition.value as string];
-      if (condition.field === "department") newDept.push(...valArray);
-      if (condition.field === "priority") newPriority.push(...valArray);
-      if (condition.field === "status") newStatus.push(...valArray);
-      if (condition.field === "sla") newSla.push(...valArray);
+      const processed = valArray.map((v) => (isNegative ? `!${v}` : v));
+
+      if (condition.field === "department") newDept.push(...processed);
+      if (condition.field === "priority") newPriority.push(...processed);
+      if (condition.field === "status") newStatus.push(...processed);
+      if (condition.field === "sla") newSla.push(...processed);
       if (condition.field === "category" || condition.field === "search") {
-        newSearch = valArray[0] || newSearch;
+        const firstVal = valArray[0] || "";
+        if (firstVal) {
+          newSearch = isNegative ? `!${firstVal}` : firstVal;
+        }
       }
     });
 
-    if (newDept.length > 0) setSelectedDept(newDept);
-    if (newPriority.length > 0) setSelectedPriority(newPriority);
-    if (newStatus.length > 0) setSelectedStatus(newStatus);
-    if (newSla.length > 0) setSelectedSla(newSla);
-    if (newSearch) setSearchQuery(newSearch);
-
+    setSelectedDept(newDept);
+    setSelectedPriority(newPriority);
+    setSelectedStatus(newStatus);
+    setSelectedSla(newSla);
+    setSearchQuery(newSearch);
     setCurrentPage(1);
   };
 

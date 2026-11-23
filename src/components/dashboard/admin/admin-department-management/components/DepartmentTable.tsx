@@ -14,6 +14,7 @@ import {
 } from "@/components/dashboard/admin/admin-shared";
 import {
   AdvancedTableSearch,
+  type FilterMode,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
@@ -31,6 +32,10 @@ interface DepartmentTableProps {
   onStatusFilterChange: (statuses: string[]) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
+  onConditionsChange?: (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => void;
   onResetFilters: () => void;
   currentPage: number;
   pageSize: number;
@@ -54,6 +59,7 @@ export function DepartmentTable({
   onStatusFilterChange,
   searchQuery,
   onSearchQueryChange,
+  onConditionsChange,
   onResetFilters,
   currentPage,
   pageSize,
@@ -113,10 +119,11 @@ export function DepartmentTable({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
-    onStatusFilterChange([]);
-    onSearchQueryChange("");
-
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    if (onConditionsChange) {
+      onConditionsChange(conditions, (mode as FilterMode) || "AND");
+      return;
+    }
     const newStatus: string[] = [];
     let newSearch = "";
 
@@ -127,20 +134,13 @@ export function DepartmentTable({
 
       if (condition.field === "status") {
         newStatus.push(...valArray);
-      }
-      if (
-        condition.field === "search" ||
-        condition.field === "id" ||
-        condition.field === "department" ||
-        condition.field === "staff" ||
-        condition.field === "cases"
-      ) {
+      } else if (condition.field === "search") {
         newSearch = valArray[0] || newSearch;
       }
     });
 
-    if (newStatus.length > 0) onStatusFilterChange(newStatus);
-    if (newSearch) onSearchQueryChange(newSearch);
+    onStatusFilterChange(newStatus);
+    onSearchQueryChange(newSearch);
   };
 
   return (

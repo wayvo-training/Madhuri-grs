@@ -178,23 +178,39 @@ export function PriorityRulesView({
 
             switch (op) {
               case "equals":
-                return target === valStr;
+              case "is_in":
+                return valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "not_equals":
-                return target !== valStr;
+              case "is_not_in":
+                return !valArray.some(
+                  (v) => target === String(v).trim().toLowerCase(),
+                );
               case "contains":
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "does_not_contain":
-                return !target.includes(valStr);
+                return !valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
               case "starts_with":
-                return target.startsWith(valStr);
+                return valArray.some((v) =>
+                  target.startsWith(String(v).trim().toLowerCase()),
+                );
               case "ends_with":
-                return target.endsWith(valStr);
+                return valArray.some((v) =>
+                  target.endsWith(String(v).trim().toLowerCase()),
+                );
               case "is_empty":
                 return target === "" || target === "all" || target === "—";
               case "is_not_empty":
                 return target !== "" && target !== "all" && target !== "—";
               default:
-                return target.includes(valStr);
+                return valArray.some((v) =>
+                  target.includes(String(v).trim().toLowerCase()),
+                );
             }
           }
 
@@ -219,7 +235,10 @@ export function PriorityRulesView({
       }
 
       // 4. Fallback generic text searchQuery
-      if (searchQuery.trim()) {
+      if (
+        (!searchConditions || searchConditions.length === 0) &&
+        searchQuery.trim()
+      ) {
         const q = searchQuery.toLowerCase().trim();
         const matchName = item.rule_name.toLowerCase().includes(q);
         const matchCat = item.category_name.toLowerCase().includes(q);

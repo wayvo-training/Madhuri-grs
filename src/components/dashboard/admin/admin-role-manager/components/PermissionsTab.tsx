@@ -2,6 +2,7 @@ import { Power, PowerOff } from "lucide-react";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
+  type FilterMode,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
@@ -18,6 +19,10 @@ interface PermissionsTabProps {
   inactivePermsCount: number;
   permSearch: string;
   onPermSearchChange: (value: string) => void;
+  onConditionsChange?: (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => void;
   permStatusFilter: string[];
   onPermStatusChange: (statuses: string[]) => void;
   togglingPermId: string | null;
@@ -38,6 +43,7 @@ export function PermissionsTab({
   inactivePermsCount,
   permSearch: _permSearch,
   onPermSearchChange,
+  onConditionsChange,
   permStatusFilter: _permStatusFilter,
   onPermStatusChange,
   togglingPermId,
@@ -70,10 +76,11 @@ export function PermissionsTab({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
-    onPermStatusChange([]);
-    onPermSearchChange("");
-
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    if (onConditionsChange) {
+      onConditionsChange(conditions, (mode as FilterMode) || "AND");
+      return;
+    }
     const newStatus: string[] = [];
     let newSearch = "";
 
@@ -84,13 +91,13 @@ export function PermissionsTab({
 
       if (condition.field === "status") {
         newStatus.push(...valArray);
-      } else {
+      } else if (condition.field === "search") {
         newSearch = valArray[0] || newSearch;
       }
     });
 
-    if (newStatus.length > 0) onPermStatusChange(newStatus);
-    if (newSearch) onPermSearchChange(newSearch);
+    onPermStatusChange(newStatus);
+    onPermSearchChange(newSearch);
   };
 
   const colGroup = (
