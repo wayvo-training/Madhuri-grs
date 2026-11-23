@@ -142,13 +142,27 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     grievance.grievance_id,
   );
 
+  const isCaseClosedOrResolved =
+    grievance.status === "CLOSED" || grievance.status === "RESOLVED";
+
   const allDepts = (grievance.grievance_departments || [])
     .map((gd) => {
-      const activeAssignments = (gd.assignments || []).filter(
-        (a) =>
-          a.assignment_status === "ASSIGNED" ||
-          a.assignment_status === "COMPLETED",
+      // Active assigned staff must have assignment_status === 'ASSIGNED'.
+      // If the grievance is currently closed or resolved and there is no active 'ASSIGNED' staff,
+      // fallback to latest 'COMPLETED' assignment to show who resolved it.
+      // But if the case is open (e.g. REOPENED, REWORK, IN_PROGRESS before assignment),
+      // we must NOT pick up a stale COMPLETED assignment from a previous cycle.
+      const currentlyAssigned = (gd.assignments || []).filter(
+        (a) => a.assignment_status === "ASSIGNED",
       );
+      const activeAssignments =
+        currentlyAssigned.length > 0
+          ? currentlyAssigned
+          : isCaseClosedOrResolved
+            ? (gd.assignments || []).filter(
+                (a) => a.assignment_status === "COMPLETED",
+              )
+            : [];
       const primaryAssignment =
         activeAssignments.find((a) => a.assignment_role === "PRIMARY") ||
         activeAssignments[0];
@@ -174,8 +188,6 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     primaryGDept?.departments?.department_name || allDepts[0]?.name || "";
 
   const latestResolution = grievance.resolutions?.[0];
-  const isCaseClosedOrResolved =
-    grievance.status === "CLOSED" || grievance.status === "RESOLVED";
 
   const resUser = latestResolution?.users;
   const resUserName = resUser

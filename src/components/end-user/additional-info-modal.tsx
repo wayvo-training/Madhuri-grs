@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { validateUploadedFile } from "@/lib/attachments/file-validation";
 import { uploadFileToSupabase } from "@/lib/storage-client";
 
 export function AdditionalInfoModal({
@@ -29,8 +30,33 @@ export function AdditionalInfoModal({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFilesToUpload((prev) => [...prev, ...newFiles]);
+      const incoming = Array.from(e.target.files);
+      const existingKeys = new Set(
+        filesToUpload.map((f) => `${f.name.toLowerCase()}__${f.size}`),
+      );
+      const validFiles: File[] = [];
+
+      for (const f of incoming) {
+        const fileKey = `${f.name.toLowerCase()}__${f.size}`;
+        if (existingKeys.has(fileKey)) {
+          toast.error("This document is already attached.");
+          continue;
+        }
+
+        const check = validateUploadedFile(f.name, f.type, f.size);
+        if (!check.valid) {
+          toast.error(check.error || `File "${f.name}" is not supported.`);
+          continue;
+        }
+
+        existingKeys.add(fileKey);
+        validFiles.push(f);
+      }
+
+      if (validFiles.length > 0) {
+        setFilesToUpload((prev) => [...prev, ...validFiles]);
+      }
+      e.target.value = "";
     }
   };
 

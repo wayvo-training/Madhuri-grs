@@ -1,4 +1,4 @@
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 export const MAX_ATTACHMENTS_PER_GRIEVANCE = 5; // Maximum 5 files per grievance
 
 export const DANGEROUS_EXTENSIONS = new Set([
@@ -76,7 +76,7 @@ export function validateUploadedFile(
   if (fileSize > MAX_FILE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `File "${fileName}" exceeds the 5MB limit (${(fileSize / (1024 * 1024)).toFixed(1)}MB).`,
+      error: `File "${fileName}" exceeds the 10MB limit (${(fileSize / (1024 * 1024)).toFixed(1)}MB).`,
     };
   }
 

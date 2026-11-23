@@ -148,9 +148,7 @@ export function SubmitGrievanceForm({
       for (const f of incomingFiles) {
         const fileKey = `${f.name.toLowerCase()}__${f.size}`;
         if (existingKeys.has(fileKey)) {
-          toast.error(
-            `File "${f.name}" is already attached. Duplicate uploads are not permitted.`,
-          );
+          toast.error("This document is already attached.");
           continue;
         }
 

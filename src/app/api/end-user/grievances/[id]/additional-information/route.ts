@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { normalizeStoragePath } from "@/lib/attachments/access-control";
+import {
+  MAX_ATTACHMENTS_PER_GRIEVANCE,
+  validateUploadedFile,
+} from "@/lib/attachments/file-validation";
 import { getCurrentUser } from "@/lib/auth";
 import { canEndUserSubmitCommunication } from "@/lib/communication/service";
 import { resumeSlaTracking } from "@/lib/engines/sla-engine";
@@ -163,6 +167,48 @@ export async function POST(
         },
         { status: 400 },
       );
+    }
+
+    if (incomingFiles.length > 0) {
+      const currentAttachmentCount = await prisma.attachments.count({
+        where: { grievance_id: grievance.grievance_id },
+      });
+      if (
+        currentAttachmentCount + incomingFiles.length >
+        MAX_ATTACHMENTS_PER_GRIEVANCE
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Maximum ${MAX_ATTACHMENTS_PER_GRIEVANCE} attachments allowed across the grievance lifecycle. Already attached: ${currentAttachmentCount}.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      const seenFileKeys = new Set<string>();
+      for (const f of incomingFiles) {
+        const fileKey = `${f.fileName.toLowerCase()}__${f.fileSize || 0}`;
+        if (seenFileKeys.has(fileKey)) {
+          return NextResponse.json(
+            { success: false, error: "This document is already attached." },
+            { status: 400 },
+          );
+        }
+        seenFileKeys.add(fileKey);
+
+        const check = validateUploadedFile(
+          f.fileName,
+          f.fileType,
+          f.fileSize || 0,
+        );
+        if (!check.valid) {
+          return NextResponse.json(
+            { success: false, error: check.error },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     const targetGrievanceId = grievance.grievance_id;

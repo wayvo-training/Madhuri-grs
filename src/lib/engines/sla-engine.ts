@@ -446,26 +446,60 @@ export async function evaluateGrievanceSla(
         d === "DEPT_HEAD" ||
         d === "RESPONSIBLE_DEPT_HEAD"
       ) {
-        if (deptContext?.deptHeads && deptContext.deptHeads.length > 0) {
-          for (const h of deptContext.deptHeads) {
-            userMap.set(h.user_id.toString(), h);
+        if (deptContext) {
+          // Departmental SLA context: RESPONSIBLE_DEPT_HEAD / DEPT_HEAD is strictly the head of this department
+          if (deptContext.deptHeads && deptContext.deptHeads.length > 0) {
+            for (const h of deptContext.deptHeads) {
+              userMap.set(h.user_id.toString(), h);
+            }
           }
-        }
-        if (primaryDeptHead) {
-          userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
+          // PRIMARY_DEPT_HEAD: add primary department head if explicitly requested or if this is the primary department
+          if (
+            (d === "PRIMARY_DEPT_HEAD" ||
+              deptContext.deptRec.involvement_type === "PRIMARY") &&
+            primaryDeptHead
+          ) {
+            userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
+          }
+        } else {
+          // Overall case SLA context
+          if (primaryDeptHead) {
+            userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
+          }
         }
       } else if (d === "SUPPORTING_DEPT_HEAD") {
-        if (deptContext && deptContext.deptRec.involvement_type !== "PRIMARY") {
+        if (deptContext) {
+          // Departmental SLA context: only add supporting head if THIS department is that supporting department.
+          // Supporting department heads must never receive the primary department's internal SLA alerts.
+          if (deptContext.deptRec.involvement_type !== "PRIMARY") {
+            for (const h of deptContext.deptHeads) {
+              userMap.set(h.user_id.toString(), h);
+            }
+          }
+        } else {
+          // Overall case context
+          for (const s of supportingDeptHeads) {
+            userMap.set(s.user_id.toString(), s);
+          }
+        }
+      } else if (d === "ALL_DEPT_HEADS") {
+        if (deptContext) {
+          // Departmental SLA context: notify this department's head, plus primary/lead head for oversight.
+          // Supporting heads of other departments must not receive this department's internal SLA alert.
           for (const h of deptContext.deptHeads) {
             userMap.set(h.user_id.toString(), h);
           }
-        }
-        for (const s of supportingDeptHeads) {
-          userMap.set(s.user_id.toString(), s);
-        }
-      } else if (d === "ALL_DEPT_HEADS") {
-        for (const h of unblockedAllDeptHeads) {
-          userMap.set(h.user_id.toString(), h);
+          if (
+            deptContext.deptRec.involvement_type !== "PRIMARY" &&
+            primaryDeptHead
+          ) {
+            userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
+          }
+        } else {
+          // Overall case SLA context: notify all department heads
+          for (const h of unblockedAllDeptHeads) {
+            userMap.set(h.user_id.toString(), h);
+          }
         }
       } else if (d === "ADMIN" || d === "GRIEVANCE_ADMIN") {
         const admins = await prisma.users.findMany({

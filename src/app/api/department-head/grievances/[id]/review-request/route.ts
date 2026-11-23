@@ -400,6 +400,46 @@ export async function POST(
           },
         },
       });
+
+      // If the Department Head assumed direct authority to resolve on reopen/rework
+      if (
+        assignedStaffId === user.user_id ||
+        cleanReason?.toLowerCase().includes("assumed direct authority")
+      ) {
+        const hodFullName =
+          `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+          "Department Head";
+        const primaryDeptName =
+          primaryDept?.departments?.department_name || "Department";
+        const primaryDeptIdStr = primaryDept?.department_id?.toString();
+
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: user.user_id,
+            action: "HOD_INTERVENTION_TAKEN",
+            entity_type: "GRIEVANCE",
+            entity_id: grievanceId,
+            new_value: {
+              actionType: "ASSUME_RESOLUTION_AUTHORITY",
+              actionLabel: `Resolution Authority Assumed by ${hodFullName}`,
+              note:
+                cleanReason ||
+                "Department Head assumed direct authority to resolve",
+              bottleneck: "Direct Department Head Intervention on Reopening",
+              departmentId: primaryDeptIdStr,
+              department_id: primaryDeptIdStr,
+              targetDepartment: primaryDeptName,
+              isResolutionAuthority: true,
+              resolutionAuthorityName: hodFullName,
+              resolutionAuthorityUserId: user.user_id.toString(),
+              intervenedAt: new Date().toISOString(),
+              intervenedBy: hodFullName,
+              intervenedByUserId: user.user_id.toString(),
+            },
+          },
+        });
+      }
     });
 
     // Notify Employee

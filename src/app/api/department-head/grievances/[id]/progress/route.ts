@@ -271,11 +271,33 @@ export async function GET(
         DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
     );
 
-    const earlyInterventionLog = (grievance.audit_logs || []).find(
+    // Lifecycle scoping: Interventions from previous cycles (before latest REOPEN_APPROVED, REWORK_APPROVED, or CLOSED)
+    // belong to closed/historical cycles and must not bleed into the current active cycle.
+    const latestLifecycleReset = (grievance.audit_logs || []).find(
       (l) =>
-        l.action === "HOD_INTERVENTION_TAKEN" ||
-        l.action.includes("INTERVENTION"),
+        l.action === "REOPEN_APPROVED" ||
+        l.action === "REWORK_APPROVED" ||
+        l.action === "CLOSED",
     );
+    const currentCycleStart = latestLifecycleReset
+      ? new Date(latestLifecycleReset.created_at).getTime()
+      : 0;
+
+    const earlyInterventionLog = (grievance.audit_logs || []).find((l) => {
+      if (
+        l.action !== "HOD_INTERVENTION_TAKEN" &&
+        !l.action.includes("INTERVENTION")
+      ) {
+        return false;
+      }
+      if (
+        currentCycleStart > 0 &&
+        new Date(l.created_at).getTime() < currentCycleStart - 1000
+      ) {
+        return false;
+      }
+      return true;
+    });
     const ivRawStr = earlyInterventionLog?.new_value
       ? typeof earlyInterventionLog.new_value === "string"
         ? earlyInterventionLog.new_value
@@ -297,12 +319,12 @@ export async function GET(
       );
       const isInterventionForThisDept = Boolean(
         assistedStaffName &&
-          (ivRawStr
-            .toLowerCase()
-            .includes((d.departments?.department_name || "").toLowerCase()) ||
-            (d.departments?.department_name || "")
-              .toLowerCase()
-              .includes("human resources")),
+          ivRawStr &&
+          (d.departments?.department_name
+            ? ivRawStr
+                .toLowerCase()
+                .includes(d.departments.department_name.toLowerCase())
+            : false),
       );
 
       const primaryAssignment =
@@ -649,6 +671,14 @@ export async function GET(
       if (
         l.action !== "HOD_INTERVENTION_TAKEN" &&
         l.action !== "Step 6: Intervention Action Taken"
+      ) {
+        return false;
+      }
+
+      // Exclude interventions from previous closed/reopened cycles
+      if (
+        currentCycleStart > 0 &&
+        new Date(l.created_at).getTime() < currentCycleStart - 1000
       ) {
         return false;
       }
@@ -1525,21 +1555,23 @@ export async function GET(
           !resolvedTargetStaffName ||
           resolvedTargetStaffName === "Unassigned")
       ) {
-        // Target the specific department of this intervention (e.g. Human Resources)
+        // Target the specific department of this intervention
+        const targetDeptName = iv.targetDepartment
+          ? String(iv.targetDepartment).toLowerCase().trim()
+          : "";
         const targetDeptRecord =
           rawDepartments.find(
             (d) =>
               (iv.departmentId &&
                 String(d.grievance_department_id) ===
                   String(iv.departmentId)) ||
-              (iv.targetDepartment &&
+              (targetDeptName &&
                 (d.departments?.department_name || "")
                   .toLowerCase()
-                  .includes(String(iv.targetDepartment).toLowerCase())) ||
-              (d.departments?.department_name || "")
-                .toLowerCase()
-                .includes("human resources"),
-          ) || rawDepartments[0];
+                  .includes(targetDeptName)),
+          ) ||
+          myDeptRecord ||
+          rawDepartments[0];
 
         // Find assignments belonging to THIS department only (excluding other departments like Legal)
         const deptSpecificAssignments = allDeptAssignments.filter(
@@ -1625,6 +1657,66 @@ export async function GET(
           (iv.bottleneckExplanation as string) || undefined,
         directiveJustification: (iv.note as string) || "",
       };
+    } else if (
+      latestLifecycleReset &&
+      (latestLifecycleReset.action === "REOPEN_APPROVED" ||
+        latestLifecycleReset.action === "REWORK_APPROVED")
+    ) {
+      let rVal: Record<string, unknown> | null = null;
+      if (latestLifecycleReset.new_value) {
+        if (typeof latestLifecycleReset.new_value === "string") {
+          try {
+            rVal = JSON.parse(latestLifecycleReset.new_value);
+          } catch {
+            rVal = null;
+          }
+        } else if (typeof latestLifecycleReset.new_value === "object") {
+          rVal = latestLifecycleReset.new_value as Record<string, unknown>;
+        }
+      }
+
+      const remarks = String(rVal?.remarks || "");
+      const isAssumedAuth =
+        remarks.toLowerCase().includes("assumed direct authority") ||
+        String(rVal?.assignedStaffId) === String(latestLifecycleReset.user_id);
+
+      const resetUserDeptId = latestLifecycleReset.users?.department_id;
+      const isForMyDept =
+        !departmentId ||
+        (resetUserDeptId && BigInt(resetUserDeptId) === departmentId) ||
+        (myDeptRecord?.involvement_type === "PRIMARY" &&
+          (!resetUserDeptId || BigInt(resetUserDeptId) === departmentId));
+
+      if (isAssumedAuth && isForMyDept) {
+        const actorName = latestLifecycleReset.users
+          ? `${latestLifecycleReset.users.first_name} ${latestLifecycleReset.users.last_name || ""}`.trim()
+          : "Department Head";
+        const primaryDeptRecord = rawDepartments.find(
+          (d) => d.involvement_type === "PRIMARY",
+        );
+        const targetDeptName =
+          myDeptRecord?.departments?.department_name ||
+          primaryDeptRecord?.departments?.department_name;
+
+        hodIntervention = {
+          actionType: "ASSUME_RESOLUTION_AUTHORITY",
+          actionLabel: `Resolution Authority Assumed by ${actorName}`,
+          note:
+            remarks || "Department Head assumed direct authority to resolve",
+          intervenedAt: formatRelativeTime(latestLifecycleReset.created_at),
+          intervenedBy: actorName,
+          targetStaffName: actorName,
+          departmentId: resetUserDeptId
+            ? resetUserDeptId.toString()
+            : undefined,
+          targetDepartment: targetDeptName || undefined,
+          isResolutionAuthority: true,
+          resolutionAuthorityUserId: latestLifecycleReset.user_id?.toString(),
+          resolutionAuthorityName: actorName,
+          rootBottleneck: "Direct Department Head Intervention on Reopening",
+          directiveJustification: remarks,
+        };
+      }
     }
 
     const supportingFindings = (grievance.audit_logs || [])

@@ -433,6 +433,50 @@ export function EndUserCaseHub({
         ),
     );
 
+    const hasHeadApprovedReopen = Boolean(
+      !isReopenRejected &&
+        grievance.status !== "REOPENED" &&
+        grievance.status !== "REOPEN_REVIEW" &&
+        ((grievance.statusHistory || []).some(
+          (h) =>
+            new Date(h.changedAt).getTime() >= cycle2StartTime &&
+            (h.remarks?.toLowerCase().includes("approved reopening") ||
+              h.remarks?.toLowerCase().includes("approved reopen")),
+        ) ||
+          [
+            "IN_PROGRESS",
+            "ASSIGNED",
+            "ESCALATED",
+            "RESOLUTION_PENDING_APPROVAL",
+            "RESOLVED",
+            "UNDER_REVIEW",
+          ].includes(grievance.status)),
+    );
+
+    const isPendingReopenReview =
+      isReopenLifecycle && !isReopenRejected && !hasHeadApprovedReopen;
+
+    const hasHeadApprovedRework = Boolean(
+      !isReworkRejected &&
+        grievance.status !== "REWORK" &&
+        ((grievance.statusHistory || []).some(
+          (h) =>
+            new Date(h.changedAt).getTime() >= cycle2StartTime &&
+            h.remarks?.toLowerCase().includes("approved rework"),
+        ) ||
+          [
+            "IN_PROGRESS",
+            "ASSIGNED",
+            "ESCALATED",
+            "RESOLUTION_PENDING_APPROVAL",
+            "RESOLVED",
+            "UNDER_REVIEW",
+          ].includes(grievance.status)),
+    );
+
+    const isPendingReworkReview =
+      isReworkLifecycle && !isReworkRejected && !hasHeadApprovedRework;
+
     let endStages: TimelineStageItem[] = [];
 
     if (isReopenLifecycle) {
@@ -501,48 +545,43 @@ export function EndUserCaseHub({
           },
           {
             id: "HEAD_REVIEW",
-            title:
-              grievance.status === "RESOLUTION_PENDING_APPROVAL"
-                ? "Department Head Review & Assessment"
-                : isDirectHeadAuthority
-                  ? "Department Head Review: Direct Authority Assumed"
-                  : assignedOfficerName
-                    ? "Department Head Review: Approved & Assigned"
-                    : "Department Head Review: Approved",
-            defaultDesc:
-              grievance.status === "RESOLUTION_PENDING_APPROVAL"
-                ? "Department Head is reviewing reopening justification to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
-                : isDirectHeadAuthority
-                  ? "Reopening approved. Department Head has assumed direct personal responsibility to resolve this grievance (New SLA cycle initiated)."
-                  : assignedOfficerName
-                    ? `Reopening approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation (New SLA cycle initiated).`
-                    : "Department Head reviewed and approved reopening for investigation (New SLA cycle initiated).",
+            title: isPendingReopenReview
+              ? "Department Head Review & Assessment"
+              : isDirectHeadAuthority
+                ? "Department Head Review: Direct Authority Assumed"
+                : assignedOfficerName
+                  ? "Department Head Review: Approved & Assigned"
+                  : "Department Head Review: Approved",
+            defaultDesc: isPendingReopenReview
+              ? "Department Head is reviewing reopening justification to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
+              : isDirectHeadAuthority
+                ? "Reopening approved. Department Head has assumed direct personal responsibility to resolve this grievance (New SLA cycle initiated)."
+                : assignedOfficerName
+                  ? `Reopening approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation (New SLA cycle initiated).`
+                  : "Department Head reviewed and approved reopening for investigation (New SLA cycle initiated).",
             icon: isDirectHeadAuthority ? Shield : UserCheck,
           },
           {
             id: "RE_INVESTIGATION",
-            title:
-              grievance.status === "RESOLUTION_PENDING_APPROVAL"
-                ? "Reopened Processing (Awaiting Head Decision)"
-                : isDirectHeadAuthority
-                  ? "Department Head Direct Inquiry"
-                  : assignedOfficerName
-                    ? "Staff Re-investigation in Progress"
-                    : "Department Re-investigation",
-            defaultDesc:
-              grievance.status === "RESOLUTION_PENDING_APPROVAL"
-                ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
-                : isDirectHeadAuthority
-                  ? "Department Head is directly re-examining evidence and formulating revised resolution."
-                  : assignedOfficerName
-                    ? `${assignedOfficerName} is actively re-investigating evidence and working on resolution.`
-                    : "Department is actively re-investigating evidence and working on resolution.",
-            icon:
-              grievance.status === "RESOLUTION_PENDING_APPROVAL"
-                ? HelpCircle
-                : isDirectHeadAuthority
-                  ? Shield
-                  : Search,
+            title: isPendingReopenReview
+              ? "Reopened Processing (Awaiting Head Decision)"
+              : isDirectHeadAuthority
+                ? "Department Head Direct Inquiry"
+                : assignedOfficerName
+                  ? "Staff Re-investigation in Progress"
+                  : "Department Re-investigation",
+            defaultDesc: isPendingReopenReview
+              ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
+              : isDirectHeadAuthority
+                ? "Department Head is directly re-examining evidence and formulating revised resolution."
+                : assignedOfficerName
+                  ? `${assignedOfficerName} is actively re-investigating evidence and working on resolution.`
+                  : "Department is actively re-investigating evidence and working on resolution.",
+            icon: isPendingReopenReview
+              ? HelpCircle
+              : isDirectHeadAuthority
+                ? Shield
+                : Search,
           },
           {
             id: "REVISED_RESOLUTION",
@@ -636,48 +675,43 @@ export function EndUserCaseHub({
           },
           {
             id: "HEAD_REVIEW",
-            title:
-              grievance.status === "REWORK"
-                ? "Department Head Review & Assessment"
-                : isDirectHeadAuthority
-                  ? "Department Head Review: Direct Authority Assumed"
-                  : assignedOfficerName
-                    ? "Department Head Review: Approved & Assigned"
-                    : "Department Head Review: Approved",
-            defaultDesc:
-              grievance.status === "REWORK"
-                ? "Department Head is reviewing your rework request and citizen remarks to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
-                : isDirectHeadAuthority
-                  ? "Request approved. Department Head has assumed direct personal responsibility to resolve this grievance."
-                  : assignedOfficerName
-                    ? `Request approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation.`
-                    : "Department Head approved rework request and assigned case for investigation.",
+            title: isPendingReworkReview
+              ? "Department Head Review & Assessment"
+              : isDirectHeadAuthority
+                ? "Department Head Review: Direct Authority Assumed"
+                : assignedOfficerName
+                  ? "Department Head Review: Approved & Assigned"
+                  : "Department Head Review: Approved",
+            defaultDesc: isPendingReworkReview
+              ? "Department Head is reviewing your rework request and citizen remarks to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
+              : isDirectHeadAuthority
+                ? "Request approved. Department Head has assumed direct personal responsibility to resolve this grievance."
+                : assignedOfficerName
+                  ? `Request approved. Assigned to ${assignedOfficerName} (${grievance.departmentName || "Department"}) for investigation.`
+                  : "Department Head approved rework request and assigned case for investigation.",
             icon: isDirectHeadAuthority ? Shield : UserCheck,
           },
           {
             id: "RE_INVESTIGATION",
-            title:
-              grievance.status === "REWORK"
-                ? "Action / Investigation (Awaiting Head Decision)"
-                : isDirectHeadAuthority
-                  ? "Department Head Direct Inquiry"
-                  : assignedOfficerName
-                    ? "Staff Re-investigation in Progress"
-                    : "Department Rework & Re-investigation",
-            defaultDesc:
-              grievance.status === "REWORK"
-                ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
-                : isDirectHeadAuthority
-                  ? "Department Head is directly re-examining evidence and formulating revised resolution."
-                  : assignedOfficerName
-                    ? `${assignedOfficerName} is actively investigating feedback and addressing your points.`
-                    : "Department is actively re-investigating evidence and working on revisions.",
-            icon:
-              grievance.status === "REWORK"
-                ? HelpCircle
-                : isDirectHeadAuthority
-                  ? Shield
-                  : Search,
+            title: isPendingReworkReview
+              ? "Action / Investigation (Awaiting Head Decision)"
+              : isDirectHeadAuthority
+                ? "Department Head Direct Inquiry"
+                : assignedOfficerName
+                  ? "Staff Re-investigation in Progress"
+                  : "Department Rework & Re-investigation",
+            defaultDesc: isPendingReworkReview
+              ? "Next step will be determined based on Department Head review: Officer Assignment, Direct Authority, or Request Evaluation."
+              : isDirectHeadAuthority
+                ? "Department Head is directly re-examining evidence and formulating revised resolution."
+                : assignedOfficerName
+                  ? `${assignedOfficerName} is actively investigating feedback and addressing your points.`
+                  : "Department is actively re-investigating evidence and working on revisions.",
+            icon: isPendingReworkReview
+              ? HelpCircle
+              : isDirectHeadAuthority
+                ? Shield
+                : Search,
           },
           {
             id: "REVISED_RESOLUTION",
@@ -795,10 +829,11 @@ export function EndUserCaseHub({
             historyDates.REWORK = h.changedAt;
           }
           if (
-            s === "IN_PROGRESS" ||
-            s === "ASSIGNED" ||
-            h.remarks?.toLowerCase().includes("approved rework") ||
-            h.remarks?.toLowerCase().includes("rejected rework")
+            (s === "IN_PROGRESS" ||
+              s === "ASSIGNED" ||
+              h.remarks?.toLowerCase().includes("approved rework") ||
+              h.remarks?.toLowerCase().includes("rejected rework")) &&
+            s !== "REWORK"
           ) {
             historyDates.HEAD_REVIEW = historyDates.HEAD_REVIEW || h.changedAt;
           }
@@ -828,11 +863,12 @@ export function EndUserCaseHub({
               historyDates.REOPEN_REQUESTED || h.changedAt;
           }
           if (
-            s === "REOPENED" ||
-            s === "IN_PROGRESS" ||
-            s === "ASSIGNED" ||
-            h.remarks?.toLowerCase().includes("approved reopen") ||
-            h.remarks?.toLowerCase().includes("rejected reopen")
+            (s === "IN_PROGRESS" ||
+              s === "ASSIGNED" ||
+              h.remarks?.toLowerCase().includes("approved reopen") ||
+              h.remarks?.toLowerCase().includes("rejected reopen")) &&
+            s !== "REOPENED" &&
+            s !== "REOPEN_REVIEW"
           ) {
             historyDates.HEAD_REVIEW = historyDates.HEAD_REVIEW || h.changedAt;
           }
@@ -948,6 +984,7 @@ export function EndUserCaseHub({
     if (!historyDates.HEAD_REVIEW) {
       if (
         isReworkLifecycle &&
+        !isPendingReworkReview &&
         [
           "IN_PROGRESS",
           "ASSIGNED",
@@ -963,8 +1000,8 @@ export function EndUserCaseHub({
           grievance.createdAt;
       } else if (
         isReopenLifecycle &&
+        !isPendingReopenReview &&
         [
-          "REOPENED",
           "IN_PROGRESS",
           "ASSIGNED",
           "RESOLUTION_PENDING_APPROVAL",
@@ -995,7 +1032,7 @@ export function EndUserCaseHub({
         if (isReworkRejected) {
           return s.id === "UNDER_REVIEW";
         }
-        if (grievance.status === "REWORK") {
+        if (isPendingReworkReview || grievance.status === "REWORK") {
           return s.id === "HEAD_REVIEW";
         }
         if (
@@ -1021,22 +1058,22 @@ export function EndUserCaseHub({
         if (isReopenRejected) {
           return s.id === "CLOSED";
         }
-        if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
-          if (
-            historyDates.HEAD_REVIEW &&
-            historyDates.HEAD_REVIEW !== historyDates.REOPEN_REQUESTED
-          ) {
-            return s.id === "REVISED_RESOLUTION";
-          }
+        if (
+          isPendingReopenReview ||
+          grievance.status === "REOPENED" ||
+          grievance.status === "REOPEN_REVIEW"
+        ) {
           return s.id === "HEAD_REVIEW";
         }
         if (
-          grievance.status === "REOPENED" ||
           grievance.status === "IN_PROGRESS" ||
           grievance.status === "ASSIGNED" ||
           grievance.status === "ESCALATED"
         ) {
           return s.id === "RE_INVESTIGATION";
+        }
+        if (grievance.status === "RESOLUTION_PENDING_APPROVAL") {
+          return s.id === "REVISED_RESOLUTION";
         }
         if (
           grievance.status === "RESOLVED" ||

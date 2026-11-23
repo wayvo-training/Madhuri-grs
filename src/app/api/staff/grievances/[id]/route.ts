@@ -589,11 +589,33 @@ export async function GET(
       orderBy: { assigned_at: "asc" },
     });
 
-    const earlyInterventionLog = (grievance.audit_logs || []).find(
+    // Lifecycle scoping: Interventions from previous cycles (before latest REOPEN_APPROVED, REWORK_APPROVED, or CLOSED)
+    // belong to closed/historical cycles and must not bleed into the current active cycle.
+    const latestLifecycleReset = (grievance.audit_logs || []).find(
       (l) =>
-        l.action === "HOD_INTERVENTION_TAKEN" ||
-        l.action.includes("INTERVENTION"),
+        l.action === "REOPEN_APPROVED" ||
+        l.action === "REWORK_APPROVED" ||
+        l.action === "CLOSED",
     );
+    const currentCycleStart = latestLifecycleReset
+      ? new Date(latestLifecycleReset.created_at).getTime()
+      : 0;
+
+    const earlyInterventionLog = (grievance.audit_logs || []).find((l) => {
+      if (
+        l.action !== "HOD_INTERVENTION_TAKEN" &&
+        !l.action.includes("INTERVENTION")
+      ) {
+        return false;
+      }
+      if (
+        currentCycleStart > 0 &&
+        new Date(l.created_at).getTime() < currentCycleStart - 1000
+      ) {
+        return false;
+      }
+      return true;
+    });
     const ivRawStr = earlyInterventionLog?.new_value
       ? typeof earlyInterventionLog.new_value === "string"
         ? earlyInterventionLog.new_value
@@ -615,12 +637,12 @@ export async function GET(
       );
       const isInterventionForThisDept = Boolean(
         assistedStaffName &&
-          (ivRawStr
-            .toLowerCase()
-            .includes((d.departments?.department_name || "").toLowerCase()) ||
-            (d.departments?.department_name || "")
-              .toLowerCase()
-              .includes("human resources")),
+          ivRawStr &&
+          (d.departments?.department_name
+            ? ivRawStr
+                .toLowerCase()
+                .includes(d.departments.department_name.toLowerCase())
+            : false),
       );
 
       const primaryAssignment =

@@ -902,10 +902,31 @@ export async function fetchDepartmentHeadGrievances(
       });
 
     const isMultiDeptCase = relatedDepts.length > 1;
+
+    // Lifecycle scoping: Interventions from previous cycles (before the latest REOPEN_APPROVED, REWORK_APPROVED, or CLOSED)
+    // belong to closed/historical cycles and must not bleed into the current active cycle.
+    const latestLifecycleReset = (g.audit_logs || []).find(
+      (l) =>
+        l.action === "REOPEN_APPROVED" ||
+        l.action === "REWORK_APPROVED" ||
+        l.action === "CLOSED",
+    );
+    const currentCycleStart = latestLifecycleReset
+      ? new Date(latestLifecycleReset.created_at).getTime()
+      : 0;
+
     const interventionLog = g.audit_logs.find((l) => {
       if (
         l.action !== "HOD_INTERVENTION_TAKEN" &&
         l.action !== "Step 6: Intervention Action Taken"
+      ) {
+        return false;
+      }
+
+      // Exclude interventions from previous closed/reopened cycles
+      if (
+        currentCycleStart > 0 &&
+        new Date(l.created_at).getTime() < currentCycleStart - 1000
       ) {
         return false;
       }
@@ -985,25 +1006,27 @@ export async function fetchDepartmentHeadGrievances(
         iv.actionType === "CO_ASSIGN" ||
         actionLabel.includes("Secondary Staff Co-Assigned")
       ) {
-        // Find Human Resources department records
-        const hrDeptRecord = allDeptRecords.find(
-          (d) =>
-            (d.departments?.department_name || "")
-              .toLowerCase()
-              .includes("human resources") ||
-            (iv.targetDepartment &&
+        // Find targeted department records
+        const targetDeptName = iv.targetDepartment
+          ? String(iv.targetDepartment).toLowerCase().trim()
+          : "";
+        const targetDeptRecord =
+          allDeptRecords.find(
+            (d) =>
+              targetDeptName &&
               (d.departments?.department_name || "")
                 .toLowerCase()
-                .includes(String(iv.targetDepartment).toLowerCase())),
-        );
+                .includes(targetDeptName),
+          ) || myDeptRecord;
 
-        const hrAssignments = grievanceAssignments.filter(
+        const targetAssignments = grievanceAssignments.filter(
           (a) =>
-            hrDeptRecord &&
-            a.grievance_department_id === hrDeptRecord.grievance_department_id,
+            targetDeptRecord &&
+            a.grievance_department_id ===
+              targetDeptRecord.grievance_department_id,
         );
 
-        const supportingAssignment = hrAssignments.find((a) => {
+        const supportingAssignment = targetAssignments.find((a) => {
           const su = a.users_assignments_staff_idTousers;
           if (!su) return false;
           const name = `${su.first_name} ${su.last_name || ""}`.trim();
@@ -1077,6 +1100,66 @@ export async function fetchDepartmentHeadGrievances(
           (iv.bottleneckExplanation as string) || undefined,
         directiveJustification: (iv.note as string) || "",
       };
+    } else if (
+      latestLifecycleReset &&
+      (latestLifecycleReset.action === "REOPEN_APPROVED" ||
+        latestLifecycleReset.action === "REWORK_APPROVED")
+    ) {
+      let rVal: Record<string, unknown> | null = null;
+      if (latestLifecycleReset.new_value) {
+        if (typeof latestLifecycleReset.new_value === "string") {
+          try {
+            rVal = JSON.parse(latestLifecycleReset.new_value);
+          } catch {
+            rVal = null;
+          }
+        } else if (typeof latestLifecycleReset.new_value === "object") {
+          rVal = latestLifecycleReset.new_value as Record<string, unknown>;
+        }
+      }
+
+      const remarks = String(rVal?.remarks || "");
+      const isAssumedAuth =
+        remarks.toLowerCase().includes("assumed direct authority") ||
+        String(rVal?.assignedStaffId) === String(latestLifecycleReset.user_id);
+
+      const resetUserDeptId = latestLifecycleReset.users?.department_id;
+      const isForMyDept =
+        !departmentId ||
+        (resetUserDeptId && BigInt(resetUserDeptId) === departmentId) ||
+        (myDeptRecord?.involvement_type === "PRIMARY" &&
+          (!resetUserDeptId || BigInt(resetUserDeptId) === departmentId));
+
+      if (isAssumedAuth && isForMyDept) {
+        const actorName = latestLifecycleReset.users
+          ? `${latestLifecycleReset.users.first_name} ${latestLifecycleReset.users.last_name || ""}`.trim()
+          : "Department Head";
+        const primaryDeptRecord = relatedDepts.find(
+          (d) => d.involvement_type === "PRIMARY",
+        );
+        const targetDeptName =
+          myDeptRecord?.departments?.department_name ||
+          primaryDeptRecord?.departments?.department_name;
+
+        hodIntervention = {
+          actionType: "ASSUME_RESOLUTION_AUTHORITY" as const,
+          actionLabel: `Resolution Authority Assumed by ${actorName}`,
+          note:
+            remarks || "Department Head assumed direct authority to resolve",
+          intervenedAt: formatRelativeTime(latestLifecycleReset.created_at),
+          intervenedBy: actorName,
+          targetStaffName: actorName,
+          departmentId: resetUserDeptId
+            ? resetUserDeptId.toString()
+            : undefined,
+          targetDepartment: targetDeptName || undefined,
+          isResolutionAuthority: true,
+          resolutionAuthorityUserId: latestLifecycleReset.user_id?.toString(),
+          resolutionAuthorityName: actorName,
+          rootBottleneck: "Direct Department Head Intervention on Reopening",
+          directiveJustification: remarks,
+        };
+      }
     }
 
     const deptList: string[] = relatedDepts.map(
@@ -1104,14 +1187,12 @@ export async function fetchDepartmentHeadGrievances(
       const assistedStaffName = assistedStaffMatch?.[1]?.trim();
       const isInterventionForThisDept = Boolean(
         assistedStaffName &&
-          (Boolean(
-            hodIntervention?.actionLabel
-              ?.toLowerCase()
-              .includes((d.departments?.department_name || "").toLowerCase()),
-          ) ||
-            (d.departments?.department_name || "")
-              .toLowerCase()
-              .includes("human resources")),
+          hodIntervention?.actionLabel &&
+          (d.departments?.department_name
+            ? hodIntervention.actionLabel
+                .toLowerCase()
+                .includes(d.departments.department_name.toLowerCase())
+            : false),
       );
 
       const primaryAssignment =
