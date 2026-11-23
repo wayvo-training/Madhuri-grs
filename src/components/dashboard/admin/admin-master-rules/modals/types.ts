@@ -11,8 +11,8 @@ export function isPurelyNumeric(val: string): boolean {
 export const SLA_RECIPIENT_OPTIONS = [
   {
     id: "ASSIGNED_STAFF",
-    label: "Assigned Staff",
-    description: "Direct handling officer assigned to work on the grievance",
+    label: "Grievance Staff",
+    description: "Direct handling staff assigned to work on the grievance",
   },
   {
     id: "PRIMARY_DEPT_HEAD",
@@ -31,8 +31,8 @@ export const SLA_RECIPIENT_OPTIONS = [
   },
   {
     id: "ADMIN",
-    label: "System Admin",
-    description: "Master system administrators and central grievance cell",
+    label: "Grievance Admin",
+    description: "Central grievance administrators and oversight cell",
   },
 ] as const;
 

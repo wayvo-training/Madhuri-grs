@@ -13,6 +13,7 @@ import { SortableTh } from "@/components/ui/sortable-table-head";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
 import { ROLE_BADGE_STYLES } from "@/lib/admin/audit/audit-constants";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type { SerializedAuditLog } from "@/types/admin/audit";
 
 interface AuditLogTableProps {
@@ -242,7 +243,7 @@ export function AuditLogTable({
                               className="font-bold text-slate-900 dark:text-slate-100 truncate text-xs block"
                             />
                             <span className="text-[10px] font-semibold text-slate-500 uppercase shrink-0">
-                              {log.role_name}
+                              {getStandardRoleDisplayName(log.role_name)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1 text-xs text-slate-400 min-w-0">

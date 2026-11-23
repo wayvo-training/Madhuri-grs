@@ -5,6 +5,7 @@ import { AdminEmptyState } from "@/components/dashboard/admin/admin-shared";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   AdvancedTableSearch,
+  type FilterMode,
   type SearchCondition,
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
@@ -12,6 +13,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useTableSort } from "@/hooks/useTableSort";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type { SerializedRole } from "@/types/admin/role-manager";
 
 interface RolesTabProps {
@@ -22,6 +24,10 @@ interface RolesTabProps {
   inactiveRolesCount: number;
   roleSearch: string;
   onRoleSearchChange: (value: string) => void;
+  onConditionsChange?: (
+    conditions: SearchCondition[],
+    mode: FilterMode,
+  ) => void;
   roleStatusFilter: string[];
   onRoleStatusChange: (statuses: string[]) => void;
   currentPage: number;
@@ -43,6 +49,7 @@ export function RolesTab({
   inactiveRolesCount,
   roleSearch,
   onRoleSearchChange,
+  onConditionsChange,
   roleStatusFilter,
   onRoleStatusChange,
   currentPage,
@@ -75,10 +82,11 @@ export function RolesTab({
     },
   ];
 
-  const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {
-    onRoleStatusChange([]);
-    onRoleSearchChange("");
-
+  const handleSearchChange = (conditions: SearchCondition[], mode: string) => {
+    if (onConditionsChange) {
+      onConditionsChange(conditions, (mode as FilterMode) || "AND");
+      return;
+    }
     const newStatus: string[] = [];
     let newSearch = "";
 
@@ -89,13 +97,13 @@ export function RolesTab({
 
       if (condition.field === "status") {
         newStatus.push(...valArray);
-      } else {
+      } else if (condition.field === "search") {
         newSearch = valArray[0] || newSearch;
       }
     });
 
-    if (newStatus.length > 0) onRoleStatusChange(newStatus);
-    if (newSearch) onRoleSearchChange(newSearch);
+    onRoleStatusChange(newStatus);
+    onRoleSearchChange(newSearch);
   };
 
   return (
@@ -179,7 +187,7 @@ export function RolesTab({
                       >
                         <td className="px-4 py-3">
                           <TruncatedText
-                            text={role.role_name}
+                            text={getStandardRoleDisplayName(role.role_name)}
                             maxChars={24}
                             className="font-semibold text-slate-900 border-none block truncate max-w-full"
                           />

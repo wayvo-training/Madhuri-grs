@@ -118,7 +118,7 @@ export function ReopenPolicyModal({
   isSubmitting,
   onSubmit,
 }: ReopenPolicyModalProps) {
-  // 1. Citizen Reopen Window (Days): 1 to 30 days
+  // 1. Employee Reopen Window (Days): 1 to 30 days
   const windowDays = reopenWindowHours
     ? (Number(reopenWindowHours) / 24).toString()
     : "14";
@@ -253,8 +253,8 @@ export function ReopenPolicyModal({
                 : "Configure Lifecycle & Closure Policy"}
             </h3>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              Configure citizen reopening window, automated inactivity closures,
-              and rework limits.
+              Configure employee reopening window, automated inactivity
+              closures, and rework limits.
             </p>
           </div>
 
@@ -484,7 +484,7 @@ export function ReopenPolicyModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-              {/* Citizen Reopen Window */}
+              {/* Employee Reopen Window */}
               <div className="space-y-1">
                 <div className="h-8 flex flex-col justify-between">
                   <label

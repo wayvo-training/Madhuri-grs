@@ -233,9 +233,7 @@ export function ReviewGracePeriodModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-teal-950">{staffName}</p>
-                  <p className="text-[11px] text-teal-700">
-                    Staff Investigating Officer
-                  </p>
+                  <p className="text-[11px] text-teal-700">Grievance Staff</p>
                 </div>
               </div>
               <span className="inline-flex items-center gap-1 rounded-lg border border-teal-300 bg-white px-2.5 py-1 text-xs font-bold text-teal-800 shadow-2xs">

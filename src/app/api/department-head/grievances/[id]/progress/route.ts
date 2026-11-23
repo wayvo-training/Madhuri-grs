@@ -784,7 +784,7 @@ export async function GET(
             grievance.status === "UNDER_REVIEW"
           ? "Under Review"
           : grievance.status === "RESOLVED"
-            ? "Awaiting Citizen Confirmation"
+            ? "Awaiting Employee Confirmation"
             : "Paused";
 
     const targetSlaState = targetDeptData?.slaState || "ON_TRACK";
@@ -893,7 +893,7 @@ export async function GET(
     } else if (st === "UNDER_REVIEW") {
       currentStageKey = "RESOLUTION_SUBMITTED";
       currentStageLabel = isHeadResolution
-        ? "Resolution Submitted — Under Citizen Review"
+        ? "Resolution Submitted — Under Employee Review"
         : "Resolution Submitted — Pending HOD Approval";
       currentStageNumber = 4;
     } else if (targetDeptRecord?.status === "COMPLETED") {

@@ -239,7 +239,7 @@ export function GrievanceDetails4TabSkeleton({
               </div>
             </div>
 
-            {/* Citizen Decision Review Actions */}
+            {/* Employee Decision Review Actions */}
             <div className="rounded-xl border border-teal-200 dark:border-teal-800/60 bg-teal-50/40 dark:bg-teal-950/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-1">
                 <Skeleton className="h-4 w-40" />
@@ -321,7 +321,7 @@ export function GrievanceDetails4TabSkeleton({
               <Skeleton className="h-8 w-44 rounded-lg" />
             </div>
 
-            {/* Section 1: Documents Shared by You (End User) */}
+            {/* Section 1: Documents Shared by You (Employee) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-52" />
@@ -349,7 +349,7 @@ export function GrievanceDetails4TabSkeleton({
               </div>
             </div>
 
-            {/* Section 2: Documents Shared by Investigation Staff */}
+            {/* Section 2: Documents Shared by Grievance Staff */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-56" />

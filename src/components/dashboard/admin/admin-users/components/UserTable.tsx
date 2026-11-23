@@ -23,6 +23,7 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { useTableSort } from "@/hooks/useTableSort";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type {
   SerializedUser,
   UserDepartmentOption,
@@ -175,7 +176,7 @@ export function UserTable({
       label: "Role",
       type: "select",
       options: availableRoles.map((r) => ({
-        label: r.role_name,
+        label: getStandardRoleDisplayName(r.role_name),
         value: r.role_name,
       })),
     },
@@ -231,7 +232,7 @@ export function UserTable({
       <div className="shrink-0 flex flex-col gap-2.5">
         <AdminPanelHeader
           title="User Accounts Directory"
-          description="Manage administrative permissions, grievance officers, department staff, and system access"
+          description="Manage administrative permissions, grievance staff, department heads, and employee access"
           action={
             <AdminToolbarAction onClick={onOpenCreateModal}>
               <Plus className="h-3.5 w-3.5" />
@@ -391,7 +392,7 @@ export function UserTable({
                           )}`}
                         >
                           <Shield className="h-3 w-3" />
-                          {user.role_name}
+                          {getStandardRoleDisplayName(user.role_name)}
                         </span>
                       )}
                     </td>

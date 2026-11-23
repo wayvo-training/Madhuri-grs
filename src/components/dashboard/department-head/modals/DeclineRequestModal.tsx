@@ -109,8 +109,8 @@ export function DeclineRequestModal({
               <p className="text-[11px] leading-relaxed text-rose-900/90">
                 This will be rejection #{effectiveMaxRejections} for this case.
                 Confirming decline will permanently <strong>CLOSE</strong> this
-                grievance and finalize dispute proceedings. The citizen will not
-                be able to submit further rework or reopening requests.
+                grievance and finalize dispute proceedings. The employee will
+                not be able to submit further rework or reopening requests.
               </p>
             </div>
           ) : (
@@ -127,7 +127,7 @@ export function DeclineRequestModal({
               <p className="text-[11px] leading-relaxed text-amber-800/90">
                 Declining this request will return the grievance to{" "}
                 <strong>{isRework ? "RESOLVED" : "CLOSED"}</strong> status. Your
-                reason will be shared with the citizen and recorded in the
+                reason will be shared with the employee and recorded in the
                 official audit trail. Note that upon reaching{" "}
                 {effectiveMaxRejections} rejections, the grievance will be
                 permanently closed.

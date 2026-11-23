@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import {
   validateEmail,
   validateEmployeeCode,
@@ -337,7 +338,9 @@ export function EditUserModal({
                   className="w-full h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-[#0F766E] focus:bg-white dark:focus:bg-slate-900"
                 >
                   <SelectValue placeholder="— Select Role —">
-                    {selectedRoleObj?.role_name || "— Select Role —"}
+                    {selectedRoleObj
+                      ? getStandardRoleDisplayName(selectedRoleObj.role_name)
+                      : "— Select Role —"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
@@ -347,7 +350,7 @@ export function EditUserModal({
                       value={r.role_id}
                       className="text-xs cursor-pointer"
                     >
-                      {r.role_name}
+                      {getStandardRoleDisplayName(r.role_name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

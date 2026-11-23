@@ -376,7 +376,7 @@ export async function POST(
                 : `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
             message:
               isAllDeptsCompleted && isLeadHod
-                ? `${priorityTag} All collaborating departments have completed their inquiries for case ${grievance.grievance_number}. Please review findings and submit the final citizen resolution.`
+                ? `${priorityTag} All collaborating departments have completed their inquiries for case ${grievance.grievance_number}. Please review findings and submit the final employee resolution.`
                 : `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
           });
         }

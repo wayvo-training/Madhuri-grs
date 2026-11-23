@@ -126,11 +126,11 @@ export function checkAttachmentAccess(
   ) {
     return {
       allowed: true,
-      reason: "Citizen owner / uploader has access to their attachment.",
+      reason: "Employee owner / uploader has access to their attachment.",
     };
   }
 
-  // 3. Formal Resolution attachments are accessible to all grievance case participants & the citizen submitter
+  // 3. Formal Resolution attachments are accessible to all grievance case participants & the employee submitter
   const isResolutionAttachment =
     (attachment.resolution_id !== null &&
       attachment.resolution_id !== undefined) ||

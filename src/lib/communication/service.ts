@@ -6,7 +6,7 @@ export interface CommunicationParticipant {
   id: string;
   name: string;
   email?: string;
-  role: "End User" | "Staff" | "Department Head" | "Admin";
+  role: "Employee" | "Grievance Staff" | "Department Head" | "Grievance Admin";
   departmentName?: string;
   involvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   isPrimary?: boolean;
@@ -16,7 +16,12 @@ export interface CommunicationMessageItem {
   id: string;
   author: string;
   authorUserId?: string;
-  role: "End User" | "Staff" | "Department Head" | "Admin" | "System";
+  role:
+    | "Employee"
+    | "Grievance Staff"
+    | "Department Head"
+    | "Grievance Admin"
+    | "System";
   department?: string;
   timestamp: string;
   message: string;
@@ -258,7 +263,7 @@ export async function getUserGrievanceConversations(
   return grievances.map((g) => {
     const endUserName = g.users
       ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
-      : "End User";
+      : "Employee";
 
     const latestAudit = g.audit_logs[0];
     const latestResolution = g.resolutions[0];
@@ -611,7 +616,7 @@ export async function getGrievanceCommunicationThread(
   // 3. Collect Participants across all involved departments (Single or Collaborative)
   const participantsMap = new Map<string, CommunicationParticipant>();
 
-  // End User
+  // Employee
   if (grievance.users) {
     const endUserName =
       `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim();
@@ -619,7 +624,7 @@ export async function getGrievanceCommunicationThread(
       id: grievance.users.user_id.toString(),
       name: endUserName,
       email: grievance.users.email,
-      role: "End User",
+      role: "Employee",
       departmentName: grievance.users.departments?.department_name,
     });
   }
@@ -633,7 +638,7 @@ export async function getGrievanceCommunicationThread(
         id: staff.user_id.toString(),
         name: staffName,
         email: staff.email,
-        role: "Staff",
+        role: "Grievance Staff",
         departmentName: staff.departments?.department_name,
       });
     }
@@ -675,7 +680,7 @@ export async function getGrievanceCommunicationThread(
   // 4. Assemble Chronological Timeline
   const endUserName = grievance.users
     ? `${grievance.users.first_name} ${grievance.users.last_name || ""}`.trim()
-    : "End User";
+    : "Employee";
 
   const timeline: CommunicationMessageItem[] = [];
 
@@ -705,19 +710,25 @@ export async function getGrievanceCommunicationThread(
 
     const actor = log.users;
     const dbRole = actor?.roles?.role_name || "STAFF";
-    const actorRole: "Staff" | "Department Head" | "End User" | "Admin" =
+    const actorRole:
+      | "Grievance Staff"
+      | "Department Head"
+      | "Employee"
+      | "Grievance Admin" =
       dbRole === "ADMIN"
-        ? "Admin"
+        ? "Grievance Admin"
         : dbRole === "DEPARTMENT_HEAD"
           ? "Department Head"
           : dbRole === "STAFF"
-            ? "Staff"
-            : "End User";
+            ? "Grievance Staff"
+            : "Employee";
 
     const actorName = actor
       ? `${actor.first_name} ${actor.last_name || ""}`.trim()
       : val?.author ||
-        (log.action === "USER_INFO_SUBMITTED" ? endUserName : "Staff Member");
+        (log.action === "USER_INFO_SUBMITTED"
+          ? endUserName
+          : "Grievance Staff");
 
     let rawMessage = val?.message || val?.response || "";
     if (!rawMessage.trim()) {
@@ -857,7 +868,10 @@ export async function getGrievanceCommunicationThread(
         id: `audit-${log.audit_log_id}`,
         author: actorName,
         authorUserId: (actor?.user_id || log.user_id)?.toString(),
-        role: actorRole === "Department Head" ? "Department Head" : "Staff",
+        role:
+          actorRole === "Department Head"
+            ? "Department Head"
+            : "Grievance Staff",
         department: actor?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
         message: rawMessage,
@@ -875,7 +889,7 @@ export async function getGrievanceCommunicationThread(
         authorUserId: (
           grievance.users?.user_id || grievance.submitted_by
         )?.toString(),
-        role: "End User",
+        role: "Employee",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
         message: rawMessage,
@@ -904,7 +918,7 @@ export async function getGrievanceCommunicationThread(
         authorUserId: (
           grievance.users?.user_id || grievance.submitted_by
         )?.toString(),
-        role: "End User",
+        role: "Employee",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
         message: "Resolution accepted. Case officially closed.",
@@ -919,7 +933,7 @@ export async function getGrievanceCommunicationThread(
         authorUserId: (
           grievance.users?.user_id || grievance.submitted_by
         )?.toString(),
-        role: "End User",
+        role: "Employee",
         department: grievance.users?.departments?.department_name,
         timestamp: log.created_at.toISOString(),
         message:
@@ -936,13 +950,20 @@ export async function getGrievanceCommunicationThread(
   for (const res of grievance.resolutions) {
     const staffAuthor = res.users
       ? `${res.users.first_name} ${res.users.last_name || ""}`.trim()
-      : "Staff Member";
+      : "Grievance Staff";
+
+    const resRole: "Grievance Staff" | "Department Head" | "Grievance Admin" =
+      res.users?.roles?.role_name === "ADMIN"
+        ? "Grievance Admin"
+        : res.users?.roles?.role_name === "DEPARTMENT_HEAD"
+          ? "Department Head"
+          : "Grievance Staff";
 
     timeline.push({
       id: `res-${res.resolution_id}`,
       author: staffAuthor,
       authorUserId: (res.users?.user_id || res.submitted_by)?.toString(),
-      role: "Staff",
+      role: resRole,
       department: res.users?.departments?.department_name,
       timestamp: res.submitted_at.toISOString(),
       message:

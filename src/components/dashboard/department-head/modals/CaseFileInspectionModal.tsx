@@ -381,12 +381,12 @@ export function CaseFileInspectionModal({
                     <h4 className="text-xs font-bold text-amber-950 uppercase tracking-wider">
                       {isBannerReworkAccepted
                         ? `${currentGrievance.status === "REOPENED" ? "Reopening" : "Rework"} Request Accepted · Select Action`
-                        : `Citizen ${currentGrievance.status === "REOPENED" ? "Reopening" : "Rework"} Request Awaiting Your Action`}
+                        : `Employee ${currentGrievance.status === "REOPENED" ? "Reopening" : "Rework"} Request Awaiting Your Action`}
                     </h4>
                     <p className="text-xs text-amber-900 mt-0.5 leading-relaxed">
                       {isBannerReworkAccepted
-                        ? `You accepted the ${currentGrievance.status === "REOPENED" ? "reopening" : "rework"} request. Choose to assign an eligible staff member for investigation, or assume direct authority to resolve personally.`
-                        : `The citizen requested to ${currentGrievance.status === "REOPENED" ? "reopen this closed grievance" : "rework this grievance"}. Please Accept the request to proceed with staff assignment or direct intervention, or Decline the request.`}
+                        ? `You accepted the ${currentGrievance.status === "REOPENED" ? "reopening" : "rework"} request. Choose to assign an eligible grievance staff for investigation, or assume direct authority to resolve personally.`
+                        : `The employee requested to ${currentGrievance.status === "REOPENED" ? "reopen this closed grievance" : "rework this grievance"}. Please Accept the request to proceed with grievance staff assignment or direct intervention, or Decline the request.`}
                     </p>
                   </div>
                 </div>

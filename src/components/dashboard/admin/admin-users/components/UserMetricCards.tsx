@@ -99,14 +99,14 @@ export function UserMetricCards({ users, stats }: UserMetricCardsProps) {
         accent="emerald"
       />
       <CompactMetricCard
-        title="Grievance Officers"
+        title="Grievance Staff & Heads"
         value={staff}
         helper="Staff & Dept Heads"
         icon={ShieldCheck}
         accent="amber"
       />
       <CompactMetricCard
-        title="End Users"
+        title="Employees"
         value={endUsers}
         helper="Portal employees"
         icon={UserCheck}

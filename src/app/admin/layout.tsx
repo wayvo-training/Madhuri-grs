@@ -16,7 +16,7 @@ export default async function AdminLayout({
       userName={fullName}
       userEmail={user.email}
       permissions={user.permissions}
-      designation="System Administrator"
+      designation="Grievance Admin"
       departmentName={
         user.departments?.department_name || "Central Administration"
       }

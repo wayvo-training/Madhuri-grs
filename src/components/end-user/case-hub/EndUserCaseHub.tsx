@@ -592,7 +592,7 @@ export function EndUserCaseHub({
           },
           {
             id: "UNDER_REVIEW",
-            title: "Citizen Review",
+            title: "Employee Review",
             defaultDesc:
               grievance.status === "RESOLVED" ||
               grievance.status === "UNDER_REVIEW"
@@ -636,7 +636,7 @@ export function EndUserCaseHub({
           },
           {
             id: "UNDER_REVIEW",
-            title: "Citizen Review (Resolution Maintained)",
+            title: "Employee Review (Resolution Maintained)",
             defaultDesc:
               "Case returned to your review with Department Head's decision. You may review the findings or accept the resolution.",
             icon: Eye,
@@ -683,7 +683,7 @@ export function EndUserCaseHub({
                   ? "Department Head Review: Approved & Assigned"
                   : "Department Head Review: Approved",
             defaultDesc: isPendingReworkReview
-              ? "Department Head is reviewing your rework request and citizen remarks to determine action: Assign Investigation Staff, Assume Direct Authority, or Decline Request."
+              ? "Department Head is reviewing your rework request and employee remarks to determine action: Assign Grievance Staff, Assume Direct Authority, or Decline Request."
               : isDirectHeadAuthority
                 ? "Request approved. Department Head has assumed direct personal responsibility to resolve this grievance."
                 : assignedOfficerName
@@ -722,7 +722,7 @@ export function EndUserCaseHub({
           },
           {
             id: "UNDER_REVIEW",
-            title: "Citizen Review",
+            title: "Employee Review",
             defaultDesc:
               grievance.status === "RESOLVED" ||
               grievance.status === "UNDER_REVIEW"
@@ -762,7 +762,7 @@ export function EndUserCaseHub({
         },
         {
           id: "UNDER_REVIEW",
-          title: "Citizen Review",
+          title: "Employee Review",
           defaultDesc:
             grievance.status === "CLOSED" || grievance.status === "RESOLVED"
               ? "Resolution reviewed and accepted"
@@ -1205,11 +1205,11 @@ export function EndUserCaseHub({
     resolution?.submittedByDept,
   ]);
 
-  // Separate documents into End User Documents and Investigation Staff Documents
+  // Separate documents into Employee Documents and Grievance Staff Documents
   const endUserDocuments = useMemo(() => {
     return (grievance.attachments || []).map((att) => ({
       ...att,
-      sourceTag: att.sourceTag || "End User Submission",
+      sourceTag: att.sourceTag || "Employee Submission",
     }));
   }, [grievance.attachments]);
 
@@ -1227,7 +1227,7 @@ export function EndUserCaseHub({
             size: att.size,
             type: att.type,
             sourceTag: "Official Resolution Evidence",
-            uploadedBy: "Resolution Officer",
+            uploadedBy: "Grievance Staff",
           });
         }
       });
@@ -2037,12 +2037,12 @@ export function EndUserCaseHub({
                   )}
                 >
                   <Shield className="h-3 w-3" />
-                  <span>Investigation Staff ({staffDocuments.length})</span>
+                  <span>Grievance Staff ({staffDocuments.length})</span>
                 </button>
               </div>
             </div>
 
-            {/* SECTION 1: DOCUMENTS SHARED BY END USER */}
+            {/* SECTION 1: DOCUMENTS SHARED BY EMPLOYEE */}
             {(docCategoryFilter === "all" ||
               docCategoryFilter === "end-user") && (
               <div className="space-y-3.5">
@@ -2053,7 +2053,7 @@ export function EndUserCaseHub({
                     </div>
                     <div>
                       <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Documents Shared by You (End User / Complainant)
+                        Documents Shared by You (Employee)
                       </h4>
                       <p className="text-[11px] text-slate-500">
                         Initial grievance statement proofs and additional
@@ -2155,7 +2155,7 @@ export function EndUserCaseHub({
               </div>
             )}
 
-            {/* SECTION 2: DOCUMENTS SHARED BY INVESTIGATION STAFF */}
+            {/* SECTION 2: DOCUMENTS SHARED BY GRIEVANCE STAFF */}
             {(docCategoryFilter === "all" || docCategoryFilter === "staff") && (
               <div className="space-y-3.5 pt-2">
                 <div className="flex items-center justify-between">
@@ -2165,7 +2165,7 @@ export function EndUserCaseHub({
                     </div>
                     <div>
                       <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Documents Shared by Investigation Staff
+                        Documents Shared by Grievance Staff
                       </h4>
                       <p className="text-[11px] text-slate-500">
                         Official inquiry findings, departmental evidence, and
@@ -2265,7 +2265,7 @@ export function EndUserCaseHub({
                   <div className="text-center p-6 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
                     <p className="text-xs text-slate-500">
                       No investigation or resolution documents have been shared
-                      by the staff team yet.
+                      by the grievance staff team yet.
                     </p>
                   </div>
                 )}
@@ -2282,8 +2282,8 @@ export function EndUserCaseHub({
                   <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
                       <h5 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                        Staff has requested supportive clarification or
-                        documentation
+                        Grievance Staff has requested supportive clarification
+                        or documentation
                       </h5>
                       <p className="text-xs text-slate-500 mt-0.5">
                         Upload relevant bills, receipts, or medical proofs

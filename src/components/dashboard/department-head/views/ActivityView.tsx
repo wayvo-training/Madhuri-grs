@@ -39,9 +39,10 @@ export function ActivityView({
       type: "select",
       options: [
         { label: "Department Head", value: "DEPARTMENT_HEAD" },
-        { label: "End User", value: "END_USER" },
+        { label: "Employee", value: "END_USER" },
         { label: "System", value: "SYSTEM" },
-        { label: "Staff", value: "STAFF" },
+        { label: "Grievance Staff", value: "STAFF" },
+        { label: "Grievance Admin", value: "ADMIN" },
       ],
     },
     { id: "search", label: "Global Search", type: "text" },
@@ -209,11 +210,13 @@ export function ActivityView({
                     const roleLabel = feed.actor.includes("DEPARTMENT_HEAD")
                       ? "Department Head"
                       : feed.actor.includes("END_USER")
-                        ? "End User"
-                        : feed.actor.includes("SLA") ||
-                            feed.actor.includes("SYSTEM")
-                          ? "System"
-                          : "Staff";
+                        ? "Employee"
+                        : feed.actor.includes("ADMIN")
+                          ? "Grievance Admin"
+                          : feed.actor.includes("SLA") ||
+                              feed.actor.includes("SYSTEM")
+                            ? "System"
+                            : "Grievance Staff";
 
                     return (
                       <div

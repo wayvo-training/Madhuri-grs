@@ -84,13 +84,13 @@ export function DashboardHeader({
   const getParentLabel = () => {
     switch (userRole) {
       case "END_USER":
-        return "End User";
+        return "Employee";
       case "STAFF":
-        return "Staff";
+        return "Grievance Staff";
       case "DEPARTMENT_HEAD":
         return "Department Head";
       case "ADMIN":
-        return "Admin";
+        return "Grievance Admin";
       default:
         return "Dashboard";
     }

@@ -203,8 +203,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "The System Administrator (ADMIN) role cannot be deactivated.",
+          message: "The Grievance Admin role cannot be deactivated.",
         },
         { status: 400 },
       );

@@ -78,7 +78,7 @@ Department Head`;
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">
-                Issue Officer Directive
+                Issue Grievance Staff Directive
               </h3>
               <p className="text-xs text-slate-500">
                 Official instruction for Case {grievance.ticketCode}
@@ -99,7 +99,7 @@ Department Head`;
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-emerald-700" />
             <span className="text-slate-600 font-medium">
-              Assigned Officer:
+              Assigned Grievance Staff:
             </span>
             <strong className="text-slate-900 font-semibold">
               {staffName}

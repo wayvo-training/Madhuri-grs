@@ -66,9 +66,7 @@ export function CaseStatementTab({
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Complainant Profile
           </span>
-          <span className="text-2.75 text-slate-400">
-            Registered Citizen / Employee
-          </span>
+          <span className="text-2.75 text-slate-400">Registered Employee</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div className="flex items-center gap-2 min-w-0">
@@ -326,7 +324,7 @@ export function CaseStatementTab({
       {/* Handling Officer Overview */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-1 text-xs">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          Handling Officer
+          Handling Grievance Staff
         </span>
         {currentGrievance.assignedStaffId ||
         (currentGrievance.assignedStaffName &&
@@ -363,7 +361,7 @@ export function CaseStatementTab({
                 ? "Case Closed"
                 : currentGrievance.status === "COMPLETED" ||
                     currentGrievance.status === "UNDER_REVIEW"
-                  ? "Under Citizen Review"
+                  ? "Under Employee Review"
                   : "Currently Unassigned"}
             </span>
             {currentGrievance.status !== "CLOSED" &&
@@ -376,7 +374,7 @@ export function CaseStatementTab({
                   onClick={() => onAssignClick(currentGrievance)}
                   className="rounded-lg bg-[#0F766E] px-3 py-1 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59]"
                 >
-                  Assign Officer Now
+                  Assign Grievance Staff Now
                 </button>
               )}
           </div>

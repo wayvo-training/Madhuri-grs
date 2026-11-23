@@ -27,7 +27,7 @@ export function useAdminRoles(
     if (role.role_name === "ADMIN") {
       setActionNotice({
         type: "error",
-        text: "The System Administrator (ADMIN) role cannot be deactivated.",
+        text: "The Grievance Admin role cannot be deactivated.",
       });
       setTimeout(() => setActionNotice(null), 4000);
       return;

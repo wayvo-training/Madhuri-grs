@@ -18,7 +18,7 @@ export async function GET() {
 
   let designation = user.roles?.description || "Employee";
   if (roleName === "ADMIN") {
-    designation = "System Administrator";
+    designation = "Grievance Admin";
   } else if (roleName === "DEPARTMENT_HEAD") {
     designation = "Department Head";
   } else if (roleName === "STAFF") {

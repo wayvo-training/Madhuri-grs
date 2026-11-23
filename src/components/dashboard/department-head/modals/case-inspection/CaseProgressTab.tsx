@@ -716,7 +716,7 @@ export function CaseProgressTab({
                         isPrimary &&
                         isHeadAuthorityForThisDept
                           ? isResolutionSubmittedByHead
-                            ? "Resolution Submitted · Under Citizen Review"
+                            ? "Resolution Submitted · Under Employee Review"
                             : "Findings Done · Pending Head Resolution"
                           : dept.status === "COMPLETED"
                             ? "Findings Submitted"

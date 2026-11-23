@@ -30,11 +30,11 @@ export function AcceptReworkModal({
 
   const isRework = grievance.status === "REWORK";
   const modalTitle = isRework
-    ? "Accept Citizen Rework Request"
-    : "Accept Citizen Reopening Request";
+    ? "Accept Employee Rework Request"
+    : "Accept Employee Reopening Request";
   const summaryDesc = isRework
-    ? "The citizen was unsatisfied with the earlier resolution and has requested rework. By accepting, a new SLA cycle begins for your department. Choose how this rework investigation will be handled:"
-    : "The citizen requested to reopen this closed grievance. By accepting, a new SLA cycle begins for your department. Choose how this investigation will be handled:";
+    ? "The employee was unsatisfied with the earlier resolution and has requested rework. By accepting, a new SLA cycle begins for your department. Choose how this rework investigation will be handled:"
+    : "The employee requested to reopen this closed grievance. By accepting, a new SLA cycle begins for your department. Choose how this investigation will be handled:";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
@@ -101,16 +101,17 @@ export function AcceptReworkModal({
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-slate-900 group-hover:text-teal-950">
-                    Assign Staff
+                    Assign Grievance Staff
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                     Delegate rework investigation to an eligible departmental
-                    staff member using smart workload & skill recommendations.
+                    grievance staff using smart workload & skill
+                    recommendations.
                   </p>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-teal-700 group-hover:translate-x-0.5 transition-transform">
-                <span>Assign Staff Member</span>
+                <span>Assign Grievance Staff</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </div>
             </button>

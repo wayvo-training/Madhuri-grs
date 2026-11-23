@@ -306,8 +306,8 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
         : undefined,
       type: att.file_type,
       uploadedAt: att.uploaded_at.toISOString(),
-      uploadedBy: "You (End User)",
-      sourceTag: "End User Submission",
+      uploadedBy: "You (Employee)",
+      sourceTag: "Employee Submission",
     }));
 
   // 2. Documents shared by Investigation Staff (Findings, department evidence, and resolution files)
@@ -335,13 +335,13 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
     .forEach((att) => {
       const uploaderName = att.users
         ? `${att.users.first_name} ${att.users.last_name || ""}`.trim()
-        : "Investigation Staff";
+        : "Grievance Staff";
       const deptName = att.grievance_departments?.departments?.department_name;
       const sourceTag = att.resolution_id
         ? "Official Resolution Evidence"
         : deptName
           ? `${deptName} Findings`
-          : "Investigation Staff Evidence";
+          : "Grievance Staff Evidence";
 
       staffAttachmentsMap.set(att.attachment_id.toString(), {
         id: att.attachment_id.toString(),
@@ -370,7 +370,7 @@ export default async function GrievanceDetailsPage({ params }: PageProps) {
           : undefined,
         type: att.file_type,
         uploadedAt: att.uploaded_at?.toISOString() || new Date().toISOString(),
-        uploadedBy: "Resolution Officer",
+        uploadedBy: "Grievance Staff",
         sourceTag: "Official Resolution Evidence",
       });
     }

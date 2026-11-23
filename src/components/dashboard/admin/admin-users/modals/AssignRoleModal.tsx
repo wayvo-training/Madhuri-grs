@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type {
   SerializedUser,
   UserDepartmentOption,
@@ -133,7 +134,7 @@ export function AssignRoleModal({
       case "DEPARTMENT_HEAD":
         return "Responsible for managing and overseeing all grievances, staff assignments, and resolutions within their designated department.";
       case "STAFF":
-        return "Department-level grievance handler assigned to investigate, respond to, and resolve citizen grievances.";
+        return "Department-level grievance handler assigned to investigate, respond to, and resolve employee grievances.";
       case "END_USER":
         return "Standard user account capable of submitting, monitoring, and providing feedback on their grievances.";
       default:
@@ -142,18 +143,7 @@ export function AssignRoleModal({
   };
 
   const getRoleDisplayName = (roleName?: string | null) => {
-    switch (roleName?.trim()?.toUpperCase()) {
-      case "ADMIN":
-        return "System Administrator (ADMIN)";
-      case "DEPARTMENT_HEAD":
-        return "Department Head";
-      case "STAFF":
-        return "Grievance Staff Officer";
-      case "END_USER":
-        return "Employee (End User)";
-      default:
-        return roleName || "";
-    }
+    return getStandardRoleDisplayName(roleName);
   };
 
   return (

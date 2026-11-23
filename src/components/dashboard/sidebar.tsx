@@ -43,7 +43,7 @@ interface DashboardSidebarProps {
 function getDefaultDesignation(role: UserRole): string {
   switch (role) {
     case "ADMIN":
-      return "System Administrator";
+      return "Grievance Admin";
     case "DEPARTMENT_HEAD":
       return "Department Head";
     case "STAFF":
@@ -51,7 +51,7 @@ function getDefaultDesignation(role: UserRole): string {
     case "END_USER":
       return "Employee";
     default:
-      return "Staff";
+      return "Employee";
   }
 }
 
@@ -64,7 +64,7 @@ function getDefaultDepartment(role: UserRole): string {
     case "STAFF":
       return "Operations";
     case "END_USER":
-      return "General Public";
+      return "Employee";
     default:
       return "General";
   }

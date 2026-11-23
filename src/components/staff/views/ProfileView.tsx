@@ -14,6 +14,7 @@ import {
   buildGmailComposeUrl,
   buildStaffHodEscalationEmail,
 } from "@/lib/email";
+import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type { StaffKpiStats, StaffMemberProfile } from "@/types/staff";
 
 interface ProfileViewProps {
@@ -68,7 +69,7 @@ export function ProfileView({ profile, stats, onRefresh }: ProfileViewProps) {
                   {profile.departmentName}
                 </span>
                 <span className="rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-xs font-medium">
-                  {profile.roleName || "Grievance Staff"}
+                  {getStandardRoleDisplayName(profile.roleName)}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">

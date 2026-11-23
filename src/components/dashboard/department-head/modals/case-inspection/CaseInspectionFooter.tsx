@@ -295,7 +295,7 @@ export function CaseInspectionFooter({
                   "ADMIN")) ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 px-3.5 py-2 rounded-xl border border-teal-200">
               <CheckCircle2 className="h-3.5 w-3.5 text-teal-600" />
-              Resolution Submitted · Awaiting Citizen Review
+              Resolution Submitted · Awaiting Employee Review
             </span>
           ) : null}
 
