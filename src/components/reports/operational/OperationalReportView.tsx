@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   FileText,
   FolderTree,
-  RefreshCw,
   ShieldAlert,
   Users,
 } from "lucide-react";
@@ -46,6 +45,13 @@ export interface OperationalReportViewProps {
 
 type OperationalTab = "overview" | "departments" | "sla" | "staff" | "taxonomy";
 
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function OperationalReportView({
   userRole,
   departmentName: _departmentName,
@@ -54,10 +60,13 @@ export function OperationalReportView({
 
   const [filters, setFilters] = useState<OperationalReportFilters>(() => {
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    const startStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    const endStr = formatLocalDate(now);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 30,
+    );
+    const startStr = formatLocalDate(start);
 
     return {
       startDate: startStr,
@@ -162,10 +171,13 @@ export function OperationalReportView({
 
   const handleResetFilters = () => {
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    const startStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    const endStr = formatLocalDate(now);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 30,
+    );
+    const startStr = formatLocalDate(start);
 
     const reset = {
       startDate: startStr,
@@ -189,21 +201,8 @@ export function OperationalReportView({
           </p>
         </div>
 
-        {/* Action Buttons: Refresh + Export */}
+        {/* Action Buttons: Export */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchReport(filters)}
-            disabled={isLoading || isExporting}
-            className="h-8 px-2.5 gap-1.5 text-xs font-medium cursor-pointer"
-          >
-            <RefreshCw
-              className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`}
-            />
-            <span>Refresh</span>
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={isLoading || isExporting}

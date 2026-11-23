@@ -71,27 +71,41 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<"th">) {
+function TableHead({ className, style, ...props }: React.ComponentProps<"th">) {
+  const isRight = className?.includes("text-right");
+  const isCenter = className?.includes("text-center");
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "h-10 px-2 text-left align-middle text-[13px] font-semibold whitespace-nowrap text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/95 [&:has([role=checkbox])]:pr-0",
+        "h-10 px-2 align-middle text-[13px] font-semibold whitespace-nowrap text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/95 [&:has([role=checkbox])]:pr-0",
+        isRight ? "text-right" : isCenter ? "text-center" : "text-left",
         className,
       )}
+      style={{
+        textAlign: isRight ? "right" : isCenter ? "center" : "left",
+        ...style,
+      }}
       {...props}
     />
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<"td">) {
+function TableCell({ className, style, ...props }: React.ComponentProps<"td">) {
+  const isRight = className?.includes("text-right");
+  const isCenter = className?.includes("text-center");
   return (
     <td
       data-slot="table-cell"
       className={cn(
         "p-2 align-middle text-sm font-normal whitespace-nowrap [&:has([role=checkbox])]:pr-0",
+        isRight ? "text-right" : isCenter ? "text-center" : "text-left",
         className,
       )}
+      style={{
+        textAlign: isRight ? "right" : isCenter ? "center" : "left",
+        ...style,
+      }}
       {...props}
     />
   );

@@ -117,20 +117,39 @@ export async function generateResolutionAnalytics(
     scopedDepartmentName = matchedDept?.department_name || null;
   }
 
-  // 4. Construct Where Clause
-  const whereConditions: Prisma.grievancesWhereInput = {};
+  // 4. Construct Where Clause (Grievances received or closed within the reporting period)
+  const andConditions: Prisma.grievancesWhereInput[] = [
+    {
+      OR: [
+        {
+          created_at: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        {
+          closed_at: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      ],
+    },
+  ];
 
   if (scope.authorizedDepartmentId) {
-    whereConditions.grievance_departments = {
-      some: {
-        department_id: scope.authorizedDepartmentId,
+    andConditions.push({
+      grievance_departments: {
+        some: {
+          department_id: scope.authorizedDepartmentId,
+        },
       },
-    };
+    });
   }
 
   if (filters.categoryId) {
     try {
-      whereConditions.category_id = BigInt(filters.categoryId);
+      andConditions.push({ category_id: BigInt(filters.categoryId) });
     } catch {
       // ignore
     }
@@ -138,37 +157,122 @@ export async function generateResolutionAnalytics(
 
   if (filters.subcategoryId) {
     try {
-      whereConditions.subcategory_id = BigInt(filters.subcategoryId);
+      andConditions.push({ subcategory_id: BigInt(filters.subcategoryId) });
     } catch {
       // ignore
     }
   }
 
   if (filters.priority && filters.priority.toUpperCase() !== "ALL") {
-    whereConditions.priority = filters.priority.toUpperCase();
+    andConditions.push({ priority: filters.priority.toUpperCase() });
   }
 
-  // Fetch candidate grievances matching scope and filters
-  const grievances = (await prisma.grievances.findMany({
-    where: whereConditions,
-    include: {
-      categories: true,
-      subcategories: true,
-      grievance_departments: {
-        include: {
-          departments: true,
+  if (filters.search) {
+    const term = filters.search.trim();
+    if (term) {
+      andConditions.push({
+        OR: [
+          { grievance_number: { contains: term, mode: "insensitive" } },
+          { title: { contains: term, mode: "insensitive" } },
+          { description: { contains: term, mode: "insensitive" } },
+        ],
+      });
+    }
+  }
+
+  const whereConditions: Prisma.grievancesWhereInput = {
+    AND: andConditions,
+  };
+
+  // Pending cases backlog where clause (active unresolved backlog up to endDate)
+  const pendingWhereConditions: Prisma.grievancesWhereInput = {
+    AND: [
+      {
+        created_at: { lte: endDate },
+        status: { not: "CLOSED" },
+        closed_at: null,
+      },
+      ...(scope.authorizedDepartmentId
+        ? [
+            {
+              grievance_departments: {
+                some: {
+                  department_id: scope.authorizedDepartmentId,
+                },
+              },
+            },
+          ]
+        : []),
+      ...(filters.categoryId
+        ? (() => {
+            try {
+              return [{ category_id: BigInt(filters.categoryId) }];
+            } catch {
+              return [];
+            }
+          })()
+        : []),
+      ...(filters.subcategoryId
+        ? (() => {
+            try {
+              return [{ subcategory_id: BigInt(filters.subcategoryId) }];
+            } catch {
+              return [];
+            }
+          })()
+        : []),
+      ...(filters.priority && filters.priority.toUpperCase() !== "ALL"
+        ? [{ priority: filters.priority.toUpperCase() }]
+        : []),
+    ],
+  };
+
+  // Fetch candidate grievances matching scope and filters in period, plus pending backlog
+  const [grievances, pendingCases] = (await Promise.all([
+    prisma.grievances.findMany({
+      where: whereConditions,
+      include: {
+        categories: true,
+        subcategories: true,
+        grievance_departments: {
+          include: {
+            departments: true,
+          },
+        },
+        resolutions: {
+          include: {
+            resolution_reviews: true,
+          },
+        },
+        sla_tracking: {
+          orderBy: { cycle_number: "desc" },
         },
       },
-      resolutions: {
-        include: {
-          resolution_reviews: true,
+    }),
+    prisma.grievances.findMany({
+      where: pendingWhereConditions,
+      include: {
+        categories: true,
+        subcategories: true,
+        grievance_departments: {
+          include: {
+            departments: true,
+          },
+        },
+        resolutions: {
+          include: {
+            resolution_reviews: true,
+          },
+        },
+        sla_tracking: {
+          orderBy: { cycle_number: "desc" },
         },
       },
-      sla_tracking: {
-        orderBy: { cycle_number: "desc" },
-      },
-    },
-  })) as GrievanceWithResolutionRelations[];
+    }),
+  ])) as [
+    GrievanceWithResolutionRelations[],
+    GrievanceWithResolutionRelations[],
+  ];
 
   const now = new Date();
 
@@ -234,10 +338,6 @@ export async function generateResolutionAnalytics(
   const awaitingEmployeeReviewCount = grievances.filter(
     (g) => g.status === "RESOLVED" || g.status === "UNDER_REVIEW",
   ).length;
-
-  const pendingCases = grievances.filter(
-    (g) => g.status !== "CLOSED" && !g.closed_at,
-  );
 
   // =================================================================
   // 7. DEPARTMENTAL PROCESSING TIME (SEQUENTIAL & PARALLEL AWARE)
@@ -528,16 +628,23 @@ export async function generateResolutionAnalytics(
   // =================================================================
   // 9. TAT BY PRIORITY BREAKDOWN
   // =================================================================
-  const priorities = ["URGENT", "HIGH", "NORMAL", "LOW"];
+  const normalizePriority = (p: string | null | undefined): string => {
+    const upper = (p || "").toUpperCase();
+    if (upper === "URGENT") return "CRITICAL";
+    if (upper === "NORMAL") return "MEDIUM";
+    return upper;
+  };
+
+  const priorities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
   const tatByPriority: PriorityTatItem[] = priorities.map((priority) => {
     const priorityGrievances = grievances.filter(
-      (g) => (g.priority || "").toUpperCase() === priority,
+      (g) => normalizePriority(g.priority) === priority,
     );
     const prioValidClosed = validClosedInPeriod.filter(
-      (g) => (g.priority || "").toUpperCase() === priority,
+      (g) => normalizePriority(g.priority) === priority,
     );
     const prioMissingClosed = missingClosedAtInPeriod.filter(
-      (g) => (g.priority || "").toUpperCase() === priority,
+      (g) => normalizePriority(g.priority) === priority,
     );
 
     const prioHoursList: number[] = [];
@@ -963,7 +1070,7 @@ export async function generateResolutionAnalytics(
         name: sc.subcategory_name,
       })),
     })),
-    priorities: ["ALL", "URGENT", "HIGH", "NORMAL", "LOW"],
+    priorities: ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"],
   };
 
   const responseData: ResolutionAnalyticsData = {

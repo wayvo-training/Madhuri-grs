@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, RotateCcw } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AdvancedTableSearch,
   type FilterMode,
@@ -13,6 +13,13 @@ import type {
   OperationalReportFilterOptions,
   OperationalReportFilters,
 } from "@/types/reports";
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export interface ReportFilterBarProps {
   filters: OperationalReportFilters;
@@ -35,6 +42,10 @@ export function ReportFilterBar({
     useState<OperationalReportFilters>(filters);
   const [activePreset, setActivePreset] = useState<string>("30d");
   const [searchKey, setSearchKey] = useState<number>(0);
+
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
   // Define Search & Filter Fields for the Standard AdvancedTableSearch
   const searchFields: SearchFieldDef[] = useMemo(() => {
@@ -139,20 +150,20 @@ export function ReportFilterBar({
   const handlePresetSelect = (preset: "7d" | "30d" | "month" | "90d") => {
     setActivePreset(preset);
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    let start = new Date();
+    const endStr = formatLocalDate(now);
+    let start: Date;
 
     if (preset === "7d") {
-      start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
     } else if (preset === "30d") {
-      start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
     } else if (preset === "month") {
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else if (preset === "90d") {
-      start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    } else {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
     }
 
-    const startStr = start.toISOString().split("T")[0];
+    const startStr = formatLocalDate(start);
     const updated: OperationalReportFilters = {
       ...localFilters,
       startDate: startStr,
@@ -242,10 +253,13 @@ export function ReportFilterBar({
   const handleReset = () => {
     setActivePreset("30d");
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    const startStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    const endStr = formatLocalDate(now);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 30,
+    );
+    const startStr = formatLocalDate(start);
 
     const resetFilters: OperationalReportFilters = {
       startDate: startStr,

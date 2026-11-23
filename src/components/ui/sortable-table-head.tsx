@@ -41,22 +41,31 @@ export function SortableTableHead({
 
   const isCenter = className?.includes("text-center");
   const isRight = className?.includes("text-right");
-  const justifyClass = isCenter
-    ? "justify-center"
-    : isRight
-      ? "justify-end"
-      : "justify-start";
 
   return (
     <TableHead
       className={cn(
         "cursor-pointer select-none bg-slate-50 dark:bg-slate-800/95 text-slate-600 dark:text-slate-400 hover:bg-slate-100/90 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors duration-150 group whitespace-nowrap",
+        isRight ? "text-right" : isCenter ? "text-center" : "text-left",
         className,
       )}
+      style={{
+        textAlign: isRight ? "right" : isCenter ? "center" : "left",
+        ...props.style,
+      }}
       onClick={handleToggle}
       {...props}
     >
-      <div className={cn("flex items-center gap-1.5 w-full", justifyClass)}>
+      <div
+        className={cn(
+          "inline-flex items-center gap-1.5",
+          isCenter
+            ? "justify-center"
+            : isRight
+              ? "justify-end"
+              : "justify-start",
+        )}
+      >
         <span className="whitespace-nowrap select-none">{children}</span>
         <span className="flex flex-col items-center justify-center shrink-0">
           {direction === "asc" ? (

@@ -1,6 +1,13 @@
 "use client";
 
 import { CheckCircle2, Clock, FileCheck, FileText, Layers } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { ResolutionStageItem } from "@/types/reports";
 
 export interface ResolutionStagesCardProps {
@@ -45,57 +52,63 @@ export function ResolutionStagesCard({ stages }: ResolutionStagesCardProps) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900/60">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-            <Layers className="h-4 w-4 text-blue-600" />
-            Resolution Workflow Stages
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Distinct resolution milestones from draft submission to final
-            closure
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
-        {stages.map((st) => (
-          <div
-            key={st.stage}
-            className="flex flex-col justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-3.5 dark:border-slate-800 dark:bg-slate-800/40"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                  {st.label}
-                </span>
-                {getStageIcon(st.stage)}
-              </div>
-              <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  {st.count.toLocaleString()}
-                </span>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  ({st.percentage}%)
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {st.description}
-              </p>
-            </div>
-
-            <div className="mt-3.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden dark:bg-slate-700">
-              <div
-                className={`h-full rounded-full ${getStageColor(st.stage)}`}
-                style={{
-                  width: `${Math.min(100, Math.max(2, st.percentage))}%`,
-                }}
-              />
-            </div>
+    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+      <CardHeader className="pb-2 pt-3.5 px-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+            <Layers className="h-4 w-4" />
           </div>
-        ))}
-      </div>
-    </div>
+          <div>
+            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Resolution Workflow Stages
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Distinct resolution milestones from draft submission to final
+              closure
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="px-4 pb-4 pt-0">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {stages.map((st) => (
+            <div
+              key={st.stage}
+              className="flex flex-col justify-between rounded-lg border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {st.label}
+                  </span>
+                  {getStageIcon(st.stage)}
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-100">
+                    {st.count.toLocaleString()}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    ({st.percentage}%)
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                  {st.description}
+                </p>
+              </div>
+
+              <div className="mt-2.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden dark:bg-slate-700">
+                <div
+                  className={`h-full rounded-full ${getStageColor(st.stage)}`}
+                  style={{
+                    width: `${Math.min(100, Math.max(2, st.percentage))}%`,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -4,13 +4,25 @@ import {
   AlertCircle,
   Building2,
   CheckCircle2,
+  ChevronDown,
+  Download,
+  FileSpreadsheet,
+  FileText,
   Hourglass,
-  LayoutDashboard,
+  Layers,
   RotateCcw,
   ShieldCheck,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReportExport } from "@/hooks/useReportExport";
 import type {
@@ -22,8 +34,6 @@ import type {
 import { DepartmentProcessingTimeCard } from "./DepartmentProcessingTimeCard";
 import { PendingCasesCard } from "./PendingCasesCard";
 import { ResolutionFilterBar } from "./ResolutionFilterBar";
-import { ResolutionMetadataHeader } from "./ResolutionMetadataHeader";
-import { ResolutionOverviewCards } from "./ResolutionOverviewCards";
 import { ResolutionStagesCard } from "./ResolutionStagesCard";
 import { ResolutionTatByPriorityCard } from "./ResolutionTatByPriorityCard";
 import { ReworkAndReopenCard } from "./ReworkAndReopenCard";
@@ -34,6 +44,15 @@ export interface ResolutionReportViewProps {
   departmentName?: string;
 }
 
+type ResolutionTab = "stages" | "departments" | "sla" | "rework" | "pending";
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function ResolutionReportView({
   userRole,
   departmentName: _departmentName,
@@ -42,10 +61,13 @@ export function ResolutionReportView({
 
   const [filters, setFilters] = useState<ResolutionAnalyticsFilters>(() => {
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    const startStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    const endStr = formatLocalDate(now);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 30,
+    );
+    const startStr = formatLocalDate(start);
 
     return {
       startDate: startStr,
@@ -53,16 +75,15 @@ export function ResolutionReportView({
     };
   });
 
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "departments" | "sla" | "rework" | "pending"
-  >("overview");
+  // Default active tab is "stages" (Resolution Stages & TAT), "all/overview" removed per user instruction
+  const [activeTab, setActiveTab] = useState<ResolutionTab>("stages");
 
   const [data, setData] = useState<ResolutionAnalyticsData | null>(null);
   const [filterOptions, setFilterOptions] =
     useState<ResolutionAnalyticsFilterOptions>({
       departments: [],
       categories: [],
-      priorities: ["ALL", "URGENT", "HIGH", "NORMAL", "LOW"],
+      priorities: ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"],
     });
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -100,6 +121,9 @@ export function ResolutionReportView({
         }
         if (currentFilters.priority) {
           query.set("priority", currentFilters.priority);
+        }
+        if (currentFilters.search) {
+          query.set("search", currentFilters.search);
         }
 
         const res = await fetch(`/api/reports/resolution?${query.toString()}`);
@@ -139,10 +163,13 @@ export function ResolutionReportView({
 
   const handleResetFilters = () => {
     const now = new Date();
-    const endStr = now.toISOString().split("T")[0];
-    const startStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0];
+    const endStr = formatLocalDate(now);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 30,
+    );
+    const startStr = formatLocalDate(start);
 
     const resetFilters: ResolutionAnalyticsFilters = {
       startDate: startStr,
@@ -152,21 +179,67 @@ export function ResolutionReportView({
   };
 
   return (
-    <div className="space-y-5">
-      {/* 1. Header with Metadata */}
-      {data?.metadata && (
-        <ResolutionMetadataHeader
-          metadata={data.metadata}
-          isLoading={isLoading}
-          onRefresh={() => fetchReport(filters)}
-          onExport={(format) => handleExport(filters, format)}
-          isExporting={isExporting}
-        />
-      )}
+    <div className="flex-1 flex flex-col min-h-0 gap-3 sm:gap-3.5 pt-2 sm:pt-3 pb-10 px-3 sm:px-5 max-w-7xl mx-auto w-full">
+      {/* 1. Header Row (Clean, uncluttered, compact without redundant badges or timestamps) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            Resolution Analytics (TAT)
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+            Authoritative Turnaround Time (TAT), resolution workflow stages,
+            departmental processing durations, SLA compliance, and rework
+            activity.
+          </p>
+        </div>
 
-      {/* Export Success Notification Banner */}
+        {/* Action Buttons: Export */}
+        <div className="flex items-center gap-2 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={isLoading || isExporting}
+              className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-blue-700 hover:bg-blue-800 text-white shadow-xs focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
+            >
+              <Download
+                className={`h-3 w-3 ${isExporting ? "animate-spin" : ""}`}
+              />
+              <span>{isExporting ? "Exporting..." : "Export Report"}</span>
+              <ChevronDown className="h-3 w-3 opacity-80" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 text-xs">
+              <DropdownMenuLabel className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
+                Export Format
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "CSV")}
+                className="gap-2 cursor-pointer"
+              >
+                <Download className="h-3.5 w-3.5 text-slate-600" />
+                <span>CSV Spreadsheet (.csv)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "EXCEL")}
+                className="gap-2 cursor-pointer"
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Excel Workbook (.xlsx)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleExport(filters, "PDF")}
+                className="gap-2 cursor-pointer"
+              >
+                <FileText className="h-3.5 w-3.5 text-rose-600" />
+                <span>PDF Document (.pdf)</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Export Notifications */}
       {exportSuccessMessage && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300 flex items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span className="font-medium">{exportSuccessMessage}</span>
@@ -174,16 +247,15 @@ export function ResolutionReportView({
           <button
             type="button"
             onClick={clearExportMessages}
-            className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 text-xs font-semibold cursor-pointer"
+            className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 text-xs font-semibold cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Export Error Notification Banner */}
       {exportErrorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>Export Failed: {exportErrorMessage}</span>
@@ -200,7 +272,7 @@ export function ResolutionReportView({
         </div>
       )}
 
-      {/* 2. Filter Bar */}
+      {/* 2. Interactive Filter Toolbar with Standard Search */}
       <ResolutionFilterBar
         filters={filters}
         filterOptions={filterOptions}
@@ -210,130 +282,224 @@ export function ResolutionReportView({
         onResetFilters={handleResetFilters}
       />
 
-      {/* Error State */}
+      {/* Error State Banner */}
       {errorMessage && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50/80 p-4 text-xs text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-            <span className="font-semibold">Failed to load reports:</span>
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{errorMessage}</span>
           </div>
           <Button
-            variant="outline"
             size="sm"
+            variant="outline"
             onClick={() => fetchReport(filters)}
-            className="mt-3 h-7 text-xs border-rose-300 text-rose-800 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-300"
+            className="h-7 text-xs border-rose-300 hover:bg-rose-100 dark:border-rose-800"
           >
-            Retry Request
+            Retry
           </Button>
         </div>
       )}
 
-      {/* Loading Skeleton */}
+      {/* 3. Loading Skeletons */}
       {isLoading && !data && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: Skeleton placeholder
-              <Skeleton key={i} className="h-24 rounded-xl" />
-            ))}
+        <div className="flex flex-col gap-5">
+          <Skeleton className="h-10 w-80 rounded-lg" />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <Skeleton className="h-80 w-full rounded-lg" />
+            <Skeleton className="h-80 w-full rounded-lg" />
           </div>
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-72 rounded-xl" />
         </div>
       )}
 
-      {/* Main Content with Navigation Tabs */}
+      {/* 4. Loaded Data Content with Focused Domain Tabs */}
       {data && (
-        <div className="space-y-4">
-          {/* Navigation Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2.5 dark:border-slate-800">
-            <Button
-              variant={activeTab === "overview" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("overview")}
-              className="h-8 gap-1.5 text-xs font-medium"
+        <div className="flex flex-col gap-3.5">
+          {/* Domain Focus Navigation Tabs */}
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5 overflow-x-auto print:hidden">
+            <div
+              role="tablist"
+              aria-label="Resolution Analytics Views"
+              className="inline-flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
             >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Overview & Stages
-            </Button>
-            <Button
-              variant={activeTab === "departments" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("departments")}
-              className="h-8 gap-1.5 text-xs font-medium"
-            >
-              <Building2 className="h-3.5 w-3.5" />
-              Department Processing
-            </Button>
-            <Button
-              variant={activeTab === "sla" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("sla")}
-              className="h-8 gap-1.5 text-xs font-medium"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              SLA Compliance
-            </Button>
-            <Button
-              variant={activeTab === "rework" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("rework")}
-              className="h-8 gap-1.5 text-xs font-medium"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Rework & Reopen
-            </Button>
-            <Button
-              variant={activeTab === "pending" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setActiveTab("pending")}
-              className="h-8 gap-1.5 text-xs font-medium"
-            >
-              <Hourglass className="h-3.5 w-3.5" />
-              Pending Cases ({data.pendingCases.totalPendingCount})
-            </Button>
+              {(
+                [
+                  {
+                    id: "stages",
+                    label: "Workflow Stages & TAT",
+                    icon: Layers,
+                  },
+                  {
+                    id: "departments",
+                    label: "Department Processing",
+                    icon: Building2,
+                  },
+                  { id: "sla", label: "SLA Compliance", icon: ShieldCheck },
+                  { id: "rework", label: "Rework & Reopen", icon: RotateCcw },
+                  {
+                    id: "pending",
+                    label: `Pending Cases (${data.pendingCases.totalPendingCount})`,
+                    icon: Hourglass,
+                  },
+                ] as Array<{
+                  id: ResolutionTab;
+                  label: string;
+                  icon: typeof Layers;
+                }>
+              ).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    role="tab"
+                    type="button"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Tab 1: Overview & Stages */}
-          {activeTab === "overview" && (
-            <div className="space-y-4">
-              <ResolutionOverviewCards overview={data.overview} />
-              <ResolutionStagesCard stages={data.stages} />
-              <ResolutionTatByPriorityCard tatByPriority={data.tatByPriority} />
-              <PendingCasesCard pendingCases={data.pendingCases} />
-            </div>
+          {/* TAB 1: Workflow Stages & TAT by Priority */}
+          {activeTab === "stages" && (
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-workflow-stages"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-workflow-stages"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Resolution Stages & Turnaround Time
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Lifecycle milestone progression and end-to-end turnaround
+                    time across priority tiers
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <ResolutionStagesCard stages={data.stages} />
+                <ResolutionTatByPriorityCard
+                  tatByPriority={data.tatByPriority}
+                />
+              </div>
+            </section>
           )}
 
-          {/* Tab 2: Department Processing */}
+          {/* TAB 2: Department Processing Time */}
           {activeTab === "departments" && (
-            <div className="space-y-4">
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-dept-processing"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-dept-processing"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Departmental Processing Time & Workload
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Department-level processing durations, distinguishing
+                    Primary lead processing from Supporting contributor
+                    processing
+                  </p>
+                </div>
+              </div>
+
               <DepartmentProcessingTimeCard
                 departments={data.departmentProcessing}
               />
-            </div>
+            </section>
           )}
 
-          {/* Tab 3: SLA Compliance */}
+          {/* TAB 3: SLA Compliance */}
           {activeTab === "sla" && (
-            <div className="space-y-4">
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-sla-compliance"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-sla-compliance"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    SLA Compliance & Breach Analysis
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Authoritative SLA attainment metrics derived from verified
+                    SLA tracking records
+                  </p>
+                </div>
+              </div>
+
               <SlaResolutionComplianceCard slaCompliance={data.slaCompliance} />
-              <ResolutionTatByPriorityCard tatByPriority={data.tatByPriority} />
-            </div>
+            </section>
           )}
 
-          {/* Tab 4: Rework & Reopen */}
+          {/* TAB 4: Rework & Reopen */}
           {activeTab === "rework" && (
-            <div className="space-y-4">
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-rework-reopen"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-rework-reopen"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Reopening & Resolution Rework Analysis
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Grievances with repeated resolution cycles, supervisor
+                    rejections, and post-closure reopenings
+                  </p>
+                </div>
+              </div>
+
               <ReworkAndReopenCard reworkAndReopen={data.reworkAndReopen} />
-            </div>
+            </section>
           )}
 
-          {/* Tab 5: Pending Cases */}
+          {/* TAB 5: Pending Cases */}
           {activeTab === "pending" && (
-            <div className="space-y-4">
+            <section
+              className="space-y-3 mb-6"
+              aria-labelledby="heading-pending-cases"
+            >
+              <div className="flex items-baseline justify-between">
+                <div>
+                  <h2
+                    id="heading-pending-cases"
+                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                  >
+                    Unresolved Grievances (Pending Cases)
+                  </h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Excluded from completed-resolution time calculations and
+                    tracked separately by active age
+                  </p>
+                </div>
+              </div>
+
               <PendingCasesCard pendingCases={data.pendingCases} />
-            </div>
+            </section>
           )}
         </div>
       )}

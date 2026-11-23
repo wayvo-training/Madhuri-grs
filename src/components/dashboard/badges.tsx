@@ -40,6 +40,7 @@ export function PriorityBadge({
 
   switch (normalized) {
     case "CRITICAL":
+    case "URGENT":
       return (
         <span
           title="Priority: Critical"
@@ -64,6 +65,7 @@ export function PriorityBadge({
         </span>
       );
     case "MEDIUM":
+    case "NORMAL":
       return (
         <span
           title="Priority: Medium"

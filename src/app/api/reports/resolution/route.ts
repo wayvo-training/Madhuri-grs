@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       categoryId: searchParams.get("categoryId") || undefined,
       subcategoryId: searchParams.get("subcategoryId") || undefined,
       priority: searchParams.get("priority") || undefined,
+      search: searchParams.get("search") || undefined,
     };
 
     // 3. Generate Resolution Analytics

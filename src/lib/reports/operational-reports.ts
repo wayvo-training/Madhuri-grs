@@ -36,8 +36,13 @@ export function normalizeDateRange(
     if (Number.isNaN(endDate.getTime())) {
       endDate = new Date();
     } else {
-      // Set to end of day if only YYYY-MM-DD
-      if (endDateStr.length <= 10) {
+      // Set to end of day if only YYYY-MM-DD or midnight
+      const isDateOnly =
+        endDateStr.length <= 10 ||
+        (endDate.getHours() === 0 &&
+          endDate.getMinutes() === 0 &&
+          endDate.getSeconds() === 0);
+      if (isDateOnly) {
         endDate.setHours(23, 59, 59, 999);
       }
     }
@@ -163,12 +168,26 @@ export async function generateOperationalReport(
     label: periodLabel,
   } = normalizeDateRange(filters.startDate, filters.endDate);
 
-  // 4. Build Grievances Filter Criteria
+  // 4. Build Grievances Filter Criteria (Grievances received or closed within the reporting period)
   const where: Prisma.grievancesWhereInput = {
-    created_at: {
-      gte: startDate,
-      lte: endDate,
-    },
+    AND: [
+      {
+        OR: [
+          {
+            created_at: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            closed_at: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        ],
+      },
+    ],
   };
 
   // Apply Department Filter (Admin-selected or forced Department Head department)

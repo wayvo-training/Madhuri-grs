@@ -53,6 +53,7 @@ interface AdvancedTableSearchProps {
   fields: SearchFieldDef[];
   onSearch: (conditions: SearchCondition[], mode: FilterMode) => void;
   className?: string;
+  placeholder?: string;
 }
 
 const TEXT_OPERATORS = [
@@ -237,6 +238,7 @@ export function AdvancedTableSearch({
   fields,
   onSearch,
   className = "",
+  placeholder = "Search...",
 }: AdvancedTableSearchProps) {
   const [conditions, setConditions] = useState<
     (SearchCondition & { internalId: string })[]
@@ -404,7 +406,7 @@ export function AdvancedTableSearch({
         trigger={
           <div className="relative w-full">
             <Input
-              placeholder="Search..."
+              placeholder={placeholder}
               className="w-full h-9 pl-3 pr-9 rounded-lg border-slate-200 bg-white shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500 cursor-pointer"
               value={quickSearch}
               onClick={() => setPopoverOpen(true)}

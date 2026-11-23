@@ -187,6 +187,7 @@ export interface ResolutionAnalyticsFilters {
   categoryId?: string;
   subcategoryId?: string;
   priority?: string;
+  search?: string;
 }
 
 export interface DataQualityExceptionsSummary {
