@@ -54,6 +54,7 @@ interface AdvancedTableSearchProps {
   onSearch: (conditions: SearchCondition[], mode: FilterMode) => void;
   className?: string;
   placeholder?: string;
+  side?: "top" | "bottom" | "auto";
 }
 
 const TEXT_OPERATORS = [
@@ -239,6 +240,7 @@ export function AdvancedTableSearch({
   onSearch,
   className = "",
   placeholder = "Search...",
+  side = "auto",
 }: AdvancedTableSearchProps) {
   const [conditions, setConditions] = useState<
     (SearchCondition & { internalId: string })[]
@@ -401,7 +403,8 @@ export function AdvancedTableSearch({
         isOpen={popoverOpen}
         onOpenChange={setPopoverOpen}
         align="left"
-        widthClass="w-64 p-0 shadow-lg"
+        side={side}
+        widthClass="w-64 p-1 pb-2 shadow-lg"
         className={`relative w-full ${className}`}
         trigger={
           <div className="relative w-full">
@@ -517,7 +520,8 @@ export function AdvancedTableSearch({
         isOpen={popoverOpen}
         onOpenChange={setPopoverOpen}
         align="left"
-        widthClass="w-64 p-0 shadow-lg"
+        side={side}
+        widthClass="w-64 p-1 pb-2 shadow-lg"
         trigger={
           <Button
             variant="ghost"

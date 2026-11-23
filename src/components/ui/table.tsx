@@ -83,8 +83,12 @@ function TableHead({ className, style, ...props }: React.ComponentProps<"th">) {
         className,
       )}
       style={{
-        textAlign: isRight ? "right" : isCenter ? "center" : "left",
         ...style,
+        textAlign: isRight
+          ? "right"
+          : isCenter
+            ? "center"
+            : style?.textAlign || "left",
       }}
       {...props}
     />
@@ -103,8 +107,12 @@ function TableCell({ className, style, ...props }: React.ComponentProps<"td">) {
         className,
       )}
       style={{
-        textAlign: isRight ? "right" : isCenter ? "center" : "left",
         ...style,
+        textAlign: isRight
+          ? "right"
+          : isCenter
+            ? "center"
+            : style?.textAlign || "left",
       }}
       {...props}
     />
