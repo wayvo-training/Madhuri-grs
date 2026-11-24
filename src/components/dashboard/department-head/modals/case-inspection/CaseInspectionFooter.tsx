@@ -210,7 +210,8 @@ export function CaseInspectionFooter({
             currentGrievance.status !== "UNDER_REVIEW" &&
             (currentGrievance.myDepartmentStatus !== "COMPLETED" ||
               Boolean(currentGrievance.isReopened)) &&
-            !hasHeadResolutionAuthority(currentGrievance) && (
+            !hasHeadResolutionAuthority(currentGrievance) &&
+            !currentGrievance.isAssignedToHead && (
               <button
                 type="button"
                 onClick={() => onAssignClick(currentGrievance)}

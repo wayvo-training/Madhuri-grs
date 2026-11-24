@@ -134,6 +134,15 @@ export async function POST(
       },
     });
 
+    // Check if the user is a Department Head of one of the involved departments
+    const isHodForInvolvedDept =
+      auth.user.roles?.role_name === "DEPARTMENT_HEAD" &&
+      allInvolvedDepts.some(
+        (d) =>
+          auth.departmentId &&
+          d.department_id.toString() === auth.departmentId.toString(),
+      );
+
     // Find the current staff member's active assignment
     const myAssignment = allInvolvedDepts
       .flatMap((d) => d.assignments || [])
@@ -144,7 +153,7 @@ export async function POST(
             a.assignment_status === "CO_ASSIGNED"),
       );
 
-    if (!myAssignment && !isAdmin) {
+    if (!myAssignment && !isAdmin && !isHodForInvolvedDept) {
       return NextResponse.json(
         {
           success: false,
@@ -158,7 +167,8 @@ export async function POST(
     if (
       myAssignment &&
       myAssignment.assignment_role === "SUPPORTING" &&
-      !isAdmin
+      !isAdmin &&
+      !isHodForInvolvedDept
     ) {
       const savedFinding = await prisma.staff_investigation_findings.create({
         data: {
@@ -183,7 +193,11 @@ export async function POST(
     const myDeptRecord =
       allInvolvedDepts.find(
         (d) =>
-          d.grievance_department_id === myAssignment?.grievance_department_id,
+          (myAssignment &&
+            d.grievance_department_id ===
+              myAssignment.grievance_department_id) ||
+          (auth.departmentId &&
+            d.department_id.toString() === auth.departmentId.toString()),
       ) || (isAdmin ? allInvolvedDepts[0] : null);
 
     if (myDeptRecord?.status === "BLOCKED") {

@@ -142,76 +142,79 @@ export function CaseInspectionHeader({
               ))}
             </div>
           )}
-          {hodIntervention && !isClosedOrResolved && (
-            <div className="pt-2">
-              {isResolutionAuthorityAssumed ? (
-                <div className="inline-flex flex-col gap-1 rounded-xl bg-teal-50 border border-teal-300/80 px-3.5 py-2.5 shadow-2xs">
-                  <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
-                        isResolutionSubmittedByHead
-                          ? "bg-emerald-600 text-white"
-                          : "bg-[#0F766E] text-white"
-                      }`}
-                    >
+          {hodIntervention &&
+            !isClosedOrResolved &&
+            status !== "REOPENED" &&
+            status !== "REWORK" && (
+              <div className="pt-2">
+                {isResolutionAuthorityAssumed ? (
+                  <div className="inline-flex flex-col gap-1 rounded-xl bg-teal-50 border border-teal-300/80 px-3.5 py-2.5 shadow-2xs">
+                    <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
+                          isResolutionSubmittedByHead
+                            ? "bg-emerald-600 text-white"
+                            : "bg-[#0F766E] text-white"
+                        }`}
+                      >
+                        {isResolutionSubmittedByHead
+                          ? "Resolution Submitted"
+                          : "Head Intervention Active"}
+                      </span>
+                      <span>
+                        {isResolutionSubmittedByHead
+                          ? "Resolution Provided by Department Head"
+                          : "Resolution Authority Assumed"}
+                        {hodIntervention.targetDepartment
+                          ? ` (${hodIntervention.targetDepartment})`
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-medium text-teal-900 leading-snug">
                       {isResolutionSubmittedByHead
-                        ? "Resolution Submitted"
-                        : "Head Intervention Active"}
-                    </span>
-                    <span>
-                      {isResolutionSubmittedByHead
-                        ? "Resolution Provided by Department Head"
-                        : "Resolution Authority Assumed"}
-                      {hodIntervention.targetDepartment
-                        ? ` (${hodIntervention.targetDepartment})`
-                        : ""}
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-medium text-teal-900 leading-snug">
-                    {isResolutionSubmittedByHead
-                      ? "Department Head has submitted the official resolution. The grievance is currently under review by the employee."
-                      : "Department Head is now responsible for reviewing the investigation and submitting the final resolution."}
-                  </p>
-                  {hodIntervention.note && (
-                    <p className="text-[11px] text-teal-800 italic border-t border-teal-200/60 pt-1 mt-0.5">
-                      Directive: &ldquo;{hodIntervention.note}&rdquo;
+                        ? "Department Head has submitted the official resolution. The grievance is currently under review by the employee."
+                        : "Department Head is now responsible for reviewing the investigation and submitting the final resolution."}
                     </p>
-                  )}
-                </div>
-              ) : (
-                <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span>
-                      Current Head Intervention &ndash; {(() => {
-                        const label = hodIntervention.actionLabel || "";
-                        if (!label.includes("(Unassigned)")) return label;
-                        if (
-                          hodIntervention.targetStaffName &&
-                          hodIntervention.targetStaffName !== "Unassigned"
-                        ) {
-                          return label.replace(
-                            /\(Unassigned\)/g,
-                            `(${hodIntervention.targetStaffName})`,
-                          );
-                        }
-                        return label.replace(" (Unassigned)", "");
-                      })()}
-                      {hodIntervention.targetDepartment
-                        ? ` (${hodIntervention.targetDepartment})`
-                        : ""}
-                    </span>
+                    {hodIntervention.note && (
+                      <p className="text-[11px] text-teal-800 italic border-t border-teal-200/60 pt-1 mt-0.5">
+                        Directive: &ldquo;{hodIntervention.note}&rdquo;
+                      </p>
+                    )}
                   </div>
-                  {(hodIntervention.note ||
-                    hodIntervention.actionType === "MONITOR") && (
-                    <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
-                      {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <div className="inline-flex flex-col gap-0.5 rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 shadow-2xs">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>
+                        Current Head Intervention &ndash; {(() => {
+                          const label = hodIntervention.actionLabel || "";
+                          if (!label.includes("(Unassigned)")) return label;
+                          if (
+                            hodIntervention.targetStaffName &&
+                            hodIntervention.targetStaffName !== "Unassigned"
+                          ) {
+                            return label.replace(
+                              /\(Unassigned\)/g,
+                              `(${hodIntervention.targetStaffName})`,
+                            );
+                          }
+                          return label.replace(" (Unassigned)", "");
+                        })()}
+                        {hodIntervention.targetDepartment
+                          ? ` (${hodIntervention.targetDepartment})`
+                          : ""}
+                      </span>
+                    </div>
+                    {(hodIntervention.note ||
+                      hodIntervention.actionType === "MONITOR") && (
+                      <span className="text-[11px] font-medium text-emerald-700 pl-5.5">
+                        {hodIntervention.note || "SLA Risk Acknowledged by HOD"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
         </div>
 
         <div>

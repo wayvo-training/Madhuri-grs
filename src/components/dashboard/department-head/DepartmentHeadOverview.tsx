@@ -711,6 +711,9 @@ export function DepartmentHeadOverviewInner({
                     assignedStaffName: staffName,
                     isAssignedToHead,
                     status: "ASSIGNED",
+                    hodIntervention: isAssignedToHead
+                      ? prev.hodIntervention
+                      : undefined,
                   }
                 : prev,
             );
@@ -768,6 +771,27 @@ export function DepartmentHeadOverviewInner({
                 myInvolvementType: resolutionModalGrievance.myInvolvementType,
                 canSubmitFinalResolution:
                   resolutionModalGrievance.canSubmitFinalResolution ?? false,
+                hasPendingSupportingDepartments:
+                  resolutionModalGrievance.hasPendingSupportingDepartments ??
+                  Boolean(
+                    resolutionModalGrievance.departmentsInvolved &&
+                      resolutionModalGrievance.departmentsInvolved.some(
+                        (d) =>
+                          d.involvementType === "SUPPORTING" &&
+                          d.status !== "COMPLETED" &&
+                          d.status !== "RESOLVED",
+                      ),
+                  ),
+                pendingSupportingDepartmentNames:
+                  resolutionModalGrievance.pendingSupportingDepartmentNames ||
+                  (resolutionModalGrievance.departmentsInvolved || [])
+                    .filter(
+                      (d) =>
+                        d.involvementType === "SUPPORTING" &&
+                        d.status !== "COMPLETED" &&
+                        d.status !== "RESOLVED",
+                    )
+                    .map((d) => d.departmentName || "Supporting Department"),
               } as StaffGrievanceItem
             }
             onResolutionSuccess={() => {

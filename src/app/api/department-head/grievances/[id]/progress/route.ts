@@ -271,28 +271,49 @@ export async function GET(
         DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
     );
 
-    // Lifecycle scoping: Interventions from previous cycles (before latest REOPEN_APPROVED, REWORK_APPROVED, or CLOSED)
+    // Lifecycle scoping: Interventions from previous cycles (before latest SLA_CYCLE_CREATED, REOPEN_APPROVED, REWORK_APPROVED, REOPEN_REQUESTED, REWORK_REQUESTED, CLOSED, or RESOLUTION)
     // belong to closed/historical cycles and must not bleed into the current active cycle.
-    const latestLifecycleReset = (grievance.audit_logs || []).find(
-      (l) =>
-        l.action === "REOPEN_APPROVED" ||
-        l.action === "REWORK_APPROVED" ||
-        l.action === "CLOSED",
-    );
-    const currentCycleStart = latestLifecycleReset
-      ? new Date(latestLifecycleReset.created_at).getTime()
+    const lifecycleResetActions = new Set([
+      "SLA_CYCLE_CREATED",
+      "REOPEN_APPROVED",
+      "REWORK_APPROVED",
+      "REOPEN_REQUESTED",
+      "REWORK_REQUESTED",
+      "CLOSED",
+      "ACCEPT_RESOLUTION",
+      "RESOLUTION_SUBMITTED",
+      "STATUS_CHANGED",
+    ]);
+
+    const activeCycleStart = activeSla?.started_at
+      ? new Date(activeSla.started_at).getTime()
       : 0;
 
-    const earlyInterventionLog = (grievance.audit_logs || []).find((l) => {
+    const latestResetIdx = (grievance.audit_logs || []).findIndex((l) =>
+      lifecycleResetActions.has(l.action),
+    );
+    const latestLifecycleReset =
+      latestResetIdx !== -1 ? grievance.audit_logs[latestResetIdx] : null;
+    const currentCycleStart = Math.max(
+      activeCycleStart,
+      latestLifecycleReset
+        ? new Date(latestLifecycleReset.created_at).getTime()
+        : 0,
+    );
+
+    const earlyInterventionLog = (grievance.audit_logs || []).find((l, idx) => {
       if (
         l.action !== "HOD_INTERVENTION_TAKEN" &&
         !l.action.includes("INTERVENTION")
       ) {
         return false;
       }
+      if (latestResetIdx !== -1 && idx >= latestResetIdx) {
+        return false;
+      }
       if (
         currentCycleStart > 0 &&
-        new Date(l.created_at).getTime() < currentCycleStart - 1000
+        new Date(l.created_at).getTime() <= currentCycleStart
       ) {
         return false;
       }
@@ -415,12 +436,18 @@ export async function GET(
         }
       }
 
-      const primaryStaff = staffUser
-        ? {
-            id: staffUser.user_id.toString(),
-            name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
-          }
-        : null;
+      const primaryStaff =
+        deptStatus === "PENDING_ASSIGNMENT" ||
+        deptStatus === "BLOCKED" ||
+        !primaryAssignment ||
+        primaryAssignment.assignment_status === "REASSIGNED"
+          ? null
+          : staffUser
+            ? {
+                id: staffUser.user_id.toString(),
+                name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+              }
+            : null;
 
       const supportingStaff = supportingAssignments
         .map((sa) => {
@@ -667,7 +694,7 @@ export async function GET(
 
     // Check if there is an HOD intervention strictly scoped to this department in multi-dept cases
     const isMultiDeptCase = rawDepartments.length > 1;
-    const interventionLog = (grievance.audit_logs || []).find((l) => {
+    const interventionLog = (grievance.audit_logs || []).find((l, idx) => {
       if (
         l.action !== "HOD_INTERVENTION_TAKEN" &&
         l.action !== "Step 6: Intervention Action Taken"
@@ -676,9 +703,12 @@ export async function GET(
       }
 
       // Exclude interventions from previous closed/reopened cycles
+      if (latestResetIdx !== -1 && idx >= latestResetIdx) {
+        return false;
+      }
       if (
         currentCycleStart > 0 &&
-        new Date(l.created_at).getTime() < currentCycleStart - 1000
+        new Date(l.created_at).getTime() <= currentCycleStart
       ) {
         return false;
       }

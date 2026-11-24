@@ -889,6 +889,10 @@ export async function GET(request: Request) {
         canSubmitFinalResolution,
         canSubmitFindings,
         isFinalSequentialDepartment,
+        hasPendingSupportingDepartments:
+          resolutionAuth.hasPendingSupporting ?? false,
+        pendingSupportingDepartmentNames:
+          resolutionAuth.pendingSupportingDeptNames ?? [],
         overallStatus: g.status,
         activeDepartmentName,
         latestExtension,

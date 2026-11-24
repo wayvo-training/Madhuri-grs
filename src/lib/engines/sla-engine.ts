@@ -680,7 +680,15 @@ export async function evaluateGrievanceSla(
       const unnotifiedUsers = targetUsers.filter(
         (u) =>
           !hasDeptSentToUser(u.user_id, notifType) &&
-          !hasDeptSentToUser(u.user_id, `DEPT_SLA_50_${deptRec.department_id}`),
+          !hasDeptSentToUser(
+            u.user_id,
+            `DEPT_SLA_50_${deptRec.department_id}`,
+          ) &&
+          !existingNotifications.some(
+            (n) =>
+              n.user_id === u.user_id &&
+              n.notification_type === `SLA_WARN_${warningThreshold}`,
+          ),
       );
 
       if (unnotifiedUsers.length > 0) {
@@ -813,7 +821,15 @@ export async function evaluateGrievanceSla(
       const recipientsToNotify = targetUsers.filter(
         (u) =>
           !hasDeptSentToUser(u.user_id, notifType) &&
-          !hasDeptSentToUser(u.user_id, `DEPT_SLA_75_${deptRec.department_id}`),
+          !hasDeptSentToUser(
+            u.user_id,
+            `DEPT_SLA_75_${deptRec.department_id}`,
+          ) &&
+          !existingNotifications.some(
+            (n) =>
+              n.user_id === u.user_id &&
+              n.notification_type === `SLA_RISK_${atRiskThreshold}`,
+          ),
       );
 
       if (recipientsToNotify.length > 0) {
@@ -1208,7 +1224,13 @@ export async function evaluateGrievanceSla(
       (u) =>
         !hasSentToUser(u.user_id, `SLA_WARN_${warningThreshold}`) &&
         !hasSentToUser(u.user_id, "SLA_HALF_TIME") &&
-        !hasSentToUser(u.user_id, "SLA_50_STAFF_WARNING"),
+        !hasSentToUser(u.user_id, "SLA_50_STAFF_WARNING") &&
+        !existingNotifications.some(
+          (n) =>
+            n.user_id === u.user_id &&
+            (n.notification_type.startsWith(`DEPT_SLA_${warningThreshold}`) ||
+              n.notification_type === `SLA_WARN_${warningThreshold}`),
+        ),
     );
 
     if (unnotifiedUsers.length > 0) {
@@ -1301,7 +1323,13 @@ export async function evaluateGrievanceSla(
         (u) =>
           !hasSentToUser(u.user_id, `SLA_RISK_${atRiskThreshold}`) &&
           !hasSentToUser(u.user_id, "SLA_75_HOD_WARNING") &&
-          !hasSentToUser(u.user_id, "SLA_AT_RISK"),
+          !hasSentToUser(u.user_id, "SLA_AT_RISK") &&
+          !existingNotifications.some(
+            (n) =>
+              n.user_id === u.user_id &&
+              (n.notification_type.startsWith(`DEPT_SLA_${atRiskThreshold}`) ||
+                n.notification_type === `SLA_RISK_${atRiskThreshold}`),
+          ),
       );
 
       const singleRiskMinutes = Math.round(

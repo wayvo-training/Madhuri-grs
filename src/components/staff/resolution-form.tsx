@@ -912,6 +912,40 @@ export function ResolutionForm({
                   </div>
                 </div>
 
+                {/* Option A: Warning when supporting departments have not submitted findings */}
+                {isResolving &&
+                  grievance.hasPendingSupportingDepartments &&
+                  (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
+                    0 && (
+                    <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 space-y-2 text-xs text-amber-950">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                        <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span>Supporting Department Findings Pending</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-amber-900">
+                        The following supporting department(s) have not yet
+                        submitted their departmental findings:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {grievance.pendingSupportingDepartmentNames?.map(
+                          (deptName) => (
+                            <span
+                              key={deptName}
+                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-200/80 text-amber-950 border border-amber-300"
+                            >
+                              {deptName}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                      <p className="text-[11px] font-semibold text-amber-950 pt-1.5 border-t border-amber-200/80">
+                        Supporting department(s) did not submit their findings
+                        yet. Still, do you want to proceed and submit the final
+                        resolution?
+                      </p>
+                    </div>
+                  )}
+
                 {/* Quick summary recap */}
                 <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
                   <div className="flex justify-between items-center text-slate-600">
@@ -957,7 +991,12 @@ export function ResolutionForm({
                     onClick={() => setShowConfirmModal(false)}
                     className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
                   >
-                    Review Again
+                    {isResolving &&
+                    grievance.hasPendingSupportingDepartments &&
+                    (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
+                      0
+                      ? "Cancel & Wait for Findings"
+                      : "Review Again"}
                   </button>
                   <button
                     type="button"
@@ -980,7 +1019,12 @@ export function ResolutionForm({
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Yes, Confirm &amp; Submit
+                        {isResolving &&
+                        grievance.hasPendingSupportingDepartments &&
+                        (grievance.pendingSupportingDepartmentNames?.length ??
+                          0) > 0
+                          ? "Proceed & Resolve Anyway"
+                          : "Yes, Confirm & Submit"}
                       </>
                     )}
                   </button>

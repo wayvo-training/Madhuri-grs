@@ -175,6 +175,9 @@ export async function POST(
       }
     }
 
+    const isSupportingContributor =
+      grievanceDept && grievanceDept.involvement_type === "SUPPORTING";
+
     if (!isAdmin && departmentId) {
       const authResult = canDepartmentSubmitFinalResolution(
         departmentId,
@@ -185,7 +188,11 @@ export async function POST(
       const canBypassPendingSupporting =
         isPrimaryOrEqual && (hasInterventionAuthority || requiresHeadReview);
 
-      if (!authResult.canResolve && !canBypassPendingSupporting) {
+      if (
+        !authResult.canResolve &&
+        !canBypassPendingSupporting &&
+        !isSupportingContributor
+      ) {
         return NextResponse.json(
           {
             success: false,
@@ -413,12 +420,9 @@ export async function POST(
           },
         });
 
-        // When Primary Head resolves case with executive intervention authority or on maximum reopens,
-        // complete any lingering supporting department stages so the grievance moves cleanly to Employee Review
-        if (
-          isPrimaryOrEqual &&
-          (hasInterventionAuthority || requiresHeadReview)
-        ) {
+        // When Primary Head resolves case, complete any lingering supporting department stages
+        // so the grievance moves cleanly to Employee Review
+        if (isPrimaryOrEqual) {
           await tx.grievance_departments.updateMany({
             where: {
               grievance_id: grievanceId,
@@ -494,6 +498,20 @@ export async function POST(
               completed_at: new Date(),
             },
           });
+
+          if (isPrimaryOrEqual) {
+            await tx.grievance_departments.updateMany({
+              where: {
+                grievance_id: grievanceId,
+                involvement_type: "SUPPORTING",
+                status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
+              },
+              data: {
+                status: "COMPLETED",
+                completed_at: new Date(),
+              },
+            });
+          }
 
           // Ensure SLA tracking clock pauses during Employee Confirmation
           const { pauseSlaTracking } = await import("@/lib/engines/sla-engine");

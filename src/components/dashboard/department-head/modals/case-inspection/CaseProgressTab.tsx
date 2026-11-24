@@ -635,6 +635,16 @@ export function CaseProgressTab({
                         <span className="font-medium text-slate-700 dark:text-slate-200 text-right truncate">
                           {(() => {
                             if (
+                              dept.status === "PENDING_ASSIGNMENT" ||
+                              dept.status === "AWAITING_ASSIGNMENT" ||
+                              dept.status === "ROUTED"
+                            ) {
+                              return "Unassigned";
+                            }
+                            if (dept.status === "BLOCKED") {
+                              return "Blocked";
+                            }
+                            if (
                               dept.assignedStaff &&
                               dept.assignedStaff !== "Unassigned"
                             ) {
@@ -660,7 +670,11 @@ export function CaseProgressTab({
                                       (f.departmentName || "").toLowerCase(),
                                     ),
                               );
-                            if (findingForDept?.submittedBy) {
+                            if (
+                              findingForDept?.submittedBy &&
+                              (dept.status === "COMPLETED" ||
+                                dept.status === "RESOLVED")
+                            ) {
                               return findingForDept.submittedBy;
                             }
                             return "Unassigned";

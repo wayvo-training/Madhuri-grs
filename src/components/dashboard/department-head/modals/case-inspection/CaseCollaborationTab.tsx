@@ -172,7 +172,14 @@ export function CaseCollaborationTab({
                       const coStaffFromLabel = matchAssist?.[1]?.trim();
                       const primaryStaffFromLabel = matchAssist?.[2]?.trim();
 
-                      let rawAssigned = dept.assignedStaff || "Unassigned";
+                      let rawAssigned =
+                        dept.status === "PENDING_ASSIGNMENT" ||
+                        dept.status === "AWAITING_ASSIGNMENT" ||
+                        dept.status === "ROUTED"
+                          ? "Unassigned"
+                          : dept.status === "BLOCKED"
+                            ? "Blocked"
+                            : dept.assignedStaff || "Unassigned";
                       let rawCoStaff =
                         dept.supportingStaff && dept.supportingStaff.length > 0
                           ? dept.supportingStaff.map((s) => s.name).join(", ")
@@ -198,7 +205,12 @@ export function CaseCollaborationTab({
                       );
 
                       // Only override for the specific department that had the co-assignment intervention
-                      if (isInterventionForThisDept && primaryStaffFromLabel) {
+                      if (
+                        dept.status !== "PENDING_ASSIGNMENT" &&
+                        dept.status !== "BLOCKED" &&
+                        isInterventionForThisDept &&
+                        primaryStaffFromLabel
+                      ) {
                         if (
                           rawAssigned.toLowerCase() !==
                           primaryStaffFromLabel.toLowerCase()
@@ -225,6 +237,8 @@ export function CaseCollaborationTab({
                       // Fallback: If department completed / findings submitted but rawAssigned is still Unassigned
                       if (
                         rawAssigned === "Unassigned" &&
+                        dept.status !== "PENDING_ASSIGNMENT" &&
+                        dept.status !== "BLOCKED" &&
                         (dept.status === "COMPLETED" ||
                           dept.status === "RESOLVED")
                       ) {

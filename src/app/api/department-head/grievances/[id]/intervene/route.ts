@@ -238,6 +238,60 @@ export async function POST(
     await prisma.$transaction(async (tx) => {
       // 1. ASSUME_RESOLUTION_AUTHORITY
       if (isAssumingAuthority) {
+        // Mark prior active assignments for this department stage as REASSIGNED
+        await tx.assignments.updateMany({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+            assignment_status: { in: ["ASSIGNED", "CO_ASSIGNED"] },
+            staff_id: { not: user.user_id },
+          },
+          data: {
+            assignment_status: "REASSIGNED",
+            completed_at: new Date(),
+          },
+        });
+
+        // Ensure an active assignment exists for the Department Head on this department stage
+        const existingHeadAssignment = await tx.assignments.findFirst({
+          where: {
+            grievance_department_id: grievanceDept.grievance_department_id,
+            staff_id: user.user_id,
+            assignment_status: "ASSIGNED",
+          },
+        });
+
+        if (!existingHeadAssignment) {
+          await tx.assignments.create({
+            data: {
+              grievance_id: grievanceId,
+              grievance_department_id: grievanceDept.grievance_department_id,
+              staff_id: user.user_id,
+              assigned_by: user.user_id,
+              assigned_at: new Date(),
+              assignment_status: "ASSIGNED",
+              assignment_role: "PRIMARY",
+            },
+          });
+        }
+
+        // Activate department stage to IN_PROGRESS if pending assignment or routed
+        if (
+          grievanceDept.status === "PENDING_ASSIGNMENT" ||
+          grievanceDept.status === "AWAITING_ASSIGNMENT" ||
+          grievanceDept.status === "ROUTED"
+        ) {
+          await tx.grievance_departments.update({
+            where: {
+              grievance_department_id: grievanceDept.grievance_department_id,
+            },
+            data: {
+              status: "IN_PROGRESS",
+              assigned_at: new Date(),
+              activated_at: grievanceDept.activated_at || new Date(),
+            },
+          });
+        }
+
         // Notify previously assigned Staff that Head has assumed resolution authority
         if (currentAssignedStaff) {
           await tx.notifications.create({

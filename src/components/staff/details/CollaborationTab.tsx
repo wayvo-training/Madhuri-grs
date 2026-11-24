@@ -107,6 +107,15 @@ export function CollaborationTab({
                     <span className="font-medium text-slate-900">
                       {(() => {
                         if (
+                          dept.status === "PENDING_ASSIGNMENT" ||
+                          dept.status === "AWAITING_ASSIGNMENT"
+                        ) {
+                          return "Unassigned";
+                        }
+                        if (dept.status === "BLOCKED") {
+                          return "Blocked";
+                        }
+                        if (
                           dept.assignedStaff &&
                           dept.assignedStaff !== "Unassigned"
                         ) {

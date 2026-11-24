@@ -110,6 +110,8 @@ export interface GrievanceItem {
   collaboratingDepartments?: string[];
   isPrimaryDepartment?: boolean;
   canSubmitFinalResolution?: boolean;
+  hasPendingSupportingDepartments?: boolean;
+  pendingSupportingDepartmentNames?: string[];
   myInvolvementType?: "PRIMARY" | "SUPPORTING" | "EQUAL";
   myDepartmentStatus?: string;
   isBlocked?: boolean;

@@ -362,6 +362,15 @@ export function StatementTab({
                       <span className="font-semibold text-slate-900 text-right">
                         {(() => {
                           if (
+                            myDept.status === "PENDING_ASSIGNMENT" ||
+                            myDept.status === "AWAITING_ASSIGNMENT"
+                          ) {
+                            return "Unassigned";
+                          }
+                          if (myDept.status === "BLOCKED") {
+                            return "Blocked";
+                          }
+                          if (
                             myDept.assignedStaff &&
                             myDept.assignedStaff !== "Unassigned"
                           ) {

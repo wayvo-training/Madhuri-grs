@@ -6,7 +6,10 @@ import {
   formatRelativeTime,
   formatSlaTimeLeft,
 } from "@/lib/department-head";
-import { canDepartmentSubmitFinalResolution } from "@/lib/engines/routing-engine";
+import {
+  canDepartmentSubmitFinalResolution,
+  type DepartmentResolutionAuthority,
+} from "@/lib/engines/routing-engine";
 import {
   calculateDepartmentSlaConsumption,
   calculateSlaConsumption,
@@ -491,13 +494,7 @@ export async function fetchDepartmentHeadGrievances(
         myDeptRecord?.status === "PENDING_ASSIGNMENT" ||
         isDeptPendingAssignment
       ) {
-        // If prior staff assignment existed (e.g. before HOD assumed authority or on rework), preserve it!
-        if (priorStaff) {
-          resolvedAssignedStaffName =
-            `${priorStaff.first_name} ${priorStaff.last_name || ""}`.trim();
-        } else {
-          resolvedAssignedStaffName = "Unassigned";
-        }
+        resolvedAssignedStaffName = "Unassigned";
       } else if (myDeptRecord?.status === "BLOCKED") {
         resolvedAssignedStaffName = "Blocked";
       } else if (
@@ -903,19 +900,37 @@ export async function fetchDepartmentHeadGrievances(
 
     const isMultiDeptCase = relatedDepts.length > 1;
 
-    // Lifecycle scoping: Interventions from previous cycles (before the latest REOPEN_APPROVED, REWORK_APPROVED, or CLOSED)
+    // Lifecycle scoping: Interventions from previous cycles (before the latest SLA_CYCLE_CREATED, REOPEN_APPROVED, REWORK_APPROVED, REOPEN_REQUESTED, REWORK_REQUESTED, CLOSED, or RESOLUTION)
     // belong to closed/historical cycles and must not bleed into the current active cycle.
-    const latestLifecycleReset = (g.audit_logs || []).find(
-      (l) =>
-        l.action === "REOPEN_APPROVED" ||
-        l.action === "REWORK_APPROVED" ||
-        l.action === "CLOSED",
-    );
-    const currentCycleStart = latestLifecycleReset
-      ? new Date(latestLifecycleReset.created_at).getTime()
+    const lifecycleResetActions = new Set([
+      "SLA_CYCLE_CREATED",
+      "REOPEN_APPROVED",
+      "REWORK_APPROVED",
+      "REOPEN_REQUESTED",
+      "REWORK_REQUESTED",
+      "CLOSED",
+      "ACCEPT_RESOLUTION",
+      "RESOLUTION_SUBMITTED",
+      "STATUS_CHANGED",
+    ]);
+
+    const activeCycleStart = g.sla_tracking?.[0]?.started_at
+      ? new Date(g.sla_tracking[0].started_at).getTime()
       : 0;
 
-    const interventionLog = g.audit_logs.find((l) => {
+    const latestResetIdx = (g.audit_logs || []).findIndex((l) =>
+      lifecycleResetActions.has(l.action),
+    );
+    const latestLifecycleReset =
+      latestResetIdx !== -1 ? g.audit_logs[latestResetIdx] : null;
+    const currentCycleStart = Math.max(
+      activeCycleStart,
+      latestLifecycleReset
+        ? new Date(latestLifecycleReset.created_at).getTime()
+        : 0,
+    );
+
+    const interventionLog = g.audit_logs.find((l, idx) => {
       if (
         l.action !== "HOD_INTERVENTION_TAKEN" &&
         l.action !== "Step 6: Intervention Action Taken"
@@ -924,9 +939,12 @@ export async function fetchDepartmentHeadGrievances(
       }
 
       // Exclude interventions from previous closed/reopened cycles
+      if (latestResetIdx !== -1 && idx >= latestResetIdx) {
+        return false;
+      }
       if (
         currentCycleStart > 0 &&
-        new Date(l.created_at).getTime() < currentCycleStart - 1000
+        new Date(l.created_at).getTime() <= currentCycleStart
       ) {
         return false;
       }
@@ -1251,12 +1269,18 @@ export async function fetchDepartmentHeadGrievances(
           "PRIMARY",
         status: deptStatus,
         assignedStaff: assignedStaffUser,
-        primaryStaff: staffUser
-          ? {
-              id: staffUser.user_id.toString(),
-              name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
-            }
-          : null,
+        primaryStaff:
+          deptStatus === "PENDING_ASSIGNMENT" ||
+          deptStatus === "BLOCKED" ||
+          !primaryAssignment ||
+          primaryAssignment.assignment_status === "REASSIGNED"
+            ? null
+            : staffUser
+              ? {
+                  id: staffUser.user_id.toString(),
+                  name: `${staffUser.first_name} ${staffUser.last_name || ""}`.trim(),
+                }
+              : null,
         supportingStaff: supportingAssignments.map((sa) => {
           const su = sa.users_assignments_staff_idTousers;
           return {
@@ -1275,9 +1299,15 @@ export async function fetchDepartmentHeadGrievances(
       myInvolvementType === "EQUAL" ||
       !departmentId;
 
-    const authResult = departmentId
+    const authResult: DepartmentResolutionAuthority = departmentId
       ? canDepartmentSubmitFinalResolution(departmentId, relatedDepts)
-      : { canResolve: true, canSubmitFindings: false };
+      : {
+          canResolve: true,
+          canSubmitFindings: false,
+          isFinalSequentialDept: true,
+          hasPendingSupporting: false,
+          pendingSupportingDeptNames: [],
+        };
     const canSubmitFinalResolution = authResult.canResolve;
 
     let resolvedStatus: GrievanceItem["status"] =
@@ -1591,6 +1621,9 @@ export async function fetchDepartmentHeadGrievances(
       departmentsInvolved,
       isPrimaryDepartment,
       canSubmitFinalResolution,
+      hasPendingSupportingDepartments: authResult.hasPendingSupporting ?? false,
+      pendingSupportingDepartmentNames:
+        authResult.pendingSupportingDeptNames ?? [],
       myInvolvementType,
       myDepartmentStatus:
         myDeptRecord?.status ||

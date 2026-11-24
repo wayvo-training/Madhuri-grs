@@ -461,6 +461,26 @@ export async function POST(
         }
       }
 
+      // If starting a rework or reopen cycle upon assignment, record lifecycle approval audit log
+      if (shouldStartReworkCycle || shouldStartReopenedCycle) {
+        await tx.audit_logs.create({
+          data: {
+            grievance_id: grievanceId,
+            user_id: user.user_id,
+            action: shouldStartReworkCycle
+              ? "REWORK_APPROVED"
+              : "REOPEN_APPROVED",
+            entity_type: "GRIEVANCE",
+            entity_id: grievanceId,
+            new_value: {
+              assignedStaffId: staff.user_id.toString(),
+              staffName,
+              details: `Department Head approved ${shouldStartReworkCycle ? "rework" : "reopening"} request and assigned ${staffName}.`,
+            },
+          },
+        });
+      }
+
       // Record audit log
       await tx.audit_logs.create({
         data: {
