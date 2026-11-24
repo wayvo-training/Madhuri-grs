@@ -113,7 +113,7 @@ export function PatternAnalysisView({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full">
       {/* Loading Skeletons */}
       {isLoading && !data && (
         <div className="flex flex-col gap-6">
@@ -215,10 +215,12 @@ export function PatternAnalysisView({
           <PatternSummaryCards summary={data.summary} />
 
           {/* Recurring Category Patterns Table */}
-          <CategoryPatternsCard
-            categoryPatterns={data.categoryPatterns}
-            onSelectPattern={(pattern) => setSelectedPattern(pattern)}
-          />
+          <div className="flex-1 min-h-0 flex flex-col">
+            <CategoryPatternsCard
+              categoryPatterns={data.categoryPatterns}
+              onSelectPattern={(pattern) => setSelectedPattern(pattern)}
+            />
+          </div>
 
           {/* Drilldown Modal */}
           <AssociatedGrievancesModal

@@ -22,15 +22,15 @@ export function CategoryPatternsCard({
   onSelectPattern,
 }: CategoryPatternsCardProps) {
   return (
-    <Card className="border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-2xs">
-      <CardHeader className="pb-3 pt-4 px-4 sm:px-5">
+    <Card className="rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-2xs flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+      <CardHeader className="pb-2 pt-3 px-3.5 sm:px-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+            <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
               <FolderTree className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Recurring Category Patterns
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
@@ -49,7 +49,7 @@ export function CategoryPatternsCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 sm:px-5 pt-0">
+      <CardContent className="px-3.5 sm:px-4 pb-3 sm:pb-3.5 pt-0 flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
         {categoryPatterns.length === 0 ? (
           <div className="py-10 text-center">
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400">
@@ -65,17 +65,31 @@ export function CategoryPatternsCard({
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto flex-1 min-h-0 overflow-y-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  <th className="pb-2.5 font-medium">Department</th>
-                  <th className="pb-2.5 font-medium">Category</th>
-                  <th className="pb-2.5 font-medium">Matching Volume</th>
-                  <th className="pb-2.5 font-medium">Severity</th>
-                  <th className="pb-2.5 font-medium">Subcategories Involved</th>
-                  <th className="pb-2.5 font-medium">Analysis Period</th>
-                  <th className="pb-2.5 text-right font-medium">Action</th>
+                <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400 sticky top-0 bg-white dark:bg-slate-900">
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Department
+                  </th>
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Category
+                  </th>
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Matching Volume
+                  </th>
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Severity
+                  </th>
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Subcategories Involved
+                  </th>
+                  <th className="pb-2 pt-1 font-semibold text-[11px]">
+                    Analysis Period
+                  </th>
+                  <th className="pb-2 pt-1 text-right font-semibold text-[11px]">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -84,13 +98,13 @@ export function CategoryPatternsCard({
                     key={pattern.patternId}
                     className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
                   >
-                    <td className="py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    <td className="py-2 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                       {pattern.departmentName}
                     </td>
-                    <td className="py-3 font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                    <td className="py-2 font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap">
                       {pattern.categoryName}
                     </td>
-                    <td className="py-3 whitespace-nowrap">
+                    <td className="py-2 whitespace-nowrap">
                       <span className="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400">
                         {pattern.matchingCount} cases
                         <span className="text-[10px] font-normal text-slate-500">
@@ -98,7 +112,7 @@ export function CategoryPatternsCard({
                         </span>
                       </span>
                     </td>
-                    <td className="py-3 whitespace-nowrap">
+                    <td className="py-2 whitespace-nowrap">
                       <Badge
                         variant="outline"
                         className={
@@ -110,7 +124,7 @@ export function CategoryPatternsCard({
                         {pattern.severity}
                       </Badge>
                     </td>
-                    <td className="py-3">
+                    <td className="py-2">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {pattern.subcategoriesInvolved
                           .slice(0, 2)

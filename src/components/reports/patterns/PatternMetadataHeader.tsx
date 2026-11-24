@@ -33,18 +33,18 @@ export function PatternMetadataHeader({
   isExporting = false,
 }: PatternMetadataHeaderProps) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs dark:border-slate-800 dark:bg-slate-900/60">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-2.5 sm:p-3 shadow-xs dark:border-slate-800 dark:bg-slate-900/60 shrink-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {/* Title and Scope */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
               Trend &amp; Pattern Analysis
             </h1>
             {metadata.scope.isOrganizationWide ? (
               <Badge
                 variant="outline"
-                className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 font-medium"
+                className="border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300 font-medium text-[11px] py-0 px-2"
               >
                 <Shield className="mr-1 h-3 w-3" />
                 Organization-Wide
@@ -52,14 +52,14 @@ export function PatternMetadataHeader({
             ) : (
               <Badge
                 variant="outline"
-                className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 font-medium"
+                className="border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 font-medium text-[11px] py-0 px-2"
               >
                 <Shield className="mr-1 h-3 w-3" />
                 {metadata.scope.departmentName || "Department Scoped"}
               </Badge>
             )}
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
             Rule-based recurring pattern detection identifying high-frequency
             category clusters across a 30-day sliding analysis window.
           </p>
@@ -71,10 +71,10 @@ export function PatternMetadataHeader({
             <DropdownMenu>
               <DropdownMenuTrigger
                 disabled={isLoading || isExporting}
-                className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-blue-700 hover:bg-blue-800 text-white shadow-xs focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 text-xs font-medium rounded-md bg-blue-700 hover:bg-blue-800 text-white shadow-xs focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
               >
                 <Download
-                  className={`h-3.5 w-3.5 ${isExporting ? "animate-spin" : ""}`}
+                  className={`h-3 w-3 ${isExporting ? "animate-spin" : ""}`}
                 />
                 <span>{isExporting ? "Exporting..." : "Export Report"}</span>
                 <ChevronDown className="h-3 w-3 opacity-80" />

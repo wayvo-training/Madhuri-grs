@@ -55,18 +55,18 @@ export function DepartmentDistributionCard({
   }));
 
   return (
-    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <CardHeader className="pb-1.5 pt-2.5 px-3 sm:px-3.5">
+    <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs flex flex-col h-full min-h-0 justify-between overflow-hidden">
+      <CardHeader className="pb-2 pt-3 px-3.5 sm:px-4 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400">
-              <Building2 className="h-3.5 w-3.5" />
+            <div className="p-1.5 rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400">
+              <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Department Workload Distribution
               </CardTitle>
-              <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">
+              <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
                 Grievance routing by Primary and Supporting departmental roles
               </CardDescription>
             </div>
@@ -88,15 +88,15 @@ export function DepartmentDistributionCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+      <CardContent className="px-3.5 sm:px-4 pb-3 sm:pb-3.5 pt-0 flex-1 min-h-0 flex flex-col justify-between">
         {departmentDistribution.length === 0 ? (
           <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
             No departmental assignments found for this selection.
           </div>
         ) : (
-          <>
+          <div className="flex flex-col justify-between h-full flex-1 min-h-0">
             {/* Workload Bar Chart */}
-            <div className="h-52 sm:h-56 w-full pt-0.5">
+            <div className="flex-1 min-h-[220px] w-full pt-1">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={chartData}
@@ -144,7 +144,7 @@ export function DepartmentDistributionCard({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

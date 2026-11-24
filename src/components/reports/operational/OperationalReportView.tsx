@@ -187,9 +187,9 @@ export function OperationalReportView({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-2.5 pb-2 px-3 sm:px-4 max-w-7xl mx-auto w-full">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full">
       {/* 1. Header Row (Clean, uncluttered, compact) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shrink-0">
         <div>
           <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
             Operational &amp; Performance Reports
@@ -321,7 +321,7 @@ export function OperationalReportView({
 
       {/* 4. Loaded Data Content */}
       {data && (
-        <div className="flex flex-col gap-2">
+        <div className="flex-1 min-h-0 flex flex-col gap-2">
           {/* Domain Focus Navigation Tabs */}
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto print:hidden">
             <div
@@ -380,10 +380,10 @@ export function OperationalReportView({
           {/* TAB 1: Status & Priority Distribution */}
           {activeTab === "overview" && (
             <section
-              className="space-y-1.5 mb-1"
+              className="flex-1 min-h-0 flex flex-col space-y-1.5"
               aria-labelledby="heading-status-priority"
             >
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline justify-between shrink-0">
                 <div>
                   <h2
                     id="heading-status-priority"
@@ -398,7 +398,7 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3 flex-1 min-h-0 items-stretch">
                 <StatusDistributionCard
                   statusDistribution={data.statusDistribution}
                   totalUniqueGrievances={data.summary.totalUniqueGrievances}
@@ -414,10 +414,10 @@ export function OperationalReportView({
           {/* TAB 2: Department Workload Distribution */}
           {activeTab === "departments" && (
             <section
-              className="space-y-1.5 mb-1"
+              className="flex-1 min-h-0 flex flex-col space-y-1.5"
               aria-labelledby="heading-dept-workload"
             >
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline justify-between shrink-0">
                 <div>
                   <h2
                     id="heading-dept-workload"
@@ -432,20 +432,22 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <DepartmentDistributionCard
-                departmentDistribution={data.departmentDistribution}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <DepartmentDistributionCard
+                  departmentDistribution={data.departmentDistribution}
+                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
+                />
+              </div>
             </section>
           )}
 
           {/* TAB 3: SLA Performance & Escalations (Unified Single Table Card) */}
           {activeTab === "sla" && (
             <section
-              className="space-y-1.5 mb-1"
+              className="flex-1 min-h-0 flex flex-col space-y-1.5"
               aria-labelledby="heading-sla-escalations"
             >
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline justify-between shrink-0">
                 <div>
                   <h2
                     id="heading-sla-escalations"
@@ -460,21 +462,23 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <SlaMonitoringCard
-                slaMonitoring={data.slaMonitoring}
-                escalations={data.escalations}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <SlaMonitoringCard
+                  slaMonitoring={data.slaMonitoring}
+                  escalations={data.escalations}
+                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
+                />
+              </div>
             </section>
           )}
 
           {/* TAB 4: Staff Workload Caseload */}
           {activeTab === "staff" && (
             <section
-              className="space-y-1.5 mb-1"
+              className="flex-1 min-h-0 flex flex-col space-y-1.5"
               aria-labelledby="heading-staff-caseload"
             >
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline justify-between shrink-0">
                 <div>
                   <h2
                     id="heading-staff-caseload"
@@ -488,20 +492,22 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <StaffAssignmentReportCard
-                staffAssignments={data.staffAssignments}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <StaffAssignmentReportCard
+                  staffAssignments={data.staffAssignments}
+                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
+                />
+              </div>
             </section>
           )}
 
           {/* TAB 5: Category & Taxonomy Breakdown */}
           {activeTab === "taxonomy" && (
             <section
-              className="space-y-1.5 mb-1"
+              className="flex-1 min-h-0 flex flex-col space-y-1.5"
               aria-labelledby="heading-taxonomy"
             >
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline justify-between shrink-0">
                 <div>
                   <h2
                     id="heading-taxonomy"
@@ -516,10 +522,12 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <CategoryDistributionCard
-                categoryDistribution={data.categoryDistribution}
-                totalUniqueGrievances={data.summary.totalUniqueGrievances}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <CategoryDistributionCard
+                  categoryDistribution={data.categoryDistribution}
+                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
+                />
+              </div>
             </section>
           )}
         </div>
