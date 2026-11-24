@@ -21,7 +21,7 @@ export function DepartmentWorkloadCard({
 }) {
   const sortedDepts = [...departments]
     .sort((a, b) => b.grievance_count - a.grievance_count)
-    .slice(0, 5);
+    .slice(0, 6);
   const totalGrievances = departments.reduce(
     (acc, d) => acc + d.grievance_count,
     0,
@@ -30,22 +30,31 @@ export function DepartmentWorkloadCard({
   const colors = [
     "bg-blue-500",
     "bg-purple-500",
+    "bg-teal-500",
     "bg-emerald-500",
     "bg-orange-500",
-    "bg-slate-300",
+    "bg-slate-400",
   ];
   const textColors = [
     "text-blue-500",
     "text-purple-500",
+    "text-teal-500",
     "text-emerald-500",
     "text-orange-500",
     "text-slate-500",
   ];
-  const icons = [Users, Landmark, Building2, ClipboardList, ShieldCheck];
+  const icons = [
+    Users,
+    Landmark,
+    Building2,
+    ClipboardList,
+    ShieldCheck,
+    Building2,
+  ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden shadow-2xs">
-      <div className="p-3 sm:p-3.5 pb-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full min-h-0 overflow-hidden shadow-2xs">
+      <div className="p-3 sm:p-3.5 pb-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
             <ClipboardList className="h-3 w-3" />
@@ -68,7 +77,7 @@ export function DepartmentWorkloadCard({
         </Link>
       </div>
 
-      <div className="p-3 sm:p-3.5 flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-y-auto custom-scrollbar">
+      <div className="p-3 sm:p-3.5 flex-1 min-h-0 flex flex-col justify-around gap-2 sm:gap-2.5 overflow-y-auto custom-scrollbar">
         {sortedDepts.map((dept, index) => {
           const percentage =
             totalGrievances > 0
@@ -112,7 +121,7 @@ export function DepartmentWorkloadCard({
       </div>
 
       {/* Solid Summary Footer matching table pagination height */}
-      <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3.5 py-2 flex items-center justify-between text-xs">
+      <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3.5 py-2.5 flex items-center justify-between text-xs">
         <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
           <span className="font-medium text-[11px] sm:text-xs">

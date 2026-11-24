@@ -280,9 +280,9 @@ export function ReportFilterBar({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-3 shadow-xs flex flex-col gap-2.5">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 shadow-2xs flex flex-col gap-1.5">
       {/* Date Presets and Date Range Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
             <Calendar className="h-3 w-3" />
@@ -293,7 +293,7 @@ export function ReportFilterBar({
             variant={activePreset === "7d" ? "default" : "outline"}
             size="sm"
             onClick={() => handlePresetSelect("7d")}
-            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+            className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
           >
             Last 7 Days
           </Button>
@@ -302,7 +302,7 @@ export function ReportFilterBar({
             variant={activePreset === "30d" ? "default" : "outline"}
             size="sm"
             onClick={() => handlePresetSelect("30d")}
-            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+            className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
           >
             Last 30 Days
           </Button>
@@ -311,7 +311,7 @@ export function ReportFilterBar({
             variant={activePreset === "month" ? "default" : "outline"}
             size="sm"
             onClick={() => handlePresetSelect("month")}
-            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+            className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
           >
             This Month
           </Button>
@@ -320,7 +320,7 @@ export function ReportFilterBar({
             variant={activePreset === "90d" ? "default" : "outline"}
             size="sm"
             onClick={() => handlePresetSelect("90d")}
-            className="h-7 text-xs px-2.5 rounded-md cursor-pointer"
+            className="h-6 text-[11px] px-2 rounded-md cursor-pointer"
           >
             Last 90 Days
           </Button>
@@ -344,7 +344,7 @@ export function ReportFilterBar({
                   : ""
               }
               onChange={(e) => handleDateChange("startDate", e.target.value)}
-              className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div className="flex items-center gap-1.5">
@@ -361,7 +361,7 @@ export function ReportFilterBar({
                 localFilters.endDate ? localFilters.endDate.split("T")[0] : ""
               }
               onChange={(e) => handleDateChange("endDate", e.target.value)}
-              className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="h-6 rounded-md border border-slate-200 bg-white px-1.5 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <Button
@@ -369,7 +369,7 @@ export function ReportFilterBar({
             variant="ghost"
             size="sm"
             onClick={handleReset}
-            className="h-7 px-2 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 gap-1 cursor-pointer"
+            className="h-6 px-1.5 text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 gap-1 cursor-pointer"
             title="Reset period & filters"
           >
             <RotateCcw className="h-3 w-3" />

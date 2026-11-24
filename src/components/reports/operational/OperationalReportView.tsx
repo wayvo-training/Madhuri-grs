@@ -187,14 +187,14 @@ export function OperationalReportView({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-3 sm:gap-3.5 pt-2 sm:pt-3 pb-10 px-3 sm:px-5 max-w-7xl mx-auto w-full">
+    <div className="flex-1 flex flex-col min-h-0 gap-2 sm:gap-2.5 pb-2 px-3 sm:px-4 max-w-7xl mx-auto w-full">
       {/* 1. Header Row (Clean, uncluttered, compact) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 leading-tight">
             Operational &amp; Performance Reports
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
             Operational statistics on grievance intake volumes, workflow
             lifecycle distribution, department workloads, SLA compliance, and
             escalations.
@@ -321,9 +321,9 @@ export function OperationalReportView({
 
       {/* 4. Loaded Data Content */}
       {data && (
-        <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-2">
           {/* Domain Focus Navigation Tabs */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5 overflow-x-auto print:hidden">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto print:hidden">
             <div
               role="tablist"
               aria-label="Operational Analytics Views"
@@ -363,7 +363,7 @@ export function OperationalReportView({
                     type="button"
                     aria-selected={isActive}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
                       isActive
                         ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -380,25 +380,25 @@ export function OperationalReportView({
           {/* TAB 1: Status & Priority Distribution */}
           {activeTab === "overview" && (
             <section
-              className="space-y-3 mb-6"
+              className="space-y-1.5 mb-1"
               aria-labelledby="heading-status-priority"
             >
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-status-priority"
-                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
                     Status & Priority Analytics
                   </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Lifecycle stage distribution and severity breakdown for
                     received grievances
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                 <StatusDistributionCard
                   statusDistribution={data.statusDistribution}
                   totalUniqueGrievances={data.summary.totalUniqueGrievances}
@@ -414,18 +414,18 @@ export function OperationalReportView({
           {/* TAB 2: Department Workload Distribution */}
           {activeTab === "departments" && (
             <section
-              className="space-y-3 mb-6"
+              className="space-y-1.5 mb-1"
               aria-labelledby="heading-dept-workload"
             >
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-dept-workload"
-                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
                     Department Workload & Routing Analytics
                   </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Primary vs Supporting department involvements with
                     deduplication accounting
                   </p>
@@ -442,18 +442,18 @@ export function OperationalReportView({
           {/* TAB 3: SLA Performance & Escalations (Unified Single Table Card) */}
           {activeTab === "sla" && (
             <section
-              className="space-y-3 mb-6"
+              className="space-y-1.5 mb-1"
               aria-labelledby="heading-sla-escalations"
             >
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-sla-escalations"
-                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
                     SLA Compliance &amp; Escalations
                   </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Active operational deadline tracking and governance
                     escalation records
                   </p>
@@ -471,18 +471,18 @@ export function OperationalReportView({
           {/* TAB 4: Staff Workload Caseload */}
           {activeTab === "staff" && (
             <section
-              className="space-y-3 mb-6"
+              className="space-y-1.5 mb-1"
               aria-labelledby="heading-staff-caseload"
             >
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-staff-caseload"
-                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
                     Staff Caseload & Handover Governance
                   </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Investigation caseload per active grievance staff member
                   </p>
                 </div>
@@ -498,18 +498,18 @@ export function OperationalReportView({
           {/* TAB 5: Category & Taxonomy Breakdown */}
           {activeTab === "taxonomy" && (
             <section
-              className="space-y-3 mb-6"
+              className="space-y-1.5 mb-1"
               aria-labelledby="heading-taxonomy"
             >
               <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-taxonomy"
-                    className="text-sm font-semibold text-slate-900 dark:text-slate-100"
+                    className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
                     Category Taxonomy Breakdown
                   </h2>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Volume distribution across master grievance categories and
                     subcategories
                   </p>

@@ -20,6 +20,7 @@ export default async function AdminLayout({
       departmentName={
         user.departments?.department_name || "Central Administration"
       }
+      mainClassName="pb-3 sm:pb-3.5 h-full flex flex-col"
     >
       {children}
     </DashboardShell>

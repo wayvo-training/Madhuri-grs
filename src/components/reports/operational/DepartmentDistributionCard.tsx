@@ -56,17 +56,17 @@ export function DepartmentDistributionCard({
 
   return (
     <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <CardHeader className="pb-2 pt-3.5 px-4">
+      <CardHeader className="pb-1.5 pt-2.5 px-3 sm:px-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400">
-              <Building2 className="h-4 w-4" />
+            <div className="p-1 rounded-md bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-400">
+              <Building2 className="h-3.5 w-3.5" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <CardTitle className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100">
                 Department Workload Distribution
               </CardTitle>
-              <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              <CardDescription className="text-[11px] text-slate-500 dark:text-slate-400">
                 Grievance routing by Primary and Supporting departmental roles
               </CardDescription>
             </div>

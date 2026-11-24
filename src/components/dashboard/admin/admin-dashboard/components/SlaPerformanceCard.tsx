@@ -52,7 +52,7 @@ export function SlaPerformanceCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between overflow-hidden shadow-2xs p-2 sm:p-2.5 h-full",
+        "rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between overflow-hidden shadow-2xs p-3 sm:p-3.5 h-full",
         className,
       )}
     >
