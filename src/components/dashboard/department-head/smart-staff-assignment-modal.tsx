@@ -278,6 +278,42 @@ export function SmartStaffAssignmentModal({
         grievance.assignedStaffName.toLowerCase() !== "blocked"),
   );
 
+  // 1. Resolve Primary Lead Department
+  const primaryDeptItem = grievance.departmentsInvolved?.find(
+    (d) => d.involvementType === "PRIMARY",
+  );
+  const primaryDeptName =
+    primaryDeptItem?.departmentName ||
+    (grievance.isPrimaryDepartment ? currentDepartmentName : null) ||
+    (grievance.departmentsInvolved && grievance.departmentsInvolved.length > 0
+      ? grievance.departmentsInvolved[0].departmentName
+      : currentDepartmentName);
+
+  // 2. Check if the currently logged-in department head is the Primary department
+  const isCurrentDeptPrimary =
+    primaryDeptName.toLowerCase() === currentDepartmentName.toLowerCase();
+
+  // 3. Supportive departments: strictly exclude the primary department and deduplicate
+  const supportiveDepts = (
+    grievance.departmentsInvolved && grievance.departmentsInvolved.length > 0
+      ? grievance.departmentsInvolved
+          .filter(
+            (d) =>
+              d.involvementType === "SUPPORTING" ||
+              (d.involvementType !== "PRIMARY" &&
+                d.departmentName.toLowerCase() !==
+                  primaryDeptName.toLowerCase()),
+          )
+          .map((d) => d.departmentName)
+      : (grievance.collaboratingDepartments || []).filter(
+          (name) => name.toLowerCase() !== primaryDeptName.toLowerCase(),
+        )
+  ).filter(
+    (name, index, self) =>
+      self.findIndex((n) => n.toLowerCase() === name.toLowerCase()) === index &&
+      name.toLowerCase() !== primaryDeptName.toLowerCase(),
+  );
+
   const [loading, setLoading] = useState(true);
   const [recommendations, setRecommendations] = useState<
     StaffRecommendationResult[]
@@ -711,24 +747,40 @@ export function SmartStaffAssignmentModal({
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                  Department
+                  Primary Department
                 </span>
-                <span className="font-medium text-slate-800 block text-xs">
-                  {currentDepartmentName}
-                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="font-semibold text-slate-800 text-xs truncate">
+                    {primaryDeptName}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-teal-100 text-teal-800 border border-teal-200 shrink-0">
+                    Lead
+                  </span>
+                </div>
               </div>
             </div>
 
-            {grievance.isCrossDepartment &&
-              grievance.collaboratingDepartments && (
-                <div className="pt-2 border-t border-slate-200/70 text-xs text-slate-600 flex items-center gap-1.5">
-                  <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+            {grievance.isCrossDepartment && supportiveDepts.length > 0 && (
+              <div className="pt-2.5 border-t border-slate-200/70 text-xs flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 text-slate-500 font-medium">
+                  <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <span>
-                    Supportive Departments:{" "}
-                    {grievance.collaboratingDepartments.join(", ")}
+                    Supportive Department{supportiveDepts.length > 1 ? "s" : ""}
+                    :
                   </span>
                 </div>
-              )}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {supportiveDepts.map((deptName) => (
+                    <span
+                      key={deptName}
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+                    >
+                      {deptName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Department Staff Team (Primary & Supporting) */}
@@ -736,17 +788,29 @@ export function SmartStaffAssignmentModal({
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5 text-teal-600" />
-                <span>Department Staff Team</span>
+                <span>{currentDepartmentName} Staff Team</span>
               </span>
               <span className="text-[11px] text-slate-400">
-                Supportive staff is co-assigned via Head SLA Intervention
+                {isCurrentDeptPrimary
+                  ? "Assign lead investigator for primary inquiry & final resolution"
+                  : "Assign supportive investigator to submit departmental findings"}
               </span>
             </div>
 
-            {/* Primary Investigator */}
-            <div className="rounded-lg border border-teal-200/80 bg-teal-50/50 p-2.5 flex items-center justify-between gap-3">
+            {/* Investigator Card */}
+            <div
+              className={`rounded-lg border p-2.5 flex items-center justify-between gap-3 ${
+                isCurrentDeptPrimary
+                  ? "border-teal-200/80 bg-teal-50/50"
+                  : "border-amber-200/80 bg-amber-50/40"
+              }`}
+            >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white font-bold text-xs">
+                <div
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg font-bold text-xs text-white ${
+                    isCurrentDeptPrimary ? "bg-teal-600" : "bg-amber-600"
+                  }`}
+                >
                   <UserCheck className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0">
@@ -756,15 +820,25 @@ export function SmartStaffAssignmentModal({
                         grievance.assignedStaffName ||
                         "Unassigned"}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-100 text-teal-800 border border-teal-200">
-                      Primary Investigator
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                        isCurrentDeptPrimary
+                          ? "bg-teal-100 text-teal-800 border border-teal-200"
+                          : "bg-amber-100 text-amber-800 border border-amber-200"
+                      }`}
+                    >
+                      {isCurrentDeptPrimary
+                        ? "Primary Investigator"
+                        : "Supportive Investigator"}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 truncate">
                     {grievance.primaryStaff?.email ||
                       (currentAssignedMember
                         ? `${currentAssignedMember.email} • ${currentAssignedMember.designation}`
-                        : "Responsible for conducting inquiry and final resolution")}
+                        : isCurrentDeptPrimary
+                          ? "Responsible for conducting inquiry and final resolution"
+                          : "Responsible for investigating and submitting departmental findings")}
                   </p>
                 </div>
               </div>
@@ -820,17 +894,37 @@ export function SmartStaffAssignmentModal({
               )}
           </div>
 
-          {/* Primary Lead Investigator Notice */}
-          <div className="rounded-xl border border-teal-100 bg-teal-50/50 p-3 flex items-center justify-between">
+          {/* Primary vs Supportive Investigator Notice */}
+          <div
+            className={`rounded-xl border p-3 flex items-center justify-between ${
+              isCurrentDeptPrimary
+                ? "border-teal-100 bg-teal-50/50 text-teal-900"
+                : "border-amber-100 bg-amber-50/50 text-amber-900"
+            }`}
+          >
             <div>
-              <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4 text-teal-700" />
-                <span>Primary Lead Investigator Assignment</span>
+              <span className="text-xs font-bold flex items-center gap-1.5">
+                <ShieldCheck
+                  className={`h-4 w-4 ${
+                    isCurrentDeptPrimary ? "text-teal-700" : "text-amber-700"
+                  }`}
+                />
+                <span>
+                  {isCurrentDeptPrimary
+                    ? "Primary Lead Investigator Assignment"
+                    : `Supportive Department Assignment (${currentDepartmentName})`}
+                </span>
               </span>
-              <p className="text-[11px] text-teal-800/80 mt-0.5">
-                Primary Investigator holds primary case ownership and resolution
-                authority. Supportive staff can be co-assigned during Department
-                Head SLA Intervention.
+              <p
+                className={`text-[11px] mt-0.5 ${
+                  isCurrentDeptPrimary
+                    ? "text-teal-800/80"
+                    : "text-amber-800/80"
+                }`}
+              >
+                {isCurrentDeptPrimary
+                  ? "Primary Investigator holds primary case ownership and resolution authority. Supportive staff can be co-assigned during Department Head SLA Intervention."
+                  : `As a supportive department, your assigned investigator conducts departmental inquiries and submits findings to assist the lead department (${primaryDeptName}).`}
               </p>
             </div>
           </div>
