@@ -27,7 +27,7 @@ export type GrievanceStatus =
 export type SlaStatus = "ON_TRACK" | "AT_RISK" | "BREACHED";
 
 /**
- * Standard Priority Badge - Clean, neutral enterprise styling.
+ * Standard Priority Badge - Vibrant, accessible enterprise badge styling.
  */
 export function PriorityBadge({
   priority,
@@ -45,11 +45,12 @@ export function PriorityBadge({
         <span
           title="Priority: Critical"
           className={cn(
-            "text-sm font-semibold text-amber-700 dark:text-amber-400 whitespace-nowrap cursor-default",
+            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 whitespace-nowrap cursor-default shadow-2xs",
             className,
           )}
         >
-          Critical
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-600 dark:bg-rose-400 animate-pulse" />
+          <span>Critical</span>
         </span>
       );
     case "HIGH":
@@ -57,11 +58,12 @@ export function PriorityBadge({
         <span
           title="Priority: High"
           className={cn(
-            "text-sm font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap cursor-default",
+            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300 whitespace-nowrap cursor-default shadow-2xs",
             className,
           )}
         >
-          High
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
+          <span>High</span>
         </span>
       );
     case "MEDIUM":
@@ -70,11 +72,12 @@ export function PriorityBadge({
         <span
           title="Priority: Medium"
           className={cn(
-            "text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap cursor-default",
+            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300 whitespace-nowrap cursor-default shadow-2xs",
             className,
           )}
         >
-          Medium
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400" />
+          <span>Medium</span>
         </span>
       );
     default:
@@ -82,11 +85,12 @@ export function PriorityBadge({
         <span
           title="Priority: Low"
           className={cn(
-            "text-sm font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap cursor-default",
+            "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 whitespace-nowrap cursor-default shadow-2xs",
             className,
           )}
         >
-          Low
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+          <span>Low</span>
         </span>
       );
   }
@@ -100,7 +104,7 @@ export interface StatusBadgeProps {
 }
 
 /**
- * Standard Status Badge - Calm neutral base; ESCALATED is the single focused highlight.
+ * Standard Status Badge - Distinct, vibrant colors for every operational status.
  * Supports graceful truncation, full-text tooltips, and compact alignment.
  */
 export function StatusBadge({
@@ -117,11 +121,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Escalated"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-400 bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/40 dark:text-amber-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-500 animate-pulse" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400 animate-pulse" />
           <span className="truncate">{label ?? "Escalated"}</span>
         </span>
       );
@@ -130,11 +134,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Resolved"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
           <span className="truncate">{label ?? "Resolved"}</span>
         </span>
       );
@@ -143,11 +147,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Rework"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-orange-300 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-800 shadow-2xs dark:bg-orange-500/20 dark:border-orange-500/30 dark:text-orange-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-orange-300 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-900 shadow-2xs dark:bg-orange-500/20 dark:border-orange-500/30 dark:text-orange-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500 dark:bg-orange-400 animate-pulse" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-600 dark:bg-orange-400 animate-pulse" />
           <span className="truncate">{label ?? "Rework"}</span>
         </span>
       );
@@ -157,11 +161,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Resolution Pending Approval"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-indigo-200 bg-indigo-50/90 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-700/30 dark:border-indigo-600 dark:text-indigo-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-violet-300 bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 shadow-2xs dark:bg-violet-700/30 dark:border-violet-600 dark:text-violet-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500 dark:bg-indigo-400" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-600 dark:bg-violet-400" />
           <span className="truncate">
             {label ?? "Resolution Pending Approval"}
           </span>
@@ -173,11 +177,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Awaiting Information"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400 animate-pulse" />
           <span className="truncate">{label ?? "Awaiting Information"}</span>
         </span>
       );
@@ -186,10 +190,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Awaiting Routing"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-amber-200 bg-amber-50/70 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-700/30 dark:border-amber-600 dark:text-amber-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-2xs dark:bg-amber-700/30 dark:border-amber-600 dark:text-amber-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400" />
           <span className="truncate">{label ?? "Awaiting Routing"}</span>
         </span>
       );
@@ -199,10 +204,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Awaiting Assignment"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-purple-300 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800 shadow-2xs dark:bg-purple-900/30 dark:border-purple-700 dark:text-purple-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-600 dark:bg-purple-400" />
           <span className="truncate">{label ?? "Awaiting Assignment"}</span>
         </span>
       );
@@ -211,11 +217,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Closed"}
           className={cn(
-            "inline-flex items-center gap-1 min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-[#162338] dark:border-[#243449] dark:text-slate-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 shadow-2xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400 dark:bg-slate-500" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500 dark:bg-slate-400" />
           <span className="truncate">{label ?? "Closed"}</span>
         </span>
       );
@@ -224,11 +230,11 @@ export function StatusBadge({
         <span
           title={title ?? "Department Findings Submitted"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 shadow-2xs dark:bg-emerald-500/20 dark:border-emerald-500/30 dark:text-emerald-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600 dark:bg-emerald-400" />
           <span className="truncate">{label ?? "Findings Done"}</span>
         </span>
       );
@@ -237,10 +243,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: In Progress"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-blue-300 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800 shadow-2xs dark:bg-blue-500/20 dark:border-blue-500/30 dark:text-blue-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
           <span className="truncate">{label ?? "In Progress"}</span>
         </span>
       );
@@ -249,10 +256,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Assigned"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-teal-300 bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800 shadow-2xs dark:bg-teal-900/30 dark:border-teal-700 dark:text-teal-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600 dark:bg-teal-400" />
           <span className="truncate">{label ?? "Assigned"}</span>
         </span>
       );
@@ -261,10 +269,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Routed"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-purple-300 bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800 shadow-2xs dark:bg-purple-900/30 dark:border-purple-700 dark:text-purple-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-600 dark:bg-purple-400" />
           <span className="truncate">{label ?? "Routed"}</span>
         </span>
       );
@@ -273,10 +282,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Submitted"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-100/70 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-sky-300 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800 shadow-2xs dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-600 dark:bg-sky-400" />
           <span className="truncate">{label ?? "Submitted"}</span>
         </span>
       );
@@ -286,10 +296,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Reopened"}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-100/80 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700/50 dark:border-slate-600 dark:text-slate-300 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-800 shadow-2xs dark:bg-rose-900/30 dark:border-rose-700 dark:text-rose-300 cursor-default select-none",
             className,
           )}
         >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-600 dark:bg-rose-400 animate-pulse" />
           <span className="truncate">{label ?? "Reopened"}</span>
         </span>
       );
@@ -298,11 +309,11 @@ export function StatusBadge({
         <span
           title={title ?? "Status: Blocked"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-2xs dark:bg-amber-500/20 dark:border-amber-500/30 dark:text-amber-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-rose-300 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-900 shadow-2xs dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 cursor-default select-none",
             className,
           )}
         >
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-500" />
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-600 dark:bg-rose-500" />
           <span className="truncate">{label ?? "Blocked"}</span>
         </span>
       );
@@ -311,7 +322,7 @@ export function StatusBadge({
         <span
           title={title ?? String(status)}
           className={cn(
-            "inline-flex items-center min-w-0 max-w-full rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-[#162338] dark:border-[#243449] dark:text-slate-400 cursor-default select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700 dark:bg-[#162338] dark:border-[#243449] dark:text-slate-300 cursor-default select-none",
             className,
           )}
         >
@@ -380,7 +391,7 @@ export function SlaBadge({
         <span
           title={title ?? "SLA On Track"}
           className={cn(
-            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-xs font-normal text-slate-600 dark:bg-[#162338] dark:border-[#243449] dark:text-slate-400 cursor-default shadow-2xs select-none",
+            "inline-flex items-center gap-1.5 min-w-0 max-w-full rounded-md border border-emerald-200/90 bg-emerald-50/70 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 cursor-default shadow-2xs select-none",
             className,
           )}
         >

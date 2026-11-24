@@ -1,21 +1,22 @@
 export const STATUS_COLORS: Record<string, string> = {
-  IN_PROGRESS: "#3B82F6",
-  ASSIGNED: "#8B5CF6",
-  UNDER_REVIEW: "#6366F1",
-  REOPENED: "#F59E0B",
-  UNASSIGNED: "#CBD5E1",
-  CLOSED: "#10B981",
+  IN_PROGRESS: "#2563EB",
+  ASSIGNED: "#0D9488",
+  UNDER_REVIEW: "#7C3AED",
+  REOPENED: "#E11D48",
+  UNASSIGNED: "#9333EA",
+  CLOSED: "#64748B",
+  RESOLVED: "#059669",
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: "#EF4444",
-  HIGH: "#F97316",
-  MEDIUM: "#F59E0B",
-  LOW: "#3B82F6",
+  CRITICAL: "#E11D48",
+  HIGH: "#D97706",
+  MEDIUM: "#2563EB",
+  LOW: "#059669",
 };
 
 export const SLA_COLORS: Record<string, string> = {
-  ON_TRACK: "#10B981",
-  AT_RISK: "#F59E0B",
-  BREACHED: "#EF4444",
+  ON_TRACK: "#059669",
+  AT_RISK: "#D97706",
+  BREACHED: "#E11D48",
 };
