@@ -72,6 +72,16 @@ export function ResolutionForm({
     grievance.status === "REOPENED" ||
     (grievance.manualReviewCount ?? 0) > 0;
 
+  // Determine whether this form operates in Resolution Mode vs Department Findings Mode.
+  // Primary Lead, Equal Co-Lead, and Final Sequential departments formulate the grievance resolution.
+  // In-department supporting staff and supportive contributing departments submit departmental findings.
+  const isResolving =
+    !grievance.isSupportingStaff &&
+    grievance.myInvolvementType !== "SUPPORTING" &&
+    (grievance.isPrimaryOwner !== false ||
+      grievance.myInvolvementType === "EQUAL" ||
+      Boolean(grievance.isFinalSequentialDepartment));
+
   // Validation checks for resolution fields
   const isProblemSummaryOnlyDigits = /^\d+$/.test(
     problemSummary.trim().replace(/\s+/g, ""),
@@ -312,19 +322,25 @@ export function ResolutionForm({
         size: att.size || `${((att.fileSize || 0) / 1024).toFixed(1)} KB`,
         fileSize:
           typeof att.fileSize === "number"
-            ? att.fileSize
-            : Number.parseFloat(att.size || "0") * 1024,
+            ? Math.round(att.fileSize)
+            : Math.round(Number.parseFloat(att.size || "0") * 1024),
         type: att.type || att.fileType || "Document",
         fileType: att.fileType || att.type || "Document",
         path: att.path || att.filePath || "",
         filePath: att.filePath || att.path || "",
         uploadedAt: new Date().toISOString(),
       }));
-      const isResolving =
-        !grievance.isSupportingStaff &&
-        (grievance.canSubmitFinalResolution ??
-          (grievance.isPrimaryOwner !== false ||
-            Boolean(grievance.isFinalSequentialDepartment)));
+      if (!isDraft && isResolving) {
+        if (
+          grievance.hasPendingSupportingDepartments &&
+          (grievance.pendingSupportingDepartmentNames?.length ?? 0) > 0
+        ) {
+          const depts = grievance.pendingSupportingDepartmentNames?.join(", ");
+          throw new Error(
+            `Supporting department(s) (${depts}) have not yet submitted their departmental findings. All supporting findings must be submitted before the final resolution can be submitted.`,
+          );
+        }
+      }
 
       if (grievance.isSupportingStaff) {
         // Supporting Investigator Findings submission (In-Department)
@@ -364,8 +380,8 @@ export function ResolutionForm({
                 fileType: att.fileType || att.type,
                 fileSize:
                   typeof att.fileSize === "number"
-                    ? att.fileSize
-                    : Number.parseFloat(att.size) * 1024,
+                    ? Math.round(att.fileSize)
+                    : Math.round(Number.parseFloat(att.size || "0") * 1024),
                 filePath: att.filePath || att.path,
               })),
             }),
@@ -393,8 +409,8 @@ export function ResolutionForm({
             fileType: att.fileType || att.type,
             fileSize:
               typeof att.fileSize === "number"
-                ? att.fileSize
-                : Number.parseFloat(att.size) * 1024,
+                ? Math.round(att.fileSize)
+                : Math.round(Number.parseFloat(att.size || "0") * 1024),
           })),
           isDraft,
         });
@@ -419,8 +435,8 @@ export function ResolutionForm({
               fileType: att.fileType || att.type,
               fileSize:
                 typeof att.fileSize === "number"
-                  ? att.fileSize
-                  : Number.parseFloat(att.size) * 1024,
+                  ? Math.round(att.fileSize)
+                  : Math.round(Number.parseFloat(att.size || "0") * 1024),
               filePath: att.filePath || att.path,
             })),
             isDraft,
@@ -458,133 +474,121 @@ export function ResolutionForm({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 overflow-hidden my-auto">
         {/* Header */}
-        {(() => {
-          const isResolving =
-            !grievance.isSupportingStaff &&
-            (grievance.canSubmitFinalResolution ??
-              (grievance.isPrimaryOwner !== false ||
-                Boolean(grievance.isFinalSequentialDepartment)));
-          return (
-            <>
-              <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                      grievance.isSupportingStaff
-                        ? "bg-teal-100 text-teal-800"
-                        : !isResolving
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
-                    }`}
-                  >
-                    <FileCheck2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      {grievance.isSupportingStaff
-                        ? "Submit Supporting Investigation Findings"
-                        : !isResolving
-                          ? "Submit Department Findings & Sign-Off"
-                          : "Submit Grievance Resolution"}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Case {grievance.grievanceNumber} &bull; {grievance.title}
-                      {grievance.isSupportingStaff ? (
-                        <span className="ml-1 text-teal-700 font-semibold bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
-                          Supporting Investigator
-                        </span>
-                      ) : !isResolving ? (
-                        <span className="ml-1 text-teal-700 font-medium">
-                          (Department Findings)
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+        <div className="flex items-center justify-between border-b border-slate-100 p-5 shrink-0 bg-white">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                grievance.isSupportingStaff
+                  ? "bg-teal-100 text-teal-800"
+                  : !isResolving
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
+              <FileCheck2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {grievance.isSupportingStaff
+                  ? "Submit Supporting Investigation Findings"
+                  : !isResolving
+                    ? "Submit Department Findings & Sign-Off"
+                    : "Formal Grievance Resolution & Sign-Off"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                Case {grievance.grievanceNumber} &bull; {grievance.title}
+                {grievance.isSupportingStaff ? (
+                  <span className="ml-1 text-teal-700 font-semibold bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded">
+                    Supporting Investigator
+                  </span>
+                ) : !isResolving ? (
+                  <span className="ml-1 text-teal-700 font-medium">
+                    (Department Findings)
+                  </span>
+                ) : null}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-              {/* Draft Restored Banner */}
-              {hasRestoredDraft && (
-                <div className="bg-emerald-50 border-b border-emerald-200/80 px-5 py-2.5 text-[11px] text-emerald-950 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileCheck2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span>
-                      <strong>Resolution Draft Restored:</strong> Your
-                      previously saved draft details and{" "}
-                      {existingAttachments.length} attached document(s) have
-                      been loaded.
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.removeItem(
-                        `draft_resolution_${grievance.id}`,
-                      );
-                      setProblemSummary(
-                        `Investigation into ${grievance.category} concern (${grievance.grievanceNumber}): ${grievance.title}`,
-                      );
-                      setFindings("");
-                      setActionTaken("");
-                      setOutcome("");
-                      setEvidence("");
-                      setExistingAttachments([]);
-                      setSupportingFiles([]);
-                      setHasRestoredDraft(false);
-                      toast.info("Draft discarded.");
-                    }}
-                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline shrink-0 ml-2 cursor-pointer"
-                  >
-                    Discard Draft
-                  </button>
-                </div>
-              )}
+        {/* Draft Restored Banner */}
+        {hasRestoredDraft && (
+          <div className="bg-emerald-50 border-b border-emerald-200/80 px-5 py-2.5 text-[11px] text-emerald-950 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileCheck2 className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>
+                <strong>Resolution Draft Restored:</strong> Your previously
+                saved draft details and {existingAttachments.length} attached
+                document(s) have been loaded.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(`draft_resolution_${grievance.id}`);
+                setProblemSummary(
+                  `Investigation into ${grievance.category} concern (${grievance.grievanceNumber}): ${grievance.title}`,
+                );
+                setFindings("");
+                setActionTaken("");
+                setOutcome("");
+                setEvidence("");
+                setExistingAttachments([]);
+                setSupportingFiles([]);
+                setHasRestoredDraft(false);
+                toast.info("Draft discarded.");
+              }}
+              className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline shrink-0 ml-2 cursor-pointer"
+            >
+              Discard Draft
+            </button>
+          </div>
+        )}
 
-              {/* Supporting Investigator Mode Notice */}
-              {grievance.isSupportingStaff ? (
-                <div className="bg-teal-50/90 border-b border-teal-200/80 px-5 py-2.5 text-[11px] text-teal-950 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Supporting Investigator Mode:</strong> Record your
-                    findings and evidence for this case. Your findings will be
-                    reviewed and consolidated by the Primary Investigator, who
-                    holds authority to submit the final resolution.
-                  </span>
-                </div>
-              ) : !isResolving ? (
-                <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Department Findings:</strong> Submitting your
-                    departmental findings completes your investigation and
-                    updates your departmental status to{" "}
-                    <strong>COMPLETED</strong> for final resolution review.
-                  </span>
-                </div>
-              ) : grievance.hasPendingSupportingDepartments &&
-                (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
-                  0 ? (
-                <div className="bg-amber-50/90 border-b border-amber-200/80 px-5 py-2.5 text-[11px] text-amber-950 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>
-                    <strong>Proceeding Without Supporting Findings:</strong>{" "}
-                    Supporting department(s) (
-                    {grievance.pendingSupportingDepartmentNames?.join(", ")})
-                    have not submitted findings. You are finalizing the
-                    resolution directly as Primary Lead.
-                  </span>
-                </div>
-              ) : null}
-            </>
-          );
-        })()}
+        {/* Supporting Investigator Mode Notice */}
+        {grievance.isSupportingStaff ? (
+          <div className="bg-teal-50/90 border-b border-teal-200/80 px-5 py-2.5 text-[11px] text-teal-950 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-teal-700 shrink-0 mt-0.5" />
+            <span>
+              <strong>Supporting Investigator Mode:</strong> Record your
+              findings and evidence for this case. Your findings will be
+              reviewed and consolidated by the Primary Investigator, who holds
+              authority to submit the final resolution.
+            </span>
+          </div>
+        ) : !isResolving ? (
+          <div className="bg-amber-50/80 border-b border-amber-200/60 px-5 py-2.5 text-[11px] text-amber-900 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>Department Findings:</strong> Submitting your departmental
+              findings completes your investigation and updates your
+              departmental status to <strong>COMPLETED</strong> for final
+              resolution review.
+            </span>
+          </div>
+        ) : isResolving &&
+          grievance.hasPendingSupportingDepartments &&
+          (grievance.pendingSupportingDepartmentNames?.length ?? 0) > 0 ? (
+          <div className="bg-amber-50/90 border-b border-amber-200/80 px-5 py-2.5 text-[11px] text-amber-950 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              <strong>Awaiting Supporting Findings:</strong> Supporting
+              department(s) (
+              {grievance.pendingSupportingDepartmentNames?.join(", ")}) have not
+              yet submitted their departmental findings. You can prepare and
+              save your resolution as a draft now, but final resolution
+              submission will remain blocked until all supporting findings are
+              submitted.
+            </span>
+          </div>
+        ) : null}
 
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
@@ -1000,243 +1004,203 @@ export function ResolutionForm({
         </div>
 
         {/* Footer Actions (Pinned) */}
-        {(() => {
-          const isResolving =
-            !grievance.isSupportingStaff &&
-            (grievance.canSubmitFinalResolution ??
-              (grievance.isPrimaryOwner !== false ||
-                Boolean(grievance.isFinalSequentialDepartment)));
-          return (
-            <div className="flex items-center justify-end gap-2.5 p-4 border-t border-slate-100 bg-slate-50/80 rounded-b-2xl shrink-0">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={isSubmitting || isSavingDraft}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => submitForm(true)}
-                disabled={isSubmitting || isSavingDraft}
-                className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50 cursor-pointer"
-              >
-                {isSavingDraft ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Saving Draft...</span>
+        <div className="flex items-center justify-end gap-2.5 p-4 border-t border-slate-100 bg-slate-50/80 rounded-b-2xl shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting || isSavingDraft}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => submitForm(true)}
+            disabled={isSubmitting || isSavingDraft}
+            className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50 cursor-pointer"
+          >
+            {isSavingDraft ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Saving Draft...</span>
+              </span>
+            ) : (
+              "Save as Draft"
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const validationError = getValidationError();
+              if (validationError) {
+                setErrorMsg(validationError);
+                toast.error(validationError);
+                return;
+              }
+              setErrorMsg(null);
+              if (grievance.isSupportingStaff || !isResolving) {
+                // Direct submission for supporting findings or department findings - avoids redundant double modal popup
+                submitForm(false);
+              } else if (
+                grievance.hasPendingSupportingDepartments &&
+                (grievance.pendingSupportingDepartmentNames?.length ?? 0) > 0
+              ) {
+                const depts =
+                  grievance.pendingSupportingDepartmentNames?.join(", ");
+                const error = `Supporting department(s) (${depts}) have not yet submitted their departmental findings. All supporting findings must be submitted before the final resolution can be submitted.`;
+                setErrorMsg(error);
+                toast.error(error);
+              } else {
+                setShowConfirmModal(true);
+              }
+            }}
+            disabled={isSubmitting || isSavingDraft || !isFormValid}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
+              grievance.isSupportingStaff
+                ? "bg-teal-700 hover:bg-teal-800"
+                : !isResolving
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-[#0F766E] hover:bg-[#115E59]"
+            }`}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Submitting...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                <span>
+                  {grievance.isSupportingStaff
+                    ? "Submit Supporting Findings"
+                    : !isResolving
+                      ? "Submit Department Findings"
+                      : isReviewRequired
+                        ? "Submit for Review"
+                        : "Resolve Grievance"}
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Confirmation Modal: Are you sure? */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {!isResolving
+                    ? "Confirm Findings Submission"
+                    : isReviewRequired
+                      ? "Confirm Review Submission"
+                      : "Confirm Grievance Resolution"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  {!isResolving
+                    ? `Are you sure you want to submit your department's findings for ${grievance.grievanceNumber}? This will mark your participation as completed and activate the next department stage.`
+                    : isReviewRequired
+                      ? `Are you sure you want to submit this resolution for ${grievance.grievanceNumber}? Because this grievance is reopened, submitting will transition it to UNDER_REVIEW for Department Head approval.`
+                      : `Are you sure you want to resolve ${grievance.grievanceNumber}? This will finalize the investigation, mark the grievance as RESOLVED, and notify the employee.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick summary recap */}
+            <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
+              <div className="flex justify-between items-center text-slate-600">
+                <span className="font-medium text-slate-500">Grievance:</span>
+                <span className="font-semibold text-slate-800">
+                  {grievance.grievanceNumber}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 block mb-0.5">
+                  Action Taken:
+                </span>
+                <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                  {actionTaken}
+                </p>
+              </div>
+              <div>
+                <span className="font-medium text-slate-500 block mb-0.5">
+                  Outcome Summary:
+                </span>
+                <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
+                  {outcome}
+                </p>
+              </div>
+              {existingAttachments.length + supportingFiles.length > 0 && (
+                <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/50">
+                  <span className="font-medium text-slate-500">
+                    Supportive Files:
                   </span>
-                ) : (
-                  "Save as Draft"
-                )}
+                  <span className="font-semibold text-slate-800">
+                    {existingAttachments.length + supportingFiles.length}{" "}
+                    file(s) attached
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setShowConfirmModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Review Again
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  const validationError = getValidationError();
-                  if (validationError) {
-                    setErrorMsg(validationError);
-                    toast.error(validationError);
+                disabled={isSubmitting}
+                onClick={async () => {
+                  if (
+                    isResolving &&
+                    grievance.hasPendingSupportingDepartments &&
+                    (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
+                      0
+                  ) {
+                    const depts =
+                      grievance.pendingSupportingDepartmentNames?.join(", ");
+                    const error = `Supporting department(s) (${depts}) have not yet submitted their departmental findings. All supporting findings must be submitted before the final resolution can be submitted.`;
+                    setErrorMsg(error);
+                    toast.error(error);
+                    setShowConfirmModal(false);
                     return;
                   }
-                  setErrorMsg(null);
-                  if (grievance.isSupportingStaff || !isResolving) {
-                    // Direct submission for supporting findings or department findings - avoids redundant double modal popup
-                    submitForm(false);
-                  } else {
-                    setShowConfirmModal(true);
-                  }
+                  setShowConfirmModal(false);
+                  await submitForm(false);
                 }}
-                disabled={isSubmitting || isSavingDraft || !isFormValid}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
-                  grievance.isSupportingStaff
-                    ? "bg-teal-700 hover:bg-teal-800"
-                    : !isResolving
-                      ? "bg-amber-600 hover:bg-amber-700"
-                      : "bg-[#0F766E] hover:bg-[#115E59]"
+                className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
+                  !isResolving
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-[#0F766E] hover:bg-[#115E59]"
                 }`}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Submitting...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Submitting...
                   </>
                 ) : (
                   <>
-                    <Send className="h-3.5 w-3.5" />
-                    <span>
-                      {grievance.isSupportingStaff
-                        ? "Submit Supporting Findings"
-                        : !isResolving
-                          ? "Submit Department Findings"
-                          : isReviewRequired
-                            ? "Submit for Review"
-                            : "Resolve Grievance"}
-                    </span>
+                    <Check className="h-4 w-4" />
+                    Yes, Confirm & Submit
                   </>
                 )}
               </button>
             </div>
-          );
-        })()}
-      </div>
-
-      {/* Confirmation Modal: Are you sure? */}
-      {showConfirmModal &&
-        (() => {
-          const isResolving =
-            !grievance.isSupportingStaff &&
-            (grievance.canSubmitFinalResolution ??
-              (grievance.isPrimaryOwner !== false ||
-                Boolean(grievance.isFinalSequentialDepartment)));
-          return (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in-50">
-              <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 text-left space-y-4 animate-in zoom-in-95 duration-150">
-                <div className="flex items-start gap-3.5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-200">
-                    <AlertCircle className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      {!isResolving
-                        ? "Confirm Findings Submission"
-                        : isReviewRequired
-                          ? "Confirm Review Submission"
-                          : "Confirm Grievance Resolution"}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      {!isResolving
-                        ? `Are you sure you want to submit your department's findings for ${grievance.grievanceNumber}? This will mark your participation as completed and activate the next department stage.`
-                        : isReviewRequired
-                          ? `Are you sure you want to submit this resolution for ${grievance.grievanceNumber}? Because this grievance is reopened, submitting will transition it to UNDER_REVIEW for Department Head approval.`
-                          : `Are you sure you want to resolve ${grievance.grievanceNumber}? This will finalize the investigation, mark the grievance as RESOLVED, and notify the employee.`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Option A: Warning when supporting departments have not submitted findings */}
-                {isResolving &&
-                  grievance.hasPendingSupportingDepartments &&
-                  (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
-                    0 && (
-                    <div className="rounded-xl border border-amber-300 bg-amber-50/90 p-3.5 space-y-2 text-xs text-amber-950">
-                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
-                        <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
-                        <span>Supporting Department Findings Pending</span>
-                      </div>
-                      <p className="text-[11px] leading-relaxed text-amber-900">
-                        The following supporting department(s) have not yet
-                        submitted their departmental findings:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {grievance.pendingSupportingDepartmentNames?.map(
-                          (deptName) => (
-                            <span
-                              key={deptName}
-                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-200/80 text-amber-950 border border-amber-300"
-                            >
-                              {deptName}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                      <p className="text-[11px] font-semibold text-amber-950 pt-1.5 border-t border-amber-200/80">
-                        Supporting department(s) did not submit their findings
-                        yet. Still, do you want to proceed and submit the final
-                        resolution?
-                      </p>
-                    </div>
-                  )}
-
-                {/* Quick summary recap */}
-                <div className="rounded-xl bg-slate-50 p-3.5 text-xs space-y-2 border border-slate-100">
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span className="font-medium text-slate-500">
-                      Grievance:
-                    </span>
-                    <span className="font-semibold text-slate-800">
-                      {grievance.grievanceNumber}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-slate-500 block mb-0.5">
-                      Action Taken:
-                    </span>
-                    <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
-                      {actionTaken}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-slate-500 block mb-0.5">
-                      Outcome Summary:
-                    </span>
-                    <p className="text-slate-800 line-clamp-2 italic font-normal bg-white p-2 rounded-lg border border-slate-200/60">
-                      {outcome}
-                    </p>
-                  </div>
-                  {existingAttachments.length + supportingFiles.length > 0 && (
-                    <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/50">
-                      <span className="font-medium text-slate-500">
-                        Supportive Files:
-                      </span>
-                      <span className="font-semibold text-slate-800">
-                        {existingAttachments.length + supportingFiles.length}{" "}
-                        file(s) attached
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => setShowConfirmModal(false)}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
-                  >
-                    {isResolving &&
-                    grievance.hasPendingSupportingDepartments &&
-                    (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
-                      0
-                      ? "Cancel & Wait for Findings"
-                      : "Review Again"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={async () => {
-                      setShowConfirmModal(false);
-                      await submitForm(false);
-                    }}
-                    className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
-                      !isResolving
-                        ? "bg-amber-600 hover:bg-amber-700"
-                        : "bg-[#0F766E] hover:bg-[#115E59]"
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4" />
-                        {isResolving &&
-                        grievance.hasPendingSupportingDepartments &&
-                        (grievance.pendingSupportingDepartmentNames?.length ??
-                          0) > 0
-                          ? "Proceed & Resolve Anyway"
-                          : "Yes, Confirm & Submit"}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

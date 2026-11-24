@@ -44,6 +44,7 @@ export interface StaffAttachmentItem {
   id: string;
   name: string;
   size: string;
+  fileSize?: number;
   type: string;
   path?: string;
   downloadUrl?: string;

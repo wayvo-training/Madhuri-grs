@@ -338,27 +338,35 @@ export async function POST(
     // 3. Notify Collaborating Departments (HODs and Staff)
     const priority = grievance.priority?.toUpperCase() || "NORMAL";
     const priorityTag = `[${priority} Priority]`;
+    const notifiedUserIds = new Set<string>();
+    if (staffId) {
+      notifiedUserIds.add(staffId.toString());
+    }
 
     // Find all other departments involved in this grievance
     const otherInvolvedDepts = allInvolvedDepts.filter(
       (d) => d.department_id !== myDeptRecord?.department_id,
     );
 
-    for (const otherDept of otherInvolvedDepts) {
-      // Notify other department's assigned staff if assigned
-      for (const a of otherDept.assignments || []) {
-        if (a.assignment_status === "ASSIGNED" && a.staff_id !== staffId) {
-          await NotificationService.send({
-            userId: a.staff_id,
-            grievanceId,
-            type: "HEAD_INTERNAL_NOTE",
-            title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
-            message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
-          });
-        }
-      }
+    const allSupportingDepts = allInvolvedDepts.filter(
+      (d) => d.involvement_type === "SUPPORTING",
+    );
+    const hasMultipleSupportingDepts = allSupportingDepts.length > 1;
 
-      // Notify other department's HOD(s)
+    const pendingSupportingDepts = allInvolvedDepts.filter(
+      (d) =>
+        d.department_id !== myDeptRecord?.department_id &&
+        d.involvement_type === "SUPPORTING" &&
+        d.status !== "COMPLETED" &&
+        d.status !== "RESOLVED" &&
+        d.status !== "REMOVED",
+    );
+    const isAllSupportingDeptsCompleted = pendingSupportingDepts.length === 0;
+
+    for (const otherDept of otherInvolvedDepts) {
+      const isLeadDept = otherDept.involvement_type === "PRIMARY";
+
+      // 1. Notify other department's HOD(s) first
       const otherHods = await prisma.users.findMany({
         where: {
           department_id: otherDept.department_id,
@@ -368,36 +376,50 @@ export async function POST(
         select: { user_id: true },
       });
 
-      const pendingDepts = allInvolvedDepts.filter(
-        (d) =>
-          d.department_id !== myDeptRecord?.department_id &&
-          d.status !== "COMPLETED" &&
-          d.status !== "RESOLVED" &&
-          d.status !== "REMOVED",
-      );
-      const isAllDeptsCompleted = pendingDepts.length === 0;
-
       for (const hod of otherHods) {
-        if (hod.user_id !== staffId) {
-          const isLeadHod = otherDept.involvement_type === "PRIMARY";
+        const hodIdStr = hod.user_id.toString();
+        if (!notifiedUserIds.has(hodIdStr)) {
+          notifiedUserIds.add(hodIdStr);
           await NotificationService.send({
             userId: hod.user_id,
             grievanceId,
             type: "HEAD_INTERNAL_NOTE",
             title:
-              isAllDeptsCompleted && isLeadHod
-                ? `[${priority}] All Department Inquiries Complete: (${grievance.grievance_number})`
+              isAllSupportingDeptsCompleted && isLeadDept
+                ? hasMultipleSupportingDepts
+                  ? `[${priority}] All Supporting Findings Submitted (${grievance.grievance_number})`
+                  : `[${priority}] Supporting Findings Submitted: ${deptName} (${grievance.grievance_number})`
                 : `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
             message:
-              isAllDeptsCompleted && isLeadHod
-                ? `${priorityTag} All collaborating departments have completed their inquiries for case ${grievance.grievance_number}. Please review findings and submit the final employee resolution.`
-                : `${priorityTag} ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}.`,
+              isAllSupportingDeptsCompleted && isLeadDept
+                ? hasMultipleSupportingDepts
+                  ? `${priorityTag} All supporting departments have completed their investigations and submitted findings for case ${grievance.grievance_number}. You may now review all findings and submit the final resolution.`
+                  : `${priorityTag} Supporting department ${deptName} has completed their investigation and submitted findings for case ${grievance.grievance_number}. You may now review their findings and submit the final resolution.`
+                : `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
+          });
+        }
+      }
+
+      // 2. Notify other department's assigned staff if assigned (and not already notified)
+      for (const a of otherDept.assignments || []) {
+        const staffIdStr = a.staff_id.toString();
+        if (
+          a.assignment_status === "ASSIGNED" &&
+          !notifiedUserIds.has(staffIdStr)
+        ) {
+          notifiedUserIds.add(staffIdStr);
+          await NotificationService.send({
+            userId: a.staff_id,
+            grievanceId,
+            type: "HEAD_INTERNAL_NOTE",
+            title: `[${priority}] Department Findings Submitted: ${deptName} (${grievance.grievance_number})`,
+            message: `${priorityTag} ${authorName} (${deptName}) has submitted departmental findings for case ${grievance.grievance_number}. Review in the Department Findings tab.`,
           });
         }
       }
     }
 
-    // Also notify submitter's own HOD (if not the submitter)
+    // 3. Also notify submitter's own HOD (if not already notified)
     if (myDeptRecord?.department_id) {
       const ownHods = await prisma.users.findMany({
         where: {
@@ -409,7 +431,9 @@ export async function POST(
       });
 
       for (const hod of ownHods) {
-        if (hod.user_id !== staffId) {
+        const hodIdStr = hod.user_id.toString();
+        if (!notifiedUserIds.has(hodIdStr)) {
+          notifiedUserIds.add(hodIdStr);
           await NotificationService.send({
             userId: hod.user_id,
             grievanceId,

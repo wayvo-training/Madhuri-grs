@@ -451,7 +451,7 @@ export async function POST(request: Request) {
             file_name: file.name,
             file_path: uploadResult.path,
             file_type: file.type,
-            file_size: BigInt(file.size),
+            file_size: BigInt(Math.round(Number(file.size || 1024))),
             uploaded_by: user.user_id,
           },
         });

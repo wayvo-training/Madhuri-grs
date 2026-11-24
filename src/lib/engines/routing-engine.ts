@@ -925,9 +925,8 @@ export function canDepartmentSubmitFinalResolution(
   );
 
   // In parallel workflow:
-  // Primary/Equal lead has overall authority to finalize the resolution.
-  // If supporting departments haven't finished, Primary can still resolve early,
-  // but we flag hasPendingSupporting so the UI prompts for user confirmation.
+  // Primary/Equal lead has overall authority to finalize the resolution once all supporting
+  // departments have completed and submitted their departmental findings.
   if (isPrimaryOrEqual && !hasSequential) {
     const pendingNames = pendingSupporting.map(
       (d) =>
@@ -935,16 +934,19 @@ export function canDepartmentSubmitFinalResolution(
           ?.department_name || `Department ${d.department_id.toString()}`,
     );
 
+    const hasPending = pendingSupporting.length > 0;
+
     return {
-      canResolve: !isCurrentDeptCompleted && !isCurrentDeptBlocked,
+      canResolve:
+        !isCurrentDeptCompleted && !isCurrentDeptBlocked && !hasPending,
       canSubmitFindings: false,
       isFinalSequentialDept: true,
-      hasPendingSupporting: pendingSupporting.length > 0,
+      hasPendingSupporting: hasPending,
       pendingSupportingDeptNames: pendingNames,
       reason: isCurrentDeptCompleted
         ? "Department investigation stage has already completed."
-        : pendingSupporting.length > 0
-          ? `Supporting department(s) (${pendingNames.join(", ")}) have not submitted findings yet.`
+        : hasPending
+          ? `Supporting department(s) (${pendingNames.join(", ")}) must submit their findings before the final resolution can be submitted.`
           : undefined,
     };
   }

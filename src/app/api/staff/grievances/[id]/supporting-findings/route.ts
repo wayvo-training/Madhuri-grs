@@ -197,6 +197,11 @@ export async function POST(
       },
     });
 
+    const notifiedUserIds = new Set<string>();
+    if (staffId) {
+      notifiedUserIds.add(staffId.toString());
+    }
+
     // 3. Notify the Primary Investigator of this department
     const primaryAssignment = await prisma.assignments.findFirst({
       where: {
@@ -206,7 +211,11 @@ export async function POST(
       },
     });
 
-    if (primaryAssignment && primaryAssignment.staff_id !== staffId) {
+    if (
+      primaryAssignment &&
+      !notifiedUserIds.has(primaryAssignment.staff_id.toString())
+    ) {
+      notifiedUserIds.add(primaryAssignment.staff_id.toString());
       await NotificationService.send({
         userId: primaryAssignment.staff_id,
         grievanceId,
@@ -229,7 +238,9 @@ export async function POST(
       });
 
       for (const dh of deptHeads) {
-        if (dh.user_id !== staffId) {
+        const dhIdStr = dh.user_id.toString();
+        if (!notifiedUserIds.has(dhIdStr)) {
+          notifiedUserIds.add(dhIdStr);
           await NotificationService.send({
             userId: dh.user_id,
             grievanceId,

@@ -186,22 +186,14 @@ export async function POST(
         departmentId,
         allInvolvedDepts,
       );
-      // If Primary/Equal lead has intervention authority or case is escalated to manual head review,
-      // the Head has executive authority to finalize and resolve the case even if supporting dept was lagging!
-      const canBypassPendingSupporting =
-        isPrimaryOrEqual && (hasInterventionAuthority || requiresHeadReview);
 
-      if (
-        !authResult.canResolve &&
-        !canBypassPendingSupporting &&
-        !isSupportingContributor
-      ) {
+      if (!authResult.canResolve && !isSupportingContributor) {
         return NextResponse.json(
           {
             success: false,
             message:
               authResult.reason ||
-              "Forbidden: As a supportive department, only Primary Lead, Equal Co-Lead, or the Final Sequential Department Heads can approve or submit the final resolution.",
+              "Forbidden: In multi-department cases, all supporting departments must submit their findings before the final resolution can be submitted.",
           },
           { status: 403 },
         );
@@ -336,6 +328,21 @@ export async function POST(
               const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
               const relativeStoragePath = norm.valid ? norm.storagePath : raw;
 
+              let calculatedSize: bigint | null = null;
+              if (att.fileSize !== undefined && att.fileSize !== null) {
+                const num = Number(att.fileSize);
+                calculatedSize = !Number.isNaN(num)
+                  ? BigInt(Math.round(num))
+                  : BigInt(1024);
+              } else if (typeof att.size === "string") {
+                const parsed = Number.parseFloat(att.size);
+                calculatedSize = !Number.isNaN(parsed)
+                  ? BigInt(Math.round(parsed * 1024))
+                  : BigInt(1024);
+              } else if (typeof att.size === "number") {
+                calculatedSize = BigInt(Math.round(att.size));
+              }
+
               await tx.attachments.create({
                 data: {
                   grievance_id: grievanceId,
@@ -344,7 +351,7 @@ export async function POST(
                   file_path: relativeStoragePath,
                   file_type:
                     att.fileType || att.type || "application/octet-stream",
-                  file_size: att.fileSize ? BigInt(att.fileSize) : null,
+                  file_size: calculatedSize,
                   uploaded_by: user.user_id,
                 },
               });
@@ -458,22 +465,6 @@ export async function POST(
             completed_at: new Date(),
           },
         });
-
-        // When Primary Head resolves case, complete any lingering supporting department stages
-        // so the grievance moves cleanly to Employee Review
-        if (isPrimaryOrEqual) {
-          await tx.grievance_departments.updateMany({
-            where: {
-              grievance_id: grievanceId,
-              involvement_type: "SUPPORTING",
-              status: { notIn: ["COMPLETED", "RESOLVED", "REMOVED"] },
-            },
-            data: {
-              status: "COMPLETED",
-              completed_at: new Date(),
-            },
-          });
-        }
 
         await activateNextSequentialDepartments(grievanceId, tx);
       } else if (latestResolution) {
