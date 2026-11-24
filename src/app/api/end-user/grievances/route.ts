@@ -13,6 +13,7 @@ import {
   populateGrievanceDepartments,
 } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
+import { checkAndNotifyRecurringPatterns } from "@/lib/reports/pattern-detection";
 import { uploadToSupabase } from "@/lib/supabase";
 
 export async function POST(request: Request) {
@@ -504,6 +505,15 @@ export async function POST(request: Request) {
           }
         }
       }
+    }
+
+    // Check and notify if recurring pattern threshold is met
+    if (newGrievance.category_id) {
+      checkAndNotifyRecurringPatterns({
+        categoryId: newGrievance.category_id,
+      }).catch((patternErr) => {
+        console.warn("Recurring pattern notification error:", patternErr);
+      });
     }
 
     return NextResponse.json(

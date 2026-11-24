@@ -8,6 +8,7 @@ import {
   processPreExpiryReminders,
   withSlaAdvisoryLock,
 } from "@/lib/engines/sla-engine";
+import { checkAndNotifyRecurringPatterns } from "@/lib/reports/pattern-detection";
 
 export async function POST(request: Request) {
   try {
@@ -65,7 +66,13 @@ export async function POST(request: Request) {
       const reminderSummary = await processPreExpiryReminders();
       const autoClosureSummary = await processAutoClosures(7);
       const batchResult = await evaluateAllActiveGrievancesSla(deptId, true);
-      return { reminderSummary, autoClosureSummary, batchResult };
+      const patternSummary = await checkAndNotifyRecurringPatterns();
+      return {
+        reminderSummary,
+        autoClosureSummary,
+        batchResult,
+        patternSummary,
+      };
     });
 
     if (!lockResult.acquired) {

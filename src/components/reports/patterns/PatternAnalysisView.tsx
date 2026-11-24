@@ -15,7 +15,6 @@ import type {
 } from "@/types/reports";
 import { AssociatedGrievancesModal } from "./AssociatedGrievancesModal";
 import { CategoryPatternsCard } from "./CategoryPatternsCard";
-import { DuplicateClustersCard } from "./DuplicateClustersCard";
 import { PatternFilterBar } from "./PatternFilterBar";
 import { PatternMetadataHeader } from "./PatternMetadataHeader";
 import { PatternSummaryCards } from "./PatternSummaryCards";
@@ -219,12 +218,6 @@ export function PatternAnalysisView({
           <CategoryPatternsCard
             categoryPatterns={data.categoryPatterns}
             onSelectPattern={(pattern) => setSelectedPattern(pattern)}
-          />
-
-          {/* Duplicate Clusters & Limitations Card */}
-          <DuplicateClustersCard
-            duplicateClusters={data.duplicateClusters}
-            dataLimitationNotice={data.dataLimitationNotice}
           />
 
           {/* Drilldown Modal */}

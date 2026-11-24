@@ -36,6 +36,7 @@ export type NotificationType =
   | "INFO_REQUEST_REMINDER"
   | "SUPPORTING_DEPT_REMINDER"
   | "INVESTIGATION_REMINDER"
+  | "RECURRING_PATTERN_DETECTED"
   // Legacy support
   | "SLA_WARNING"
   | "SLA_BREACH"

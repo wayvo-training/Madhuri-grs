@@ -595,3 +595,201 @@ export async function getPatternFilterOptions(user: AuthUser): Promise<{
     priorities,
   };
 }
+
+/**
+ * Detects recurring patterns across the 30-day window and dispatches
+ * notifications to Admins and the respective Department Head(s) when
+ * a category threshold (>= 8 grievances) is met.
+ */
+export async function checkAndNotifyRecurringPatterns(options?: {
+  categoryId?: bigint | null;
+  departmentId?: bigint | null;
+}): Promise<{
+  notifiedCount: number;
+  patternsDetected: number;
+}> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  // 1. Fetch grievances from the last 30 days
+  const where: Prisma.grievancesWhereInput = {
+    created_at: { gte: thirtyDaysAgo },
+  };
+
+  if (options?.categoryId) {
+    where.category_id = options.categoryId;
+  }
+
+  const grievances = await prisma.grievances.findMany({
+    where,
+    select: {
+      grievance_id: true,
+      category_id: true,
+      categories: {
+        select: {
+          category_id: true,
+          category_name: true,
+        },
+      },
+      grievance_departments: {
+        select: {
+          department_id: true,
+          involvement_type: true,
+          departments: {
+            select: {
+              department_id: true,
+              department_name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // 2. Group by department_id and category_id
+  const patternGroups = new Map<
+    string,
+    {
+      deptId: bigint;
+      deptName: string;
+      categoryId: bigint;
+      categoryName: string;
+      count: number;
+    }
+  >();
+
+  for (const g of grievances) {
+    if (!g.category_id) continue;
+    const catId = g.category_id;
+    const catName = g.categories?.category_name || "General";
+
+    // Find primary department
+    const primaryDept =
+      g.grievance_departments.find(
+        (gd) => (gd.involvement_type || "").toUpperCase() === "PRIMARY",
+      ) || g.grievance_departments[0];
+    const deptId = primaryDept?.department_id;
+    if (!deptId) continue;
+    if (options?.departmentId && deptId !== options.departmentId) continue;
+
+    const deptName =
+      primaryDept?.departments?.department_name || `Dept #${deptId}`;
+    const key = `${deptId}_${catId}`;
+
+    const existing = patternGroups.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      patternGroups.set(key, {
+        deptId: BigInt(deptId),
+        deptName,
+        categoryId: BigInt(catId),
+        categoryName: catName,
+        count: 1,
+      });
+    }
+  }
+
+  // 3. Find groups that exceed CATEGORY_PATTERN_THRESHOLD (>= 8)
+  const qualifyingPatterns = Array.from(patternGroups.values()).filter(
+    (p) => p.count > CATEGORY_PATTERN_THRESHOLD,
+  );
+
+  if (qualifyingPatterns.length === 0) {
+    return { notifiedCount: 0, patternsDetected: 0 };
+  }
+
+  // 4. Fetch all active Admins
+  const admins = await prisma.users.findMany({
+    where: {
+      roles: { role_name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+      status: "ACTIVE",
+    },
+    select: { user_id: true, first_name: true, last_name: true, email: true },
+  });
+
+  let totalNotified = 0;
+
+  for (const pattern of qualifyingPatterns) {
+    const notifType = `RECURRING_PATTERN_${pattern.deptId}_${pattern.categoryId}`;
+
+    // 5. Check if notification was already sent in the 30-day window
+    const alreadySent = await prisma.notifications.findFirst({
+      where: {
+        notification_type: notifType,
+        created_at: { gte: thirtyDaysAgo },
+      },
+    });
+
+    if (alreadySent) {
+      continue; // Skip: already notified for this 30-day pattern cycle
+    }
+
+    // 6. Fetch respective Department Head(s)
+    const deptHeads = await prisma.users.findMany({
+      where: {
+        department_id: pattern.deptId,
+        roles: { role_name: "DEPARTMENT_HEAD" },
+        status: "ACTIVE",
+      },
+      select: { user_id: true, first_name: true, last_name: true, email: true },
+    });
+
+    // 7. Combine recipients (Admins + Respective Department Head)
+    const recipientMap = new Map<string, { user_id: bigint; name: string }>();
+    for (const a of admins) {
+      recipientMap.set(a.user_id.toString(), {
+        user_id: a.user_id,
+        name: `${a.first_name} ${a.last_name || ""}`.trim(),
+      });
+    }
+    for (const h of deptHeads) {
+      recipientMap.set(h.user_id.toString(), {
+        user_id: h.user_id,
+        name: `${h.first_name} ${h.last_name || ""}`.trim(),
+      });
+    }
+
+    const recipients = Array.from(recipientMap.values());
+    if (recipients.length === 0) continue;
+
+    // 8. Create notifications and audit log
+    await prisma.$transaction(async (tx) => {
+      for (const r of recipients) {
+        await tx.notifications.create({
+          data: {
+            user_id: r.user_id,
+            notification_type: notifType,
+            channel: "IN_APP",
+            title: `⚠ Recurring Pattern Detected: ${pattern.categoryName} (${pattern.deptName})`,
+            message: `High-frequency issue pattern detected: ${pattern.count} grievances have been submitted under "${pattern.categoryName}" in ${pattern.deptName} over the past 30 days.\n\nPlease review departmental procedures and consider standardizing resolution guidelines to address potential root causes.`,
+            status: "PENDING",
+            created_at: new Date(),
+          },
+        });
+      }
+
+      await tx.audit_logs.create({
+        data: {
+          user_id: null,
+          action: "RECURRING_PATTERN_DETECTED",
+          entity_type: "CATEGORY",
+          entity_id: pattern.categoryId,
+          new_value: {
+            categoryName: pattern.categoryName,
+            departmentName: pattern.deptName,
+            grievanceCount: pattern.count,
+            threshold: CATEGORY_PATTERN_THRESHOLD,
+            notifiedRecipients: recipients.map((r) => r.name).join(", "),
+          },
+        },
+      });
+    });
+
+    totalNotified += recipients.length;
+  }
+
+  return {
+    notifiedCount: totalNotified,
+    patternsDetected: qualifyingPatterns.length,
+  };
+}
