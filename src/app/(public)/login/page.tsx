@@ -225,7 +225,7 @@ export default function LoginPage() {
                       required
                       disabled={loading}
                       placeholder="Enter your password"
-                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60"
+                      className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-[#0F766E] focus:bg-white focus:ring-2 focus:ring-teal-600/20 disabled:opacity-60 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                     />
                     <button
                       type="button"

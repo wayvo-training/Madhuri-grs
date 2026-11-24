@@ -273,7 +273,7 @@ function ResetPasswordFlow() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={resetLoading || Boolean(resetSuccess)}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                 />
                 <button
                   type="button"
@@ -340,7 +340,7 @@ function ResetPasswordFlow() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   disabled={resetLoading || Boolean(resetSuccess)}
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60"
+                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-11 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-600/20 disabled:opacity-60 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                 />
                 <button
                   type="button"

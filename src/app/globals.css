@@ -176,6 +176,12 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Disable native browser password reveal and clear buttons to prevent duplicate eye icons */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
+
   html {
     font-family:
       var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
