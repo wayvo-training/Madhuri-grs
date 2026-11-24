@@ -1,6 +1,10 @@
 import { AlertTriangle, Building2, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
-import { StatusBadge } from "@/components/dashboard/badges";
+import {
+  PriorityBadge,
+  SlaBadge,
+  StatusBadge,
+} from "@/components/dashboard/badges";
 import { ActionMenu } from "@/components/ui/action-menu";
 import {
   DropdownMenu,
@@ -439,8 +443,8 @@ export function GrievanceTableList({
                         </TableCell>
 
                         {/* Priority */}
-                        <TableCell className="w-[100px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 text-[13px] font-medium text-slate-700 align-middle">
-                          {g.priority}
+                        <TableCell className="w-[100px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
+                          <PriorityBadge priority={g.priority} />
                         </TableCell>
 
                         {/* Status */}
@@ -449,14 +453,8 @@ export function GrievanceTableList({
                         </TableCell>
 
                         {/* SLA Health */}
-                        <TableCell className="w-[140px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 text-[13px] font-medium text-slate-800 dark:text-slate-200 align-middle">
-                          {g.sla_status === "BREACHED"
-                            ? "Breached"
-                            : g.sla_status === "AT_RISK"
-                              ? "At Risk"
-                              : g.sla_status === "ON_TRACK"
-                                ? "On Track"
-                                : g.sla_status || "—"}
+                        <TableCell className="w-[140px] overflow-hidden text-ellipsis whitespace-nowrap px-3 py-3 align-middle">
+                          <SlaBadge status={g.sla_status} />
                         </TableCell>
 
                         {/* Actions */}

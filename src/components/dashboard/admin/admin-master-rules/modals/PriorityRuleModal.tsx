@@ -140,16 +140,28 @@ export function PriorityRuleModal({
                     value="CRITICAL"
                     className="text-xs cursor-pointer"
                   >
-                    Critical
+                    <span className="inline-flex items-center gap-1.5 font-bold text-rose-700 dark:text-rose-400">
+                      <span className="h-2 w-2 rounded-full bg-rose-600" />
+                      Critical
+                    </span>
                   </SelectItem>
                   <SelectItem value="HIGH" className="text-xs cursor-pointer">
-                    High
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-400">
+                      <span className="h-2 w-2 rounded-full bg-amber-600" />
+                      High
+                    </span>
                   </SelectItem>
                   <SelectItem value="MEDIUM" className="text-xs cursor-pointer">
-                    Medium
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-blue-700 dark:text-blue-400">
+                      <span className="h-2 w-2 rounded-full bg-blue-600" />
+                      Medium
+                    </span>
                   </SelectItem>
                   <SelectItem value="LOW" className="text-xs cursor-pointer">
-                    Low
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                      <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                      Low
+                    </span>
                   </SelectItem>
                 </SelectContent>
               </Select>
