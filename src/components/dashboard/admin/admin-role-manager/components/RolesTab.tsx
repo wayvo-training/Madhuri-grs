@@ -107,9 +107,9 @@ export function RolesTab({
   };
 
   return (
-    <div className="p-5 sm:p-6">
+    <div className="p-4 sm:p-5 flex-1 min-h-0 flex flex-col overflow-hidden">
       {/* Controls Bar */}
-      <div className="mb-5">
+      <div className="mb-3 shrink-0">
         <AdvancedTableSearch
           fields={filterFields}
           onSearch={handleSearchChange}
@@ -125,11 +125,11 @@ export function RolesTab({
           description="Try adjusting your search query or status filter."
         />
       ) : (
-        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs">
-          <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[850px]">
+        <div className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs flex-1 min-h-0 flex flex-col justify-between">
+          <div className="overflow-x-auto flex-1 min-h-0 flex flex-col custom-scrollbar">
+            <div className="min-w-[850px] flex-1 min-h-0 flex flex-col">
               {/* Header Table (Static, no scrollbar) */}
-              <table className="w-full text-left text-sm table-fixed border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+              <table className="w-full text-left text-sm table-fixed border-b border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50 shrink-0">
                 <colgroup>
                   <col className="w-[24%]" />
                   <col className="w-[32%]" />
@@ -170,7 +170,7 @@ export function RolesTab({
               </table>
 
               {/* Scrollable Rows Container (Vertical scroll starts directly below header) */}
-              <div className="max-h-[420px] overflow-y-auto overflow-x-hidden custom-scrollbar">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
                 <table className="w-full text-left text-sm table-fixed">
                   <colgroup>
                     <col className="w-[24%]" />

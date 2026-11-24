@@ -47,29 +47,29 @@ function MetricCard({
   } as const;
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-4 flex flex-col justify-between h-[115px] sm:h-[120px] shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer">
+    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white p-2.5 sm:p-3 flex flex-col justify-between h-[88px] sm:h-[94px] shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 truncate">
           {title}
         </span>
         <div
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${styles[accent].chip}`}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${styles[accent].chip}`}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="h-3 w-3" />
         </div>
       </div>
-      <div className="mt-1 flex items-baseline gap-2">
+      <div className="mt-0.5 flex items-baseline gap-2">
         <span
-          className={`text-xl font-bold tracking-tight leading-none ${styles[accent].value}`}
+          className={`text-lg font-bold font-mono tracking-tight leading-none ${styles[accent].value}`}
         >
           {value}
         </span>
-        <span className="text-[11px] font-medium text-slate-400 truncate">
+        <span className="text-[10.5px] font-medium text-slate-400 truncate">
           {helper}
         </span>
       </div>
       <div
-        className={`mt-auto pt-1 flex items-center gap-1.5 text-[11px] font-normal ${styles[accent].accent}`}
+        className={`mt-auto pt-0.5 flex items-center gap-1.5 text-[10px] font-normal ${styles[accent].accent}`}
       >
         <span
           className={`inline-block h-1 w-1 rounded-full ${styles[accent].dot}`}
@@ -88,7 +88,7 @@ function MetricCard({
 
 export function AuditMetricCards({ totalCount, stats }: AuditMetricCardsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 shrink-0">
       <MetricCard
         title="Total Audited Events"
         value={stats?.total ?? totalCount}

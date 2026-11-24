@@ -64,7 +64,7 @@ export function AuditLogTable({
   );
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
       {/* Static Header Table: no scrollbar next to header */}
       <table className="w-full text-left text-xs table-fixed border-collapse shrink-0 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800">
         {colGroup}
@@ -116,7 +116,7 @@ export function AuditLogTable({
       </table>
 
       {/* Scrollable Rows Container (Vertical scroll within rows only) */}
-      <div className="max-h-[360px] sm:max-h-[calc(100vh-450px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
         <table className="w-full text-left text-xs table-fixed border-collapse">
           {colGroup}
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">

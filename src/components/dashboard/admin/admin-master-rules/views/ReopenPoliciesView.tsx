@@ -335,10 +335,10 @@ export function ReopenPoliciesView({
 
   return (
     <TooltipProvider delay={150}>
-      <div className="flex flex-col gap-4">
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[1300px]">
+      <div className="flex-1 min-h-0 flex flex-col h-full">
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+          <div className="overflow-x-auto flex-1 min-h-0 flex flex-col custom-scrollbar">
+            <div className="min-w-[1300px] flex-1 min-h-0 flex flex-col">
               {(() => {
                 const colGroup = (
                   <colgroup>
@@ -435,7 +435,7 @@ export function ReopenPoliciesView({
                     </table>
 
                     {/* Scrollable Rows Container */}
-                    <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
                       <table className="w-full text-left text-[13px] table-fixed border-collapse">
                         {colGroup}
                         <TableBody className="font-normal text-slate-700">

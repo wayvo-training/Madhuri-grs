@@ -34,19 +34,19 @@ export function AdminAuditTrail({
   } = useAdminAudit(initialLogs, initialTotalCount);
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full overflow-hidden">
       <AuditMetricCards totalCount={totalCount} stats={stats} />
 
       <div
         id="audit-logs"
-        className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
+        className="flex-1 min-h-0 flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden"
       >
         {/* Header */}
-        <div className="pt-5 sm:pt-6 px-5 sm:px-6">
+        <div className="pt-3 sm:pt-3.5 px-4 sm:px-5 shrink-0">
           <AdminPanelHeader title="Observability & Audit Trail" />
 
           {/* Top-Level Tabs */}
-          <div className="flex items-center gap-6 mt-2 border-b border-slate-100 overflow-x-auto no-scrollbar pb-1">
+          <div className="flex items-center gap-6 mt-1 border-b border-slate-100 overflow-x-auto no-scrollbar pb-1">
             {CATEGORY_TABS.map((tab) => {
               const Icon = tab.icon;
               return (

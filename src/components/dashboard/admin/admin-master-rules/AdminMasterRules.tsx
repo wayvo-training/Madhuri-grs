@@ -166,10 +166,10 @@ export function AdminMasterRules({
   return (
     <div
       id="master-configuration"
-      className="rounded-2xl border border-slate-200/80 bg-white shadow-xs"
+      className="flex-1 h-full min-h-0 flex flex-col rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden"
     >
       {/* Header */}
-      <div className="pt-5 sm:pt-6 px-5 sm:px-6">
+      <div className="pt-3.5 sm:pt-4 px-4 sm:px-5 shrink-0">
         <AdminPanelHeader
           title="Master Governance & Rules"
           action={
@@ -182,7 +182,7 @@ export function AdminMasterRules({
                     setModalRuleType("routing");
                     setRuleModalOpen(true);
                   }}
-                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                  className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition-colors"
                 >
                   + Create Routing Rule
                 </button>
@@ -195,7 +195,7 @@ export function AdminMasterRules({
                     setModalRuleType("priority");
                     setRuleModalOpen(true);
                   }}
-                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                  className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition-colors"
                 >
                   + Create Priority Rule
                 </button>
@@ -208,7 +208,7 @@ export function AdminMasterRules({
                     setModalRuleType("sla");
                     setRuleModalOpen(true);
                   }}
-                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                  className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition-colors"
                 >
                   + Configure SLA Policy
                 </button>
@@ -221,7 +221,7 @@ export function AdminMasterRules({
                     setModalRuleType("reopen");
                     setRuleModalOpen(true);
                   }}
-                  className="rounded-lg bg-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#115E59] transition-colors"
+                  className="rounded-lg bg-[#0F766E] px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition-colors"
                 >
                   + Configure Lifecycle Policy
                 </button>
@@ -232,7 +232,7 @@ export function AdminMasterRules({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 px-5 sm:px-6 mt-2 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 px-4 sm:px-5 mt-1 overflow-x-auto no-scrollbar shrink-0">
         {[
           { id: "routing", label: "Routing Rules", count: routingRules.length },
           {
@@ -275,7 +275,7 @@ export function AdminMasterRules({
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 px-5 py-3 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60 px-4 py-2 sm:px-5 shrink-0">
         <div className="flex-1 w-full lg:w-3/5">
           <AdvancedTableSearch
             fields={(() => {
@@ -446,7 +446,7 @@ export function AdminMasterRules({
       </div>
 
       {/* Main Tab Content */}
-      <div className="p-5 sm:p-6">
+      <div className="p-3.5 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
         {activeTab === "priority" && (
           <PriorityRulesView
             rules={priorityRules}

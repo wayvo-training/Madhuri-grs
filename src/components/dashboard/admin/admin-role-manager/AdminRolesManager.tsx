@@ -87,7 +87,7 @@ export function AdminRolesManager({
   return (
     <div
       id="roles-permissions"
-      className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs"
+      className="flex-1 h-full min-h-0 flex flex-col rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden"
     >
       <RoleManagerHeader
         activeTab={activeTab}
@@ -99,50 +99,54 @@ export function AdminRolesManager({
       />
 
       {activeTab === "roles" && (
-        <RolesTab
-          roles={roles}
-          paginatedRoles={paginatedRoles}
-          filteredRolesCount={filteredRoles.length}
-          activeRolesCount={activeRolesCount}
-          inactiveRolesCount={inactiveRolesCount}
-          roleSearch={roleSearch}
-          onRoleSearchChange={setRoleSearch}
-          onConditionsChange={handleRoleConditionsChange}
-          roleStatusFilter={roleStatusFilter}
-          onRoleStatusChange={setRoleStatusFilter}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setPageSize}
-          togglingRoleId={togglingRoleId}
-          onEditRole={openEditRoleModal}
-          onToggleRoleStatus={handleToggleRoleStatus}
-          onTabChange={setActiveTab}
-        />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <RolesTab
+            roles={roles}
+            paginatedRoles={paginatedRoles}
+            filteredRolesCount={filteredRoles.length}
+            activeRolesCount={activeRolesCount}
+            inactiveRolesCount={inactiveRolesCount}
+            roleSearch={roleSearch}
+            onRoleSearchChange={setRoleSearch}
+            onConditionsChange={handleRoleConditionsChange}
+            roleStatusFilter={roleStatusFilter}
+            onRoleStatusChange={setRoleStatusFilter}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            togglingRoleId={togglingRoleId}
+            onEditRole={openEditRoleModal}
+            onToggleRoleStatus={handleToggleRoleStatus}
+            onTabChange={setActiveTab}
+          />
+        </div>
       )}
 
       {activeTab === "permissions" && (
-        <PermissionsTab
-          permissionsList={permissionsList}
-          filteredPermissions={filteredPermissions}
-          paginatedPermissions={paginatedPermissions}
-          activePermsCount={activePermsCount}
-          inactivePermsCount={inactivePermsCount}
-          permSearch={permSearch}
-          onPermSearchChange={setPermSearch}
-          onConditionsChange={handlePermConditionsChange}
-          permStatusFilter={permStatusFilter}
-          onPermStatusChange={setPermStatusFilter}
-          togglingPermId={togglingPermId}
-          onTogglePermStatus={handleTogglePermStatus}
-          currentPage={permCurrentPage}
-          totalPages={permTotalPages}
-          pageSize={permPageSize}
-          onPageChange={setPermCurrentPage}
-          onPageSizeChange={setPermPageSize}
-          onTabChange={setActiveTab}
-        />
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <PermissionsTab
+            permissionsList={permissionsList}
+            filteredPermissions={filteredPermissions}
+            paginatedPermissions={paginatedPermissions}
+            activePermsCount={activePermsCount}
+            inactivePermsCount={inactivePermsCount}
+            permSearch={permSearch}
+            onPermSearchChange={setPermSearch}
+            onConditionsChange={handlePermConditionsChange}
+            permStatusFilter={permStatusFilter}
+            onPermStatusChange={setPermStatusFilter}
+            togglingPermId={togglingPermId}
+            onTogglePermStatus={handleTogglePermStatus}
+            currentPage={permCurrentPage}
+            totalPages={permTotalPages}
+            pageSize={permPageSize}
+            onPageChange={setPermCurrentPage}
+            onPageSizeChange={setPermPageSize}
+            onTabChange={setActiveTab}
+          />
+        </div>
       )}
 
       <RoleManagerModals

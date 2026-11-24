@@ -377,11 +377,11 @@ export function RoutingRulesView({
 
   return (
     <TooltipProvider delay={200}>
-      <div className="flex flex-col gap-3.5">
+      <div className="flex-1 min-h-0 flex flex-col h-full">
         {/* Table Container */}
-        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex flex-col overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
-            <div className="min-w-[1650px]">
+        <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-xs flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+          <div className="overflow-x-auto flex-1 min-h-0 flex flex-col custom-scrollbar">
+            <div className="min-w-[1650px] flex-1 min-h-0 flex flex-col">
               {/* Common Column Definitions */}
               {(() => {
                 const colGroup = (
@@ -486,7 +486,7 @@ export function RoutingRulesView({
                     </table>
 
                     {/* Scrollable Rows Container (Vertical scroll within rows only) */}
-                    <div className="max-h-[calc(100vh-340px)] overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
                       <table className="w-full text-left text-[13px] table-fixed border-collapse">
                         {colGroup}
                         <TableBody className="font-normal text-slate-700 dark:text-slate-200">
@@ -761,7 +761,7 @@ export function RoutingRulesView({
 
           {/* Pagination */}
           {rules.length > 0 && (
-            <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
