@@ -2,6 +2,7 @@
 
 import { ShieldAlert } from "lucide-react";
 import React, { useMemo, useState } from "react";
+import { StatusBadge } from "@/components/dashboard/badges";
 import {
   AdvancedTableSearch,
   type FilterMode,
@@ -196,12 +197,7 @@ export function EscalationReportCard({
                         {esc.reason}
                       </TableCell>
                       <TableCell className="py-2.5 px-3">
-                        <Badge
-                          variant="outline"
-                          className="text-[11px] border-slate-200 dark:border-slate-700 font-normal"
-                        >
-                          {esc.status}
-                        </Badge>
+                        <StatusBadge status={esc.status} />
                       </TableCell>
                       <TableCell className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 font-mono text-[11px] tabular-nums">
                         {dateFormatted}

@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { StatusBadge } from "@/components/dashboard/badges";
 import {
   type DocumentPreviewData,
   DocumentViewerModal,
@@ -104,19 +105,7 @@ export function GrievanceCommunicationWorkspace({
                 </>
               )}
               <span>•</span>
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  isClosed
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : data.status === "RESOLVED"
-                      ? "bg-teal-50 text-teal-700 border-teal-200"
-                      : data.status === "WAITING_ON_USER"
-                        ? "bg-amber-50 text-amber-800 border-amber-200"
-                        : "bg-blue-50 text-blue-700 border-blue-200"
-                }`}
-              >
-                Status: {data.status}
-              </span>
+              <StatusBadge status={data.status} />
             </div>
           </div>
 

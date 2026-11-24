@@ -734,8 +734,14 @@ export function ProposeKnowledgeModal({
                       <h5 className="font-bold text-xs text-slate-900 truncate">
                         {dupState.highestMatch.articleTitle}
                       </h5>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 shrink-0">
-                        {dupState.highestMatch.status}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 border ${
+                          dupState.highestMatch.status === "PUBLISHED"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {dupState.highestMatch.status?.replace("_", " ")}
                       </span>
                     </div>
 
@@ -825,8 +831,14 @@ export function ProposeKnowledgeModal({
                       <h5 className="font-bold text-xs text-slate-900 truncate">
                         {dupState.highestMatch.articleTitle}
                       </h5>
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 shrink-0">
-                        {dupState.highestMatch.status}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 border ${
+                          dupState.highestMatch.status === "PUBLISHED"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-800 border-amber-200"
+                        }`}
+                      >
+                        {dupState.highestMatch.status?.replace("_", " ")}
                       </span>
                     </div>
 

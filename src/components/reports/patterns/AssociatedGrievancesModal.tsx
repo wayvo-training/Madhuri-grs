@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { RecurringCategoryPatternItem } from "@/types/reports";
@@ -17,19 +18,6 @@ export function AssociatedGrievancesModal({
   pattern,
 }: AssociatedGrievancesModalProps) {
   if (!isOpen || !pattern) return null;
-
-  const getPriorityBadgeClass = (priority: string) => {
-    switch (priority.toUpperCase()) {
-      case "CRITICAL":
-        return "border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300";
-      case "HIGH":
-        return "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300";
-      case "MEDIUM":
-        return "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300";
-      default:
-        return "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
@@ -116,17 +104,10 @@ export function AssociatedGrievancesModal({
                     {g.subcategoryName}
                   </td>
                   <td className="py-2.5 whitespace-nowrap">
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] font-medium ${getPriorityBadgeClass(g.priority)}`}
-                    >
-                      {g.priority}
-                    </Badge>
+                    <PriorityBadge priority={g.priority} />
                   </td>
                   <td className="py-2.5 whitespace-nowrap">
-                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                      {g.status}
-                    </span>
+                    <StatusBadge status={g.status} />
                   </td>
                   <td className="py-2.5 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                     {new Date(g.createdAt).toLocaleDateString("en-US", {

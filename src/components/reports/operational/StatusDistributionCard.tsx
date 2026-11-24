@@ -19,21 +19,27 @@ export interface StatusDistributionCardProps {
 }
 
 const STATUS_COLOR_MAP: Record<string, string> = {
-  SUBMITTED: "#2563EB", // Blue
-  ROUTED: "#0EA5E9", // Cyan
-  AWAITING_ROUTING: "#0284C7", // Sky
-  IN_PROGRESS: "#38BDF8", // Light Sky
-  INVESTIGATION: "#38BDF8", // Light Sky
-  PENDING_INFO: "#F59E0B", // Amber
-  AWAITING_INFORMATION: "#F59E0B", // Amber
-  RESOLUTION_PENDING_APPROVAL: "#6366F1", // Indigo
-  REWORK: "#D97706", // Amber
-  RESOLVED: "#0D9488", // Teal
-  CLOSED: "#475569", // Slate
-  REOPEN_REVIEW: "#EC4899", // Pink / Rose
-  REOPEN_REQUESTED: "#EC4899", // Pink / Rose
-  REOPENED: "#DC2626", // Red
-  ESCALATED: "#7C3AED", // Purple
+  SUBMITTED: "#0284C7", // Sky
+  ROUTED: "#9333EA", // Purple
+  AWAITING_ROUTING: "#D97706", // Amber
+  AWAITING_ASSIGNMENT: "#9333EA", // Purple
+  PENDING_ASSIGNMENT: "#9333EA", // Purple
+  ASSIGNED: "#0D9488", // Teal
+  IN_PROGRESS: "#2563EB", // Blue
+  INVESTIGATION: "#2563EB", // Blue
+  PENDING_INFO: "#D97706", // Amber
+  AWAITING_INFORMATION: "#D97706", // Amber
+  WAITING_ON_USER: "#D97706", // Amber
+  UNDER_REVIEW: "#7C3AED", // Violet
+  RESOLUTION_PENDING_APPROVAL: "#7C3AED", // Violet
+  REWORK: "#EA580C", // Orange
+  RESOLVED: "#059669", // Emerald
+  COMPLETED: "#059669", // Emerald
+  CLOSED: "#64748B", // Slate
+  REOPEN_REVIEW: "#E11D48", // Rose
+  REOPEN_REQUESTED: "#E11D48", // Rose
+  REOPENED: "#E11D48", // Rose
+  ESCALATED: "#B45309", // Amber-Red
 };
 
 function getStatusColor(status: string): string {
