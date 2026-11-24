@@ -8,6 +8,27 @@ export function isPurelyNumeric(val: string): boolean {
   return trimmed.length > 0 && !/[a-zA-Z]/.test(trimmed);
 }
 
+export function isInvalidCustomName(val: string): boolean {
+  const trimmed = val.trim();
+  if (trimmed.length === 0) return false;
+  return trimmed.length < 10 || !/[a-zA-Z]/.test(trimmed);
+}
+
+export function getCustomNameValidationError(
+  val: string,
+  label: "Category name" | "Subcategory name" | string,
+): string | null {
+  const trimmed = val.trim();
+  if (trimmed.length === 0) return null;
+  if (!/[a-zA-Z]/.test(trimmed)) {
+    return `${label} cannot consist of only numbers or symbols. It must include letters or letters and numbers.`;
+  }
+  if (trimmed.length < 10) {
+    return `${label} must be at least 10 characters long (currently ${trimmed.length} characters).`;
+  }
+  return null;
+}
+
 export const SLA_RECIPIENT_OPTIONS = [
   {
     id: "ASSIGNED_STAFF",

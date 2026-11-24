@@ -243,6 +243,16 @@ export async function GET(request: Request) {
           a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
+        const policyTc =
+          (activeSla?.sla_policies?.trigger_condition as Record<
+            string,
+            unknown
+          >) || {};
+        const policyAtRisk = Number(
+          policyTc.at_risk_threshold_percent ||
+            activeSla?.sla_policies?.escalation_threshold_percent ||
+            75,
+        );
         slaCalc = calculateSlaStatus(
           deptStart,
           deptDue,
@@ -251,6 +261,7 @@ export async function GET(request: Request) {
           activeSla?.paused_at,
           g.status,
           completedAt,
+          policyAtRisk,
         );
       }
 

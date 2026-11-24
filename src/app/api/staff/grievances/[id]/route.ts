@@ -142,13 +142,8 @@ export async function GET(
 
     const currentAssignment = grievance.assignments?.[0];
 
-    // Proactively evaluate SLA threshold notifications only when grievance is active and not paused
-    if (
-      grievance.status !== "CLOSED" &&
-      grievance.status !== "RESOLVED" &&
-      grievance.status !== "AWAITING_INFORMATION" &&
-      grievance.status !== "WAITING_ON_USER"
-    ) {
+    // Proactively evaluate SLA threshold notifications only when grievance is active (non-terminal)
+    if (grievance.status !== "CLOSED" && grievance.status !== "RESOLVED") {
       try {
         const { evaluateGrievanceSla } = await import(
           "@/lib/engines/sla-engine"
@@ -881,6 +876,18 @@ export async function GET(
           ? new Date(deptStart.getTime() + deptAllocatedMins * 60 * 1000)
           : activeSla?.due_at || grievance.due_at);
       const deptSlaStatus = myDeptRaw?.sla_status || grievance.sla_status;
+      const policyTc =
+        (activeSla?.sla_policies?.trigger_condition as Record<
+          string,
+          unknown
+        >) || {};
+      const policyAtRisk = Number(
+        policyTc.warning_threshold_percent ||
+          activeSla?.sla_policies?.warning_threshold_percent ||
+          policyTc.at_risk_threshold_percent ||
+          activeSla?.sla_policies?.escalation_threshold_percent ||
+          DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT,
+      );
       slaCalc = calculateSlaStatus(
         deptStart,
         deptDue,
@@ -889,6 +896,7 @@ export async function GET(
         activeSla?.paused_at,
         grievance.status,
         completedAt,
+        policyAtRisk,
       );
     }
 
@@ -995,6 +1003,32 @@ export async function GET(
         }
       : null;
 
+    // In multi-department workflows, each involved primary investigator who submitted findings or resolution
+    // can propose a KB article for their department's expertise (except co-staff).
+    // hasProposedKb checks whether THIS CURRENT STAFF MEMBER has already proposed a KB article for this grievance.
+    const allResIds = (grievance.resolutions || []).map((r) => r.resolution_id);
+    const userProposedArticle = await prisma.knowledge_articles.findFirst({
+      where: {
+        created_by: staffId,
+        ...(allResIds.length > 0
+          ? { source_resolution_id: { in: allResIds } }
+          : {}),
+      },
+      select: { article_id: true },
+    });
+
+    const userAuditLogKb = await prisma.audit_logs.findFirst({
+      where: {
+        grievance_id: grievanceId,
+        user_id: staffId,
+        action: "KNOWLEDGE_ARTICLE_SUGGESTED",
+      },
+      select: { audit_log_id: true },
+    });
+
+    const hasUserProposedKb =
+      Boolean(userProposedArticle) || Boolean(userAuditLogKb);
+
     const result: StaffGrievanceItem = {
       id: grievance.grievance_id.toString(),
       grievanceNumber: grievance.grievance_number,
@@ -1035,12 +1069,7 @@ export async function GET(
       submitterEmail: submitter?.email || "",
       submitterRole: submitter?.roles?.role_name || "Employee",
       hasResolution: Boolean(latestResolution),
-      hasProposedKb:
-        ((
-          latestResolution as unknown as {
-            knowledge_articles?: unknown[];
-          }
-        )?.knowledge_articles?.length ?? 0) > 0,
+      hasProposedKb: hasUserProposedKb,
       submittedResolution,
       attachments,
       internalNotes,

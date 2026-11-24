@@ -633,10 +633,7 @@ export function GrievanceDetails({
             ) : null}
 
             {!isCompleted &&
-              grievance.status !== "ASSIGNED" &&
               grievance.myDepartmentStatus !== "BLOCKED" &&
-              !grievance.isSupportingStaff &&
-              grievance.myInvolvementType !== "SUPPORTING" &&
               (localExtension?.status === "PENDING" ? (
                 <span
                   className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 shadow-2xs"

@@ -32,6 +32,16 @@ export interface ProposeKnowledgeGrievance {
   description?: string;
   submitterName?: string;
   submitterEmail?: string;
+  isSupportingStaff?: boolean;
+  supportingFindings?: Array<{
+    id?: string;
+    departmentName?: string;
+    findings?: string;
+    actionTaken?: string;
+    notes?: string;
+    authorName?: string;
+    authorId?: string;
+  }>;
   submittedResolution?: {
     id?: string;
     problemSummary?: string;
@@ -133,6 +143,37 @@ export function ProposeKnowledgeModal({
     rawSolution = rawSolution
       ? `${rawSolution}\n\nFindings:\n${resolution.findings}`
       : resolution.findings;
+  }
+
+  // Multi-department fallback: If resolution is not yet populated or was submitted by another department,
+  // pre-fill from this department's investigation findings
+  if (
+    !rawSolution &&
+    grievance.supportingFindings &&
+    grievance.supportingFindings.length > 0
+  ) {
+    const myFinding =
+      grievance.supportingFindings.find(
+        (f) =>
+          (grievance.submitterName &&
+            f.authorName?.includes(grievance.submitterName)) ||
+          f.actionTaken ||
+          f.findings,
+      ) || grievance.supportingFindings[0];
+
+    if (myFinding) {
+      if (myFinding.actionTaken?.trim()) {
+        rawSolution = myFinding.actionTaken.trim();
+      }
+      if (myFinding.findings?.trim()) {
+        rawSolution = rawSolution
+          ? `${rawSolution}\n\nDepartment Findings:\n${myFinding.findings.trim()}`
+          : myFinding.findings.trim();
+      }
+      if (myFinding.notes?.trim() && !rawSolution) {
+        rawSolution = myFinding.notes.trim();
+      }
+    }
   }
 
   const rawKeyPoints = resolution?.outcome ? resolution.outcome.trim() : "";
@@ -295,6 +336,30 @@ export function ProposeKnowledgeModal({
   const executeSubmit = async (justification?: string) => {
     setIsSubmitting(true);
     setErrorMsg(null);
+
+    // Validate duplicate justification when duplicate state is active
+    if (dupState.classification === "LIKELY_DUPLICATE") {
+      const just = (justification ?? duplicateJustification).trim();
+      if (!just) {
+        setErrorMsg("Reason for continuing with new proposal is required.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (just.length < 15) {
+        setErrorMsg(
+          `Reason must be at least 15 characters (currently ${just.length} characters).`,
+        );
+        setIsSubmitting(false);
+        return;
+      }
+      if (/^\d+$/.test(just) || !/[a-zA-Z]/.test(just)) {
+        setErrorMsg(
+          "Reason cannot consist solely of numbers or symbols. Please provide descriptive text with letters.",
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const res = await fetch("/api/staff/knowledge", {
@@ -836,14 +901,27 @@ export function ProposeKnowledgeModal({
                   </div>
 
                   {/* Mandatory justification requirement */}
-                  <div className="space-y-1 pt-1 border-t border-rose-200/70">
-                    <label
-                      htmlFor="prop-justification"
-                      className="font-bold text-[11px] text-rose-950 block"
-                    >
-                      Reason for continuing with new proposal (Required):{" "}
-                      <span className="text-rose-600">*</span>
-                    </label>
+                  <div className="space-y-1.5 pt-1 border-t border-rose-200/70">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="prop-justification"
+                        className="font-bold text-[11px] text-rose-950 block"
+                      >
+                        Reason for continuing with new proposal (Required):{" "}
+                        <span className="text-rose-600">*</span>
+                      </label>
+                      <span
+                        className={`text-[10px] font-mono ${
+                          duplicateJustification.trim().length >= 15 &&
+                          !/^\d+$/.test(duplicateJustification.trim()) &&
+                          /[a-zA-Z]/.test(duplicateJustification.trim())
+                            ? "text-emerald-700 font-bold"
+                            : "text-rose-600 font-semibold"
+                        }`}
+                      >
+                        {duplicateJustification.trim().length}/15 chars min
+                      </span>
+                    </div>
                     <textarea
                       id="prop-justification"
                       rows={2}
@@ -852,9 +930,43 @@ export function ProposeKnowledgeModal({
                       onChange={(e) =>
                         setDuplicateJustification(e.target.value)
                       }
-                      className="w-full rounded-xl border border-rose-300 bg-white p-2.5 text-xs text-slate-900 focus:outline-hidden focus:border-rose-500 focus:ring-1 focus:ring-rose-500 leading-relaxed"
+                      className={`w-full rounded-xl border p-2.5 text-xs text-slate-900 focus:outline-hidden leading-relaxed ${
+                        duplicateJustification.trim().length > 0 &&
+                        (
+                          duplicateJustification.trim().length < 15 ||
+                            /^\d+$/.test(duplicateJustification.trim()) ||
+                            !/[a-zA-Z]/.test(duplicateJustification.trim())
+                        )
+                          ? "border-rose-400 bg-rose-50/50 focus:border-rose-600 focus:ring-1 focus:ring-rose-600"
+                          : "border-rose-300 bg-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
+                      }`}
                       placeholder="Explain why this proposal is distinct or necessary despite the existing match..."
                     />
+                    {duplicateJustification.trim().length > 0 &&
+                      /^\d+$/.test(duplicateJustification.trim()) && (
+                        <p className="text-[11px] font-medium text-rose-700 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5 inline shrink-0 text-rose-600" />
+                          Reason cannot consist solely of numbers. Please
+                          provide a clear explanation with letters.
+                        </p>
+                      )}
+                    {duplicateJustification.trim().length > 0 &&
+                      !/^\d+$/.test(duplicateJustification.trim()) &&
+                      !/[a-zA-Z]/.test(duplicateJustification.trim()) && (
+                        <p className="text-[11px] font-medium text-rose-700 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5 inline shrink-0 text-rose-600" />
+                          Reason must contain descriptive letters.
+                        </p>
+                      )}
+                    {duplicateJustification.trim().length > 0 &&
+                      duplicateJustification.trim().length < 15 &&
+                      /[a-zA-Z]/.test(duplicateJustification.trim()) && (
+                        <p className="text-[11px] font-medium text-rose-700 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5 inline shrink-0 text-rose-600" />
+                          Reason must be at least 15 characters (currently{" "}
+                          {duplicateJustification.trim().length}/15).
+                        </p>
+                      )}
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-1">
@@ -873,8 +985,14 @@ export function ProposeKnowledgeModal({
                     <button
                       type="button"
                       onClick={() => executeSubmit(duplicateJustification)}
-                      disabled={isSubmitting || !duplicateJustification.trim()}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-700 text-white text-xs font-semibold hover:bg-rose-800 transition cursor-pointer disabled:opacity-40"
+                      disabled={
+                        isSubmitting ||
+                        !duplicateJustification.trim() ||
+                        duplicateJustification.trim().length < 15 ||
+                        /^\d+$/.test(duplicateJustification.trim()) ||
+                        !/[a-zA-Z]/.test(duplicateJustification.trim())
+                      }
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-700 text-white text-xs font-semibold hover:bg-rose-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span>Continue with New Proposal</span>
                     </button>

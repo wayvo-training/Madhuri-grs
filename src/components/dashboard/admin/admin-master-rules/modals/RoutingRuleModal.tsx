@@ -37,6 +37,8 @@ import {
 } from "@/components/ui/select";
 import type { DepartmentDependencyNode } from "@/lib/validations/dependency-graph";
 import {
+  getCustomNameValidationError,
+  isInvalidCustomName,
   isPurelyNumeric,
   type ParticipatingDepartmentRow,
   type RoutingRuleModalProps,
@@ -72,10 +74,20 @@ export function RoutingRuleModal({
   onSubmit,
 }: RoutingRuleModalProps) {
   const isRuleNameNumeric = isPurelyNumeric(ruleName);
-  const isCategoryNumeric =
-    selectedCatId === "CUSTOM" && isPurelyNumeric(newCategoryName);
-  const isSubcategoryNumeric =
-    selectedRoutingSubcatId === "CUSTOM" && isPurelyNumeric(newSubcategoryName);
+  const isCategoryInvalid =
+    selectedCatId === "CUSTOM" && isInvalidCustomName(newCategoryName);
+  const categoryError =
+    selectedCatId === "CUSTOM"
+      ? getCustomNameValidationError(newCategoryName, "Category name")
+      : null;
+
+  const isSubcategoryInvalid =
+    selectedRoutingSubcatId === "CUSTOM" &&
+    isInvalidCustomName(newSubcategoryName);
+  const subcategoryError =
+    selectedRoutingSubcatId === "CUSTOM"
+      ? getCustomNameValidationError(newSubcategoryName, "Subcategory name")
+      : null;
 
   const [routingScope, setRoutingScope] = useState<"SINGLE" | "MULTI">(
     "SINGLE",
@@ -772,12 +784,12 @@ export function RoutingRuleModal({
                       <div className="mt-1 flex items-center gap-2">
                         <input
                           type="text"
-                          placeholder="Enter custom category name"
+                          placeholder="Enter custom category name (min 10 characters)"
                           value={newCategoryName}
                           onChange={(e) => setNewCategoryName(e.target.value)}
                           required
                           className={`h-9.5 w-full rounded-xl border ${
-                            isCategoryNumeric
+                            isCategoryInvalid
                               ? "border-rose-500 focus:border-rose-600"
                               : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
                           } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
@@ -790,9 +802,9 @@ export function RoutingRuleModal({
                           ×
                         </button>
                       </div>
-                      {isCategoryNumeric && (
+                      {categoryError && (
                         <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                          Category name cannot consist of only numbers.
+                          {categoryError}
                         </p>
                       )}
                     </div>
@@ -853,14 +865,14 @@ export function RoutingRuleModal({
                       <div className="mt-1 flex items-center gap-2">
                         <input
                           type="text"
-                          placeholder="Enter custom subcategory name"
+                          placeholder="Enter custom subcategory name (min 10 characters)"
                           value={newSubcategoryName}
                           onChange={(e) =>
                             setNewSubcategoryName(e.target.value)
                           }
                           required
                           className={`h-9.5 w-full rounded-xl border ${
-                            isSubcategoryNumeric
+                            isSubcategoryInvalid
                               ? "border-rose-500 focus:border-rose-600"
                               : "border-slate-200 dark:border-slate-700 focus:border-teal-600"
                           } bg-white dark:bg-slate-800 px-3 text-xs text-slate-800 dark:text-slate-200 outline-none transition`}
@@ -873,9 +885,9 @@ export function RoutingRuleModal({
                           ×
                         </button>
                       </div>
-                      {isSubcategoryNumeric && (
+                      {subcategoryError && (
                         <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-                          Subcategory name cannot consist of only numbers.
+                          {subcategoryError}
                         </p>
                       )}
                     </div>
@@ -1537,9 +1549,9 @@ export function RoutingRuleModal({
                   !ruleName.trim() ||
                   isRuleNameNumeric ||
                   (selectedCatId === "CUSTOM" &&
-                    (!newCategoryName.trim() || isCategoryNumeric)) ||
+                    (!newCategoryName.trim() || isCategoryInvalid)) ||
                   (selectedRoutingSubcatId === "CUSTOM" &&
-                    (!newSubcategoryName.trim() || isSubcategoryNumeric)) ||
+                    (!newSubcategoryName.trim() || isSubcategoryInvalid)) ||
                   !selectedCatId ||
                   !selectedRoutingSubcatId ||
                   (routingScope === "SINGLE" &&

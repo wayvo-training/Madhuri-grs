@@ -169,6 +169,10 @@ export function RequestGracePeriodModal({
   const trimmedReason = reason.trim();
   const isValidLength = trimmedReason.length >= 15;
   const hasLetters = /[a-zA-Z]/.test(trimmedReason);
+  const isValidMinutes =
+    typeof selectedMinutes === "number" &&
+    selectedMinutes >= 1 &&
+    selectedMinutes <= maxAllowedMinutes;
 
   // Dynamic thresholds configured by admin (default: 50% warning, 75% auto-escalation)
   const warningThreshold = grievance.warningThresholdPercent ?? 50;
@@ -184,6 +188,7 @@ export function RequestGracePeriodModal({
   const canSubmit =
     isValidLength &&
     hasLetters &&
+    isValidMinutes &&
     isEligibleWarning &&
     isUnderEscalation &&
     isNotBreached &&
@@ -221,6 +226,10 @@ export function RequestGracePeriodModal({
         );
       } else if (!hasLetters) {
         toast.error("Reason cannot consist of numbers or symbols alone.");
+      } else if (!isValidMinutes) {
+        toast.error(
+          `Please specify an extension duration between 1 and ${maxAllowedMinutes} minutes.`,
+        );
       }
       return;
     }
@@ -400,28 +409,65 @@ export function RequestGracePeriodModal({
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {presetMinutes.map((mins) => (
-                <button
-                  key={mins}
-                  type="button"
-                  onClick={() => setSelectedMinutes(mins)}
-                  disabled={
-                    !isEligibleWarning || !isUnderEscalation || !isNotBreached
-                  }
-                  className={`rounded-lg py-1.5 px-3 text-xs font-bold transition cursor-pointer border text-center ${
-                    selectedMinutes === mins
-                      ? "border-[#0F766E] bg-[#0F766E] text-white shadow-xs"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  }`}
-                >
-                  {formatExtensionBadge(mins)}
-                </button>
-              ))}
+            {/* Custom Input + Presets */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={maxAllowedMinutes}
+                    step={1}
+                    value={selectedMinutes || ""}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (Number.isNaN(val)) {
+                        setSelectedMinutes(0);
+                      } else {
+                        setSelectedMinutes(
+                          Math.min(maxAllowedMinutes, Math.max(1, val)),
+                        );
+                      }
+                    }}
+                    disabled={
+                      !isEligibleWarning || !isUnderEscalation || !isNotBreached
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:border-teal-600 focus:ring-1 focus:ring-teal-600 disabled:opacity-50"
+                    placeholder={`Enter minutes (1 - ${maxAllowedMinutes})`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 pointer-events-none">
+                    Minutes
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Select Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Quick Select:
+                </span>
+                {presetMinutes.map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() => setSelectedMinutes(mins)}
+                    disabled={
+                      !isEligibleWarning || !isUnderEscalation || !isNotBreached
+                    }
+                    className={`rounded-md py-1 px-2.5 text-[11px] font-bold transition cursor-pointer border text-center ${
+                      selectedMinutes === mins
+                        ? "border-[#0F766E] bg-[#0F766E] text-white shadow-xs"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    }`}
+                  >
+                    {formatExtensionBadge(mins)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Projected Date Preview */}
-            <div className="mt-1.5 flex items-center justify-between rounded-lg bg-teal-50/70 border border-teal-200/80 px-2.5 py-1 text-xs text-teal-900">
+            <div className="mt-2 flex items-center justify-between rounded-lg bg-teal-50/70 border border-teal-200/80 px-2.5 py-1 text-xs text-teal-900">
               <div className="flex items-center gap-1.5 font-medium text-[11px]">
                 <Calendar className="h-3 w-3 text-teal-700" />
                 <span>Projected New Due Date:</span>

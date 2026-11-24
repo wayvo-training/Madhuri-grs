@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { evaluateAllActiveGrievancesSla } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 import { resolveStaffAuth } from "@/lib/staff/permissions";
 import { calculateSlaStatus } from "@/lib/staff/utils";
@@ -14,6 +15,14 @@ export async function GET(req: NextRequest) {
     const authResult = await resolveStaffAuth();
     if ("error" in authResult) return authResult.error;
     const { staffId } = authResult;
+
+    if (authResult.departmentId) {
+      try {
+        await evaluateAllActiveGrievancesSla(authResult.departmentId);
+      } catch (slaErr) {
+        console.warn("[Staff Queue API] SLA evaluation error:", slaErr);
+      }
+    }
 
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status");
@@ -170,6 +179,16 @@ export async function GET(req: NextRequest) {
           a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
+        const policyTc =
+          (activeSla?.sla_policies?.trigger_condition as Record<
+            string,
+            unknown
+          >) || {};
+        const policyAtRisk = Number(
+          policyTc.at_risk_threshold_percent ||
+            activeSla?.sla_policies?.escalation_threshold_percent ||
+            75,
+        );
         slaCalc = calculateSlaStatus(
           deptStart,
           deptDue,
@@ -178,6 +197,7 @@ export async function GET(req: NextRequest) {
           activeSla?.paused_at,
           g.status,
           completedAt,
+          policyAtRisk,
         );
       }
 

@@ -385,27 +385,51 @@ export function useRuleActions({
       return;
     }
 
-    if (
-      (selectedCatId === "CUSTOM" || selectedPriorityCatId === "CUSTOM") &&
-      isPurelyNumbers(newCategoryName)
-    ) {
-      showNotice(
-        "error",
-        "Category name cannot consist of only numbers. It must include letters or letters and numbers.",
-      );
-      return;
+    if (selectedCatId === "CUSTOM" || selectedPriorityCatId === "CUSTOM") {
+      const trimmedCat = newCategoryName.trim();
+      if (!trimmedCat) {
+        showNotice("error", "Category name is required.");
+        return;
+      }
+      if (!/[a-zA-Z]/.test(trimmedCat)) {
+        showNotice(
+          "error",
+          "Category name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+        );
+        return;
+      }
+      if (trimmedCat.length < 10) {
+        showNotice(
+          "error",
+          `Category name must be at least 10 characters long (currently ${trimmedCat.length} characters).`,
+        );
+        return;
+      }
     }
 
     if (
-      (selectedRoutingSubcatId === "CUSTOM" ||
-        selectedPrioritySubcatId === "CUSTOM") &&
-      isPurelyNumbers(newSubcategoryName)
+      selectedRoutingSubcatId === "CUSTOM" ||
+      selectedPrioritySubcatId === "CUSTOM"
     ) {
-      showNotice(
-        "error",
-        "Subcategory name cannot consist of only numbers. It must include letters or letters and numbers.",
-      );
-      return;
+      const trimmedSubcat = newSubcategoryName.trim();
+      if (!trimmedSubcat) {
+        showNotice("error", "Subcategory name is required.");
+        return;
+      }
+      if (!/[a-zA-Z]/.test(trimmedSubcat)) {
+        showNotice(
+          "error",
+          "Subcategory name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+        );
+        return;
+      }
+      if (trimmedSubcat.length < 10) {
+        showNotice(
+          "error",
+          `Subcategory name must be at least 10 characters long (currently ${trimmedSubcat.length} characters).`,
+        );
+        return;
+      }
     }
 
     try {

@@ -1030,8 +1030,6 @@ export function QueueView({
                                   Boolean(item.escalationReason) ||
                                   item.escalationStage ===
                                     "GRIEVANCE_ESCALATED" ||
-                                  item.myDepartmentStatus ===
-                                    "PENDING_ASSIGNMENT" ||
                                   Boolean(item.isReopened))
                                   ? [
                                       {

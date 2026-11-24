@@ -191,40 +191,13 @@ export async function evaluateGrievanceSla(
     };
   }
 
-  // Skip milestone evaluations and notifications while SLA clock is paused or awaiting approval
-  const pausedStatuses = [
-    "AWAITING_INFORMATION",
-    "WAITING_ON_USER",
-    "WAITING_ON_EMPLOYEE",
-    "RESOLUTION_PENDING_APPROVAL",
-    "UNDER_REVIEW",
-  ];
-  const activeTrackingEarly = grievance.sla_tracking?.[0];
-  if (
-    pausedStatuses.includes(grievance.status) ||
-    activeTrackingEarly?.paused_at
-  ) {
-    return {
-      grievanceId: grievance.grievance_id.toString(),
-      grievanceNumber: grievance.grievance_number,
-      consumptionPercent: 0,
-      threshold: "BELOW_WARNING",
-      slaStatus:
-        (grievance.sla_status as "ON_TRACK" | "AT_RISK" | "BREACHED") ||
-        "ON_TRACK",
-      status: grievance.status,
-      notificationsSent: [],
-      escalated: false,
-      message: "Grievance is paused; SLA monitoring skipped.",
-    };
-  }
-
   const activeTracking = grievance.sla_tracking?.[0];
   const accPaused = activeTracking?.accumulated_paused_minutes || 0;
   const isPaused =
     activeTracking?.paused_at ||
     (grievance.status === "WAITING_ON_USER" ||
-    grievance.status === "WAITING_ON_EMPLOYEE"
+    grievance.status === "WAITING_ON_EMPLOYEE" ||
+    grievance.status === "AWAITING_INFORMATION"
       ? evaluationDate
       : null);
 
@@ -376,9 +349,14 @@ export async function evaluateGrievanceSla(
       escalation?: string[];
     }) || {};
 
-  const warningDesignations = recipientsConfig.warning || ["ASSIGNED_STAFF"];
+  const warningDesignations = recipientsConfig.warning || [
+    "ASSIGNED_STAFF",
+    "RESPONSIBLE_DEPT_HEAD",
+    "PRIMARY_DEPT_HEAD",
+  ];
   const atRiskDesignations = recipientsConfig.at_risk || [
     "ASSIGNED_STAFF",
+    "RESPONSIBLE_DEPT_HEAD",
     "PRIMARY_DEPT_HEAD",
   ];
   const defaultBreachDesignations = [
@@ -597,7 +575,7 @@ export async function evaluateGrievanceSla(
             (l.paused_at && new Date(l.paused_at) >= activatedAt) ||
             (l.resumed_at && new Date(l.resumed_at) > activatedAt),
         )
-        .reduce((sum, l) => sum + (l.duration_minutes || 0) * 60 * 1000, 0);
+        .reduce((sum, l) => sum + (l.duration_minutes || 0), 0);
     } else if (
       involvedDeptRecords.length <= 1 ||
       deptRec.involvement_type === "PRIMARY"
@@ -662,6 +640,38 @@ export async function evaluateGrievanceSla(
 
     // 1. Department Warning Threshold (uses dynamic warningThreshold & designated recipients)
     if (deptConsumptionPercent >= warningThreshold) {
+      if (
+        deptRec.sla_status !== "AT_RISK" &&
+        deptRec.sla_status !== "BREACHED"
+      ) {
+        await prisma.grievance_departments.update({
+          where: { grievance_department_id: deptRec.grievance_department_id },
+          data: { sla_status: "AT_RISK" },
+        });
+        deptRec.sla_status = "AT_RISK";
+      }
+
+      if (
+        grievance.sla_status !== "AT_RISK" &&
+        grievance.sla_status !== "BREACHED"
+      ) {
+        await prisma.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { sla_status: "AT_RISK" },
+        });
+      }
+
+      if (
+        activeTracking &&
+        activeTracking.status !== "AT_RISK" &&
+        activeTracking.status !== "BREACHED"
+      ) {
+        await prisma.sla_tracking.update({
+          where: { sla_tracking_id: activeTracking.sla_tracking_id },
+          data: { status: "AT_RISK" },
+        });
+      }
+
       const targetUsers = await resolveDesignatedUsers(
         warningDesignations,
         deptContext,
@@ -728,6 +738,28 @@ export async function evaluateGrievanceSla(
         await prisma.grievance_departments.update({
           where: { grievance_department_id: deptRec.grievance_department_id },
           data: { sla_status: "AT_RISK" },
+        });
+        deptRec.sla_status = "AT_RISK";
+      }
+
+      if (
+        grievance.sla_status !== "AT_RISK" &&
+        grievance.sla_status !== "BREACHED"
+      ) {
+        await prisma.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { sla_status: "AT_RISK" },
+        });
+      }
+
+      if (
+        activeTracking &&
+        activeTracking.status !== "AT_RISK" &&
+        activeTracking.status !== "BREACHED"
+      ) {
+        await prisma.sla_tracking.update({
+          where: { sla_tracking_id: activeTracking.sla_tracking_id },
+          data: { status: "AT_RISK" },
         });
       }
 
@@ -842,6 +874,7 @@ export async function evaluateGrievanceSla(
           where: { grievance_department_id: deptRec.grievance_department_id },
           data: { sla_status: "BREACHED" },
         });
+        deptRec.sla_status = "BREACHED";
       }
       if (activeTracking && activeTracking.status !== "BREACHED") {
         await prisma.sla_tracking.update({
@@ -1061,11 +1094,13 @@ export async function evaluateGrievanceSla(
     };
   }
 
-  const isMultiDept = involvedDeptRecords.length > 1;
-  if (isMultiDept) {
-    const activeDept = involvedDeptRecords.find(
-      (d) => d.status === "IN_PROGRESS" || d.status === "ASSIGNED",
-    );
+  if (involvedDeptRecords.length > 0) {
+    const activeDept =
+      involvedDeptRecords.find(
+        (d) => d.status === "IN_PROGRESS" || d.status === "ASSIGNED",
+      ) ||
+      involvedDeptRecords.find((d) => d.involvement_type === "PRIMARY") ||
+      involvedDeptRecords[0];
     const activeStatus = activeDept?.sla_status || "ON_TRACK";
     const mappedSlaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" =
       activeStatus === "BREACHED"
@@ -1082,12 +1117,21 @@ export async function evaluateGrievanceSla(
         ? "AT_BREACH"
         : mappedSlaStatus === "AT_RISK"
           ? "AT_RISK"
-          : "BELOW_WARNING";
+          : notificationsSent.length > 0
+            ? "AT_WARNING"
+            : "BELOW_WARNING";
 
     if (grievance.sla_status !== mappedSlaStatus) {
       await prisma.grievances.update({
         where: { grievance_id: grievanceId },
         data: { sla_status: mappedSlaStatus },
+      });
+    }
+
+    if (activeTracking && activeTracking.status !== mappedSlaStatus) {
+      await prisma.sla_tracking.update({
+        where: { sla_tracking_id: activeTracking.sla_tracking_id },
+        data: { status: mappedSlaStatus },
       });
     }
 
@@ -1099,8 +1143,8 @@ export async function evaluateGrievanceSla(
       slaStatus: mappedSlaStatus,
       status: grievance.status,
       notificationsSent,
-      escalated: mappedSlaStatus === "AT_RISK",
-      message: `Multi-department SLA evaluated per-department. Current active department: ${activeDept?.departments?.department_name || "Department"} (${mappedSlaStatus}).`,
+      escalated: mappedSlaStatus === "AT_RISK" || didEscalate,
+      message: `SLA evaluated based on department allocation. Current active department: ${activeDept?.departments?.department_name || "Department"} (${mappedSlaStatus}).`,
     };
   }
 
@@ -1134,8 +1178,29 @@ export async function evaluateGrievanceSla(
   // Automatically notify designated staff / recipients that time is running low.
   // =========================================================================
   if (consumptionPercent >= warningThreshold) {
-    if (!grievance.sla_status || grievance.sla_status === "ON_TRACK") {
-      updatedSlaStatus = "ON_TRACK";
+    if (grievance.sla_status !== "BREACHED") {
+      updatedSlaStatus = "AT_RISK";
+    }
+
+    if (
+      grievance.sla_status !== "AT_RISK" &&
+      grievance.sla_status !== "BREACHED"
+    ) {
+      await prisma.grievances.update({
+        where: { grievance_id: grievanceId },
+        data: { sla_status: "AT_RISK" },
+      });
+    }
+
+    if (
+      activeTracking &&
+      activeTracking.status !== "AT_RISK" &&
+      activeTracking.status !== "BREACHED"
+    ) {
+      await prisma.sla_tracking.update({
+        where: { sla_tracking_id: activeTracking.sla_tracking_id },
+        data: { status: "AT_RISK" },
+      });
     }
 
     const targetUsers = await resolveDesignatedUsers(warningDesignations);
@@ -1194,23 +1259,13 @@ export async function evaluateGrievanceSla(
       notificationsSent.push(`SLA_${warningThreshold}_WARNING`);
     }
 
-    if (
-      consumptionPercent < atRiskThreshold &&
-      grievance.sla_status !== "ON_TRACK"
-    ) {
-      await prisma.grievances.update({
-        where: { grievance_id: grievanceId },
-        data: { sla_status: "ON_TRACK" },
-      });
-    }
-
     if (consumptionPercent < atRiskThreshold) {
       return {
         grievanceId: grievance.grievance_id.toString(),
         grievanceNumber: grievance.grievance_number,
         consumptionPercent,
         threshold: "AT_WARNING",
-        slaStatus: "ON_TRACK",
+        slaStatus: "AT_RISK",
         status: grievance.status,
         notificationsSent,
         escalated: false,

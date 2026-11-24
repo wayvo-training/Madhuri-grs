@@ -20,6 +20,7 @@ export function calculateSlaStatus(
   pausedAt?: Date | string | null,
   grievanceStatus?: string | null,
   completedAt?: Date | string | null,
+  atRiskThresholdPercent: number = DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT,
 ): SlaCalculationResult {
   const now = new Date();
   const created = new Date(createdAt);
@@ -133,6 +134,10 @@ export function calculateSlaStatus(
           ? "Resolution Pending Approval"
           : "Paused";
 
+    const isAtRisk =
+      consumptionPercent >= atRiskThresholdPercent ||
+      overrideStatus === "AT_RISK";
+
     return {
       consumptionPercent,
       timeRemaining:
@@ -140,13 +145,15 @@ export function calculateSlaStatus(
         grievanceStatus === "UNDER_REVIEW"
           ? "Resolution Pending Approval (Paused)"
           : timeRemaining,
-      state: "PAUSED",
-      stateLabel: `SLA Paused (${pauseLabel})`,
+      state: isAtRisk ? "AT_RISK" : "PAUSED",
+      stateLabel: isAtRisk
+        ? `SLA At Risk (Paused: ${pauseLabel})`
+        : `SLA Paused (${pauseLabel})`,
     };
   }
 
   const isAtRisk =
-    consumptionPercent >= DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT ||
+    consumptionPercent >= atRiskThresholdPercent ||
     overrideStatus === "AT_RISK";
 
   return {
@@ -327,6 +334,7 @@ export function formatAuditActionTitle(action: string): string {
  * Checks whether the current staff member is authorized to propose a knowledge article.
  * Rules:
  * - Grievance must be CLOSED (accepted by end user).
+ * - Co-staff / supporting staff cannot propose KB (only primary investigators or staff who submitted findings).
  * - Resolution must NOT have been submitted by the Department Head (if Head took authority, Head proposes KB).
  */
 export function canStaffProposeKnowledge(
@@ -336,6 +344,11 @@ export function canStaffProposeKnowledge(
   const isGrievanceClosed =
     grievance.status === "CLOSED" || grievance.overallStatus === "CLOSED";
   if (!isGrievanceClosed) return false;
+
+  // Co-staff / supporting staff within department cannot propose KB
+  if (grievance.isSupportingStaff) {
+    return false;
+  }
 
   // If Department Head assumed authority and submitted the resolution, Staff cannot propose KB
   const submittedByRole = grievance.submittedResolution?.submittedByRole;

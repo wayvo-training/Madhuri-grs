@@ -190,7 +190,15 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               error:
-                "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+                "Category name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+            },
+            { status: 400 },
+          );
+        }
+        if (trimmedCat.length < 10) {
+          return NextResponse.json(
+            {
+              error: `Category name must be at least 10 characters long (currently ${trimmedCat.length} characters).`,
             },
             { status: 400 },
           );
@@ -221,7 +229,15 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               error:
-                "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+                "Subcategory name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+            },
+            { status: 400 },
+          );
+        }
+        if (trimmedSubcat.length < 10) {
+          return NextResponse.json(
+            {
+              error: `Subcategory name must be at least 10 characters long (currently ${trimmedSubcat.length} characters).`,
             },
             { status: 400 },
           );
@@ -502,7 +518,15 @@ export async function PATCH(request: Request) {
             return NextResponse.json(
               {
                 error:
-                  "Category name cannot consist of only numbers. It must include letters (or letters and numbers).",
+                  "Category name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+              },
+              { status: 400 },
+            );
+          }
+          if (trimmedCat.length < 10) {
+            return NextResponse.json(
+              {
+                error: `Category name must be at least 10 characters long (currently ${trimmedCat.length} characters).`,
               },
               { status: 400 },
             );
@@ -533,7 +557,15 @@ export async function PATCH(request: Request) {
             return NextResponse.json(
               {
                 error:
-                  "Subcategory name cannot consist of only numbers. It must include letters (or letters and numbers).",
+                  "Subcategory name cannot consist of only numbers or symbols. It must include letters or letters and numbers.",
+              },
+              { status: 400 },
+            );
+          }
+          if (trimmedSubcat.length < 10) {
+            return NextResponse.json(
+              {
+                error: `Subcategory name must be at least 10 characters long (currently ${trimmedSubcat.length} characters).`,
               },
               { status: 400 },
             );

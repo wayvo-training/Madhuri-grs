@@ -240,16 +240,39 @@ export async function POST(request: Request) {
 
     if (
       finalDuplicateCheck &&
-      finalDuplicateCheck.highestClassification === "LIKELY_DUPLICATE" &&
-      !duplicateJustification?.trim()
+      finalDuplicateCheck.highestClassification === "LIKELY_DUPLICATE"
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `A duplicate knowledge article already exists (${finalDuplicateCheck.highestScore ?? 90}% match). A justification reason is required to submit.`,
-        },
-        { status: 400 },
-      );
+      const just = duplicateJustification?.trim() || "";
+      if (!just) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `A duplicate knowledge article already exists (${finalDuplicateCheck.highestScore ?? 90}% match). A justification reason is required to submit.`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (just.length < 15) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Justification reason must be at least 15 characters (currently ${just.length} characters).`,
+          },
+          { status: 400 },
+        );
+      }
+
+      if (/^\d+$/.test(just) || !/[a-zA-Z]/.test(just)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Justification reason cannot consist solely of numbers or symbols. Please provide descriptive text with letters.",
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Format content as structured JSON

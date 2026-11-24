@@ -247,7 +247,6 @@ export function CaseInspectionFooter({
               currentGrievance.status === "ESCALATED" ||
               Boolean(currentGrievance.escalationReason) ||
               currentGrievance.escalationStage === "GRIEVANCE_ESCALATED" ||
-              currentGrievance.myDepartmentStatus === "PENDING_ASSIGNMENT" ||
               Boolean(currentGrievance.isReopened)) && (
               <button
                 type="button"

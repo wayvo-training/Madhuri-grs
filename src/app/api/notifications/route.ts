@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { evaluateAllActiveGrievancesSla } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -12,6 +13,18 @@ export async function GET() {
 
     const userId = user.user_id;
     const userRole = user.roles?.role_name || "END_USER";
+
+    // Proactively evaluate SLA for active grievances if privileged role
+    if (userRole !== "END_USER") {
+      try {
+        await evaluateAllActiveGrievancesSla(user.department_id || undefined);
+      } catch (slaErr) {
+        console.warn(
+          "[Notifications API] Proactive SLA evaluation error:",
+          slaErr,
+        );
+      }
+    }
 
     // Internal notification types prohibited for END_USER
     const prohibitedForEndUser = [

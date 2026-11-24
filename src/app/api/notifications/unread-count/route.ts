@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { evaluateAllActiveGrievancesSla } from "@/lib/engines/sla-engine";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -7,6 +8,17 @@ export async function GET() {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ success: true, count: 0 });
+    }
+
+    if (user.roles?.role_name !== "END_USER") {
+      try {
+        await evaluateAllActiveGrievancesSla(user.department_id || undefined);
+      } catch (slaErr) {
+        console.warn(
+          "[Unread Count API] Proactive SLA evaluation error:",
+          slaErr,
+        );
+      }
     }
 
     const count = await prisma.notifications.count({
