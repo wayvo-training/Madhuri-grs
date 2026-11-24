@@ -537,20 +537,47 @@ export function GrievanceDetails({
                   <FileCheck2 className="h-3.5 w-3.5" />
                   <span>Submit Investigation Findings</span>
                 </button>
-              ) : grievance.canSubmitFinalResolution ||
-                (grievance.isFinalSequentialDepartment &&
-                  !grievance.isSupportingStaff) ? (
-                <button
-                  type="button"
-                  onClick={handleOpenFinalResolution}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                >
-                  <FileCheck2 className="h-3.5 w-3.5" />
-                  <span>Submit Final Resolution</span>
-                </button>
-              ) : grievance.canSubmitFindings ||
-                (!grievance.isMyDepartmentCompleted &&
-                  grievance.myDepartmentStatus !== "COMPLETED") ? (
+              ) : !grievance.isSupportingStaff &&
+                grievance.myInvolvementType !== "SUPPORTING" &&
+                (grievance.isPrimaryOwner !== false ||
+                  grievance.myInvolvementType === "EQUAL" ||
+                  Boolean(grievance.isFinalSequentialDepartment)) ? (
+                <div className="flex items-center gap-2">
+                  {grievance.hasPendingSupportingDepartments &&
+                    (grievance.pendingSupportingDepartmentNames?.length ?? 0) >
+                      0 && (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 border border-amber-200"
+                        title={`Awaiting findings from: ${grievance.pendingSupportingDepartmentNames?.join(", ")}`}
+                      >
+                        <Clock className="h-3.5 w-3.5 text-amber-600" />
+                        <span>
+                          Awaiting Supportive Findings (
+                          {grievance.pendingSupportingDepartmentNames?.join(
+                            ", ",
+                          )}
+                          )
+                        </span>
+                      </span>
+                    )}
+                  <button
+                    type="button"
+                    onClick={handleOpenFinalResolution}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
+                  >
+                    <FileCheck2 className="h-3.5 w-3.5" />
+                    <span>Submit Final Resolution</span>
+                  </button>
+                </div>
+              ) : grievance.isMyDepartmentCompleted ||
+                grievance.myDepartmentStatus === "COMPLETED" ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    Department Findings Submitted · Awaiting Subsequent Stage
+                  </span>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={() => {
@@ -565,53 +592,6 @@ export function GrievanceDetails({
                   <FileCheck2 className="h-3.5 w-3.5" />
                   <span>Submit Department Findings</span>
                 </button>
-              ) : grievance.isMyDepartmentCompleted ||
-                grievance.myDepartmentStatus === "COMPLETED" ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 border border-emerald-200">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    Department Findings Submitted · Awaiting Subsequent Stage
-                  </span>
-                </div>
-              ) : (
-                (() => {
-                  const pendingSupporting = (
-                    grievance.departmentsInvolved || []
-                  ).filter(
-                    (d) =>
-                      d.involvementType === "SUPPORTING" &&
-                      d.status !== "COMPLETED" &&
-                      d.status !== "RESOLVED" &&
-                      d.status !== "REMOVED",
-                  );
-                  if (pendingSupporting.length > 0) {
-                    return (
-                      <span
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800 border border-amber-200 shadow-2xs"
-                        title={`Awaiting findings from: ${pendingSupporting.map((d) => d.departmentName).join(", ")}`}
-                      >
-                        <Clock className="h-3.5 w-3.5 text-amber-600" />
-                        <span>
-                          Awaiting Supportive Findings (
-                          {pendingSupporting
-                            .map((d) => d.departmentName)
-                            .join(", ")}
-                          )
-                        </span>
-                      </span>
-                    );
-                  }
-                  return (
-                    <button
-                      type="button"
-                      onClick={handleOpenFinalResolution}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#115E59] transition cursor-pointer"
-                    >
-                      <FileCheck2 className="h-3.5 w-3.5" />
-                      <span>Submit Final Resolution</span>
-                    </button>
-                  );
-                })()
               ))}
 
             {grievance.status === "CLOSED" ||

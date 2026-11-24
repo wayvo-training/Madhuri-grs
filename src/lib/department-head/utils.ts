@@ -54,6 +54,15 @@ export function formatEscalationNotice(reason?: string): string {
 
 export function formatAuditActionTitle(action: string): string {
   const act = action.toUpperCase().replace(/\s+/g, "_");
+  if (act === "DEPARTMENT_SLA_ESCALATION_WARNING") {
+    return "Department SLA Escalation Warning";
+  }
+  if (act === "DEPARTMENT_SLA_WARNING") {
+    return "Department SLA Warning";
+  }
+  if (act === "DEPARTMENT_SLA_BREACHED") {
+    return "Department SLA Breached";
+  }
   if (act.includes("SLA_100") || act.includes("BREACH")) {
     return "SLA Deadline Breached (Escalated)";
   }
@@ -165,6 +174,36 @@ export function formatAuditLogContent(
       if (parsed.outcome) return String(parsed.outcome);
 
       const act = action.toUpperCase();
+      if (
+        act === "DEPARTMENT_SLA_ESCALATION_WARNING" ||
+        act.includes("DEPARTMENT_SLA_ESCALATION")
+      ) {
+        const dept = parsed.department ? ` (${parsed.department})` : "";
+        const threshold = parsed.threshold
+          ? `${parsed.threshold}`
+          : "escalation threshold";
+        return `Automated SLA escalation warning: Department${dept} reached ${threshold} of allocated SLA. Case escalated to Department Head.`;
+      }
+
+      if (
+        act === "DEPARTMENT_SLA_WARNING" ||
+        act.includes("DEPARTMENT_SLA_WARNING")
+      ) {
+        const dept = parsed.department ? ` (${parsed.department})` : "";
+        const threshold = parsed.threshold
+          ? `${parsed.threshold}`
+          : "warning threshold";
+        return `Automated SLA warning: Department${dept} consumed ${threshold} of allocated SLA budget.`;
+      }
+
+      if (
+        act === "DEPARTMENT_SLA_BREACHED" ||
+        act.includes("DEPARTMENT_SLA_BREACH")
+      ) {
+        const dept = parsed.department ? ` (${parsed.department})` : "";
+        return `Department SLA deadline breached${dept}. 100% of allocated SLA budget elapsed without resolution.`;
+      }
+
       if (
         act.includes("SLA_100") ||
         act.includes("BREACH") ||

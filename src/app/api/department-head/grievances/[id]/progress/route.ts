@@ -1173,6 +1173,17 @@ export async function GET(
           .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" ");
 
+        const deptNameFromLog =
+          (val.department as string) ||
+          (log.entity_type === "GRIEVANCE_DEPARTMENT" && log.entity_id
+            ? rawDepartments?.find(
+                (d) =>
+                  d.grievance_department_id.toString() ===
+                  log.entity_id?.toString(),
+              )?.departments?.department_name
+            : "") ||
+          "";
+
         let description =
           (val.details as string) ||
           (val.note as string) ||
@@ -1321,6 +1332,42 @@ export async function GET(
             (val.note as string) ||
             (val.details as string) ||
             "Cross-department collaboration note.";
+        } else if (
+          act === "DEPARTMENT_SLA_ESCALATION_WARNING" ||
+          act.includes("DEPARTMENT_SLA_ESCALATION")
+        ) {
+          title = deptNameFromLog
+            ? `Department SLA Escalation Warning (${deptNameFromLog})`
+            : "Department SLA Escalation Warning";
+          const thresh =
+            (val.threshold as string) ||
+            (val.consumptionPercent ? `${val.consumptionPercent}%` : "75%");
+          description = deptNameFromLog
+            ? `Automated SLA escalation warning: ${deptNameFromLog} reached ${thresh} of allocated SLA budget. Case escalated for Department Head intervention.`
+            : `Automated SLA escalation warning: Case reached ${thresh} of allocated department SLA budget.`;
+        } else if (
+          act === "DEPARTMENT_SLA_WARNING" ||
+          (act.includes("DEPARTMENT_SLA") && act.includes("WARNING"))
+        ) {
+          title = deptNameFromLog
+            ? `Department SLA Warning (${deptNameFromLog})`
+            : "Department SLA Warning";
+          const thresh =
+            (val.threshold as string) ||
+            (val.consumptionPercent ? `${val.consumptionPercent}%` : "50%");
+          description = deptNameFromLog
+            ? `Automated SLA warning: ${deptNameFromLog} consumed ${thresh} of its allocated SLA budget.`
+            : `Automated SLA warning: Case reached ${thresh} of allocated department SLA budget.`;
+        } else if (
+          act === "DEPARTMENT_SLA_BREACHED" ||
+          (act.includes("DEPARTMENT_SLA") && act.includes("BREACH"))
+        ) {
+          title = deptNameFromLog
+            ? `Department SLA Breached (${deptNameFromLog})`
+            : "Department SLA Breached";
+          description = deptNameFromLog
+            ? `Department SLA deadline breached: ${deptNameFromLog} exhausted 100% of its allocated SLA budget without resolution.`
+            : "Department SLA deadline breached without resolution.";
         } else if (act.includes("SLA_100") || act.includes("BREACH")) {
           title = "SLA Deadline Breached (Escalated)";
           description =
@@ -1430,7 +1477,9 @@ export async function GET(
             act.includes("AUTO_") ||
             act.includes("TIMER")
           ) {
-            actor = "System Automated";
+            actor = deptNameFromLog
+              ? `System Automated (${deptNameFromLog})`
+              : "System Automated";
           }
         }
 

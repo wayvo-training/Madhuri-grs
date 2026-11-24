@@ -53,6 +53,8 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
     item.status === "RESOLVED" ||
     item.status === "COMPLETED" ||
     item.status === "REWORK" ||
+    item.overallStatus === "CLOSED" ||
+    item.overallStatus === "RESOLVED" ||
     isResolutionSubmittedByHead(item)
   ) {
     return false;
@@ -105,11 +107,39 @@ export function requiresHeadResolutionReview(item: GrievanceItem): boolean {
 export function canHeadProposeKnowledge(item: GrievanceItem): boolean {
   if (item.hasProposedKb) return false;
 
-  // Must strictly be CLOSED (accepted by citizen, not RESOLVED / review)
-  if (item.status !== "CLOSED") return false;
+  // Strictly only for user-accepted grievances (CLOSED status)
+  const isUserAccepted =
+    item.status === "CLOSED" || item.overallStatus === "CLOSED";
+  if (!isUserAccepted) return false;
 
-  // Only authorized if Department Head submitted/assumed the resolution
-  return isResolutionSubmittedByHead(item);
+  // 1. Supporting Department: If supporting department head submitted department findings / resolution
+  const isSupportingDept =
+    item.myInvolvementType === "SUPPORTING" ||
+    item.isPrimaryDepartment === false;
+
+  if (isSupportingDept) {
+    const hasSubmittedFindings =
+      item.myDepartmentStatus === "COMPLETED" ||
+      item.status === "COMPLETED" ||
+      (item.supportingFindings && item.supportingFindings.length > 0);
+
+    return Boolean(hasSubmittedFindings);
+  }
+
+  // 2. Lead / Primary Department: Final resolution submitted by Department Head
+  const hasHeadResolution = Boolean(
+    item.submittedResolution &&
+      (item.submittedResolution.submittedByRole === "DEPARTMENT_HEAD" ||
+        item.submittedResolution.submittedByRole === "ADMIN" ||
+        item.isAssignedToHead ||
+        Boolean(item.hodIntervention?.isResolutionAuthority) ||
+        (item.hodIntervention?.resolutionAuthorityUserId &&
+          item.submittedResolution.submittedByUserId ===
+            item.hodIntervention.resolutionAuthorityUserId) ||
+        item.isPrimaryDepartment !== false),
+  );
+
+  return hasHeadResolution;
 }
 
 export function computeDepartmentMetrics(

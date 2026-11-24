@@ -280,9 +280,16 @@ export function DepartmentHeadOverviewInner({
 
   const handleOpenEscalateModal = useCallback(
     (item: GrievanceItem) => {
-      if (item.status === "CLOSED" || item.status === "RESOLVED") {
+      if (
+        item.status === "CLOSED" ||
+        item.status === "RESOLVED" ||
+        item.status === "COMPLETED" ||
+        item.overallStatus === "CLOSED" ||
+        item.overallStatus === "RESOLVED" ||
+        item.myDepartmentStatus === "COMPLETED"
+      ) {
         toast.error(
-          `Cannot intervene on a ${item.status.toLowerCase()} grievance.`,
+          `Cannot intervene on a ${String(item.overallStatus || item.status).toLowerCase()} grievance.`,
         );
         return;
       }
@@ -403,6 +410,17 @@ export function DepartmentHeadOverviewInner({
 
   const handleDirectIntervention = useCallback(
     async (item: GrievanceItem) => {
+      if (
+        item.status === "CLOSED" ||
+        item.status === "RESOLVED" ||
+        item.status === "COMPLETED" ||
+        item.overallStatus === "CLOSED" ||
+        item.overallStatus === "RESOLVED" ||
+        item.myDepartmentStatus === "COMPLETED"
+      ) {
+        toast.error("Cannot intervene on a closed or resolved grievance.");
+        return;
+      }
       try {
         const res = await fetch(
           `/api/department-head/grievances/${item.id}/review-request`,
@@ -769,7 +787,8 @@ export function DepartmentHeadOverviewInner({
                 status: resolutionModalGrievance.status,
                 priority: resolutionModalGrievance.priority,
                 reopenCount: resolutionModalGrievance.reopenCount,
-                isPrimaryOwner: resolutionModalGrievance.isPrimaryDepartment,
+                isPrimaryOwner:
+                  resolutionModalGrievance.isPrimaryDepartment ?? true,
                 myInvolvementType: resolutionModalGrievance.myInvolvementType,
                 canSubmitFinalResolution:
                   resolutionModalGrievance.canSubmitFinalResolution ?? false,
@@ -814,9 +833,11 @@ export function DepartmentHeadOverviewInner({
                   filePath: att.path,
                   fileType: att.type,
                   fileSize:
-                    typeof att.size === "string"
-                      ? Number.parseFloat(att.size) * 1024
-                      : undefined,
+                    typeof att.fileSize === "number"
+                      ? Math.round(att.fileSize)
+                      : typeof att.size === "string"
+                        ? Math.round(Number.parseFloat(att.size) * 1024)
+                        : undefined,
                 })),
               });
               setResolutionModalGrievance(null);

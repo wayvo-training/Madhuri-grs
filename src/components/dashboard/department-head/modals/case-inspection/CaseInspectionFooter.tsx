@@ -105,9 +105,17 @@ export function CaseInspectionFooter({
       staffEmail.trim().toLowerCase() === headSenderEmail.toLowerCase(),
   );
 
-  const isClosedOrResolved =
+  const isClosedOrResolved = Boolean(
     currentGrievance.status === "CLOSED" ||
-    currentGrievance.status === "RESOLVED";
+      currentGrievance.status === "RESOLVED" ||
+      currentGrievance.status === "COMPLETED" ||
+      currentGrievance.overallStatus === "CLOSED" ||
+      currentGrievance.overallStatus === "RESOLVED" ||
+      caseProgressData?.grievance?.status === "CLOSED" ||
+      caseProgressData?.grievance?.status === "RESOLVED" ||
+      (currentGrievance.myInvolvementType === "SUPPORTING" &&
+        currentGrievance.myDepartmentStatus === "COMPLETED"),
+  );
 
   const handlePostDirective = async (note: string): Promise<boolean> => {
     if (!onAddInternalNote) return false;
@@ -197,9 +205,21 @@ export function CaseInspectionFooter({
                 {onDirectInterveneClick && (
                   <button
                     type="button"
-                    onClick={() => onDirectInterveneClick(currentGrievance)}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
-                    title="Assume direct authority to investigate and resolve personally"
+                    disabled={isClosedOrResolved}
+                    onClick={() => {
+                      if (isClosedOrResolved) return;
+                      onDirectInterveneClick(currentGrievance);
+                    }}
+                    className={
+                      isClosedOrResolved
+                        ? "inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed shadow-none"
+                        : "inline-flex items-center gap-1.5 rounded-xl bg-[#0F766E] px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-[#115E59] transition cursor-pointer"
+                    }
+                    title={
+                      isClosedOrResolved
+                        ? "Cannot intervene: Grievance is closed or resolved."
+                        : "Assume direct authority to investigate and resolve personally"
+                    }
                   >
                     <Shield className="h-3.5 w-3.5" />
                     <span>Assume Authority</span>
@@ -246,12 +266,8 @@ export function CaseInspectionFooter({
             )
           )}
 
-          {!isClosedOrResolved &&
-            currentGrievance.status !== "COMPLETED" &&
-            currentGrievance.status !== "REWORK" &&
+          {currentGrievance.status !== "REWORK" &&
             currentGrievance.status !== "REOPENED" &&
-            (currentGrievance.myDepartmentStatus !== "COMPLETED" ||
-              Boolean(currentGrievance.isReopened)) &&
             !hasHeadResolutionAuthority(currentGrievance) &&
             onEscalateClick &&
             (currentGrievance.slaStatus === "AT_RISK" ||
@@ -259,12 +275,25 @@ export function CaseInspectionFooter({
               currentGrievance.status === "ESCALATED" ||
               Boolean(currentGrievance.escalationReason) ||
               currentGrievance.escalationStage === "GRIEVANCE_ESCALATED" ||
-              Boolean(currentGrievance.isReopened)) && (
+              Boolean(currentGrievance.isReopened) ||
+              isClosedOrResolved) && (
               <button
                 type="button"
-                onClick={() => onEscalateClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-amber-700 transition cursor-pointer"
-                title="Intervene directly or assume resolution authority on escalated / at-risk case"
+                disabled={isClosedOrResolved}
+                onClick={() => {
+                  if (isClosedOrResolved) return;
+                  onEscalateClick(currentGrievance);
+                }}
+                className={
+                  isClosedOrResolved
+                    ? "inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2 text-xs font-semibold text-slate-400 cursor-not-allowed shadow-none"
+                    : "inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-amber-700 transition cursor-pointer"
+                }
+                title={
+                  isClosedOrResolved
+                    ? "Cannot intervene: Grievance is closed or resolved."
+                    : "Intervene directly or assume resolution authority on escalated / at-risk case"
+                }
               >
                 <Shield className="h-3.5 w-3.5" />
                 <span>Intervene / Assume Authority</span>
@@ -274,44 +303,65 @@ export function CaseInspectionFooter({
           {currentGrievance.status !== "REWORK" &&
           currentGrievance.status !== "REOPENED" &&
           canHeadSubmitResolution(currentGrievance) ? (
-            currentGrievance.canSubmitFinalResolution !== false ? (
-              <button
-                type="button"
-                onClick={() => onReviewResolutionClick(currentGrievance)}
-                className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
-                  hasDraft
-                    ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400/50"
-                    : "bg-[#0F766E] hover:bg-[#115E59]"
-                }`}
-                title={
-                  hasDraft
-                    ? "Resume and edit your saved resolution draft"
-                    : "Formulate and submit grievance resolution"
-                }
-              >
-                {hasDraft ? (
-                  <FileEdit className="h-3.5 w-3.5" />
-                ) : (
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                )}
-                <span>
-                  {hasDraft ? "Resume Draft Resolution" : "Submit Resolution"}
+            currentGrievance.myInvolvementType === "SUPPORTING" ? (
+              currentGrievance.myDepartmentStatus === "COMPLETED" ? (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  Department Findings Submitted · Next Stage Activated
                 </span>
-              </button>
-            ) : currentGrievance.myDepartmentStatus === "COMPLETED" ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                Department Findings Submitted · Next Stage Activated
-              </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onReviewResolutionClick(currentGrievance)}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-700 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-teal-800 transition cursor-pointer"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5" />
+                  <span>Submit Department Findings</span>
+                </button>
+              )
             ) : (
-              <button
-                type="button"
-                onClick={() => onReviewResolutionClick(currentGrievance)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-amber-700 transition cursor-pointer"
-              >
-                <FileCheck2 className="h-3.5 w-3.5" />
-                <span>Submit Department Findings</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {currentGrievance.hasPendingSupportingDepartments &&
+                  (currentGrievance.pendingSupportingDepartmentNames?.length ??
+                    0) > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 px-3.5 py-2 rounded-xl border border-amber-200"
+                      title={`Awaiting findings from ${currentGrievance.pendingSupportingDepartmentNames?.join(", ")}`}
+                    >
+                      <Clock className="h-3.5 w-3.5 text-amber-600" />
+                      <span>
+                        Awaiting Supporting Findings (
+                        {currentGrievance.pendingSupportingDepartmentNames?.join(
+                          ", ",
+                        )}
+                        )
+                      </span>
+                    </span>
+                  )}
+                <button
+                  type="button"
+                  onClick={() => onReviewResolutionClick(currentGrievance)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer ${
+                    hasDraft
+                      ? "bg-emerald-700 hover:bg-emerald-800 ring-2 ring-emerald-400/50"
+                      : "bg-[#0F766E] hover:bg-[#115E59]"
+                  }`}
+                  title={
+                    hasDraft
+                      ? "Resume and edit your saved resolution draft"
+                      : "Formulate and submit grievance resolution"
+                  }
+                >
+                  {hasDraft ? (
+                    <FileEdit className="h-3.5 w-3.5" />
+                  ) : (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  )}
+                  <span>
+                    {hasDraft ? "Resume Draft Resolution" : "Submit Resolution"}
+                  </span>
+                </button>
+              </div>
             )
           ) : isResolutionSubmittedByHead(currentGrievance) ||
             (currentGrievance.status === "UNDER_REVIEW" &&
@@ -325,16 +375,37 @@ export function CaseInspectionFooter({
             </span>
           ) : null}
 
-          {canHeadProposeKnowledge(currentGrievance) && onProposeKbClick && (
-            <button
-              type="button"
-              onClick={() => onProposeKbClick(currentGrievance)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-[#F0FDFA] px-3.5 py-2 text-xs font-semibold text-[#0F766E] shadow-2xs hover:bg-teal-100 transition cursor-pointer"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              <span>Propose as Knowledge Article</span>
-            </button>
-          )}
+          {currentGrievance.myInvolvementType === "SUPPORTING" &&
+            (currentGrievance.myDepartmentStatus === "COMPLETED" ||
+              currentGrievance.status === "COMPLETED") && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                Department Findings Submitted · Completed
+              </span>
+            )}
+
+          {canHeadProposeKnowledge(
+            (currentGrievance.status === "CLOSED" ||
+              currentGrievance.overallStatus === "CLOSED" ||
+              caseProgressData?.grievance?.status === "CLOSED") &&
+              currentGrievance.status !== "CLOSED"
+              ? {
+                  ...currentGrievance,
+                  status: "CLOSED",
+                  overallStatus: "CLOSED",
+                }
+              : currentGrievance,
+          ) &&
+            onProposeKbClick && (
+              <button
+                type="button"
+                onClick={() => onProposeKbClick(currentGrievance)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-teal-300 bg-[#F0FDFA] px-3.5 py-2 text-xs font-semibold text-[#0F766E] shadow-2xs hover:bg-teal-100 transition cursor-pointer"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Propose as Knowledge Article</span>
+              </button>
+            )}
 
           <button
             type="button"

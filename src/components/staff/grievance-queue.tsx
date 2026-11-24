@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Clock, Eye, FileCheck2, Inbox, Play, X } from "lucide-react";
+import { BookOpen, Clock, Eye, FileCheck2, Inbox, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { ProposeKnowledgeModal } from "@/components/knowledge/ProposeKnowledgeModal";
@@ -703,18 +703,7 @@ export function GrievanceQueue({
                                         onClick: () => onResolve(item),
                                       },
                                     ]
-                                  : item.status === "ASSIGNED"
-                                    ? [
-                                        {
-                                          label: "Start Investigation",
-                                          icon: (
-                                            <Play className="h-3.5 w-3.5 text-emerald-600" />
-                                          ),
-                                          variant: "primary" as const,
-                                          onClick: () => onExamine(item),
-                                        },
-                                      ]
-                                    : []),
+                                  : []),
                                 ...(!item.hasProposedKb &&
                                 !locallyProposedIds.has(item.id) &&
                                 canStaffProposeKnowledge(item)

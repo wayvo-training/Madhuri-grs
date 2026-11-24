@@ -402,10 +402,14 @@ export function SlaGovernanceView({
                       const isSupportingDeptCompleted =
                         item.isPrimaryDepartment === false &&
                         item.myDepartmentStatus === "COMPLETED";
-                      const isClosedOrResolved =
+                      const isClosedOrResolved = Boolean(
                         item.status === "CLOSED" ||
-                        item.status === "RESOLVED" ||
-                        isSupportingDeptCompleted;
+                          item.status === "RESOLVED" ||
+                          item.status === "COMPLETED" ||
+                          item.overallStatus === "CLOSED" ||
+                          item.overallStatus === "RESOLVED" ||
+                          isSupportingDeptCompleted,
+                      );
                       const isEscalated =
                         !isItemBlocked &&
                         (item.status === "ESCALATED" ||
@@ -588,7 +592,6 @@ export function SlaGovernanceView({
                                     ]
                                   : []),
                                 ...(!hasAuthority &&
-                                !isClosedOrResolved &&
                                 !item.isBlocked &&
                                 item.status !== "BLOCKED" &&
                                 item.myDepartmentStatus !== "BLOCKED" &&
@@ -597,7 +600,8 @@ export function SlaGovernanceView({
                                   item.slaStatus === "AT_RISK" ||
                                   Boolean(item.escalationReason) ||
                                   item.escalationStage ===
-                                    "GRIEVANCE_ESCALATED")
+                                    "GRIEVANCE_ESCALATED" ||
+                                  isClosedOrResolved)
                                   ? [
                                       {
                                         label: "Intervene",
@@ -605,7 +609,11 @@ export function SlaGovernanceView({
                                           <AlertCircle className="h-3.5 w-3.5" />
                                         ),
                                         variant: "warning" as const,
-                                        onClick: () => onIntervene(item),
+                                        disabled: isClosedOrResolved,
+                                        onClick: () => {
+                                          if (isClosedOrResolved) return;
+                                          onIntervene(item);
+                                        },
                                       },
                                     ]
                                   : []),

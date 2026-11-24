@@ -733,7 +733,21 @@ export function CaseProgressTab({
                             ? "Resolution Submitted · Under Employee Review"
                             : "Findings Done · Pending Head Resolution"
                           : dept.status === "COMPLETED"
-                            ? "Findings Submitted"
+                            ? currentGrievance.supportingFindings?.some(
+                                (f) =>
+                                  f.departmentName
+                                    ?.toLowerCase()
+                                    .includes(
+                                      (dept.departmentName || "").toLowerCase(),
+                                    ) ||
+                                  (dept.departmentName || "")
+                                    .toLowerCase()
+                                    .includes(
+                                      (f.departmentName || "").toLowerCase(),
+                                    ),
+                              )
+                              ? "Findings Submitted"
+                              : "Completed"
                             : dept.status.replace(/_/g, " ")}
                       </span>
                     </div>

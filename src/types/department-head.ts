@@ -72,6 +72,7 @@ export interface GrievanceItem {
     | "BLOCKED"
     | "PENDING_ASSIGNMENT"
     | "COMPLETED";
+  overallStatus?: string;
   slaStatus: "ON_TRACK" | "AT_RISK" | "BREACHED" | "PAUSED";
   slaDeadline: string;
   slaTimeLeft: string;

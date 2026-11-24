@@ -76,7 +76,11 @@ export async function POST(
       );
     }
 
-    if (grievance.status === "CLOSED" || grievance.status === "RESOLVED") {
+    if (
+      grievance.status === "CLOSED" ||
+      grievance.status === "RESOLVED" ||
+      grievanceDept.status === "COMPLETED"
+    ) {
       return NextResponse.json(
         {
           success: false,

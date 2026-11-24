@@ -1528,6 +1528,7 @@ export async function fetchDepartmentHeadGrievances(
       submitterEmail: g.users?.email || "",
       priority: g.priority as GrievanceItem["priority"],
       status: resolvedStatus,
+      overallStatus: g.status,
       slaStatus: resolvedSlaStatus,
       slaDeadline: resolvedSlaDeadline,
       slaTimeLeft: resolvedSlaTimeLeft,
@@ -2005,14 +2006,16 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
         log.action.includes("AT_RISK")
       ) {
         const threshold = val?.threshold ? String(val.threshold) : "At Risk";
-        formattedAction = `${ticketNum}: SLA At Risk (${threshold} Alert)`;
+        const dept = val?.department ? ` - ${val.department}` : "";
+        formattedAction = `${ticketNum}: SLA At Risk (${threshold} Alert${dept})`;
       } else if (
         log.action === "SLA_50_PERCENT_WARNING" ||
         log.action.includes("PERCENT_WARNING") ||
         log.action === "DEPARTMENT_SLA_WARNING"
       ) {
         const threshold = val?.threshold ? String(val.threshold) : "Priority";
-        formattedAction = `${ticketNum}: ${threshold} SLA Warning`;
+        const dept = val?.department ? ` (${val.department})` : "";
+        formattedAction = `${ticketNum}: ${threshold} SLA Warning${dept}`;
       } else if (log.action === "INTERVENTION_MONITOR") {
         formattedAction = `${ticketNum}: HOD Continuing Monitoring`;
       } else if (log.action === "INTERVENTION_NOTIFY_STAFF") {
@@ -2114,7 +2117,8 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
               : val.threshold
                 ? String(val.threshold)
                 : "At Risk";
-          formattedDetails = `SLA reached ${consumption} capacity. Department Head alerted for monitoring without auto-reassignment.`;
+          const dept = val?.department ? ` for ${val.department}` : "";
+          formattedDetails = `SLA reached ${consumption} capacity${dept}. Department Head alerted for monitoring without auto-reassignment.`;
         } else if (
           log.action === "SLA_50_PERCENT_WARNING" ||
           log.action.includes("PERCENT_WARNING") ||
@@ -2126,7 +2130,8 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
               : val.threshold
                 ? String(val.threshold)
                 : "Warning";
-          formattedDetails = `SLA warning threshold consumed (${consumption}). Priority alert dispatched to assigned staff member.`;
+          const dept = val?.department ? ` for ${val.department}` : "";
+          formattedDetails = `SLA warning threshold consumed (${consumption})${dept}. Priority alert dispatched to assigned staff member.`;
         } else if (val.note) {
           formattedDetails = String(val.note);
         } else if (val.remarks) {
