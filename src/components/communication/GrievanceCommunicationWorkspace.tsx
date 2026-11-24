@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   type DocumentPreviewData,
@@ -35,6 +35,20 @@ export function GrievanceCommunicationWorkspace({
   const [previewDoc, setPreviewDoc] = useState<DocumentPreviewData | null>(
     null,
   );
+
+  // Mark message notifications for this grievance thread as read
+  useEffect(() => {
+    if (data?.grievanceId) {
+      fetch(`/api/messages/${data.grievanceId}/read`, { method: "POST" })
+        .then((res) => {
+          if (res.ok) {
+            window.dispatchEvent(new Event("messages-changed"));
+            window.dispatchEvent(new Event("notifications-changed"));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [data?.grievanceId]);
 
   const isClosed = data.isClosed || data.status === "CLOSED";
 

@@ -260,6 +260,40 @@ export async function getUserGrievanceConversations(
     }
   }
 
+  let unreadGrievanceIdSet = new Set<string>();
+  try {
+    const unreadNotifs = await prisma.notifications.findMany({
+      where: {
+        user_id: userId,
+        status: { not: "READ" },
+        read_at: null,
+        notification_type: {
+          in: [
+            "ADDITIONAL_INFO_REQUESTED",
+            "ADDITIONAL_INFO_SUBMITTED",
+            "COMMUNICATION_MESSAGE",
+          ],
+        },
+        NOT: {
+          OR: [
+            { message: { startsWith: "Your message" } },
+            { message: { startsWith: "You sent" } },
+            { title: { startsWith: "Message Sent" } },
+            { title: { startsWith: "Communication Sent" } },
+          ],
+        },
+      },
+      select: { grievance_id: true },
+    });
+    unreadGrievanceIdSet = new Set(
+      unreadNotifs
+        .map((n) => n.grievance_id?.toString())
+        .filter(Boolean) as string[],
+    );
+  } catch (err) {
+    console.warn("Failed to query unread message notifications:", err);
+  }
+
   return grievances.map((g) => {
     const endUserName = g.users
       ? `${g.users.first_name} ${g.users.last_name || ""}`.trim()
@@ -281,12 +315,22 @@ export async function getUserGrievanceConversations(
 
     if (latestAudit && latestResolution) {
       if (latestAudit.created_at > latestResolution.submitted_at) {
-        latestEvent = formatAuditEvent(latestAudit, endUserName, g.status);
+        latestEvent = formatAuditEvent(
+          latestAudit,
+          endUserName,
+          g.status,
+          userRole,
+        );
       } else {
         latestEvent = formatResolutionEvent(latestResolution, g.status);
       }
     } else if (latestAudit) {
-      latestEvent = formatAuditEvent(latestAudit, endUserName, g.status);
+      latestEvent = formatAuditEvent(
+        latestAudit,
+        endUserName,
+        g.status,
+        userRole,
+      );
     } else if (latestResolution) {
       latestEvent = formatResolutionEvent(latestResolution, g.status);
     }
@@ -327,7 +371,10 @@ export async function getUserGrievanceConversations(
       timestamp: latestEvent.timestamp.toISOString(),
       filterCategory: latestEvent.filterCategory,
       hasAttachments: latestEvent.hasAttachments,
-      isUnread: latestEvent.filterCategory === "ACTION_REQUIRED",
+      isUnread:
+        unreadGrievanceIdSet.has(g.grievance_id.toString()) ||
+        (userRole === "END_USER" &&
+          latestEvent.filterCategory === "ACTION_REQUIRED"),
     };
   });
 }
@@ -345,6 +392,7 @@ function formatAuditEvent(
   },
   endUserName: string,
   grievanceStatus: string,
+  userRole?: string,
 ) {
   const val = audit.new_value as {
     message?: string;
@@ -362,6 +410,7 @@ function formatAuditEvent(
     const rawMsg =
       val?.message ||
       "Please provide additional details regarding this grievance.";
+    const isEmployee = userRole === "END_USER";
     return {
       type: "AUDIT" as const,
       timestamp: audit.created_at,
@@ -369,8 +418,14 @@ function formatAuditEvent(
       preview:
         rawMsg || "Requested additional supporting details for verification.",
       communicationState:
-        grievanceStatus === "CLOSED" ? "Case Closed" : "Action Required",
-      filterCategory: "ACTION_REQUIRED" as const,
+        grievanceStatus === "CLOSED"
+          ? "Case Closed"
+          : isEmployee
+            ? "Action Required"
+            : "Awaiting Employee",
+      filterCategory: (isEmployee ? "ACTION_REQUIRED" : "UPDATES") as
+        | "ACTION_REQUIRED"
+        | "UPDATES",
       hasAttachments: (val?.requestedDocs?.length ?? 0) > 0,
       action: audit.action,
     };
@@ -475,6 +530,31 @@ export async function getGrievanceCommunicationThread(
   const userRole = user.roles.role_name;
   const userId = BigInt(user.user_id);
   const deptId = user.department_id ? BigInt(user.department_id) : null;
+
+  // Mark unread incoming message notifications for this grievance as read
+  try {
+    await prisma.notifications.updateMany({
+      where: {
+        user_id: userId,
+        grievance_id: BigInt(grievanceId),
+        status: { not: "READ" },
+        read_at: null,
+        notification_type: {
+          in: [
+            "ADDITIONAL_INFO_REQUESTED",
+            "ADDITIONAL_INFO_SUBMITTED",
+            "COMMUNICATION_MESSAGE",
+          ],
+        },
+      },
+      data: {
+        status: "READ",
+        read_at: new Date(),
+      },
+    });
+  } catch (markErr) {
+    console.warn("Failed to mark message notifications as read:", markErr);
+  }
 
   // 1. Fetch grievance with all relations
   const grievance = await prisma.grievances.findUnique({

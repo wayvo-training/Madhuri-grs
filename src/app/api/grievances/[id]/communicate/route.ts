@@ -122,6 +122,10 @@ export async function POST(
     const isAssignedStaff = grievance.assignments.some(
       (a) => a.staff_id === userId && a.assignment_status === "ASSIGNED",
     );
+    const isInvolvedStaff =
+      userRole === "STAFF" &&
+      deptId !== null &&
+      involvedDepts.some((gd) => gd.department_id === deptId);
     const isPermittedDeptHead =
       userRole === "DEPARTMENT_HEAD" &&
       deptId !== null &&
@@ -145,6 +149,7 @@ export async function POST(
     if (
       !isSubmitter &&
       !isAssignedStaff &&
+      !isInvolvedStaff &&
       !isPermittedDeptHead &&
       !(isAdmin && hasSendCommunication)
     ) {
@@ -158,7 +163,11 @@ export async function POST(
       );
     }
 
-    if (userRole === "STAFF" && grievance.status === "ASSIGNED") {
+    if (
+      userRole === "STAFF" &&
+      grievance.status === "ASSIGNED" &&
+      isAssignedStaff
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -293,7 +302,9 @@ export async function POST(
             file_name: file.fileName,
             file_path: relativeStoragePath,
             file_type: file.fileType || "application/octet-stream",
-            file_size: file.fileSize ? BigInt(file.fileSize) : null,
+            file_size: file.fileSize
+              ? BigInt(Math.round(Number(file.fileSize)))
+              : null,
             uploaded_by: userId,
           },
         });

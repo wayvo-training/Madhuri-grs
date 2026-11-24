@@ -236,6 +236,7 @@ export function DashboardSidebar({
   }
 
   const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -253,20 +254,43 @@ export function DashboardSidebar({
       }
     };
 
+    const fetchUnreadMessages = async () => {
+      try {
+        const res = await fetch("/api/messages/unread-count");
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.success && typeof data.count === "number") {
+            setUnreadMessages(data.count);
+          }
+        }
+      } catch {
+        // silent fallback
+      }
+    };
+
     fetchUnread();
-    const interval = setInterval(fetchUnread, 10000);
+    fetchUnreadMessages();
+    const interval = setInterval(() => {
+      fetchUnread();
+      fetchUnreadMessages();
+    }, 10000);
 
     const handleNotificationsChanged = () => {
       fetchUnread();
     };
+    const handleMessagesChanged = () => {
+      fetchUnreadMessages();
+    };
     const handleFocus = () => {
       fetchUnread();
+      fetchUnreadMessages();
     };
     if (typeof window !== "undefined") {
       window.addEventListener(
         "notifications-changed",
         handleNotificationsChanged,
       );
+      window.addEventListener("messages-changed", handleMessagesChanged);
       window.addEventListener("focus", handleFocus);
     }
 
@@ -278,6 +302,7 @@ export function DashboardSidebar({
           "notifications-changed",
           handleNotificationsChanged,
         );
+        window.removeEventListener("messages-changed", handleMessagesChanged);
         window.removeEventListener("focus", handleFocus);
       }
     };
@@ -323,10 +348,19 @@ export function DashboardSidebar({
                     const isNotification =
                       item.title === "Notifications" ||
                       item.href.includes("/notifications");
+                    const isMessages =
+                      item.title === "Messages" ||
+                      item.href.includes("/messages");
                     const badgeContent =
                       isNotification && unreadNotifications > 0
-                        ? unreadNotifications.toString()
-                        : item.badge;
+                        ? unreadNotifications > 99
+                          ? "99+"
+                          : unreadNotifications.toString()
+                        : isMessages && unreadMessages > 0
+                          ? unreadMessages > 99
+                            ? "99+"
+                            : unreadMessages.toString()
+                          : item.badge;
 
                     const itemBaseRoute = item.href.split("?")[0].split("#")[0];
                     const isSameRoute = pathname === itemBaseRoute;
@@ -362,7 +396,9 @@ export function DashboardSidebar({
                             className={
                               isNotification
                                 ? "bg-rose-500 text-white font-bold text-[10px] px-1.5 py-0.5 rounded-full"
-                                : ""
+                                : isMessages
+                                  ? "bg-[#0F766E] text-white font-bold text-[10px] px-1.5 py-0.5 rounded-full"
+                                  : ""
                             }
                           >
                             {badgeContent}

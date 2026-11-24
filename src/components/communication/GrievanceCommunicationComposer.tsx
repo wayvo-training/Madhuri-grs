@@ -113,6 +113,10 @@ export function GrievanceCommunicationComposer({
       setSelectedFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("messages-changed"));
+        window.dispatchEvent(new Event("notifications-changed"));
+      }
     } catch (err) {
       console.error("Communication error:", err);
       toast.error("Failed to send message", {

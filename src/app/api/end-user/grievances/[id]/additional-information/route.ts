@@ -259,7 +259,9 @@ export async function POST(
               file_name: file.fileName,
               file_path: relativeStoragePath,
               file_type: file.fileType || "application/octet-stream",
-              file_size: file.fileSize ? BigInt(file.fileSize) : BigInt(1024),
+              file_size: file.fileSize
+                ? BigInt(Math.round(Number(file.fileSize)))
+                : BigInt(1024),
               uploaded_by: user.user_id,
             },
           });
