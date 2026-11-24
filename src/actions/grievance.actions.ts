@@ -25,6 +25,12 @@ export interface SubmitResolutionParams {
   actionTaken?: string;
   outcome?: string;
   evidence?: string;
+  attachments?: Array<{
+    fileName: string;
+    filePath?: string;
+    fileType?: string;
+    fileSize?: number;
+  }>;
 }
 
 export interface AddGrievanceNoteParams {
@@ -114,6 +120,7 @@ export async function reviewResolutionAction(params: SubmitResolutionParams) {
         actionTaken: params.actionTaken,
         outcome: params.outcome,
         evidence: params.evidence,
+        attachments: params.attachments,
       }),
     },
   );

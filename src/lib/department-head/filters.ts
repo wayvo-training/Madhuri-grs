@@ -86,11 +86,12 @@ export function canHeadSubmitResolution(item: GrievanceItem): boolean {
   ) {
     return true;
   }
-  // 3. Maximum reopens reached with submitted resolution
+  // 4. Reopened grievance with submitted resolution pending Head review
   if (
-    (item.reopenCount ?? 0) >= 2 &&
-    item.submittedResolution &&
-    !isResolutionSubmittedByHead(item)
+    item.isReopened ||
+    ((item.reopenCount ?? 0) > 0 &&
+      item.submittedResolution &&
+      !isResolutionSubmittedByHead(item))
   ) {
     return true;
   }

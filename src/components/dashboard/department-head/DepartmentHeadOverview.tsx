@@ -753,7 +753,9 @@ export function DepartmentHeadOverviewInner({
 
       {resolutionModalGrievance &&
         (hasHeadResolutionAuthority(resolutionModalGrievance) ||
-        (resolutionModalGrievance.reopenCount ?? 0) >= 2 ||
+        resolutionModalGrievance.hodIntervention?.isResolutionAuthority ||
+        resolutionModalGrievance.isAssignedToHead ||
+        !resolutionModalGrievance.submittedResolution ||
         resolutionModalGrievance.status !== "UNDER_REVIEW" ? (
           <ResolutionForm
             isOpen={!!resolutionModalGrievance}
@@ -807,6 +809,15 @@ export function DepartmentHeadOverviewInner({
                 actionTaken: data.actionTaken,
                 outcome: data.outcome,
                 evidence: data.evidence || undefined,
+                attachments: data.attachments?.map((att) => ({
+                  fileName: att.name,
+                  filePath: att.path,
+                  fileType: att.type,
+                  fileSize:
+                    typeof att.size === "string"
+                      ? Number.parseFloat(att.size) * 1024
+                      : undefined,
+                })),
               });
               setResolutionModalGrievance(null);
             }}

@@ -109,6 +109,27 @@ export function CaseFileInspectionModal({
           setCaseProgressData(json.data);
           setCurrentGrievance((prev) => ({
             ...prev,
+            ...(json.data.hodIntervention
+              ? { hodIntervention: json.data.hodIntervention }
+              : {}),
+            ...(json.data.canSubmitFinalResolution !== undefined
+              ? { canSubmitFinalResolution: json.data.canSubmitFinalResolution }
+              : {}),
+            ...(json.data.hasPendingSupportingDepartments !== undefined
+              ? {
+                  hasPendingSupportingDepartments:
+                    json.data.hasPendingSupportingDepartments,
+                }
+              : {}),
+            ...(json.data.pendingSupportingDepartmentNames
+              ? {
+                  pendingSupportingDepartmentNames:
+                    json.data.pendingSupportingDepartmentNames,
+                }
+              : {}),
+            ...(json.data.isPrimaryDepartment !== undefined
+              ? { isPrimaryDepartment: json.data.isPrimaryDepartment }
+              : {}),
             ...(json.data.departmentsInvolved
               ? { departmentsInvolved: json.data.departmentsInvolved }
               : {}),

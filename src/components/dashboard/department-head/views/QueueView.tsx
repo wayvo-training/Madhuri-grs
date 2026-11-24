@@ -958,6 +958,23 @@ export function QueueView({
                                   </span>
                                 </button>
                               )}
+                            {(hasHeadResolutionAuthority(item) ||
+                              Boolean(
+                                item.hodIntervention?.isResolutionAuthority,
+                              )) &&
+                              item.status !== "CLOSED" &&
+                              item.status !== "RESOLVED" &&
+                              item.status !== "COMPLETED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => onReviewResolution(item)}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700 border border-teal-200 hover:bg-teal-100 hover:text-teal-800 transition cursor-pointer shadow-2xs"
+                                  title="Submit or resume draft resolution as Department Head"
+                                >
+                                  <CheckCircle2 className="h-3 w-3 text-teal-600" />
+                                  <span>Submit Resolution</span>
+                                </button>
+                              )}
                             <ActionMenu
                               widthClass="w-44"
                               items={[

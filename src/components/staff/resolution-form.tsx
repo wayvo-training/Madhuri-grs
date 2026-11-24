@@ -16,6 +16,19 @@ import { toast } from "sonner";
 import { uploadFileToSupabase } from "@/lib/storage-client";
 import type { StaffGrievanceItem, StaffResolutionData } from "@/types/staff";
 
+export interface DraftAttachment {
+  id: string;
+  name: string;
+  fileName?: string;
+  size: string;
+  fileSize?: number;
+  type?: string;
+  fileType?: string;
+  path?: string;
+  filePath?: string;
+  fileUrl?: string;
+}
+
 interface ResolutionFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -41,11 +54,23 @@ export function ResolutionForm({
   const [actionTaken, setActionTaken] = useState("");
   const [outcome, setOutcome] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [existingAttachments, setExistingAttachments] = useState<
+    DraftAttachment[]
+  >([]);
   const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const isSubmittingRef = useRef(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Review governance: Reopened grievances or those with manual review trigger Head review
+  const isReviewRequired =
+    Boolean(grievance.reopenCount && grievance.reopenCount > 0) ||
+    grievance.status === "REWORK" ||
+    grievance.status === "REOPENED" ||
+    (grievance.manualReviewCount ?? 0) > 0;
 
   // Validation checks for resolution fields
   const isProblemSummaryOnlyDigits = /^\d+$/.test(
@@ -126,6 +151,26 @@ export function ResolutionForm({
     return null;
   };
 
+  const handleRemoveExistingAttachment = (index: number) => {
+    setExistingAttachments((prev) => {
+      const updated = prev.filter((_, i) => i !== index);
+      const saved = localStorage.getItem(`draft_resolution_${grievance.id}`);
+      if (saved) {
+        try {
+          const draftData = JSON.parse(saved);
+          draftData.attachments = updated;
+          localStorage.setItem(
+            `draft_resolution_${grievance.id}`,
+            JSON.stringify(draftData),
+          );
+        } catch (e) {
+          console.error("Failed to update draft attachments in storage", e);
+        }
+      }
+      return updated;
+    });
+  };
+
   useEffect(() => {
     if (isOpen && grievance.id) {
       const saved = localStorage.getItem(`draft_resolution_${grievance.id}`);
@@ -138,9 +183,20 @@ export function ResolutionForm({
           if (draftData.actionTaken) setActionTaken(draftData.actionTaken);
           if (draftData.outcome) setOutcome(draftData.outcome);
           if (draftData.evidence) setEvidence(draftData.evidence);
+          if (Array.isArray(draftData.attachments)) {
+            setExistingAttachments(draftData.attachments);
+          } else {
+            setExistingAttachments([]);
+          }
+          setHasRestoredDraft(true);
         } catch (e) {
           console.error("Failed to parse saved draft", e);
+          setHasRestoredDraft(false);
         }
+      } else {
+        setExistingAttachments([]);
+        setSupportingFiles([]);
+        setHasRestoredDraft(false);
       }
     }
   }, [isOpen, grievance.id]);
@@ -149,19 +205,67 @@ export function ResolutionForm({
 
   const submitForm = async (isDraft: boolean) => {
     if (isDraft) {
-      const draftData = {
-        problemSummary,
-        findings,
-        actionTaken,
-        outcome,
-        evidence,
-      };
-      localStorage.setItem(
-        `draft_resolution_${grievance.id}`,
-        JSON.stringify(draftData),
-      );
-      toast.success("Resolution draft saved to your browser.");
-      onClose();
+      if (isSubmittingRef.current) return;
+      setIsSavingDraft(true);
+      isSubmittingRef.current = true;
+      setErrorMsg(null);
+
+      try {
+        let newlyUploaded: DraftAttachment[] = [];
+        if (supportingFiles.length > 0) {
+          newlyUploaded = await Promise.all(
+            supportingFiles.map(async (f) => {
+              const uploadRes = await uploadFileToSupabase(f, "resolutions");
+              const safePath = uploadRes.filePath || uploadRes.fileUrl;
+              return {
+                id: String(Date.now() + Math.random()),
+                name: f.name,
+                fileName: f.name,
+                size: `${(f.size / 1024).toFixed(1)} KB`,
+                fileSize: f.size,
+                type: f.type || "Document",
+                fileType: f.type || "Document",
+                path: safePath,
+                filePath: safePath,
+                fileUrl: uploadRes.fileUrl,
+              };
+            }),
+          );
+        }
+
+        const mergedAttachments = [...existingAttachments, ...newlyUploaded];
+        setExistingAttachments(mergedAttachments);
+        setSupportingFiles([]);
+
+        const draftData = {
+          problemSummary,
+          findings,
+          actionTaken,
+          outcome,
+          evidence,
+          attachments: mergedAttachments,
+        };
+        localStorage.setItem(
+          `draft_resolution_${grievance.id}`,
+          JSON.stringify(draftData),
+        );
+        toast.success(
+          mergedAttachments.length > 0
+            ? `Resolution draft and ${mergedAttachments.length} document(s) saved.`
+            : "Resolution draft saved to your browser.",
+        );
+        onClose();
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Failed to save draft attachments";
+        setErrorMsg(msg);
+        toast.error(msg);
+      } finally {
+        setIsSavingDraft(false);
+        isSubmittingRef.current = false;
+      }
       return;
     }
 
@@ -178,24 +282,44 @@ export function ResolutionForm({
     setErrorMsg(null);
 
     try {
-      const attachmentPayloads = await Promise.all(
-        supportingFiles.map(async (f) => {
-          const uploadRes = await uploadFileToSupabase(f, "resolutions");
-          const safePath = uploadRes.filePath || uploadRes.fileUrl;
-          return {
-            id: String(Date.now() + Math.random()),
-            name: f.name,
-            fileName: f.name,
-            size: `${(f.size / 1024).toFixed(1)} KB`,
-            fileSize: f.size,
-            type: f.type || "Document",
-            fileType: f.type || "Document",
-            path: safePath,
-            filePath: safePath,
-            uploadedAt: new Date().toISOString(),
-          };
-        }),
-      );
+      let newlyUploaded: DraftAttachment[] = [];
+      if (supportingFiles.length > 0) {
+        newlyUploaded = await Promise.all(
+          supportingFiles.map(async (f) => {
+            const uploadRes = await uploadFileToSupabase(f, "resolutions");
+            const safePath = uploadRes.filePath || uploadRes.fileUrl;
+            return {
+              id: String(Date.now() + Math.random()),
+              name: f.name,
+              fileName: f.name,
+              size: `${(f.size / 1024).toFixed(1)} KB`,
+              fileSize: f.size,
+              type: f.type || "Document",
+              fileType: f.type || "Document",
+              path: safePath,
+              filePath: safePath,
+              fileUrl: uploadRes.fileUrl,
+            };
+          }),
+        );
+      }
+
+      const allAttachments = [...existingAttachments, ...newlyUploaded];
+      const attachmentPayloads = allAttachments.map((att) => ({
+        id: att.id,
+        name: att.name || att.fileName || "Document",
+        fileName: att.fileName || att.name || "Document",
+        size: att.size || `${((att.fileSize || 0) / 1024).toFixed(1)} KB`,
+        fileSize:
+          typeof att.fileSize === "number"
+            ? att.fileSize
+            : Number.parseFloat(att.size || "0") * 1024,
+        type: att.type || att.fileType || "Document",
+        fileType: att.fileType || att.type || "Document",
+        path: att.path || att.filePath || "",
+        filePath: att.filePath || att.path || "",
+        uploadedAt: new Date().toISOString(),
+      }));
       const isResolving =
         !grievance.isSupportingStaff &&
         (grievance.canSubmitFinalResolution ??
@@ -385,6 +509,43 @@ export function ResolutionForm({
                   <X className="h-4 w-4" />
                 </button>
               </div>
+
+              {/* Draft Restored Banner */}
+              {hasRestoredDraft && (
+                <div className="bg-emerald-50 border-b border-emerald-200/80 px-5 py-2.5 text-[11px] text-emerald-950 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCheck2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>
+                      <strong>Resolution Draft Restored:</strong> Your
+                      previously saved draft details and{" "}
+                      {existingAttachments.length} attached document(s) have
+                      been loaded.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem(
+                        `draft_resolution_${grievance.id}`,
+                      );
+                      setProblemSummary(
+                        `Investigation into ${grievance.category} concern (${grievance.grievanceNumber}): ${grievance.title}`,
+                      );
+                      setFindings("");
+                      setActionTaken("");
+                      setOutcome("");
+                      setEvidence("");
+                      setExistingAttachments([]);
+                      setSupportingFiles([]);
+                      setHasRestoredDraft(false);
+                      toast.info("Draft discarded.");
+                    }}
+                    className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:underline shrink-0 ml-2 cursor-pointer"
+                  >
+                    Discard Draft
+                  </button>
+                </div>
+              )}
 
               {/* Supporting Investigator Mode Notice */}
               {grievance.isSupportingStaff ? (
@@ -738,14 +899,47 @@ export function ResolutionForm({
                 />
               </label>
               <span className="text-[11px] text-slate-500">
-                {supportingFiles.length === 0
+                {existingAttachments.length + supportingFiles.length === 0
                   ? "No documents attached"
-                  : `${supportingFiles.length} file(s) attached`}
+                  : `${existingAttachments.length + supportingFiles.length} file(s) attached`}
               </span>
             </div>
 
-            {supportingFiles.length > 0 && (
+            {(existingAttachments.length > 0 || supportingFiles.length > 0) && (
               <div className="flex flex-wrap gap-2 pt-1">
+                {/* Previously drafted / saved attachments */}
+                {existingAttachments.map((att, attIndex) => (
+                  <span
+                    key={att.id || `draft-att-${attIndex}-${att.name}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50/70 px-2.5 py-1 text-[11px] font-medium text-teal-900 shadow-2xs"
+                  >
+                    <FileText className="h-3 w-3 text-[#0F766E]" />
+                    <span
+                      className="max-w-[180px] truncate"
+                      title={att.name || att.fileName}
+                    >
+                      {att.name || att.fileName}
+                    </span>
+                    <span className="text-[10px] text-teal-700">
+                      (
+                      {att.size ||
+                        (att.fileSize
+                          ? `${(att.fileSize / 1024).toFixed(0)} KB`
+                          : "Attached")}
+                      )
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExistingAttachment(attIndex)}
+                      className="rounded-xs p-0.5 text-teal-600 hover:bg-teal-100 hover:text-teal-900 transition cursor-pointer"
+                      title="Remove document"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+
+                {/* Newly selected files */}
                 {supportingFiles.map((file, fileIndex) => (
                   <span
                     key={`${file.name}-${file.size}-${file.lastModified}`}
@@ -766,6 +960,7 @@ export function ResolutionForm({
                         )
                       }
                       className="rounded-xs p-0.5 text-teal-600 hover:bg-teal-100 hover:text-teal-900 transition cursor-pointer"
+                      title="Remove document"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -787,7 +982,7 @@ export function ResolutionForm({
                   will be alerted to review your findings and submit the final
                   customer resolution.
                 </>
-              ) : grievance.reopenCount >= 3 ? (
+              ) : isReviewRequired ? (
                 <>
                   Submitting this resolution transitions the grievance to{" "}
                   <strong>UNDER_REVIEW</strong>. Your Department Head and the
@@ -816,17 +1011,25 @@ export function ResolutionForm({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                disabled={isSubmitting || isSavingDraft}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition disabled:opacity-50 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => submitForm(true)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSavingDraft}
                 className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition disabled:opacity-50 cursor-pointer"
               >
-                Save as Draft
+                {isSavingDraft ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Saving Draft...</span>
+                  </span>
+                ) : (
+                  "Save as Draft"
+                )}
               </button>
               <button
                 type="button"
@@ -845,7 +1048,7 @@ export function ResolutionForm({
                     setShowConfirmModal(true);
                   }
                 }}
-                disabled={isSubmitting || !isFormValid}
+                disabled={isSubmitting || isSavingDraft || !isFormValid}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-5 py-2 text-xs font-semibold text-white shadow-xs transition disabled:opacity-50 cursor-pointer ${
                   grievance.isSupportingStaff
                     ? "bg-teal-700 hover:bg-teal-800"
@@ -867,7 +1070,7 @@ export function ResolutionForm({
                         ? "Submit Supporting Findings"
                         : !isResolving
                           ? "Submit Department Findings"
-                          : grievance.reopenCount >= 3
+                          : isReviewRequired
                             ? "Submit for Review"
                             : "Resolve Grievance"}
                     </span>
@@ -898,15 +1101,15 @@ export function ResolutionForm({
                     <h3 className="text-base font-bold text-slate-900">
                       {!isResolving
                         ? "Confirm Findings Submission"
-                        : grievance.reopenCount >= 3
+                        : isReviewRequired
                           ? "Confirm Review Submission"
                           : "Confirm Grievance Resolution"}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                       {!isResolving
                         ? `Are you sure you want to submit your department's findings for ${grievance.grievanceNumber}? This will mark your participation as completed and activate the next department stage.`
-                        : grievance.reopenCount >= 3
-                          ? `Are you sure you want to submit this resolution for ${grievance.grievanceNumber}? Because this grievance has been reopened 3+ times, submitting will transition it to UNDER_REVIEW for Department Head approval.`
+                        : isReviewRequired
+                          ? `Are you sure you want to submit this resolution for ${grievance.grievanceNumber}? Because this grievance is reopened, submitting will transition it to UNDER_REVIEW for Department Head approval.`
                           : `Are you sure you want to resolve ${grievance.grievanceNumber}? This will finalize the investigation, mark the grievance as RESOLVED, and notify the employee.`}
                     </p>
                   </div>
@@ -972,13 +1175,14 @@ export function ResolutionForm({
                       {outcome}
                     </p>
                   </div>
-                  {supportingFiles.length > 0 && (
+                  {existingAttachments.length + supportingFiles.length > 0 && (
                     <div className="flex justify-between items-center text-slate-600 pt-1 border-t border-slate-200/50">
                       <span className="font-medium text-slate-500">
                         Supportive Files:
                       </span>
                       <span className="font-semibold text-slate-800">
-                        {supportingFiles.length} file(s) attached
+                        {existingAttachments.length + supportingFiles.length}{" "}
+                        file(s) attached
                       </span>
                     </div>
                   )}

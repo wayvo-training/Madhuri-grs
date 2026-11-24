@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeStoragePath } from "@/lib/attachments/access-control";
 import { resolveDepartmentHeadAuth } from "@/lib/department-head";
 import {
   evaluateReopenPolicy,
@@ -9,6 +10,7 @@ import {
   canDepartmentSubmitFinalResolution,
 } from "@/lib/engines/routing-engine";
 import { prisma } from "@/lib/prisma";
+import { SUPABASE_BUCKET } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
@@ -32,6 +34,7 @@ export async function POST(
       actionTaken = "",
       outcome = "RESOLVED",
       evidence = "",
+      attachments = [],
     } = body;
 
     const grievanceDept = await prisma.grievance_departments.findFirst({
@@ -297,7 +300,7 @@ export async function POST(
     await prisma.$transaction(async (tx) => {
       if (isDirectResolution) {
         // 1. Direct Resolution Submission by Department Head
-        await tx.resolutions.create({
+        const newResolution = await tx.resolutions.create({
           data: {
             grievance_id: grievanceId,
             submitted_by: user.user_id,
@@ -312,6 +315,42 @@ export async function POST(
             evidence: evidence || null,
           },
         });
+
+        // Save optional supportive resolution attachments
+        if (Array.isArray(attachments) && attachments.length > 0) {
+          for (const rawAtt of attachments) {
+            const att = rawAtt as {
+              fileName?: string;
+              name?: string;
+              filePath?: string;
+              path?: string;
+              fileType?: string;
+              type?: string;
+              fileSize?: number;
+              size?: string | number;
+            };
+            const resolvedFileName = att.fileName || att.name;
+            if (resolvedFileName) {
+              const raw =
+                att.filePath || att.path || `resolutions/${resolvedFileName}`;
+              const norm = normalizeStoragePath(raw, SUPABASE_BUCKET);
+              const relativeStoragePath = norm.valid ? norm.storagePath : raw;
+
+              await tx.attachments.create({
+                data: {
+                  grievance_id: grievanceId,
+                  resolution_id: newResolution.resolution_id,
+                  file_name: resolvedFileName,
+                  file_path: relativeStoragePath,
+                  file_type:
+                    att.fileType || att.type || "application/octet-stream",
+                  file_size: att.fileSize ? BigInt(att.fileSize) : null,
+                  uploaded_by: user.user_id,
+                },
+              });
+            }
+          }
+        }
 
         const isSupportingContributor =
           grievanceDept && grievanceDept.involvement_type === "SUPPORTING";

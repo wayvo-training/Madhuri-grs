@@ -33,7 +33,9 @@ export function DepartmentHeadResolutionModal({
 }: DepartmentHeadResolutionModalProps) {
   const isClarify = decision === "CLARIFY" || decision === "REJECT";
   const isDirectResolution =
-    (grievance.reopenCount ?? 0) >= 2 ||
+    Boolean(grievance.hodIntervention?.isResolutionAuthority) ||
+    Boolean(grievance.isAssignedToHead) ||
+    !grievance.submittedResolution ||
     grievance.status === "ESCALATED" ||
     grievance.status !== "UNDER_REVIEW";
 

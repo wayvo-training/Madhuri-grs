@@ -280,6 +280,7 @@ export function useGrievanceActions({
       actionTaken,
       outcome,
       evidence,
+      attachments,
     }: {
       grievance: GrievanceItem;
       decision: "APPROVE" | "CLARIFY";
@@ -288,12 +289,19 @@ export function useGrievanceActions({
       actionTaken?: string;
       outcome?: string;
       evidence?: string;
+      attachments?: Array<{
+        fileName: string;
+        filePath?: string;
+        fileType?: string;
+        fileSize?: number;
+      }>;
     }) => {
       const isDirectResolution =
-        (grievance.reopenCount ?? 0) >= 2 ||
+        Boolean(grievance.hodIntervention?.isResolutionAuthority) ||
+        Boolean(grievance.isAssignedToHead) ||
+        !grievance.submittedResolution ||
         grievance.status === "ESCALATED" ||
-        grievance.status !== "UNDER_REVIEW" ||
-        Boolean(grievance.hodIntervention?.isResolutionAuthority);
+        grievance.status !== "UNDER_REVIEW";
 
       if (decision === "APPROVE") {
         const finalAudit: EscalationAuditRecord = {
@@ -374,6 +382,7 @@ export function useGrievanceActions({
           actionTaken,
           outcome,
           evidence,
+          attachments,
         });
         await loadData(undefined, true);
       } catch (err: unknown) {

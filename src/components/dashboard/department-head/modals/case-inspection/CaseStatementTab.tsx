@@ -8,10 +8,13 @@ import {
   Image as ImageIcon,
   Paperclip,
   Share2,
+  ShieldAlert,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
+import { hasHeadResolutionAuthority } from "@/lib/department-head/filters";
 import { buildGmailComposeUrl } from "@/lib/email";
 import type {
   DocumentPreviewData,
@@ -326,10 +329,44 @@ export function CaseStatementTab({
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Handling Grievance Staff
         </span>
-        {currentGrievance.assignedStaffId ||
-        (currentGrievance.assignedStaffName &&
-          currentGrievance.assignedStaffName !== "Unassigned" &&
-          currentGrievance.assignedStaffName !== "Blocked") ? (
+        {hasHeadResolutionAuthority(currentGrievance) ||
+        currentGrievance.hodIntervention?.isResolutionAuthority ||
+        currentGrievance.hodIntervention?.actionType ===
+          "ASSUME_RESOLUTION_AUTHORITY" ||
+        currentGrievance.isAssignedToHead ? (
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+              <div>
+                <span className="font-semibold text-slate-900 block text-xs">
+                  {currentGrievance.hodIntervention?.resolutionAuthorityName ||
+                    currentGrievance.assignedStaffName ||
+                    "Department Head"}
+                </span>
+                <span className="text-[10px] text-amber-700 font-medium">
+                  Direct Resolution Authority Assumed
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                toast.info(
+                  "You have assumed direct authority to investigate and resolve this grievance personally. Staff assignment is disabled while direct authority is active.",
+                  { duration: 4000 },
+                );
+              }}
+              className="inline-flex items-center gap-1 rounded-lg bg-slate-200/70 hover:bg-slate-200 text-slate-600 px-3 py-1.5 text-xs font-semibold border border-slate-300 transition cursor-pointer"
+              title="Staff assignment is disabled because you have assumed direct resolution authority"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+              <span>Authority Assumed (Assign Disabled)</span>
+            </button>
+          </div>
+        ) : currentGrievance.assignedStaffId ||
+          (currentGrievance.assignedStaffName &&
+            currentGrievance.assignedStaffName !== "Unassigned" &&
+            currentGrievance.assignedStaffName !== "Blocked") ? (
           <div className="flex items-center justify-between pt-1">
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-emerald-700" />
