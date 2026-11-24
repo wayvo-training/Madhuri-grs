@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { StatusBadge } from "@/components/dashboard/badges";
 import {
   formatAuditActionTitle,
   formatAuditLogContent,
@@ -723,7 +724,14 @@ export function CaseProgressTab({
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800"
                               : dept.status === "BLOCKED"
                                 ? "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
-                                : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                                : dept.status === "IN_PROGRESS"
+                                  ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800"
+                                  : dept.status === "ASSIGNED"
+                                    ? "bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800"
+                                    : dept.status === "PENDING_ASSIGNMENT" ||
+                                        dept.status === "AWAITING_ASSIGNMENT"
+                                      ? "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800"
+                                      : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
                         }`}
                       >
                         {dept.status === "COMPLETED" &&
@@ -881,11 +889,12 @@ export function CaseProgressTab({
                 <User className="h-3.5 w-3.5 text-emerald-800 dark:text-teal-400" />
                 Current Assignment
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                 Status:{" "}
-                <strong className="font-semibold text-slate-800 dark:text-slate-200">
-                  {assignmentStatus}
-                </strong>
+                <StatusBadge
+                  status={assignmentStatus}
+                  className="text-[10px] py-0 px-2 font-semibold"
+                />
               </span>
             </div>
 

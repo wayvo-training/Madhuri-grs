@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, CheckCircle2, X } from "lucide-react";
+import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
 export interface HodInterventionInfo {
@@ -110,9 +111,7 @@ export function CaseInspectionHeader({
             <span className="text-slate-300">•</span>
             <span>{subcategory}</span>
             <span className="text-slate-300">•</span>
-            <span className="text-slate-900 font-semibold">
-              {priority} Priority
-            </span>
+            <PriorityBadge priority={priority} />
           </div>
           {departmentsInvolved && departmentsInvolved.length > 1 && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -219,23 +218,28 @@ export function CaseInspectionHeader({
 
         <div>
           {isClosedOrResolved ? (
-            <span className="text-sm font-bold text-slate-700 uppercase">
-              {status}
-            </span>
+            <StatusBadge
+              status={status ?? "RESOLVED"}
+              className="text-xs px-3 py-1 font-bold uppercase tracking-wider"
+            />
           ) : isBreached ? (
-            <span className="text-sm font-bold text-rose-600 uppercase">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
               SLA BREACHED
             </span>
           ) : isSlaExtended ? (
-            <span className="text-sm font-bold text-emerald-700 uppercase">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
               SLA EXTENDED
             </span>
           ) : isAtRisk ? (
-            <span className="text-sm font-bold text-amber-600 uppercase">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse" />
               SLA AT RISK
             </span>
           ) : (
-            <span className="text-sm font-bold text-emerald-700 uppercase">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
               ON TRACK
             </span>
           )}

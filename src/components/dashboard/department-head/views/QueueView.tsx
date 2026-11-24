@@ -743,12 +743,12 @@ export function QueueView({
 
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                               {item.isReopened && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
                                   Reopened ({item.reopenCount}x)
                                 </span>
                               )}
                               {item.isCrossDepartment && (
-                                <span className="inline-flex items-center text-xs font-medium text-slate-600 dark:text-slate-300">
+                                <span className="inline-flex items-center text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded px-1.5 py-0.5 dark:bg-teal-950/40 dark:border-teal-800 dark:text-teal-300">
                                   Multi Department
                                 </span>
                               )}
