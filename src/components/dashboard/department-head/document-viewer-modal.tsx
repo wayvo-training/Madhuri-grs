@@ -259,7 +259,15 @@ export function DocumentViewerModal({
               </div>
             ) : isPdf ? (
               <iframe
-                src={targetUrl}
+                src={
+                  targetUrl
+                    ? targetUrl.includes("#")
+                      ? targetUrl.includes("toolbar=")
+                        ? targetUrl
+                        : `${targetUrl}&toolbar=0&navpanes=0`
+                      : `${targetUrl}#toolbar=0&navpanes=0`
+                    : undefined
+                }
                 title={document.name}
                 className="w-full h-full flex-1 border-0"
               />

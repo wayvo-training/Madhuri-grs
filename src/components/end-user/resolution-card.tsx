@@ -66,6 +66,7 @@ interface ResolutionCardProps {
   } | null;
   allowActions?: boolean;
   showDownloadButton?: boolean;
+  onOpenDocumentPreview?: (doc: ResolutionAttachment) => void;
 }
 
 export function ResolutionCard({
@@ -83,6 +84,7 @@ export function ResolutionCard({
   feedback = null,
   allowActions = true,
   showDownloadButton = true,
+  onOpenDocumentPreview,
 }: ResolutionCardProps) {
   const [currentFeedback, setCurrentFeedback] = useState(feedback);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -270,20 +272,33 @@ export function ResolutionCard({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    href={att.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  {onOpenDocumentPreview ? (
                     <Button
+                      type="button"
                       variant="outline"
                       size="sm"
+                      onClick={() => onOpenDocumentPreview(att)}
                       className="h-7 px-2.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 rounded-lg cursor-pointer"
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       View
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link
+                      href={att.path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 rounded-lg cursor-pointer"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                    </Link>
+                  )}
                   <a
                     href={`${att.path}${att.path.includes("?") ? "&" : "?"}download=true`}
                     target="_blank"

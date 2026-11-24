@@ -28,6 +28,10 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PriorityBadge, StatusBadge } from "@/components/dashboard/badges";
+import {
+  type DocumentPreviewData,
+  DocumentViewerModal,
+} from "@/components/dashboard/department-head/document-viewer-modal";
 import { AdditionalInfoModal } from "@/components/end-user/additional-info-modal";
 import { PrintSectionButton } from "@/components/end-user/print-button";
 import { ReopenButton } from "@/components/end-user/reopen-button";
@@ -36,6 +40,7 @@ import {
   ResolutionCard,
 } from "@/components/end-user/resolution-card";
 import { Button } from "@/components/ui/button";
+import { triggerFileDownload } from "@/lib/utils/download";
 
 export interface CaseAttachment {
   id: string;
@@ -179,6 +184,43 @@ export function EndUserCaseHub({
   const [docCategoryFilter, setDocCategoryFilter] = useState<
     "all" | "end-user" | "staff"
   >("all");
+
+  const [previewDocument, setPreviewDocument] =
+    useState<DocumentPreviewData | null>(null);
+
+  const handleOpenPreview = (doc: {
+    id?: string;
+    name: string;
+    size?: string;
+    type?: string;
+    path?: string;
+    downloadUrl?: string;
+    uploadedAt?: string;
+  }) => {
+    setPreviewDocument({
+      id: doc.id,
+      name: doc.name,
+      size: doc.size || "Document File",
+      type: doc.type || "Official Record",
+      path: doc.path,
+      downloadUrl: doc.downloadUrl || doc.path,
+      uploadedAt: doc.uploadedAt,
+      grievanceNumber: grievance.grievanceNumber,
+      category: grievance.categoryName,
+      title: grievance.title,
+      submitterName: "Employee",
+    });
+  };
+
+  const handleDownloadDocument = (doc: DocumentPreviewData) => {
+    const url =
+      doc.downloadUrl ||
+      doc.path ||
+      (doc.id ? `/api/attachments/${doc.id}/download?download=true` : "");
+    if (url) {
+      triggerFileDownload(url, doc.name);
+    }
+  };
 
   const isResolvedOrClosed =
     Boolean(resolution) ||
@@ -1601,16 +1643,23 @@ export function EndUserCaseHub({
                                     <div className="flex items-center gap-1 shrink-0">
                                       {att.downloadUrl ? (
                                         <>
-                                          <a
-                                            href={att.downloadUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800"
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              handleOpenPreview({
+                                                id: att.id,
+                                                name: att.name,
+                                                size: att.size,
+                                                path: att.downloadUrl,
+                                                downloadUrl: att.downloadUrl,
+                                              })
+                                            }
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 hover:bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800 cursor-pointer"
                                             title="View Document"
                                           >
                                             <Eye className="h-2.5 w-2.5" />
                                             View
-                                          </a>
+                                          </button>
                                           <a
                                             href={att.downloadUrl}
                                             target="_blank"
@@ -1670,14 +1719,13 @@ export function EndUserCaseHub({
                           {att.name}
                         </span>
                       </div>
-                      <Link
-                        href={att.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-semibold text-[#0F766E] hover:underline shrink-0"
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPreview(att)}
+                        className="text-xs font-semibold text-[#0F766E] hover:underline shrink-0 cursor-pointer"
                       >
                         View
-                      </Link>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1704,6 +1752,7 @@ export function EndUserCaseHub({
                 maxRejections={grievance.maxRejections}
                 feedback={grievance.feedback}
                 showDownloadButton={true}
+                onOpenDocumentPreview={handleOpenPreview}
               />
             ) : grievance.status === "CLOSED" ? (
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-8 text-center space-y-4 shadow-sm">
@@ -2111,20 +2160,15 @@ export function EndUserCaseHub({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          <Link
-                            href={doc.path}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleOpenPreview(doc)}
+                            className="h-8 px-2.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
                           >
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:text-slate-300 flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              <span>View</span>
-                            </Button>
-                          </Link>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            <span>View</span>
+                          </Button>
 
                           <Link
                             href={`${doc.path}?download=true`}
@@ -2228,20 +2272,15 @@ export function EndUserCaseHub({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          <Link
-                            href={doc.path}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleOpenPreview(doc)}
+                            className="h-8 px-2.5 text-xs font-semibold rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 flex items-center gap-1.5 cursor-pointer"
                           >
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-8 px-2.5 text-xs font-semibold rounded-xl border-emerald-200 hover:bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Eye className="h-3.5 w-3.5 mr-1" />
-                              <span>View</span>
-                            </Button>
-                          </Link>
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            <span>View</span>
+                          </Button>
 
                           <Link
                             href={`${doc.path}?download=true`}
@@ -2311,6 +2350,13 @@ export function EndUserCaseHub({
           </div>
         )}
       </div>
+
+      {/* Document Proof Previewer Modal */}
+      <DocumentViewerModal
+        document={previewDocument}
+        onClose={() => setPreviewDocument(null)}
+        onDownload={handleDownloadDocument}
+      />
     </div>
   );
 }
