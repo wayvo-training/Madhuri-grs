@@ -103,7 +103,7 @@ export default async function UserDashboardPage() {
   });
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex-1 h-full min-h-0 flex flex-col">
       {/* Live End User Portal with Inquiry Response & Document Upload */}
       <EndUserPortal
         initialGrievances={serializedGrievances}

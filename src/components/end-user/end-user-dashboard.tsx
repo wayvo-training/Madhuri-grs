@@ -208,7 +208,7 @@ export function EndUserPortal({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 justify-between">
       {/* KPI Stats Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
         <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
@@ -422,7 +422,7 @@ export function EndUserPortal({
       )}
 
       {/* Recent Grievances Area */}
-      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs flex flex-col flex-1 min-h-0 overflow-hidden justify-between">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 shrink-0">
           <div>
             <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -441,7 +441,7 @@ export function EndUserPortal({
           </Link>
         </div>
 
-        <div className="mt-2 overflow-y-auto custom-scrollbar flex-1 relative min-h-0 max-h-[400px]">
+        <div className="mt-2 overflow-y-auto custom-scrollbar flex-1 relative min-h-0">
           <table className="w-full text-left border-collapse text-sm">
             <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-md shadow-sm z-10 after:absolute after:inset-x-0 after:bottom-0 after:border-b after:border-slate-200 dark:after:border-slate-700">
               <tr>

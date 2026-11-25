@@ -20,22 +20,40 @@ export function StaffPieCharts({
   const statusDataRaw = React.useMemo(() => {
     let inProgress = 0;
     let underReview = 0;
+    let awaitingInfo = 0;
+    let escalated = 0;
+    let resolved = 0;
+    let closed = 0;
     let reopened = 0;
 
     grievances.forEach((g) => {
-      if (
-        g.status === "CLOSED" ||
-        g.status === "RESOLVED" ||
-        g.status === "COMPLETED" ||
-        g.isMyDepartmentCompleted
-      ) {
-        return;
-      }
+      const s = (g.status || "").toUpperCase();
 
-      if (g.status === "REOPENED" || g.reopenCount > 0) {
+      if (s === "RESOLVED" || s === "COMPLETED" || g.isMyDepartmentCompleted) {
+        resolved++;
+      } else if (s === "CLOSED") {
+        closed++;
+      } else if (
+        s === "REOPENED" ||
+        s === "REWORK" ||
+        (g.reopenCount || 0) > 0
+      ) {
         reopened++;
-      } else if (g.status === "UNDER_REVIEW" || g.status === "REOPEN_REVIEW") {
+      } else if (s === "ESCALATED") {
+        escalated++;
+      } else if (
+        s === "UNDER_REVIEW" ||
+        s === "REOPEN_REVIEW" ||
+        s === "RESOLUTION_PENDING_APPROVAL"
+      ) {
         underReview++;
+      } else if (
+        s === "AWAITING_INFORMATION" ||
+        s === "WAITING_ON_USER" ||
+        s === "BLOCKED" ||
+        s === "PENDING_INFO"
+      ) {
+        awaitingInfo++;
       } else {
         inProgress++;
       }
@@ -55,6 +73,30 @@ export function StaffPieCharts({
         description: "Awaiting review",
       },
       {
+        name: "Awaiting Info",
+        value: awaitingInfo,
+        fill: STATUS_COLORS.AWAITING_INFO || "#D97706",
+        description: "Waiting on user",
+      },
+      {
+        name: "Escalated",
+        value: escalated,
+        fill: STATUS_COLORS.ESCALATED || "#B45309",
+        description: "SLA escalation",
+      },
+      {
+        name: "Resolved",
+        value: resolved,
+        fill: STATUS_COLORS.RESOLVED,
+        description: "Resolution proposed",
+      },
+      {
+        name: "Closed",
+        value: closed,
+        fill: STATUS_COLORS.CLOSED,
+        description: "Case completed",
+      },
+      {
         name: "Reopened",
         value: reopened,
         fill: STATUS_COLORS.REOPENED,
@@ -63,7 +105,7 @@ export function StaffPieCharts({
     ];
   }, [grievances]);
 
-  const totalActiveStatus = React.useMemo(
+  const totalGrievances = React.useMemo(
     () => statusDataRaw.reduce((acc, curr) => acc + curr.value, 0),
     [statusDataRaw],
   );
@@ -122,6 +164,16 @@ export function StaffPieCharts({
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
     underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
+    awaitingInfo: {
+      label: "Awaiting Info",
+      color: STATUS_COLORS.AWAITING_INFO || "#D97706",
+    },
+    escalated: {
+      label: "Escalated",
+      color: STATUS_COLORS.ESCALATED || "#B45309",
+    },
+    resolved: { label: "Resolved", color: STATUS_COLORS.RESOLVED },
+    closed: { label: "Closed", color: STATUS_COLORS.CLOSED },
     reopened: { label: "Reopened", color: STATUS_COLORS.REOPENED },
   } satisfies ChartConfig;
 
@@ -137,6 +189,14 @@ export function StaffPieCharts({
       onFilterQueue("in_progress");
     } else if (item.name === "Under Review") {
       onFilterQueue("under_review");
+    } else if (item.name === "Awaiting Info") {
+      onFilterQueue("awaiting_info");
+    } else if (item.name === "Escalated") {
+      onFilterQueue("escalated");
+    } else if (item.name === "Resolved") {
+      onFilterQueue("resolved");
+    } else if (item.name === "Closed") {
+      onFilterQueue("closed");
     } else if (item.name === "Reopened") {
       onFilterQueue("reopened");
     }
@@ -159,11 +219,11 @@ export function StaffPieCharts({
     >
       <DashboardPieChartCard
         title="My Grievance Status"
-        description="My active grievances by current status"
+        description="My grievances by current status"
         data={statusDataRaw}
         config={statusConfig}
-        centerValue={totalActiveStatus}
-        centerLabelTop="ACTIVE"
+        centerValue={totalGrievances}
+        centerLabelTop="TOTAL"
         centerLabelBottom="GRIEVANCES"
         onItemClick={onFilterQueue ? handleStatusItemClick : undefined}
       />

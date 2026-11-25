@@ -100,7 +100,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
   }, [advancedSearch, filterMode, sortState, pagination.resetPage]);
 
   return (
-    <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden flex flex-col">
+    <div className="flex-1 h-full min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden flex flex-col justify-between">
       <div className="p-3.5 sm:p-4 shrink-0">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1 min-w-0 w-full lg:w-1/2">

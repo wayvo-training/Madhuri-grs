@@ -12,6 +12,7 @@ interface QueueViewProps {
   onExamine: (grievance: StaffGrievanceItem) => void;
   onResolve: (grievance: StaffGrievanceItem) => void;
   initialTab?: StaffQueueTab;
+  onBackToOverview?: () => void;
 }
 
 export function QueueView({
@@ -22,16 +23,17 @@ export function QueueView({
   onExamine,
   onResolve,
   initialTab = "all",
+  onBackToOverview,
 }: QueueViewProps) {
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-3">
-      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-2xs">
+    <div className="flex-1 h-full min-h-0 flex flex-col space-y-3">
+      <div className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white dark:bg-slate-900 px-4 py-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
         <div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <FileText className="w-4 h-4 text-[#0F766E]" />
             My Grievances Queue
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Complete list of grievances assigned to you for investigation,
             inquiry, and resolution processing.
           </p>
@@ -46,6 +48,7 @@ export function QueueView({
         onExamine={onExamine}
         onResolve={onResolve}
         initialTab={initialTab}
+        onBackToOverview={onBackToOverview}
       />
     </div>
   );

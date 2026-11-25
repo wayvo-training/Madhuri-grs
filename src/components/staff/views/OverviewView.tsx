@@ -169,7 +169,7 @@ export function OverviewView({
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-4">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 justify-between">
       {/* Welcome & Role Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-white px-4 py-3 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div>
@@ -199,7 +199,7 @@ export function OverviewView({
       />
 
       {/* Recent Grievances Area */}
-      <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 space-y-2 min-h-0 shadow-2xs">
+      <div className="flex-1 flex flex-col rounded-2xl border border-slate-200 bg-white p-3.5 sm:p-4 space-y-2 min-h-0 shadow-2xs justify-between">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2 shrink-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-slate-900">
@@ -221,7 +221,7 @@ export function OverviewView({
         </div>
 
         {displayList.length > 0 ? (
-          <div className="flex-1 overflow-auto max-h-[400px] custom-scrollbar rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <div className="flex-1 overflow-auto min-h-0 custom-scrollbar rounded-xl bg-white border border-slate-200 shadow-2xs">
             <table className="w-full text-left text-xs border-collapse relative">
               <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr className="border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-900 shadow-sm">

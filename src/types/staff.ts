@@ -245,7 +245,11 @@ export type StaffQueueTab =
   | "breached"
   | "reopened"
   | "completed"
-  | "on_track";
+  | "on_track"
+  | "closed"
+  | "resolved"
+  | "awaiting_info"
+  | "escalated";
 
 export interface StaffQueueFilterState {
   searchQuery: string;

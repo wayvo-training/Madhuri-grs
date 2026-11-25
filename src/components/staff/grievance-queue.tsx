@@ -34,6 +34,7 @@ interface GrievanceQueueProps {
   onExamine: (grievance: StaffGrievanceItem) => void;
   onResolve: (grievance: StaffGrievanceItem) => void;
   initialTab?: StaffQueueTab;
+  onBackToOverview?: () => void;
 }
 
 export function GrievanceQueue({
@@ -42,6 +43,7 @@ export function GrievanceQueue({
   onExamine,
   onResolve,
   initialTab = "all",
+  onBackToOverview: _onBackToOverview,
 }: GrievanceQueueProps) {
   const [activeTab, setActiveTab] = useState<StaffQueueTab>(initialTab);
 
@@ -224,10 +226,16 @@ export function GrievanceQueue({
           item.isMyDepartmentCompleted ||
           item.status === "COMPLETED" ||
           item.status === "CLOSED" ||
-          (item.status !== "IN_PROGRESS" &&
-            item.status !== "ASSIGNED" &&
-            item.status !== "WAITING_ON_USER" &&
-            item.status !== "AWAITING_INFORMATION")
+          item.status === "RESOLVED" ||
+          item.status === "REOPENED" ||
+          item.status === "REWORK" ||
+          (item.reopenCount || 0) > 0 ||
+          item.status === "ESCALATED" ||
+          item.status === "UNDER_REVIEW" ||
+          item.status === "REOPEN_REVIEW" ||
+          item.status === "RESOLUTION_PENDING_APPROVAL" ||
+          item.status === "AWAITING_INFORMATION" ||
+          item.status === "WAITING_ON_USER"
         ) {
           return false;
         }
@@ -236,7 +244,10 @@ export function GrievanceQueue({
           item.isMyDepartmentCompleted ||
           item.status === "COMPLETED" ||
           item.status === "CLOSED" ||
-          (item.status !== "UNDER_REVIEW" && item.status !== "REOPEN_REVIEW")
+          item.status === "RESOLVED" ||
+          (item.status !== "UNDER_REVIEW" &&
+            item.status !== "REOPEN_REVIEW" &&
+            item.status !== "RESOLUTION_PENDING_APPROVAL")
         ) {
           return false;
         }
@@ -268,7 +279,19 @@ export function GrievanceQueue({
           return false;
         }
       } else if (activeTab === "reopened") {
-        if (item.reopenCount === 0 && item.status !== "REOPENED") {
+        if (
+          item.status === "CLOSED" ||
+          item.status === "RESOLVED" ||
+          item.status === "COMPLETED" ||
+          item.isMyDepartmentCompleted
+        ) {
+          return false;
+        }
+        if (
+          item.reopenCount === 0 &&
+          item.status !== "REOPENED" &&
+          item.status !== "REWORK"
+        ) {
           return false;
         }
       } else if (activeTab === "completed") {
@@ -279,6 +302,27 @@ export function GrievanceQueue({
           item.status !== "COMPLETED" &&
           !item.isMyDepartmentCompleted
         ) {
+          return false;
+        }
+      } else if (activeTab === "closed") {
+        if (item.status !== "CLOSED" || item.isMyDepartmentCompleted) {
+          return false;
+        }
+      } else if (activeTab === "resolved") {
+        const isStaffResolved =
+          item.status === "RESOLVED" ||
+          item.status === "COMPLETED" ||
+          Boolean(item.isMyDepartmentCompleted);
+        if (!isStaffResolved) return false;
+      } else if (activeTab === "awaiting_info") {
+        if (
+          item.status !== "AWAITING_INFORMATION" &&
+          item.status !== "WAITING_ON_USER"
+        ) {
+          return false;
+        }
+      } else if (activeTab === "escalated") {
+        if (item.status !== "ESCALATED") {
           return false;
         }
       }
@@ -391,6 +435,14 @@ export function GrievanceQueue({
         return "SLA Breached";
       case "completed":
         return "Completed";
+      case "closed":
+        return "Closed";
+      case "resolved":
+        return "Resolved";
+      case "awaiting_info":
+        return "Awaiting Info";
+      case "escalated":
+        return "Escalated";
       default:
         return "All Assigned";
     }
@@ -420,7 +472,7 @@ export function GrievanceQueue({
                 Filtered:
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-                {getTabLabel(activeTab)} ({filteredGrievances.length})
+                {getTabLabel(activeTab)}
                 <button
                   type="button"
                   onClick={() => setActiveTab("all")}
@@ -430,13 +482,6 @@ export function GrievanceQueue({
                   <X className="w-3 h-3" />
                 </button>
               </span>
-              <button
-                type="button"
-                onClick={() => setActiveTab("all")}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer"
-              >
-                ← Back to All Cases
-              </button>
             </div>
           )}
           <div className="flex-1 min-w-0 w-full">

@@ -529,7 +529,7 @@ export function StaffDashboard({
   ).length;
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-4">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3">
       {/* Render Active View */}
       {activeView === "overview" && (
         <OverviewView
@@ -563,6 +563,16 @@ export function StaffDashboard({
           onExamine={handleExamineGrievance}
           onResolve={handleResolveGrievance}
           initialTab={queueInitialTab}
+          onBackToOverview={() => {
+            if (
+              typeof window !== "undefined" &&
+              window.location.pathname === "/staff/grievances"
+            ) {
+              router.push("/staff/dashboard");
+            } else {
+              switchView("overview");
+            }
+          }}
         />
       )}
 

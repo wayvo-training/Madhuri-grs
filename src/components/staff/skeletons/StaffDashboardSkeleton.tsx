@@ -37,17 +37,17 @@ export function StaffDashboardSkeleton() {
             </div>
 
             {/* Legend Skeleton */}
-            <div className="flex flex-col justify-center gap-2 flex-1 max-w-[200px] min-w-0">
-              {[1, 2, 3].map((i) => (
+            <div className="w-full sm:w-auto sm:flex-1 justify-center grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 max-w-[340px]">
+              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between gap-2 py-0.5"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Skeleton className="h-2.5 w-2.5 rounded-full shrink-0" />
-                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                  <Skeleton className="h-3 w-6" />
+                  <Skeleton className="h-3 w-4" />
                 </div>
               ))}
             </div>
