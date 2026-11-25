@@ -328,7 +328,7 @@ export function ReportFilterBar({
         </div>
 
         {/* Date Picker Inputs + Reset Button */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs sm:mr-4 lg:mr-6">
           <div className="flex items-center gap-1.5">
             <label
               htmlFor="rep-start-date"

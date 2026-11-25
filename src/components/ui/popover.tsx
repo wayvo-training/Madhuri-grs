@@ -19,7 +19,7 @@ interface PopoverProps {
   onOpenChange: (open: boolean) => void;
   widthClass?: string;
   className?: string;
-  align?: "left" | "right";
+  align?: "left" | "right" | "auto";
   side?: "top" | "bottom" | "auto";
 }
 
@@ -37,29 +37,45 @@ export function Popover({
   const [placement, setPlacement] = useState<"top" | "bottom">(
     side === "top" ? "top" : "bottom",
   );
+  const [horizontalPlacement, setHorizontalPlacement] = useState<
+    "left" | "right"
+  >(align === "left" ? "left" : "right");
 
   const updatePlacement = useCallback(() => {
     if (!containerRef.current) return;
     if (side === "top") {
       setPlacement("top");
-      return;
-    }
-    if (side === "bottom") {
+    } else if (side === "bottom") {
       setPlacement("bottom");
-      return;
-    }
-    // "auto" detection:
-    const rect = containerRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    // If space below is constrained (< 200px) and there's more room above, flip to top
-    if (spaceBelow < 200 && spaceAbove > spaceBelow) {
-      setPlacement("top");
     } else {
-      setPlacement("bottom");
+      // "auto" vertical detection:
+      const rect = containerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // If space below is constrained (< 200px) and there's more room above, flip to top
+      if (spaceBelow < 200 && spaceAbove > spaceBelow) {
+        setPlacement("top");
+      } else {
+        setPlacement("bottom");
+      }
     }
-  }, [side]);
+
+    // Horizontal alignment:
+    if (align === "left") {
+      setHorizontalPlacement("left");
+    } else if (align === "right") {
+      setHorizontalPlacement("right");
+    } else {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceRight = window.innerWidth - rect.left;
+      if (spaceRight < 300) {
+        setHorizontalPlacement("right");
+      } else {
+        setHorizontalPlacement("left");
+      }
+    }
+  }, [side, align]);
 
   useIsomorphicLayoutEffect(() => {
     if (isOpen) {
@@ -96,7 +112,7 @@ export function Popover({
 
       {isOpen && (
         <div
-          className={`absolute ${align === "right" ? "right-0" : "left-0"} ${
+          className={`absolute ${horizontalPlacement === "right" ? "right-0" : "left-0"} ${
             placement === "top" ? "bottom-full mb-1" : "top-full mt-1"
           } z-50 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 ${widthClass}`}
         >
