@@ -95,13 +95,15 @@ export function AdminMetricCard({
   } as const;
 
   const styles = accentStyles[accent];
+  const Component = onClick ? "button" : "div";
 
   return (
-    <button
-      type="button"
+    <Component
+      type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "relative overflow-hidden rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-2xs transition-all duration-150 hover:shadow-sm cursor-pointer flex flex-col justify-between min-h-[84px] sm:min-h-[88px]",
+        "relative overflow-hidden rounded-xl border px-3.5 py-2.5 sm:px-4 sm:py-3 text-left shadow-2xs transition-all duration-150 flex flex-col justify-between min-h-[84px] sm:min-h-[88px]",
+        onClick ? "cursor-pointer hover:shadow-sm" : "cursor-default",
         styles.ring,
       )}
     >
@@ -137,7 +139,7 @@ export function AdminMetricCard({
           </>
         )}
       </div>
-    </button>
+    </Component>
   );
 }
 

@@ -8,26 +8,9 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminAuditLogsPage() {
   await requirePageRole("ADMIN");
 
-  const [totalCount, sessionCount, apiCount, errorCount, rawAuditLogs] =
-    await Promise.all([
+  const [totalCount, errorCount, configCount, rawAuditLogs] = await Promise.all(
+    [
       prisma.audit_logs.count(),
-      prisma.audit_logs.count({
-        where: {
-          OR: [
-            { entity_type: { in: ["SESSION", "session"] } },
-            { action: { contains: "LOGIN", mode: "insensitive" } },
-            { action: { contains: "LOGOUT", mode: "insensitive" } },
-          ],
-        },
-      }),
-      prisma.audit_logs.count({
-        where: {
-          OR: [
-            { entity_type: { in: ["API_CALL", "api_call"] } },
-            { action: { contains: "API_REQUEST", mode: "insensitive" } },
-          ],
-        },
-      }),
       prisma.audit_logs.count({
         where: {
           OR: [
@@ -35,6 +18,22 @@ export default async function AdminAuditLogsPage() {
             { action: { contains: "ERROR", mode: "insensitive" } },
             { action: { contains: "FAILED", mode: "insensitive" } },
           ],
+        },
+      }),
+      prisma.audit_logs.count({
+        where: {
+          entity_type: {
+            notIn: [
+              "SESSION",
+              "API_CALL",
+              "NAVIGATION",
+              "session",
+              "api_call",
+              "navigation",
+              "ERROR",
+              "error",
+            ],
+          },
         },
       }),
       prisma.audit_logs.findMany({
@@ -58,7 +57,8 @@ export default async function AdminAuditLogsPage() {
           },
         },
       }),
-    ]);
+    ],
+  );
 
   const serializedAuditLogs: SerializedAuditLog[] = rawAuditLogs.map((l) => {
     const payload = l.new_value as
@@ -184,8 +184,7 @@ export default async function AdminAuditLogsPage() {
       initialTotalCount={totalCount}
       stats={{
         total: totalCount,
-        sessions: sessionCount,
-        apis: apiCount,
+        config: configCount,
         errors: errorCount,
       }}
     />

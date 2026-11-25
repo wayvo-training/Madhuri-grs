@@ -287,7 +287,8 @@ export function ResolutionFilterBar({
                   : ""
               }
               onChange={(e) => handleDateChange("startDate", e.target.value)}
-              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
             />
           </div>
           <div className="flex items-center gap-1.5">
@@ -304,7 +305,8 @@ export function ResolutionFilterBar({
                 localFilters.endDate ? localFilters.endDate.split("T")[0] : ""
               }
               onChange={(e) => handleDateChange("endDate", e.target.value)}
-              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              onClick={(e) => e.currentTarget.showPicker?.()}
+              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
             />
           </div>
           <Button

@@ -153,7 +153,7 @@ export function Pagination({
               onClick={() => onPageChange(1)}
               title="First Page"
               aria-label="First Page"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition"
             >
               <ChevronsLeft className="h-3.5 w-3.5" />
             </button>
@@ -166,7 +166,7 @@ export function Pagination({
             onClick={() => onPageChange(safeCurrentPage - 1)}
             title="Previous Page"
             aria-label="Previous Page"
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             <span className={compact ? "sr-only" : ""}>Prev</span>
@@ -196,7 +196,7 @@ export function Pagination({
                     type="button"
                     disabled={isLoading}
                     onClick={() => onPageChange(pageNum)}
-                    className={`inline-flex h-8 min-w-8 px-2 items-center justify-center rounded-lg text-xs font-semibold transition ${
+                    className={`inline-flex h-8 min-w-8 px-2 items-center justify-center rounded-lg text-xs font-semibold transition cursor-pointer disabled:cursor-not-allowed ${
                       isActive
                         ? "bg-[#0F766E] text-white shadow-2xs font-bold"
                         : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
@@ -223,7 +223,7 @@ export function Pagination({
             onClick={() => onPageChange(safeCurrentPage + 1)}
             title="Next Page"
             aria-label="Next Page"
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition"
           >
             <span className={compact ? "sr-only" : ""}>Next</span>
             <ChevronRight className="h-3.5 w-3.5" />
@@ -237,7 +237,7 @@ export function Pagination({
               onClick={() => onPageChange(safeTotalPages)}
               title="Last Page"
               aria-label="Last Page"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-35 disabled:cursor-not-allowed transition"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 cursor-pointer disabled:opacity-35 disabled:cursor-not-allowed transition"
             >
               <ChevronsRight className="h-3.5 w-3.5" />
             </button>

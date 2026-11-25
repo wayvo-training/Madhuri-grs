@@ -16,9 +16,10 @@ export interface SerializedAuditLog {
 
 export interface AuditStats {
   total: number;
-  sessions: number;
-  apis: number;
+  config?: number;
   errors: number;
+  sessions?: number;
+  apis?: number;
 }
 
 export interface AdminAuditTrailProps {

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Activity,
-  CheckCircle2,
-  Globe,
-  RotateCcw,
-  XCircle,
-} from "lucide-react";
+import { Activity, CheckCircle2, RotateCcw, XCircle } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-table-head";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -49,11 +43,10 @@ export function AuditLogTable({
 
   const colGroup = (
     <colgroup>
-      <col className="w-[18%]" />
-      <col className="w-[28%]" />
+      <col className="w-[20%]" />
+      <col className="w-[32%]" />
+      <col className="w-[26%]" />
       <col className="w-[22%]" />
-      <col className="w-[17%]" />
-      <col className="w-[15%]" />
     </colgroup>
   );
 
@@ -92,17 +85,9 @@ export function AuditLogTable({
               field="entity_type"
               currentSort={sortState}
               onSort={handleSort}
-              className="px-3 py-3.5"
+              className="py-3.5 pl-3 pr-6"
             >
               Category & Entity
-            </SortableTh>
-            <SortableTh
-              field="ip_address"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-3.5 pl-3 pr-6 text-right"
-            >
-              Source IP / Device
             </SortableTh>
           </tr>
         </thead>
@@ -140,17 +125,14 @@ export function AuditLogTable({
                   <td className="px-3 py-3.5">
                     <div className="h-3 w-32 rounded bg-slate-200" />
                   </td>
-                  <td className="px-3 py-3.5">
+                  <td className="py-3.5 pl-3 pr-6">
                     <div className="h-5 w-20 rounded-md bg-slate-100" />
-                  </td>
-                  <td className="py-3.5 pl-3 pr-6 text-right">
-                    <div className="h-3 w-20 ml-auto rounded bg-slate-200" />
                   </td>
                 </tr>
               ))
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-14 text-center">
+                <td colSpan={4} className="py-14 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0FDFA] text-[#0F766E] ring-8 ring-teal-50/50">
                       <Activity className="h-6 w-6" />
@@ -264,7 +246,7 @@ export function AuditLogTable({
                       </span>
                     </td>
 
-                    <td className="whitespace-nowrap px-3 py-3.5">
+                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6">
                       <span className="text-xs font-semibold text-slate-600">
                         {log.entity_type}
                       </span>
@@ -273,13 +255,6 @@ export function AuditLogTable({
                           #{log.entity_id}
                         </span>
                       )}
-                    </td>
-
-                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right font-mono text-xs text-slate-500">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Globe className="h-3 w-3 text-slate-400" />
-                        <span>{log.ip_address}</span>
-                      </div>
                     </td>
                   </tr>
                 );

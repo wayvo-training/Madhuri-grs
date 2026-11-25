@@ -709,3 +709,72 @@
   border-color: var(--teal-primary, #0f766e) !important;
   color: #ffffff !important;
 }
+
+/* Global Cursor Rules:
+   - Default arrow for all static UI elements and static text
+   - Hand (pointer) for clickable/interactive elements
+   - I-beam (text) for editable text inputs and textareas
+   - Not-allowed for disabled elements
+*/
+@layer base {
+  *,
+  *::before,
+  *::after {
+    cursor: default;
+  }
+
+  /* Clickable elements get hand (pointer) cursor */
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]):not([disabled]),
+  select:not(:disabled),
+  summary,
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"],
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator,
+  input[type="week"]::-webkit-calendar-picker-indicator,
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+  input[type="date"]::-webkit-datetime-edit-text,
+  input[type="date"]::-webkit-datetime-edit-month-field,
+  input[type="date"]::-webkit-datetime-edit-day-field,
+  input[type="date"]::-webkit-datetime-edit-year-field {
+    cursor: pointer;
+  }
+
+  /* Editable text inputs & textareas get I-beam (text) cursor */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input:not([type]),
+  textarea,
+  [contenteditable="true"] {
+    cursor: text;
+  }
+
+  /* Disabled elements get not-allowed cursor */
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  [role="button"]:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+}
+

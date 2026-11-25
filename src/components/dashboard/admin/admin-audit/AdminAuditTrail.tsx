@@ -31,7 +31,12 @@ export function AdminAuditTrail({
 
   return (
     <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full overflow-hidden">
-      <AuditMetricCards totalCount={totalCount} stats={stats} />
+      <AuditMetricCards
+        totalCount={totalCount}
+        stats={stats}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+      />
 
       <div
         id="audit-logs"
@@ -50,7 +55,7 @@ export function AdminAuditTrail({
                   type="button"
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabCategory)}
-                  className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-1 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
                     activeTab === tab.id
                       ? "border-[#0F766E] text-[#0F766E]"
                       : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"

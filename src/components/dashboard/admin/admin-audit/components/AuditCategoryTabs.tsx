@@ -25,7 +25,6 @@ export function AuditCategoryTabs({
     { id: "user", label: "User", type: "text" },
     { id: "action", label: "Action", type: "text" },
     { id: "entity_type", label: "Target Entity", type: "text" },
-    { id: "ip_address", label: "IP Address", type: "text" },
   ];
 
   const handleSearchChange = (conditions: SearchCondition[], _mode: string) => {

@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type SearchFieldType = "text" | "select" | "date" | "number";
 export type FilterMode = "AND" | "OR" | "NOT";
@@ -185,7 +186,15 @@ const ConditionPill = ({
               ? "date"
               : "text"
         }
-        className="h-full bg-transparent outline-none px-3 text-xs min-w-30 w-30 font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors"
+        className={cn(
+          "h-full bg-transparent outline-none px-3 text-xs min-w-30 w-30 font-medium placeholder:text-slate-400 hover:bg-slate-50 focus:bg-slate-50 transition-colors",
+          fieldDef?.type === "date" && "cursor-pointer",
+        )}
+        onClick={(e) => {
+          if (fieldDef?.type === "date") {
+            e.currentTarget.showPicker?.();
+          }
+        }}
         value={condition.value as string}
         onChange={(e) => onChange({ value: e.target.value })}
         onKeyDown={(e) => {

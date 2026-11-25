@@ -3,24 +3,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AdminAuditLogsLoading() {
   return (
     <div className="space-y-6 flex flex-col flex-1 min-h-0">
-      {/* 4 Metric Cards Skeleton matching AuditMetricCards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 shrink-0">
-        {[1, 2, 3, 4].map((i) => (
+      {/* 3 Metric Cards Skeleton matching AuditMetricCards */}
+      <div className="grid grid-cols-1 gap-2.5 sm:gap-3 sm:grid-cols-3 shrink-0">
+        {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex flex-col justify-between h-[115px] sm:h-[120px] shadow-2xs"
+            className="rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-3.5 flex flex-col justify-between min-h-[90px] sm:min-h-[96px] shadow-2xs"
           >
             <div className="flex items-center justify-between gap-2">
-              <Skeleton className="h-3 w-32" />
-              <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg shrink-0" />
             </div>
             <div className="mt-1 flex items-baseline gap-2">
               <Skeleton className="h-6 w-16" />
-              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-3 w-14" />
             </div>
             <div className="mt-auto pt-1 flex items-center gap-1.5">
               <Skeleton className="h-1.5 w-1.5 rounded-full" />
-              <Skeleton className="h-3 w-36" />
+              <Skeleton className="h-3 w-32" />
             </div>
           </div>
         ))}
@@ -57,7 +57,7 @@ export default function AdminAuditLogsLoading() {
           </div>
         </div>
 
-        {/* Audit Log Table (5 Columns matching AuditLogTable) */}
+        {/* Audit Log Table (4 Columns matching AuditLogTable) */}
         <div className="p-5 sm:p-6">
           <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="h-11 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between">
@@ -65,7 +65,6 @@ export default function AdminAuditLogsLoading() {
               <Skeleton className="h-3.5 w-36" />
               <Skeleton className="h-3.5 w-28" />
               <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-3.5 w-24 text-right" />
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -95,12 +94,6 @@ export default function AdminAuditLogsLoading() {
 
                   {/* Category & Entity */}
                   <Skeleton className="h-3.5 w-24" />
-
-                  {/* Source IP / Device */}
-                  <div className="space-y-1 w-28 shrink-0 text-right">
-                    <Skeleton className="h-3 w-20 ml-auto" />
-                    <Skeleton className="h-2 w-16 ml-auto" />
-                  </div>
                 </div>
               ))}
             </div>
