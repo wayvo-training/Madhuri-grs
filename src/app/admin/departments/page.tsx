@@ -20,7 +20,7 @@ export default async function AdminDepartmentsPage() {
           users: {
             where: {
               status: "ACTIVE",
-              roles: { role_name: "DEPARTMENT_HEAD" },
+              roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
             },
             select: {
               user_id: true,

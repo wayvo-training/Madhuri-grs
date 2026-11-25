@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   FilterMode,
   SearchCondition,
@@ -13,6 +13,10 @@ const DEFAULT_PAGE_SIZE = 10;
 export function useDepartments(initialDepartments: SerializedDepartment[]) {
   const [departments, setDepartments] =
     useState<SerializedDepartment[]>(initialDepartments);
+
+  useEffect(() => {
+    setDepartments(initialDepartments);
+  }, [initialDepartments]);
   const [searchConditions, setSearchConditions] = useState<SearchCondition[]>(
     [],
   );

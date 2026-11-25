@@ -13,7 +13,7 @@ export async function GET() {
         users: {
           where: {
             status: "ACTIVE",
-            roles: { role_name: "DEPARTMENT_HEAD" },
+            roles: { role_name: { in: ["DEPARTMENT_HEAD", "ADMIN"] } },
           },
           select: {
             user_id: true,
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       fullDescription = `${fullDescription.substring(0, 252)}...`;
     }
 
-    const department = await prisma.$transaction(async (tx) => {
+    const { department, headUser } = await prisma.$transaction(async (tx) => {
       const created = await tx.departments.create({
         data: {
           department_name: trimmedName,
@@ -144,11 +144,22 @@ export async function POST(request: Request) {
         },
       });
 
+      let assignedUser: {
+        first_name: string;
+        last_name: string | null;
+        email: string;
+      } | null = null;
+
       if (head_user_id) {
         try {
-          await tx.users.update({
+          assignedUser = await tx.users.update({
             where: { user_id: BigInt(head_user_id) },
             data: { department_id: created.department_id },
+            select: {
+              first_name: true,
+              last_name: true,
+              email: true,
+            },
           });
         } catch (err) {
           console.error("Failed to assign department head:", err);
@@ -170,8 +181,13 @@ export async function POST(request: Request) {
         },
       });
 
-      return created;
+      return { department: created, headUser: assignedUser };
     });
+
+    const headName = headUser
+      ? `${headUser.first_name} ${headUser.last_name || ""}`.trim()
+      : null;
+    const headEmail = headUser?.email || null;
 
     return NextResponse.json({
       success: true,
@@ -181,8 +197,10 @@ export async function POST(request: Request) {
         department_name: department.department_name,
         description: department.description,
         status: department.status,
-        user_count: 0,
+        user_count: headUser ? 1 : 0,
         grievance_count: 0,
+        head_name: headName,
+        head_email: headEmail,
       },
     });
   } catch (error) {

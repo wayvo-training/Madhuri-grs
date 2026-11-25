@@ -22,6 +22,10 @@ export interface DepartmentActionResult {
     department_name: string;
     description: string | null;
     status: string;
+    user_count?: number;
+    grievance_count?: number;
+    head_name?: string | null;
+    head_email?: string | null;
   };
 }
 

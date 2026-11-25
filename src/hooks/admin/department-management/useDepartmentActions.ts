@@ -11,7 +11,7 @@ import type {
 
 export function useDepartmentActions(
   setDepartments: React.Dispatch<React.SetStateAction<SerializedDepartment[]>>,
-  _departmentHeads: DepartmentHeadOption[] = [],
+  departmentHeads: DepartmentHeadOption[] = [],
 ) {
   const router = useRouter();
 
@@ -93,11 +93,9 @@ export function useDepartmentActions(
 
       toast.success("Department updated successfully.");
 
-      setTimeout(() => {
-        setIsEditModalOpen(false);
-        setEditingDeptId(null);
-        router.refresh();
-      }, 900);
+      setIsEditModalOpen(false);
+      setEditingDeptId(null);
+      router.refresh();
     } catch (err: unknown) {
       console.error("Failed to update department:", err);
       const msg =
@@ -149,30 +147,53 @@ export function useDepartmentActions(
 
       if (data.department) {
         const dept = data.department;
-        setDepartments((prev) => [
-          ...prev,
-          {
-            department_id: dept.department_id,
-            department_name: dept.department_name,
-            description: dept.description,
-            status: dept.status,
-            user_count: selectedHeadId ? 1 : 0,
-            grievance_count: 0,
-          },
-        ]);
+        const assignedHead = departmentHeads.find(
+          (h) => h.user_id === selectedHeadId,
+        );
+        const headName =
+          dept.head_name ??
+          (assignedHead
+            ? `${assignedHead.first_name} ${assignedHead.last_name || ""}`.trim()
+            : null);
+        const headEmail = dept.head_email ?? assignedHead?.email ?? null;
+
+        const newDepartment: SerializedDepartment = {
+          department_id: dept.department_id,
+          department_name: dept.department_name,
+          description: dept.description,
+          status: dept.status,
+          user_count: selectedHeadId ? 1 : 0,
+          grievance_count: 0,
+          head_name: headName,
+          head_email: headEmail,
+        };
+
+        setDepartments((prev) => {
+          if (
+            prev.some((d) => d.department_id === newDepartment.department_id)
+          ) {
+            return prev.map((d) =>
+              d.department_id === newDepartment.department_id
+                ? { ...d, ...newDepartment }
+                : d,
+            );
+          }
+          const updated = [...prev, newDepartment];
+          return updated.sort((a, b) =>
+            a.department_name.localeCompare(b.department_name),
+          );
+        });
       }
 
       toast.success(data.message || "Department created successfully.");
 
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setDeptName("");
-        setDeptCode("");
-        setSelectedHeadId("");
-        setDescription("");
-        setContactEmail("");
-        router.refresh();
-      }, 900);
+      setIsModalOpen(false);
+      setDeptName("");
+      setDeptCode("");
+      setSelectedHeadId("");
+      setDescription("");
+      setContactEmail("");
+      router.refresh();
     } catch (err: unknown) {
       console.error("Failed to create department:", err);
       const msg =

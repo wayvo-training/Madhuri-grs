@@ -78,13 +78,11 @@ export function DepartmentMetricCards({
   totalGrievances,
   stats,
 }: DepartmentMetricCardsProps) {
-  const total = stats?.total ?? departments.length;
-  const active =
-    stats?.active ??
-    departments.filter((d) => (d.status || "ACTIVE") === "ACTIVE").length;
-  const inactive =
-    stats?.inactive ??
-    departments.filter((d) => d.status === "INACTIVE").length;
+  const total = departments.length;
+  const active = departments.filter(
+    (d) => (d.status || "ACTIVE") === "ACTIVE",
+  ).length;
+  const inactive = departments.filter((d) => d.status === "INACTIVE").length;
   const cases = stats?.totalGrievances ?? totalGrievances;
 
   return (
