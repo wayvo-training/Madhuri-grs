@@ -122,67 +122,67 @@ export function StaffAssignmentReportCard({
   }, [sortedStaff, currentPage, pageSize]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Top Caseload Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="p-1.5 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
             <span>Currently Assigned</span>
             <div className="p-1 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
-              <UserCheck className="h-3.5 w-3.5" />
+              <UserCheck className="h-3 w-3" />
             </div>
           </div>
-          <div className="text-xl font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
+          <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
             {assignedGrievancesCount.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-0.5">
             {totalUniqueGrievances > 0
               ? `${((assignedGrievancesCount / totalUniqueGrievances) * 100).toFixed(1)}% of total received`
               : "0% assigned"}
           </p>
         </div>
 
-        <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+        <div className="p-1.5 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
             <span>Unassigned Cases</span>
             <div className="p-1 rounded bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
-              <UserX className="h-3.5 w-3.5" />
+              <UserX className="h-3 w-3" />
             </div>
           </div>
-          <div className="text-xl font-bold font-mono tabular-nums text-indigo-700 dark:text-indigo-400">
+          <div className="text-lg font-bold font-mono tabular-nums text-indigo-700 dark:text-indigo-400">
             {unassignedGrievancesCount.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-0.5">
             Awaiting staff assignment
           </p>
         </div>
 
-        <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+        <div className="p-1.5 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
             <span>Period Assignments</span>
             <div className="p-1 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
-              <GitBranch className="h-3.5 w-3.5" />
+              <GitBranch className="h-3 w-3" />
             </div>
           </div>
-          <div className="text-xl font-bold font-mono tabular-nums text-blue-700 dark:text-blue-400">
+          <div className="text-lg font-bold font-mono tabular-nums text-blue-700 dark:text-blue-400">
             {activities.totalAssignmentsInPeriod.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-0.5">
             Routing handovers performed
           </p>
         </div>
 
-        <div className="p-2.5 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+        <div className="p-1.5 sm:p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-0.5">
             <span>Reassignments</span>
             <div className="p-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
-              <CheckCircle2 className="h-3.5 w-3.5" />
+              <CheckCircle2 className="h-3 w-3" />
             </div>
           </div>
-          <div className="text-xl font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400">
+          <div className="text-lg font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400">
             {activities.reassignmentsCount.toLocaleString()}
           </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-0.5">
             Caseload balancing transfers
           </p>
         </div>
@@ -190,14 +190,14 @@ export function StaffAssignmentReportCard({
 
       {/* Staff Caseload Table Card with Sticky Header, Scrollable Body & Bottom Pagination */}
       <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-        <CardHeader className="pb-2 pt-3.5 px-4">
+        <CardHeader className="pb-1.5 pt-2 px-3 sm:px-3.5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+              <div className="p-1 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
                 <Users className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Staff Caseload &amp; Handover Governance
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
@@ -208,10 +208,10 @@ export function StaffAssignmentReportCard({
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-4 pt-0 space-y-3">
+        <CardContent className="px-3 sm:px-3.5 pb-2 pt-0 space-y-2">
           {/* Full-Width Search Input */}
           {currentStaffWorkload.length > 0 && (
-            <div className="w-full">
+            <div className="w-full -mt-0.5 sm:-mt-1">
               <AdvancedTableSearch
                 fields={searchFields}
                 onSearch={(conds, mode) => {
@@ -220,6 +220,7 @@ export function StaffAssignmentReportCard({
                   setCurrentPage(1);
                 }}
                 className="w-full"
+                side="bottom"
               />
             </div>
           )}
@@ -234,7 +235,7 @@ export function StaffAssignmentReportCard({
             </div>
           ) : (
             <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col">
-              <div className="overflow-y-auto max-h-[220px] custom-scrollbar">
+              <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
                 <Table className="relative">
                   <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                     <TableRow>
@@ -242,7 +243,7 @@ export function StaffAssignmentReportCard({
                         field="staffName"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                        className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                       >
                         Staff Member
                       </SortableTableHead>
@@ -250,7 +251,7 @@ export function StaffAssignmentReportCard({
                         field="departmentName"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                        className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                       >
                         Department
                       </SortableTableHead>
@@ -258,7 +259,7 @@ export function StaffAssignmentReportCard({
                         field="email"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                        className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                       >
                         Email Address
                       </SortableTableHead>
@@ -266,7 +267,7 @@ export function StaffAssignmentReportCard({
                         field="activeAssignmentsCount"
                         currentSort={sort}
                         onSort={handleSort}
-                        className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                        className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                       >
                         Active Caseload
                       </SortableTableHead>
@@ -278,16 +279,16 @@ export function StaffAssignmentReportCard({
                         key={staff.staffId}
                         className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                       >
-                        <TableCell className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 font-semibold text-slate-900 dark:text-slate-100 text-xs">
                           {staff.staffName}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-slate-600 dark:text-slate-400 text-xs">
                           {staff.departmentName}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                           {staff.email}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-right">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-right">
                           <Badge
                             variant="secondary"
                             className="font-mono font-bold text-slate-800 dark:text-slate-200"
@@ -305,7 +306,7 @@ export function StaffAssignmentReportCard({
 
           {/* Standard Pagination Controls Fixed Below the Table */}
           {sortedStaff.length > 0 && (
-            <div className="pt-2">
+            <div className="pt-1.5">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

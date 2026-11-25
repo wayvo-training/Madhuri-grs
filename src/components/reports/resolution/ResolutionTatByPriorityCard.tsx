@@ -96,8 +96,8 @@ export function ResolutionTatByPriorityCard({
   }, [sortedRows, currentPage, pageSize]);
 
   return (
-    <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs flex flex-col h-full min-h-0 justify-between overflow-hidden">
-      <CardHeader className="pb-1.5 pt-2.5 px-3.5 sm:px-4 shrink-0">
+    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex flex-col justify-between overflow-hidden">
+      <CardHeader className="pb-1.5 pt-2 px-3 sm:px-3.5 shrink-0">
         <div className="flex items-center gap-2">
           <div className="p-1 rounded-md bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
             <Timer className="h-3.5 w-3.5" />
@@ -114,14 +114,14 @@ export function ResolutionTatByPriorityCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-3.5 sm:px-4 pb-3 sm:pb-3.5 pt-0 flex-1 min-h-0 flex flex-col justify-between">
+      <CardContent className="px-3 sm:px-3.5 pb-2 pt-0 flex flex-col justify-between">
         {tatByPriority.length === 0 ? (
-          <div className="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
             No priority turnaround data available for this selection.
           </div>
         ) : (
-          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col justify-between">
-            <div className="overflow-y-auto flex-1 min-h-0 custom-scrollbar">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col justify-between">
+            <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
               <Table className="relative">
                 <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                   <TableRow>
@@ -129,7 +129,7 @@ export function ResolutionTatByPriorityCard({
                       field="priority"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Priority
                     </SortableTableHead>
@@ -137,7 +137,7 @@ export function ResolutionTatByPriorityCard({
                       field="totalGrievances"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Total Cases
                     </SortableTableHead>
@@ -145,7 +145,7 @@ export function ResolutionTatByPriorityCard({
                       field="closedCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Closed Cases
                     </SortableTableHead>
@@ -153,7 +153,7 @@ export function ResolutionTatByPriorityCard({
                       field="avgResolutionTimeHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Average TAT
                     </SortableTableHead>
@@ -161,7 +161,7 @@ export function ResolutionTatByPriorityCard({
                       field="medianResolutionTimeHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Median TAT
                     </SortableTableHead>
@@ -169,7 +169,7 @@ export function ResolutionTatByPriorityCard({
                       field="slaCompliantCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       SLA Compliant
                     </SortableTableHead>
@@ -177,7 +177,7 @@ export function ResolutionTatByPriorityCard({
                       field="slaBreachedCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       SLA Breached
                     </SortableTableHead>
@@ -185,7 +185,7 @@ export function ResolutionTatByPriorityCard({
                       field="slaComplianceRate"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Compliance Rate
                     </SortableTableHead>
@@ -197,13 +197,13 @@ export function ResolutionTatByPriorityCard({
                       key={row.priority}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <TableCell className="py-2 px-3 font-medium text-slate-800 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 font-medium text-slate-800 dark:text-slate-200">
                         <PriorityBadge priority={row.priority} />
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300 text-xs">
                         {row.totalGrievances.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-100">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-100 text-xs">
                         {row.closedCount.toLocaleString()}
                         {row.missingClosedAtCount > 0 && (
                           <span
@@ -214,11 +214,11 @@ export function ResolutionTatByPriorityCard({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right text-slate-700 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-700 dark:text-slate-200 text-xs">
                         {row.closedWithValidTat > 0 ? (
                           <span className="font-semibold text-indigo-600 dark:text-indigo-400 font-mono tabular-nums">
                             {row.avgResolutionTimeDays}d{" "}
-                            <span className="text-[11px] font-normal text-slate-400">
+                            <span className="text-[10px] font-normal text-slate-400">
                               ({row.avgResolutionTimeHours}h)
                             </span>
                           </span>
@@ -228,11 +228,11 @@ export function ResolutionTatByPriorityCard({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right text-slate-700 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-700 dark:text-slate-200 text-xs">
                         {row.closedWithValidTat > 0 ? (
                           <span className="font-semibold text-purple-600 dark:text-purple-400 font-mono tabular-nums">
                             {row.medianResolutionTimeDays}d{" "}
-                            <span className="text-[11px] font-normal text-slate-400">
+                            <span className="text-[10px] font-normal text-slate-400">
                               ({row.medianResolutionTimeHours}h)
                             </span>
                           </span>
@@ -242,15 +242,15 @@ export function ResolutionTatByPriorityCard({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right font-mono tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-emerald-600 dark:text-emerald-400 text-xs">
                         {row.slaCompliantCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right font-mono tabular-nums font-medium text-rose-600 dark:text-rose-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-rose-600 dark:text-rose-400 text-xs">
                         {row.slaBreachedCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2 px-3 text-right font-mono tabular-nums">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums text-xs">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-semibold ${
                             row.slaComplianceRate >= 90
                               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                               : row.slaComplianceRate >= 75
@@ -270,7 +270,7 @@ export function ResolutionTatByPriorityCard({
             </div>
 
             {/* Bottom-Fixed Pagination Bar */}
-            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-2 flex items-center justify-between shrink-0">
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-1.5 flex items-center justify-between shrink-0">
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 Showing{" "}
                 {tatByPriority.length > 0
@@ -290,6 +290,7 @@ export function ResolutionTatByPriorityCard({
                   setCurrentPage(1);
                 }}
                 pageSizeOptions={[5, 10, 20]}
+                compact
               />
             </div>
           </div>

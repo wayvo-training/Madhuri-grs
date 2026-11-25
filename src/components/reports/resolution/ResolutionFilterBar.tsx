@@ -223,9 +223,9 @@ export function ResolutionFilterBar({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-2.5 shadow-xs flex flex-col gap-2 shrink-0">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 sm:p-2 pb-1 shadow-xs flex flex-col gap-1 shrink-0">
       {/* Date Presets and Date Range Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
             <Calendar className="h-3 w-3" />
@@ -329,6 +329,7 @@ export function ResolutionFilterBar({
           onSearch={handleAdvancedSearch}
           placeholder="Filter by department, category, priority..."
           className="w-full"
+          side="bottom"
         />
       </div>
     </div>

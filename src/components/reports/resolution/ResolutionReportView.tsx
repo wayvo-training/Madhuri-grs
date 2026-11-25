@@ -179,7 +179,7 @@ export function ResolutionReportView({
   };
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2 sm:gap-2.5 w-full overflow-y-auto overflow-x-hidden custom-scrollbar">
       {/* 1. Header Row (Clean, uncluttered, compact without redundant badges or timestamps) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shrink-0">
         <div>
@@ -273,14 +273,16 @@ export function ResolutionReportView({
       )}
 
       {/* 2. Interactive Filter Toolbar with Standard Search */}
-      <ResolutionFilterBar
-        filters={filters}
-        filterOptions={filterOptions}
-        isOrganizationWide={isOrganizationWide}
-        isLoading={isLoading}
-        onApplyFilters={handleApplyFilters}
-        onResetFilters={handleResetFilters}
-      />
+      <div className="shrink-0">
+        <ResolutionFilterBar
+          filters={filters}
+          filterOptions={filterOptions}
+          isOrganizationWide={isOrganizationWide}
+          isLoading={isLoading}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
+        />
+      </div>
 
       {/* Error State Banner */}
       {errorMessage && (
@@ -315,11 +317,11 @@ export function ResolutionReportView({
       {data && (
         <div className="flex-1 min-h-0 flex flex-col gap-2">
           {/* Domain Focus Navigation Tabs */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto print:hidden">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5 pt-0.5 overflow-x-auto print:hidden shrink-0">
             <div
               role="tablist"
               aria-label="Resolution Analytics Views"
-              className="inline-flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
+              className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
             >
               {(
                 [
@@ -355,7 +357,7 @@ export function ResolutionReportView({
                     type="button"
                     aria-selected={isActive}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
                       isActive
                         ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -372,7 +374,7 @@ export function ResolutionReportView({
           {/* TAB 1: Workflow Stages & TAT by Priority */}
           {activeTab === "stages" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-workflow-stages"
             >
               <div className="flex items-baseline justify-between shrink-0">
@@ -381,7 +383,7 @@ export function ResolutionReportView({
                     id="heading-workflow-stages"
                     className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
-                    Resolution Stages & Turnaround Time
+                    Resolution Stages &amp; Turnaround Time
                   </h2>
                   <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Lifecycle milestone progression and end-to-end turnaround
@@ -390,13 +392,11 @@ export function ResolutionReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col gap-2.5">
+              <div className="flex flex-col gap-2">
                 <ResolutionStagesCard stages={data.stages} />
-                <div className="flex-1 min-h-0 flex flex-col">
-                  <ResolutionTatByPriorityCard
-                    tatByPriority={data.tatByPriority}
-                  />
-                </div>
+                <ResolutionTatByPriorityCard
+                  tatByPriority={data.tatByPriority}
+                />
               </div>
             </section>
           )}
@@ -404,7 +404,7 @@ export function ResolutionReportView({
           {/* TAB 2: Department Processing Time */}
           {activeTab === "departments" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-dept-processing"
             >
               <div className="flex items-baseline justify-between shrink-0">
@@ -413,7 +413,7 @@ export function ResolutionReportView({
                     id="heading-dept-processing"
                     className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
-                    Departmental Processing Time & Workload
+                    Departmental Processing Time &amp; Workload
                   </h2>
                   <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Department-level processing durations, distinguishing
@@ -423,18 +423,16 @@ export function ResolutionReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <DepartmentProcessingTimeCard
-                  departments={data.departmentProcessing}
-                />
-              </div>
+              <DepartmentProcessingTimeCard
+                departments={data.departmentProcessing}
+              />
             </section>
           )}
 
           {/* TAB 3: SLA Compliance */}
           {activeTab === "sla" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-sla-compliance"
             >
               <div className="flex items-baseline justify-between shrink-0">
@@ -443,7 +441,7 @@ export function ResolutionReportView({
                     id="heading-sla-compliance"
                     className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
-                    SLA Compliance & Breach Analysis
+                    SLA Compliance &amp; Breach Analysis
                   </h2>
                   <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Authoritative SLA attainment metrics derived from verified
@@ -452,18 +450,14 @@ export function ResolutionReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <SlaResolutionComplianceCard
-                  slaCompliance={data.slaCompliance}
-                />
-              </div>
+              <SlaResolutionComplianceCard slaCompliance={data.slaCompliance} />
             </section>
           )}
 
           {/* TAB 4: Rework & Reopen */}
           {activeTab === "rework" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-rework-reopen"
             >
               <div className="flex items-baseline justify-between shrink-0">
@@ -472,7 +466,7 @@ export function ResolutionReportView({
                     id="heading-rework-reopen"
                     className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-slate-100"
                   >
-                    Reopening & Resolution Rework Analysis
+                    Reopening &amp; Resolution Rework Analysis
                   </h2>
                   <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
                     Grievances with repeated resolution cycles, supervisor
@@ -481,16 +475,14 @@ export function ResolutionReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <ReworkAndReopenCard reworkAndReopen={data.reworkAndReopen} />
-              </div>
+              <ReworkAndReopenCard reworkAndReopen={data.reworkAndReopen} />
             </section>
           )}
 
           {/* TAB 5: Pending Cases */}
           {activeTab === "pending" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-pending-cases"
             >
               <div className="flex items-baseline justify-between shrink-0">
@@ -508,9 +500,7 @@ export function ResolutionReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <PendingCasesCard pendingCases={data.pendingCases} />
-              </div>
+              <PendingCasesCard pendingCases={data.pendingCases} />
             </section>
           )}
         </div>

@@ -71,11 +71,11 @@ export function ResolutionStagesCard({ stages }: ResolutionStagesCardProps) {
       </CardHeader>
 
       <CardContent className="px-3 sm:px-3.5 pb-2 pt-0">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2">
           {stages.map((st) => (
             <div
               key={st.stage}
-              className="flex flex-col justify-between rounded-lg border border-slate-100 bg-slate-50/60 p-2 dark:border-slate-800 dark:bg-slate-800/40"
+              className="flex flex-col justify-between rounded-lg border border-slate-100 bg-slate-50/60 p-1.5 sm:p-2 dark:border-slate-800 dark:bg-slate-800/40"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -84,20 +84,20 @@ export function ResolutionStagesCard({ stages }: ResolutionStagesCardProps) {
                   </span>
                   {getStageIcon(st.stage)}
                 </div>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-lg font-bold font-mono tracking-tight text-slate-900 dark:text-slate-100">
+                <div className="mt-0.5 flex items-baseline gap-1.5">
+                  <span className="text-base font-bold font-mono tracking-tight text-slate-900 dark:text-slate-100">
                     {st.count.toLocaleString()}
                   </span>
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                     ({st.percentage}%)
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                <p className="mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 line-clamp-1">
                   {st.description}
                 </p>
               </div>
 
-              <div className="mt-1.5 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden dark:bg-slate-700">
+              <div className="mt-1 w-full bg-slate-200 h-1.5 rounded-full overflow-hidden dark:bg-slate-700">
                 <div
                   className={`h-full rounded-full ${getStageColor(st.stage)}`}
                   style={{

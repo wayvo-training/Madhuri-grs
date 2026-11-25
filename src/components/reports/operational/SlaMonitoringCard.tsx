@@ -261,14 +261,14 @@ export function SlaMonitoringCard({
 
   return (
     <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <CardHeader className="pb-2 pt-3.5 px-4">
+      <CardHeader className="pb-1.5 pt-2 px-3 sm:px-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+            <div className="p-1 rounded-md bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
               <ShieldAlert className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 SLA Compliance &amp; Governance Escalations
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
@@ -295,69 +295,69 @@ export function SlaMonitoringCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+      <CardContent className="px-3 sm:px-3.5 pb-2 pt-0 space-y-2">
         {/* SLA Performance Strip (4 Metric Cards with Hairline Dividers) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 rounded-lg border border-slate-200 dark:border-slate-800 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20">
-          <div className="p-2.5 sm:p-3 flex flex-col justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-1.5 sm:p-2 flex flex-col justify-between">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               SLA Compliance Rate
             </span>
-            <div className="mt-0.5 text-xl font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
+            <div className="text-lg font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
               {complianceRate.toFixed(1)}%
             </div>
-            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+            <p className="text-[9.5px] text-slate-500 dark:text-slate-400">
               {totalMonitored - breachedDeadlineCount} of {totalMonitored}{" "}
               on-track
             </p>
           </div>
 
-          <div className="p-2.5 sm:p-3 flex flex-col justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-1.5 sm:p-2 flex flex-col justify-between">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Active On Track
             </span>
-            <div className="mt-0.5 text-xl font-bold font-mono tabular-nums text-blue-700 dark:text-blue-400">
+            <div className="text-lg font-bold font-mono tabular-nums text-blue-700 dark:text-blue-400">
               {onTrackCount.toLocaleString()}
             </div>
-            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+            <p className="text-[9.5px] text-slate-500 dark:text-slate-400">
               Elapsed within safe threshold (&lt; 50%)
             </p>
           </div>
 
-          <div className="p-2.5 sm:p-3 flex flex-col justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-1.5 sm:p-2 flex flex-col justify-between">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Active At Risk (50-99%)
             </span>
-            <div className="mt-0.5 text-xl font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400">
+            <div className="text-lg font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400">
               {approachingDeadlineCount.toLocaleString()}
             </div>
-            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+            <p className="text-[9.5px] text-slate-500 dark:text-slate-400">
               Approaching deadline / warning
             </p>
           </div>
 
-          <div className="p-2.5 sm:p-3 flex flex-col justify-between">
-            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          <div className="p-1.5 sm:p-2 flex flex-col justify-between">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Active Breached (≥ 100%)
             </span>
-            <div className="mt-0.5 text-xl font-bold font-mono tabular-nums text-rose-700 dark:text-rose-400">
+            <div className="text-lg font-bold font-mono tabular-nums text-rose-700 dark:text-rose-400">
               {breachedDeadlineCount.toLocaleString()}
             </div>
-            <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+            <p className="text-[9.5px] text-slate-500 dark:text-slate-400">
               Exceeded target turnaround
             </p>
           </div>
         </div>
 
         {/* Unified Table Controls: 3 Tabs (Deadlines + Escalations) */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1">
           <Button
             type="button"
             variant={activeTab === "approaching" ? "default" : "outline"}
             size="sm"
             onClick={() => handleTabChange("approaching")}
-            className="h-8 text-xs px-3 font-medium rounded-md gap-1.5 cursor-pointer"
+            className="h-7 text-xs px-2.5 font-medium rounded-md gap-1 cursor-pointer"
           >
-            <AlertTriangle className="h-3.5 w-3.5" />
+            <AlertTriangle className="h-3 w-3" />
             Active Approaching Deadlines ({approachingGrievances.length})
           </Button>
           <Button
@@ -365,9 +365,9 @@ export function SlaMonitoringCard({
             variant={activeTab === "breached" ? "default" : "outline"}
             size="sm"
             onClick={() => handleTabChange("breached")}
-            className="h-8 text-xs px-3 font-medium rounded-md gap-1.5 cursor-pointer"
+            className="h-7 text-xs px-2.5 font-medium rounded-md gap-1 cursor-pointer"
           >
-            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertCircle className="h-3 w-3" />
             Active Exceeded Deadlines ({breachedGrievances.length})
           </Button>
           <Button
@@ -375,15 +375,15 @@ export function SlaMonitoringCard({
             variant={activeTab === "escalations" ? "default" : "outline"}
             size="sm"
             onClick={() => handleTabChange("escalations")}
-            className="h-8 text-xs px-3 font-medium rounded-md gap-1.5 cursor-pointer"
+            className="h-7 text-xs px-2.5 font-medium rounded-md gap-1 cursor-pointer"
           >
-            <ShieldAlert className="h-3.5 w-3.5" />
+            <ShieldAlert className="h-3 w-3" />
             Recorded Escalations ({escalations.events.length})
           </Button>
         </div>
 
         {/* Full-Width Search Bar */}
-        <div className="w-full">
+        <div className="w-full -mt-1 sm:-mt-1.5">
           <AdvancedTableSearch
             fields={
               activeTab === "escalations"
@@ -396,6 +396,7 @@ export function SlaMonitoringCard({
               setCurrentPage(1);
             }}
             className="w-full"
+            side="bottom"
           />
         </div>
 
@@ -412,7 +413,7 @@ export function SlaMonitoringCard({
         ) : activeTab === "escalations" ? (
           /* Escalations Table with Sticky Header & Scrollable Body */
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col">
-            <div className="overflow-y-auto max-h-[220px] custom-scrollbar">
+            <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
               <Table className="relative">
                 <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                   <TableRow>
@@ -420,7 +421,7 @@ export function SlaMonitoringCard({
                       field="ticketCode"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Grievance #
                     </SortableTableHead>
@@ -428,7 +429,7 @@ export function SlaMonitoringCard({
                       field="title"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Grievance Title
                     </SortableTableHead>
@@ -436,7 +437,7 @@ export function SlaMonitoringCard({
                       field="level"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-center font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-center font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Level
                     </SortableTableHead>
@@ -444,7 +445,7 @@ export function SlaMonitoringCard({
                       field="escalatedTo"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Escalated To
                     </SortableTableHead>
@@ -452,7 +453,7 @@ export function SlaMonitoringCard({
                       field="reason"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Reason
                     </SortableTableHead>
@@ -460,7 +461,7 @@ export function SlaMonitoringCard({
                       field="status"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Status
                     </SortableTableHead>
@@ -468,7 +469,7 @@ export function SlaMonitoringCard({
                       field="createdAt"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Escalation Date
                     </SortableTableHead>
@@ -491,13 +492,13 @@ export function SlaMonitoringCard({
                         key={esc.escalationId}
                         className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                       >
-                        <TableCell className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">
                           {esc.grievanceNumber}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 max-w-xs truncate font-medium text-slate-800 dark:text-slate-200">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 max-w-xs truncate font-medium text-slate-800 dark:text-slate-200">
                           {esc.grievanceTitle}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-center">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-center">
                           <Badge
                             variant="secondary"
                             className="font-bold text-purple-700 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-300 font-mono"
@@ -505,19 +506,19 @@ export function SlaMonitoringCard({
                             L{esc.escalationLevel}
                           </Badge>
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-slate-700 dark:text-slate-300 font-medium">
                           {esc.escalatedToName}
                         </TableCell>
                         <TableCell
-                          className="py-2.5 px-3 max-w-sm truncate text-slate-600 dark:text-slate-400"
+                          className="py-1.5 px-2.5 sm:px-3 max-w-sm truncate text-slate-600 dark:text-slate-400"
                           title={esc.reason}
                         >
                           {esc.reason}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3">
                           <StatusBadge status={esc.status} />
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400 font-mono text-[11px] tabular-nums">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-500 dark:text-slate-400 font-mono text-[11px] tabular-nums">
                           {dateFormatted}
                         </TableCell>
                       </TableRow>
@@ -530,7 +531,7 @@ export function SlaMonitoringCard({
         ) : (
           /* Deadlines Table with Sticky Header & Scrollable Body */
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col">
-            <div className="overflow-y-auto max-h-[220px] custom-scrollbar">
+            <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
               <Table className="relative">
                 <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                   <TableRow>
@@ -538,7 +539,7 @@ export function SlaMonitoringCard({
                       field="ticketCode"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Grievance #
                     </SortableTableHead>
@@ -546,7 +547,7 @@ export function SlaMonitoringCard({
                       field="title"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Title
                     </SortableTableHead>
@@ -554,7 +555,7 @@ export function SlaMonitoringCard({
                       field="department"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Primary Dept
                     </SortableTableHead>
@@ -562,7 +563,7 @@ export function SlaMonitoringCard({
                       field="priority"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Priority
                     </SortableTableHead>
@@ -570,7 +571,7 @@ export function SlaMonitoringCard({
                       field="status"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Status
                     </SortableTableHead>
@@ -578,7 +579,7 @@ export function SlaMonitoringCard({
                       field="slaStatus"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       SLA Status
                     </SortableTableHead>
@@ -586,7 +587,7 @@ export function SlaMonitoringCard({
                       field="dueAt"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-right text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-right text-slate-600 dark:text-slate-300"
                     >
                       Target Due At
                     </SortableTableHead>
@@ -608,25 +609,25 @@ export function SlaMonitoringCard({
                         key={g.grievanceId}
                         className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                       >
-                        <TableCell className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 font-mono font-bold text-slate-900 dark:text-slate-100 text-[11px]">
                           {g.grievanceNumber}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 max-w-xs truncate font-medium text-slate-800 dark:text-slate-200">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 max-w-xs truncate font-medium text-slate-800 dark:text-slate-200">
                           {g.title}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-slate-600 dark:text-slate-400">
                           {g.primaryDepartmentName}
                         </TableCell>
-                        <TableCell className="py-2.5 px-3">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3">
                           <PriorityBadge priority={g.priority} />
                         </TableCell>
-                        <TableCell className="py-2.5 px-3">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3">
                           <StatusBadge status={g.status} />
                         </TableCell>
-                        <TableCell className="py-2.5 px-3">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3">
                           <SlaBadge status={g.slaStatus} />
                         </TableCell>
-                        <TableCell className="py-2.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300 tabular-nums">
+                        <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono text-slate-700 dark:text-slate-300 tabular-nums">
                           {dueFormatted}
                         </TableCell>
                       </TableRow>
@@ -640,7 +641,7 @@ export function SlaMonitoringCard({
 
         {/* Standard Pagination Controls Fixed Below the Table */}
         {totalFilteredCount > 0 && (
-          <div className="pt-2">
+          <div className="pt-1.5">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

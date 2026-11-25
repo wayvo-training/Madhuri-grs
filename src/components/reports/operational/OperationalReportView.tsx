@@ -187,7 +187,13 @@ export function OperationalReportView({
   };
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 w-full">
+    <div
+      className={`flex-1 h-full min-h-0 flex flex-col gap-2 sm:gap-2.5 w-full ${
+        activeTab === "overview" || activeTab === "departments"
+          ? "overflow-hidden"
+          : "overflow-y-auto overflow-x-hidden custom-scrollbar"
+      }`}
+    >
       {/* 1. Header Row (Clean, uncluttered, compact) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shrink-0">
         <div>
@@ -281,18 +287,20 @@ export function OperationalReportView({
       )}
 
       {/* 2. Interactive Filter Toolbar */}
-      <ReportFilterBar
-        filters={filters}
-        filterOptions={filterOptions}
-        isOrganizationWide={isOrganizationWide}
-        isLoading={isLoading}
-        onApplyFilters={handleApplyFilters}
-        onResetFilters={handleResetFilters}
-      />
+      <div className="shrink-0">
+        <ReportFilterBar
+          filters={filters}
+          filterOptions={filterOptions}
+          isOrganizationWide={isOrganizationWide}
+          isLoading={isLoading}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
+        />
+      </div>
 
       {/* Error State Banner */}
       {errorMessage && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{errorMessage}</span>
@@ -321,13 +329,13 @@ export function OperationalReportView({
 
       {/* 4. Loaded Data Content */}
       {data && (
-        <div className="flex-1 min-h-0 flex flex-col gap-2">
+        <div className="flex-1 min-h-0 flex flex-col gap-1.5 sm:gap-2">
           {/* Domain Focus Navigation Tabs */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto print:hidden">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-1.5 pt-0.5 overflow-x-auto print:hidden shrink-0">
             <div
               role="tablist"
               aria-label="Operational Analytics Views"
-              className="inline-flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
+              className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-lg shrink-0"
             >
               {(
                 [
@@ -363,7 +371,7 @@ export function OperationalReportView({
                     type="button"
                     aria-selected={isActive}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap cursor-pointer ${
                       isActive
                         ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -444,10 +452,10 @@ export function OperationalReportView({
           {/* TAB 3: SLA Performance & Escalations (Unified Single Table Card) */}
           {activeTab === "sla" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-sla-escalations"
             >
-              <div className="flex items-baseline justify-between shrink-0">
+              <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-sla-escalations"
@@ -462,23 +470,21 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <SlaMonitoringCard
-                  slaMonitoring={data.slaMonitoring}
-                  escalations={data.escalations}
-                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
-                />
-              </div>
+              <SlaMonitoringCard
+                slaMonitoring={data.slaMonitoring}
+                escalations={data.escalations}
+                totalUniqueGrievances={data.summary.totalUniqueGrievances}
+              />
             </section>
           )}
 
           {/* TAB 4: Staff Workload Caseload */}
           {activeTab === "staff" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-staff-caseload"
             >
-              <div className="flex items-baseline justify-between shrink-0">
+              <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-staff-caseload"
@@ -492,22 +498,20 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <StaffAssignmentReportCard
-                  staffAssignments={data.staffAssignments}
-                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
-                />
-              </div>
+              <StaffAssignmentReportCard
+                staffAssignments={data.staffAssignments}
+                totalUniqueGrievances={data.summary.totalUniqueGrievances}
+              />
             </section>
           )}
 
           {/* TAB 5: Category & Taxonomy Breakdown */}
           {activeTab === "taxonomy" && (
             <section
-              className="flex-1 min-h-0 flex flex-col space-y-1.5"
+              className="space-y-1.5 pb-3"
               aria-labelledby="heading-taxonomy"
             >
-              <div className="flex items-baseline justify-between shrink-0">
+              <div className="flex items-baseline justify-between">
                 <div>
                   <h2
                     id="heading-taxonomy"
@@ -522,12 +526,10 @@ export function OperationalReportView({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 flex flex-col">
-                <CategoryDistributionCard
-                  categoryDistribution={data.categoryDistribution}
-                  totalUniqueGrievances={data.summary.totalUniqueGrievances}
-                />
-              </div>
+              <CategoryDistributionCard
+                categoryDistribution={data.categoryDistribution}
+                totalUniqueGrievances={data.summary.totalUniqueGrievances}
+              />
             </section>
           )}
         </div>

@@ -129,14 +129,14 @@ export function DepartmentProcessingTimeCard({
   }, [sortedDepartments, currentPage, pageSize]);
 
   return (
-    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <CardHeader className="pb-2 pt-3.5 px-4">
+    <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs flex flex-col justify-between overflow-hidden">
+      <CardHeader className="pb-1.5 pt-2 px-3 sm:px-3.5 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+          <div className="p-1 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
             <Building2 className="h-4 w-4" />
           </div>
           <div>
-            <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
               Departmental Processing Time &amp; Workload
             </CardTitle>
             <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
@@ -147,10 +147,10 @@ export function DepartmentProcessingTimeCard({
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+      <CardContent className="px-3 sm:px-3.5 pb-2 pt-0 space-y-2">
         {/* Full-Width Search Input */}
         {departments.length > 0 && (
-          <div className="w-full">
+          <div className="w-full -mt-0.5 sm:-mt-1">
             <AdvancedTableSearch
               fields={searchFields}
               onSearch={(conds, mode) => {
@@ -159,21 +159,22 @@ export function DepartmentProcessingTimeCard({
                 setCurrentPage(1);
               }}
               className="w-full"
+              side="bottom"
             />
           </div>
         )}
 
         {departments.length === 0 ? (
-          <div className="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
             No departmental records found for selected period and filters.
           </div>
         ) : filteredDepartments.length === 0 ? (
-          <div className="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
+          <div className="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
             No departments matching search criteria.
           </div>
         ) : (
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col">
-            <div className="overflow-y-auto max-h-[220px] custom-scrollbar">
+            <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
               <Table className="relative">
                 <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                   <TableRow>
@@ -181,7 +182,7 @@ export function DepartmentProcessingTimeCard({
                       field="departmentName"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Department
                     </SortableTableHead>
@@ -189,7 +190,7 @@ export function DepartmentProcessingTimeCard({
                       field="totalInvolved"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Involved Cases
                     </SortableTableHead>
@@ -197,7 +198,7 @@ export function DepartmentProcessingTimeCard({
                       field="completedWithValidDurationCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Completed
                     </SortableTableHead>
@@ -205,7 +206,7 @@ export function DepartmentProcessingTimeCard({
                       field="blockedStagesCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Blocked
                     </SortableTableHead>
@@ -213,7 +214,7 @@ export function DepartmentProcessingTimeCard({
                       field="pendingStagesCount"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Pending
                     </SortableTableHead>
@@ -221,7 +222,7 @@ export function DepartmentProcessingTimeCard({
                       field="avgProcessingTimeHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Avg Duration
                     </SortableTableHead>
@@ -229,7 +230,7 @@ export function DepartmentProcessingTimeCard({
                       field="medianProcessingTimeHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Median Duration
                     </SortableTableHead>
@@ -237,7 +238,7 @@ export function DepartmentProcessingTimeCard({
                       field="primaryAvgProcessingHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Primary Avg
                     </SortableTableHead>
@@ -245,7 +246,7 @@ export function DepartmentProcessingTimeCard({
                       field="supportingAvgProcessingHours"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Supporting Avg
                     </SortableTableHead>
@@ -253,7 +254,7 @@ export function DepartmentProcessingTimeCard({
                       field="slaComplianceRate"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       SLA Compliance
                     </SortableTableHead>
@@ -265,13 +266,13 @@ export function DepartmentProcessingTimeCard({
                       key={dept.departmentId}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <TableCell className="py-2.5 px-3 font-medium text-slate-900 dark:text-slate-100">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 font-medium text-slate-900 dark:text-slate-100 text-xs">
                         {dept.departmentName}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums text-slate-600 dark:text-slate-300 text-xs">
                         {dept.totalInvolved.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-emerald-600 dark:text-emerald-400 text-xs">
                         {dept.completedWithValidDurationCount.toLocaleString()}
                         {dept.missingActivationCount > 0 && (
                           <span
@@ -282,17 +283,17 @@ export function DepartmentProcessingTimeCard({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono tabular-nums font-medium text-purple-600 dark:text-purple-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-purple-600 dark:text-purple-400 text-xs">
                         {dept.blockedStagesCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono tabular-nums font-medium text-amber-600 dark:text-amber-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums font-medium text-amber-600 dark:text-amber-400 text-xs">
                         {dept.pendingStagesCount.toLocaleString()}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right text-slate-700 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-700 dark:text-slate-200 text-xs">
                         {dept.completedWithValidDurationCount > 0 ? (
                           <span className="font-semibold text-indigo-600 dark:text-indigo-400 font-mono tabular-nums">
                             {dept.avgProcessingTimeDays}d{" "}
-                            <span className="text-[11px] font-normal text-slate-400">
+                            <span className="text-[10px] font-normal text-slate-400">
                               ({dept.avgProcessingTimeHours}h)
                             </span>
                           </span>
@@ -300,11 +301,11 @@ export function DepartmentProcessingTimeCard({
                           <span className="text-slate-400 italic">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right text-slate-700 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-700 dark:text-slate-200 text-xs">
                         {dept.completedWithValidDurationCount > 0 ? (
                           <span className="font-semibold text-purple-600 dark:text-purple-400 font-mono tabular-nums">
                             {dept.medianProcessingTimeDays}d{" "}
-                            <span className="text-[11px] font-normal text-slate-400">
+                            <span className="text-[10px] font-normal text-slate-400">
                               ({dept.medianProcessingTimeHours}h)
                             </span>
                           </span>
@@ -312,19 +313,19 @@ export function DepartmentProcessingTimeCard({
                           <span className="text-slate-400 italic">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300 font-mono tabular-nums">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-600 dark:text-slate-300 font-mono tabular-nums text-xs">
                         {dept.primaryCount > 0
                           ? `${(dept.avgPrimaryProcessingHours / 24).toFixed(1)}d`
                           : "—"}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-300 font-mono tabular-nums">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right text-slate-600 dark:text-slate-300 font-mono tabular-nums text-xs">
                         {dept.supportingCount > 0
                           ? `${(dept.avgSupportingProcessingHours / 24).toFixed(1)}d`
                           : "—"}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono tabular-nums">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono tabular-nums text-xs">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-semibold ${
                             dept.slaComplianceRate >= 90
                               ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
                               : dept.slaComplianceRate >= 75
@@ -344,7 +345,7 @@ export function DepartmentProcessingTimeCard({
             </div>
 
             {/* Bottom-Fixed Pagination Bar */}
-            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-2 flex items-center justify-between">
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-1.5 flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 Showing{" "}
                 {filteredDepartments.length > 0
@@ -365,6 +366,7 @@ export function DepartmentProcessingTimeCard({
                   setCurrentPage(1);
                 }}
                 pageSizeOptions={[5, 10, 20]}
+                compact
               />
             </div>
           </div>

@@ -136,14 +136,14 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
 
   return (
     <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-      <CardHeader className="pb-2 pt-3.5 px-4">
+      <CardHeader className="pb-1.5 pt-2 px-3 sm:px-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
+            <div className="p-1 rounded-md bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
               <Hourglass className="h-4 w-4" />
             </div>
             <div>
-              <CardTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <CardTitle className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Unresolved Grievances (Pending Cases)
               </CardTitle>
               <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
@@ -162,10 +162,10 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="px-4 pb-4 pt-0 space-y-3">
+      <CardContent className="px-3 sm:px-3.5 pb-2 pt-0 space-y-2">
         {/* Full-Width Search Input for Pending Cases */}
         {pendingCases.recentPendingCases.length > 0 && (
-          <div className="w-full">
+          <div className="w-full -mt-0.5 sm:-mt-1">
             <AdvancedTableSearch
               fields={searchFields}
               onSearch={(conds, mode) => {
@@ -174,6 +174,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                 setCurrentPage(1);
               }}
               className="w-full"
+              side="bottom"
             />
           </div>
         )}
@@ -188,7 +189,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
           </div>
         ) : (
           <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden flex flex-col">
-            <div className="overflow-y-auto max-h-[220px] custom-scrollbar">
+            <div className="overflow-y-auto min-h-[140px] max-h-[175px] custom-scrollbar">
               <Table className="relative">
                 <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800/95 backdrop-blur-xs z-10 border-b border-slate-200 dark:border-slate-700">
                   <TableRow>
@@ -196,7 +197,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="ticketCode"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Grievance #
                     </SortableTableHead>
@@ -204,7 +205,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="title"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Title
                     </SortableTableHead>
@@ -212,7 +213,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="priority"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Priority
                     </SortableTableHead>
@@ -220,7 +221,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="department"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Department
                     </SortableTableHead>
@@ -228,7 +229,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="status"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Status
                     </SortableTableHead>
@@ -236,7 +237,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       field="daysOpen"
                       currentSort={sort}
                       onSort={handleSort}
-                      className="py-2.5 px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
+                      className="py-1.5 px-2.5 sm:px-3 text-right font-semibold text-xs text-slate-600 dark:text-slate-300"
                     >
                       Age (Days)
                     </SortableTableHead>
@@ -248,22 +249,22 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                       key={item.grievanceId}
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                     >
-                      <TableCell className="py-2.5 px-3 font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">
                         {item.grievanceNumber}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 max-w-[240px] truncate text-xs font-medium text-slate-800 dark:text-slate-200">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 max-w-[240px] truncate text-xs font-medium text-slate-800 dark:text-slate-200">
                         {item.title}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3">
                         <PriorityBadge priority={item.priority} />
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-xs text-slate-600 dark:text-slate-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-xs text-slate-600 dark:text-slate-400">
                         {item.departmentName}
                       </TableCell>
-                      <TableCell className="py-2.5 px-3">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3">
                         <StatusBadge status={item.status} />
                       </TableCell>
-                      <TableCell className="py-2.5 px-3 text-right font-mono text-xs tabular-nums font-semibold text-amber-600 dark:text-amber-400">
+                      <TableCell className="py-1.5 px-2.5 sm:px-3 text-right font-mono text-xs tabular-nums font-semibold text-amber-600 dark:text-amber-400">
                         {item.daysOpen}d
                       </TableCell>
                     </TableRow>
@@ -273,7 +274,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
             </div>
 
             {/* Bottom-Fixed Pagination Bar */}
-            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-2 flex items-center justify-between">
+            <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 px-3 py-1.5 flex items-center justify-between">
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 Showing{" "}
                 {filteredCases.length > 0
@@ -293,6 +294,7 @@ export function PendingCasesCard({ pendingCases }: PendingCasesCardProps) {
                   setCurrentPage(1);
                 }}
                 pageSizeOptions={[5, 10, 20]}
+                compact
               />
             </div>
           </div>
