@@ -672,28 +672,10 @@ export function GrievanceQueue({
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
                           {isClosed ? (
                             <StatusBadge status="CLOSED" label="Closed" />
-                          ) : isResolved ? (
-                            <StatusBadge status="RESOLVED" label="Resolved" />
-                          ) : item.isMyDepartmentCompleted ||
+                          ) : isResolved ||
+                            item.isMyDepartmentCompleted ||
                             item.status === "COMPLETED" ? (
-                            <StatusBadge
-                              status="COMPLETED"
-                              title={
-                                item.overallStatus &&
-                                item.overallStatus !== "COMPLETED" &&
-                                item.overallStatus !== "CLOSED" &&
-                                item.overallStatus !== "RESOLVED"
-                                  ? `Case: ${item.overallStatus.replace(/_/g, " ")}${item.activeDepartmentName ? ` (${item.activeDepartmentName})` : ""}`
-                                  : item.myInvolvementType === "SUPPORTING"
-                                    ? "Department Findings Submitted"
-                                    : "Work Completed"
-                              }
-                              label={
-                                item.myInvolvementType === "SUPPORTING"
-                                  ? "Findings Done"
-                                  : "Work Completed"
-                              }
-                            />
+                            <StatusBadge status="RESOLVED" label="Resolved" />
                           ) : (
                             <StatusBadge status={item.status} />
                           )}

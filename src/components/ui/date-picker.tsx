@@ -92,7 +92,7 @@ export function DatePicker({
       widthClass="w-auto p-0"
       align={align}
     >
-      <div className="p-2.5 w-[280px]">
+      <div className="p-3 w-[250px] bg-white dark:bg-slate-900 rounded-lg">
         <Calendar
           mode="single"
           selected={selectedDate}
@@ -103,25 +103,21 @@ export function DatePicker({
             return false;
           }}
         />
-        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-2.5 mt-1.5 px-1.5">
-          <Button
+        <div className="flex items-center justify-between pt-2.5 mt-1 px-1">
+          <button
             type="button"
-            variant="ghost"
-            size="xs"
             onClick={() => handleSelect(undefined)}
-            className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer"
+            className="text-xs font-normal text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
             Clear
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
-            variant="ghost"
-            size="xs"
             onClick={() => handleSelect(new Date())}
-            className="text-[11px] font-semibold text-[#0F766E] dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300 cursor-pointer"
+            className="text-xs font-normal text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
             Today
-          </Button>
+          </button>
         </div>
       </div>
     </Popover>

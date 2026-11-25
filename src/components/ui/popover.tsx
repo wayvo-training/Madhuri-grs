@@ -114,7 +114,7 @@ export function Popover({
         <div
           className={`absolute ${horizontalPlacement === "right" ? "right-0" : "left-0"} ${
             placement === "top" ? "bottom-full mb-1" : "top-full mt-1"
-          } z-50 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 ${widthClass}`}
+          } z-50 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900 ${widthClass}`}
         >
           {children}
         </div>

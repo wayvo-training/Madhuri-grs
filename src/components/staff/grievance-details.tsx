@@ -246,10 +246,16 @@ export function GrievanceDetails({
                 <span className="text-slate-300">&bull;</span>
                 <PriorityBadge priority={grievance.priority} />
                 <StatusBadge
-                  status={grievance.status}
+                  status={
+                    grievance.status === "COMPLETED" ||
+                    grievance.myDepartmentStatus === "COMPLETED"
+                      ? "RESOLVED"
+                      : grievance.status
+                  }
                   label={
-                    grievance.status === "COMPLETED"
-                      ? "Findings Submitted"
+                    grievance.status === "COMPLETED" ||
+                    grievance.myDepartmentStatus === "COMPLETED"
+                      ? "Resolved"
                       : undefined
                   }
                 />
