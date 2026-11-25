@@ -154,6 +154,10 @@ export async function getUserGrievanceConversations(
               "COMMUNICATION_MESSAGE",
               "RESOLUTION_ACCEPTED",
               "GRIEVANCE_REOPENED",
+              "REOPEN_REQUESTED",
+              "REWORK_REQUESTED",
+              "REWORK_APPROVED",
+              "REWORK_REQUIRED",
             ];
           };
         };
@@ -208,6 +212,10 @@ export async function getUserGrievanceConversations(
                 "COMMUNICATION_MESSAGE",
                 "RESOLUTION_ACCEPTED",
                 "GRIEVANCE_REOPENED",
+                "REOPEN_REQUESTED",
+                "REWORK_REQUESTED",
+                "REWORK_APPROVED",
+                "REWORK_REQUIRED",
               ],
             },
           },
@@ -322,7 +330,11 @@ export async function getUserGrievanceConversations(
           userRole,
         );
       } else {
-        latestEvent = formatResolutionEvent(latestResolution, g.status);
+        latestEvent = formatResolutionEvent(
+          latestResolution,
+          g.status,
+          userRole,
+        );
       }
     } else if (latestAudit) {
       latestEvent = formatAuditEvent(
@@ -332,7 +344,7 @@ export async function getUserGrievanceConversations(
         userRole,
       );
     } else if (latestResolution) {
-      latestEvent = formatResolutionEvent(latestResolution, g.status);
+      latestEvent = formatResolutionEvent(latestResolution, g.status, userRole);
     }
 
     if (!latestEvent) {
@@ -478,6 +490,36 @@ function formatAuditEvent(
     };
   }
 
+  if (
+    audit.action === "GRIEVANCE_REOPENED" ||
+    audit.action === "REOPEN_REQUESTED" ||
+    audit.action === "REWORK_REQUESTED" ||
+    audit.action === "REWORK_REQUIRED"
+  ) {
+    const isStaffOrHead =
+      userRole === "STAFF" ||
+      userRole === "DEPARTMENT_HEAD" ||
+      userRole === "ADMIN";
+    const isRework =
+      audit.action === "REWORK_REQUESTED" || audit.action === "REWORK_REQUIRED";
+    return {
+      type: "AUDIT" as const,
+      timestamp: audit.created_at,
+      sender: endUserName,
+      preview:
+        val?.message ||
+        (isRework
+          ? "Rework requested. Staff review and revision required."
+          : "Grievance reopened by employee. Review and further investigation required."),
+      communicationState: isRework ? "Rework Required" : "Grievance Reopened",
+      filterCategory: (isStaffOrHead ? "ACTION_REQUIRED" : "UPDATES") as
+        | "ACTION_REQUIRED"
+        | "UPDATES",
+      hasAttachments: false,
+      action: audit.action,
+    };
+  }
+
   return {
     type: "AUDIT" as const,
     timestamp: audit.created_at,
@@ -498,12 +540,19 @@ function formatResolutionEvent(
     users?: { first_name: string; last_name: string | null } | null;
   },
   grievanceStatus: string,
+  userRole?: string,
 ) {
   const staffName = res.users
     ? `${res.users.first_name} ${res.users.last_name || ""}`.trim()
     : "Staff Member";
 
   const isClosed = grievanceStatus === "CLOSED";
+  const isActionRequired =
+    !isClosed &&
+    (userRole === "END_USER" ||
+      userRole === "DEPARTMENT_HEAD" ||
+      grievanceStatus === "RESOLUTION_PENDING_APPROVAL" ||
+      grievanceStatus === "RESOLVED");
 
   return {
     type: "RESOLUTION" as const,
@@ -514,7 +563,9 @@ function formatResolutionEvent(
     communicationState: isClosed
       ? "Case Closed"
       : "Resolution Ready for Review",
-    filterCategory: "UPDATES" as const,
+    filterCategory: (isActionRequired ? "ACTION_REQUIRED" : "UPDATES") as
+      | "ACTION_REQUIRED"
+      | "UPDATES",
     hasAttachments: false,
   };
 }

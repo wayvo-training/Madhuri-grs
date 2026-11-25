@@ -2,8 +2,8 @@
 
 import { MessageSquare, Paperclip, Search } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import type { CommunicationConversationSummary } from "@/lib/communication/service";
 
 interface GrievanceCommunicationSidebarProps {
@@ -18,51 +18,68 @@ export function GrievanceCommunicationSidebar({
   basePath,
 }: GrievanceCommunicationSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterTab>("ALL");
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      router.refresh();
+    };
+
+    window.addEventListener("messages-changed", handleRefresh);
+    window.addEventListener("notifications-changed", handleRefresh);
+
+    return () => {
+      window.removeEventListener("messages-changed", handleRefresh);
+      window.removeEventListener("notifications-changed", handleRefresh);
+    };
+  }, [router]);
+
+  const searchMatchedConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.toLowerCase().trim();
+    return conversations.filter((c) => {
+      const matchNumber = c.grievanceNumber?.toLowerCase().includes(q);
+      const matchTitle = c.title?.toLowerCase().includes(q);
+      const matchPreview = c.lastMessagePreview?.toLowerCase().includes(q);
+      const matchSender = c.sender?.toLowerCase().includes(q);
+      const matchState = c.communicationState?.toLowerCase().includes(q);
+      const matchStatus = c.status?.toLowerCase().includes(q);
+      return Boolean(
+        matchNumber ||
+          matchTitle ||
+          matchPreview ||
+          matchSender ||
+          matchState ||
+          matchStatus,
+      );
+    });
+  }, [conversations, searchQuery]);
+
   const counts = useMemo(() => {
     return {
-      ALL: conversations.length,
-      ACTION_REQUIRED: conversations.filter(
+      ALL: searchMatchedConversations.length,
+      ACTION_REQUIRED: searchMatchedConversations.filter(
         (c) => c.filterCategory === "ACTION_REQUIRED",
       ).length,
-      RESPONSES: conversations.filter((c) => c.filterCategory === "RESPONSES")
-        .length,
-      UPDATES: conversations.filter((c) => c.filterCategory === "UPDATES")
-        .length,
+      RESPONSES: searchMatchedConversations.filter(
+        (c) => c.filterCategory === "RESPONSES",
+      ).length,
+      UPDATES: searchMatchedConversations.filter(
+        (c) => c.filterCategory === "UPDATES",
+      ).length,
     };
-  }, [conversations]);
+  }, [searchMatchedConversations]);
 
   const filteredConversations = useMemo(() => {
-    return conversations.filter((c) => {
-      // 1. Tab filter
-      if (activeFilter !== "ALL" && c.filterCategory !== activeFilter) {
-        return false;
-      }
-
-      // 2. Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchNumber = c.grievanceNumber.toLowerCase().includes(q);
-        const matchTitle = c.title.toLowerCase().includes(q);
-        const matchPreview = c.lastMessagePreview.toLowerCase().includes(q);
-        const matchSender = c.sender.toLowerCase().includes(q);
-        const matchState = c.communicationState.toLowerCase().includes(q);
-        if (
-          !matchNumber &&
-          !matchTitle &&
-          !matchPreview &&
-          !matchSender &&
-          !matchState
-        ) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [conversations, activeFilter, searchQuery]);
+    if (activeFilter === "ALL") {
+      return searchMatchedConversations;
+    }
+    return searchMatchedConversations.filter(
+      (c) => c.filterCategory === activeFilter,
+    );
+  }, [searchMatchedConversations, activeFilter]);
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 select-none">
@@ -115,12 +132,7 @@ export function GrievanceCommunicationSidebar({
                 : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200/70"
             }`}
           >
-            Action Required
-            {counts.ACTION_REQUIRED > 0 && (
-              <span className="ml-1 px-1 rounded-full bg-amber-500/20 text-[10px]">
-                {counts.ACTION_REQUIRED}
-              </span>
-            )}
+            Action Required ({counts.ACTION_REQUIRED})
           </button>
           <button
             type="button"
