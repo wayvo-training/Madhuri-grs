@@ -431,10 +431,10 @@ export async function evaluateGrievanceSla(
               userMap.set(h.user_id.toString(), h);
             }
           }
-          // PRIMARY_DEPT_HEAD: add primary department head if explicitly requested or if this is the primary department
+          // PRIMARY_DEPT_HEAD: in department context, only add primary department head if THIS IS the primary department.
+          // In parallel workflows, primary department head must not receive partner/supporting departments' departmental SLA alerts.
           if (
-            (d === "PRIMARY_DEPT_HEAD" ||
-              deptContext.deptRec.involvement_type === "PRIMARY") &&
+            deptContext.deptRec.involvement_type === "PRIMARY" &&
             primaryDeptHead
           ) {
             userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
@@ -462,16 +462,10 @@ export async function evaluateGrievanceSla(
         }
       } else if (d === "ALL_DEPT_HEADS") {
         if (deptContext) {
-          // Departmental SLA context: notify this department's head, plus primary/lead head for oversight.
-          // Supporting heads of other departments must not receive this department's internal SLA alert.
+          // Departmental SLA context: strictly notify this department's head.
+          // In parallel workflows, departments must not cross-receive other departments' internal SLA alerts.
           for (const h of deptContext.deptHeads) {
             userMap.set(h.user_id.toString(), h);
-          }
-          if (
-            deptContext.deptRec.involvement_type !== "PRIMARY" &&
-            primaryDeptHead
-          ) {
-            userMap.set(primaryDeptHead.user_id.toString(), primaryDeptHead);
           }
         } else {
           // Overall case SLA context: notify all department heads

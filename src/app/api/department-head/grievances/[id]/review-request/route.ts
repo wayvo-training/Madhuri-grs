@@ -473,6 +473,7 @@ export async function POST(
 
       const hodFullName = `${user.first_name} ${user.last_name || ""}`.trim();
       for (const sHead of supportiveHeads) {
+        if (sHead.user_id === user.user_id) continue;
         await NotificationService.send({
           userId: sHead.user_id,
           grievanceId,
