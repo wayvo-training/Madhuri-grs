@@ -296,16 +296,17 @@ export function GrievanceQueue({
         }
       } else if (activeTab === "completed") {
         if (
-          item.status !== "CLOSED" &&
-          item.status !== "RESOLVED" &&
-          item.status !== "UNDER_REVIEW" &&
-          item.status !== "COMPLETED" &&
-          !item.isMyDepartmentCompleted
+          item.status === "CLOSED" ||
+          item.overallStatus === "CLOSED" ||
+          (item.status !== "RESOLVED" &&
+            item.status !== "UNDER_REVIEW" &&
+            item.status !== "COMPLETED" &&
+            !item.isMyDepartmentCompleted)
         ) {
           return false;
         }
       } else if (activeTab === "closed") {
-        if (item.status !== "CLOSED" || item.isMyDepartmentCompleted) {
+        if (item.status !== "CLOSED" && item.overallStatus !== "CLOSED") {
           return false;
         }
       } else if (activeTab === "resolved") {
@@ -610,6 +611,9 @@ export function GrievanceQueue({
                     const isClosed =
                       item.status === "CLOSED" ||
                       item.overallStatus === "CLOSED";
+                    const isResolved =
+                      item.status === "RESOLVED" ||
+                      item.overallStatus === "RESOLVED";
 
                     return (
                       <tr
@@ -666,8 +670,12 @@ export function GrievanceQueue({
 
                         {/* Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                          {item.isMyDepartmentCompleted ||
-                          item.status === "COMPLETED" ? (
+                          {isClosed ? (
+                            <StatusBadge status="CLOSED" label="Closed" />
+                          ) : isResolved ? (
+                            <StatusBadge status="RESOLVED" label="Resolved" />
+                          ) : item.isMyDepartmentCompleted ||
+                            item.status === "COMPLETED" ? (
                             <StatusBadge
                               status="COMPLETED"
                               title={
@@ -687,17 +695,7 @@ export function GrievanceQueue({
                               }
                             />
                           ) : (
-                            <StatusBadge
-                              status={
-                                item.status === "CLOSED" ||
-                                item.overallStatus === "CLOSED"
-                                  ? "CLOSED"
-                                  : item.status === "RESOLVED" ||
-                                      item.overallStatus === "RESOLVED"
-                                    ? "RESOLVED"
-                                    : item.status
-                              }
-                            />
+                            <StatusBadge status={item.status} />
                           )}
                         </td>
 

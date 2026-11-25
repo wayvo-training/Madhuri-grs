@@ -635,8 +635,6 @@ export function SlaGovernanceView({
                                 item.status !== "COMPLETED" &&
                                 item.status !== "UNDER_REVIEW" &&
                                 item.myDepartmentStatus !== "COMPLETED" &&
-                                !isEscalated &&
-                                item.slaStatus !== "BREACHED" &&
                                 (item.assignedStaffName || item.assignedStaffId)
                                   ? [
                                       {

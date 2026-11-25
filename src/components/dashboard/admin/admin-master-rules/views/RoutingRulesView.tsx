@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AlertTriangle,
   CheckCircle2,
   FileText,
   GitBranch,
@@ -18,7 +17,6 @@ import type {
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTableHead } from "@/components/ui/sortable-table-head";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -503,8 +501,6 @@ export function RoutingRulesView({
                           ) : (
                             paginated.map((r) => {
                               const mdi = r.mdi;
-                              const isSequential =
-                                mdi.executionMode === "SEQUENTIAL";
                               const primaryDepts =
                                 mdi.participatingDepartments.filter(
                                   (d) =>
@@ -515,6 +511,12 @@ export function RoutingRulesView({
                                 mdi.participatingDepartments.filter(
                                   (d) => d.involvement_type === "SUPPORT",
                                 );
+                              const isMultiDept =
+                                supportDepts.length > 0 ||
+                                mdi.participatingDepartments.length > 1;
+                              const isSequential =
+                                isMultiDept &&
+                                mdi.executionMode === "SEQUENTIAL";
 
                               return (
                                 <TableRow
@@ -633,7 +635,12 @@ export function RoutingRulesView({
 
                                   {/* Execution Mode */}
                                   <TableCell className="w-[130px] px-3.5 py-3 min-w-[130px] max-w-[130px] whitespace-nowrap overflow-hidden text-ellipsis align-middle">
-                                    {isSequential ? (
+                                    {!isMultiDept ? (
+                                      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-500 shrink-0" />
+                                        DIRECT
+                                      </span>
+                                    ) : isSequential ? (
                                       <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 dark:text-slate-300">
                                         <GitMerge className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                                         SEQUENTIAL
@@ -648,7 +655,11 @@ export function RoutingRulesView({
 
                                   {/* Dependencies */}
                                   <TableCell className="w-[170px] px-3.5 py-3 min-w-[170px] max-w-[170px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                                    {mdi.isDependencyComplex ? (
+                                    {!isMultiDept ? (
+                                      <span className="text-slate-300 dark:text-slate-600 font-mono text-xs select-none">
+                                        &mdash;
+                                      </span>
+                                    ) : mdi.isDependencyComplex ? (
                                       <button
                                         type="button"
                                         onClick={() =>

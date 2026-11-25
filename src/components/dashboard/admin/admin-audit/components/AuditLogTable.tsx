@@ -9,6 +9,38 @@ import { ROLE_BADGE_STYLES } from "@/lib/admin/audit/audit-constants";
 import { getStandardRoleDisplayName } from "@/lib/role-display";
 import type { SerializedAuditLog } from "@/types/admin/audit";
 
+interface AssignmentMeta {
+  name: string;
+  role?: string;
+}
+
+function getAssignmentDetails(log: SerializedAuditLog): AssignmentMeta | null {
+  if (!log.action.includes("ASSIGN") && !log.action.includes("STAFF")) {
+    return null;
+  }
+  if (!log.new_value || typeof log.new_value !== "object") {
+    return null;
+  }
+  const payload = log.new_value as Record<string, unknown>;
+  const name =
+    typeof payload.staff_name === "string"
+      ? payload.staff_name
+      : typeof payload.staffName === "string"
+        ? payload.staffName
+        : null;
+
+  if (!name) return null;
+
+  const role =
+    typeof payload.role_label === "string"
+      ? payload.role_label
+      : typeof payload.assignment_role === "string"
+        ? payload.assignment_role
+        : undefined;
+
+  return { name, role };
+}
+
 interface AuditLogTableProps {
   logs: SerializedAuditLog[];
   isLoading: boolean;
@@ -235,25 +267,65 @@ export function AuditLogTable({
                     </td>
 
                     <td className="whitespace-nowrap px-3 py-3.5">
-                      <span
-                        className={`font-mono text-xs font-bold ${
-                          isError
-                            ? "text-rose-600 dark:text-rose-400"
-                            : "text-slate-700 dark:text-slate-300"
-                        }`}
-                      >
-                        {log.action}
-                      </span>
+                      <div className="flex flex-col">
+                        <span
+                          className={`font-mono text-xs font-bold ${
+                            isError
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          {log.action}
+                        </span>
+                        {(() => {
+                          const assignmentMeta = getAssignmentDetails(log);
+                          if (!assignmentMeta) return null;
+                          return (
+                            <div className="flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                              <span className="text-teal-600 dark:text-teal-400 font-bold">
+                                →
+                              </span>
+                              <span>
+                                Assigned to:{" "}
+                                <strong className="font-semibold text-slate-700 dark:text-slate-200">
+                                  {assignmentMeta.name}
+                                </strong>
+                                {assignmentMeta.role && (
+                                  <span className="ml-1 text-[10px] px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                    {assignmentMeta.role}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </td>
 
                     <td className="whitespace-nowrap py-3.5 pl-3 pr-6">
-                      <span className="text-xs font-semibold text-slate-600">
-                        {log.entity_type}
-                      </span>
-                      {log.entity_id && (
-                        <span className="ml-1 font-mono text-xs text-slate-400">
-                          #{log.entity_id}
-                        </span>
+                      {log.grievance_number ? (
+                        <div className="flex flex-col">
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+                            {log.grievance_number}
+                          </span>
+                          {log.entity_type !== "GRIEVANCE" && (
+                            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                              {log.entity_type.replace(/_/g, " ")}
+                              {log.entity_id ? ` #${log.entity_id}` : ""}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            {log.entity_type}
+                          </span>
+                          {log.entity_id && (
+                            <span className="ml-1 font-mono text-xs text-slate-400 dark:text-slate-500">
+                              #{log.entity_id}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>

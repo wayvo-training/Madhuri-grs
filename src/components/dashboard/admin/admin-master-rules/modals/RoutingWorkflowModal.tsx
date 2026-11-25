@@ -46,7 +46,8 @@ export function RoutingWorkflowModal({
 
   if (!open || !rule || !mdi) return null;
 
-  const isSequential = mdi.executionMode === "SEQUENTIAL";
+  const isSingleDept = mdi.participatingDepartments.length <= 1;
+  const isSequential = !isSingleDept && mdi.executionMode === "SEQUENTIAL";
 
   return (
     <div
@@ -116,20 +117,26 @@ export function RoutingWorkflowModal({
           {/* Execution Mode Banner */}
           <div
             className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-              isSequential
-                ? "border-amber-200 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20"
-                : "border-sky-200 bg-sky-50/50 dark:border-sky-900/60 dark:bg-sky-950/20"
+              isSingleDept
+                ? "border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/40"
+                : isSequential
+                  ? "border-amber-200 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20"
+                  : "border-sky-200 bg-sky-50/50 dark:border-sky-900/60 dark:bg-sky-950/20"
             }`}
           >
             <div className="flex items-start sm:items-center gap-3">
               <div
                 className={`p-2 rounded-lg shrink-0 ${
-                  isSequential
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                    : "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
+                  isSingleDept
+                    ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    : isSequential
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                      : "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
                 }`}
               >
-                {isSequential ? (
+                {isSingleDept ? (
+                  <Layers className="h-5 w-5" />
+                ) : isSequential ? (
                   <GitMerge className="h-5 w-5" />
                 ) : (
                   <Zap className="h-5 w-5" />
@@ -142,18 +149,26 @@ export function RoutingWorkflowModal({
                   </span>
                   <span
                     className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${
-                      isSequential
-                        ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-200 dark:border-amber-700"
-                        : "bg-sky-100 text-sky-800 border border-sky-300 dark:bg-sky-900/60 dark:text-sky-200 dark:border-sky-700"
+                      isSingleDept
+                        ? "bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+                        : isSequential
+                          ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-200 dark:border-amber-700"
+                          : "bg-sky-100 text-sky-800 border border-sky-300 dark:bg-sky-900/60 dark:text-sky-200 dark:border-sky-700"
                     }`}
                   >
-                    {isSequential ? "⏳ SEQUENTIAL" : "⚡ PARALLEL"}
+                    {isSingleDept
+                      ? "DIRECT"
+                      : isSequential
+                        ? "⏳ SEQUENTIAL"
+                        : "⚡ PARALLEL"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  {isSequential
-                    ? "Departments activate in ordered stages. Dependent departments remain BLOCKED until all prerequisite departments complete."
-                    : "All participating departments activate concurrently upon ticket triage. Each department resolves its tasks in parallel."}
+                  {isSingleDept
+                    ? "Tickets route directly to the designated department upon ticket triage with no cross-department dependencies."
+                    : isSequential
+                      ? "Departments activate in ordered stages. Dependent departments remain BLOCKED until all prerequisite departments complete."
+                      : "All participating departments activate concurrently upon ticket triage. Each department resolves its tasks in parallel."}
                 </p>
               </div>
             </div>
@@ -182,9 +197,6 @@ export function RoutingWorkflowModal({
                 <Layers className="h-3.5 w-3.5 text-indigo-500" />
                 Execution Flow & Derived Stages
               </h4>
-              <span className="text-2xs text-slate-400 dark:text-slate-500">
-                Topological Order derived via Kahn&apos;s Algorithm
-              </span>
             </div>
 
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-5 space-y-4">
@@ -201,9 +213,11 @@ export function RoutingWorkflowModal({
                       </span>
                       {stageInfo.stageNumber === 1 && (
                         <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">
-                          {isSequential
-                            ? "Starts Immediately"
-                            : "Concurrent Starters"}
+                          {isSingleDept
+                            ? "Direct Starter"
+                            : isSequential
+                              ? "Starts Immediately"
+                              : "Concurrent Starters"}
                         </span>
                       )}
                     </div>

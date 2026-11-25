@@ -77,6 +77,14 @@ export async function GET(request: Request) {
                 { entity_type: { contains: negSearch, mode: "insensitive" } },
                 { ip_address: { contains: negSearch, mode: "insensitive" } },
                 {
+                  grievances: {
+                    grievance_number: {
+                      contains: negSearch,
+                      mode: "insensitive",
+                    },
+                  },
+                },
+                {
                   users: {
                     OR: [
                       {
@@ -112,6 +120,11 @@ export async function GET(request: Request) {
             { entity_type: { contains: search, mode: "insensitive" } },
             { ip_address: { contains: search, mode: "insensitive" } },
             {
+              grievances: {
+                grievance_number: { contains: search, mode: "insensitive" },
+              },
+            },
+            {
               users: {
                 OR: [
                   { first_name: { contains: search, mode: "insensitive" } },
@@ -136,6 +149,11 @@ export async function GET(request: Request) {
         take: limit,
         orderBy: { created_at: "desc" },
         include: {
+          grievances: {
+            select: {
+              grievance_number: true,
+            },
+          },
           users: {
             select: {
               user_id: true,
@@ -227,6 +245,7 @@ export async function GET(request: Request) {
         action: l.action,
         entity_type: l.entity_type,
         entity_id: l.entity_id ? l.entity_id.toString() : null,
+        grievance_number: l.grievances?.grievance_number || null,
         user_name:
           metaWho?.name ||
           (l.users

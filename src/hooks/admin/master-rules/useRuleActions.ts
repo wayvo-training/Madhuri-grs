@@ -596,7 +596,7 @@ export function useRuleActions({
           involvement_type: resolvedInvolvement,
           supporting_departments: selectedSupportingDepts,
           conditions: {
-            dependency_type: dependencyType,
+            dependency_type: isMultiDepartment ? dependencyType : "PARALLEL",
             dependencies: policyValidation.normalizedDependencies,
             primary_sla_percent: leadDeptNode?.sla_percent_allocation ?? null,
             primary_duration_minutes:

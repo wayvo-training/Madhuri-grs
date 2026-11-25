@@ -1123,8 +1123,6 @@ export function QueueView({
                                 item.status !== "COMPLETED" &&
                                 item.status !== "UNDER_REVIEW" &&
                                 item.myDepartmentStatus !== "COMPLETED" &&
-                                item.status !== "ESCALATED" &&
-                                item.slaStatus !== "BREACHED" &&
                                 (!hasAssignedStaff ||
                                   item.myDepartmentStatus ===
                                     "PENDING_ASSIGNMENT")
@@ -1164,8 +1162,6 @@ export function QueueView({
                                 item.status !== "COMPLETED" &&
                                 item.status !== "UNDER_REVIEW" &&
                                 item.myDepartmentStatus !== "COMPLETED" &&
-                                item.status !== "ESCALATED" &&
-                                item.slaStatus !== "BREACHED" &&
                                 hasAssignedStaff &&
                                 item.myDepartmentStatus !== "PENDING_ASSIGNMENT"
                                   ? [

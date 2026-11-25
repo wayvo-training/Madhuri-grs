@@ -3,6 +3,7 @@ export interface SerializedAuditLog {
   action: string;
   entity_type: string;
   entity_id: string | null;
+  grievance_number?: string | null;
   user_name: string;
   user_email: string;
   employee_code?: string | null;

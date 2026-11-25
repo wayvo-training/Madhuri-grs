@@ -51,10 +51,6 @@ export function parseRoutingRuleMDI(
     }
   }
 
-  // 2. Execution Mode strictly from saved conditions
-  const executionMode: "PARALLEL" | "SEQUENTIAL" =
-    conditionsObj.dependency_type === "SEQUENTIAL" ? "SEQUENTIAL" : "PARALLEL";
-
   // 3. Lead Primary Department
   const primaryDepartment = rule.department_name || "Lead Department";
 
@@ -84,6 +80,13 @@ export function parseRoutingRuleMDI(
   const supportingDeptsList = Array.from(allDeptNamesSet).filter(
     (name) => name.toLowerCase() !== primaryDepartment.toLowerCase(),
   );
+
+  // 2. Execution Mode strictly from saved conditions (only multi-department rules can be sequential)
+  const isMultiDepartment = supportingDeptsList.length > 0;
+  const executionMode: "PARALLEL" | "SEQUENTIAL" =
+    isMultiDepartment && conditionsObj.dependency_type === "SEQUENTIAL"
+      ? "SEQUENTIAL"
+      : "PARALLEL";
 
   const primaryDepNode = rawDeps.find(
     (d) =>

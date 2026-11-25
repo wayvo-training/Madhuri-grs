@@ -29,10 +29,18 @@ export function StaffPieCharts({
     grievances.forEach((g) => {
       const s = (g.status || "").toUpperCase();
 
-      if (s === "RESOLVED" || s === "COMPLETED" || g.isMyDepartmentCompleted) {
-        resolved++;
-      } else if (s === "CLOSED") {
+      if (
+        s === "CLOSED" ||
+        (g.overallStatus && g.overallStatus.toUpperCase() === "CLOSED")
+      ) {
         closed++;
+      } else if (
+        s === "RESOLVED" ||
+        (g.overallStatus && g.overallStatus.toUpperCase() === "RESOLVED") ||
+        s === "COMPLETED" ||
+        g.isMyDepartmentCompleted
+      ) {
+        resolved++;
       } else if (
         s === "REOPENED" ||
         s === "REWORK" ||

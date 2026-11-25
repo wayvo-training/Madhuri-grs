@@ -50,7 +50,14 @@ export function AuditPayloadDrawer({
           </span>
           <span className="text-[11px] text-slate-400">
             Entity:{" "}
-            <span className="text-teal-400">{activeLog?.entity_type}</span>
+            <span className="text-teal-400">
+              {activeLog?.grievance_number
+                ? `${activeLog.grievance_number} (${activeLog.entity_type})`
+                : activeLog?.entity_type}
+              {activeLog?.entity_id &&
+                !activeLog?.grievance_number &&
+                ` #${activeLog.entity_id}`}
+            </span>
           </span>
         </div>
 
