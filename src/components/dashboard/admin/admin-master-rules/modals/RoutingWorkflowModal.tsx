@@ -165,10 +165,10 @@ export function RoutingWorkflowModal({
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
                   {isSingleDept
-                    ? "Tickets route directly to the designated department upon ticket triage with no cross-department dependencies."
+                    ? "Grievances route directly to the designated department upon triage with no cross-department dependencies."
                     : isSequential
                       ? "Departments activate in ordered stages. Dependent departments remain BLOCKED until all prerequisite departments complete."
-                      : "All participating departments activate concurrently upon ticket triage. Each department resolves its tasks in parallel."}
+                      : "All participating departments activate concurrently upon grievance triage. Each department resolves its tasks in parallel."}
                 </p>
               </div>
             </div>
