@@ -21,9 +21,11 @@ function Calendar({
   locale,
   formatters,
   components,
+  onCaptionClick,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
+  onCaptionClick?: () => void;
 }) {
   const defaultClassNames = getDefaultClassNames();
 
@@ -136,6 +138,21 @@ function Calendar({
               className={cn(className)}
               {...props}
             />
+          );
+        },
+        CaptionLabel: ({ children, className: capClassName, ...capProps }) => {
+          return (
+            <button
+              type="button"
+              onClick={onCaptionClick}
+              className={cn(
+                "font-bold text-sm text-slate-900 dark:text-slate-100 select-none cursor-pointer flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition-colors",
+                capClassName,
+              )}
+              {...capProps}
+            >
+              {children}
+            </button>
           );
         },
         Chevron: ({ className, orientation, ...props }) => {
