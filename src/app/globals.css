@@ -712,33 +712,101 @@
 
 /* Global Cursor Rules:
    - Default arrow for all static UI elements and static text
-   - Hand (pointer) for clickable/interactive elements
+   - Hand (pointer) for clickable/interactive elements and all their contents
    - I-beam (text) for editable text inputs and textareas
    - Not-allowed for disabled elements
 */
 @layer base {
-  *,
-  *::before,
-  *::after {
+  html,
+  body {
     cursor: default;
   }
 
-  /* Clickable elements get hand (pointer) cursor */
-  a[href],
+  /* Static headings, text blocks, table cells & labels default to arrow */
+  h1, h2, h3, h4, h5, h6,
+  p,
+  td,
+  th:not(.cursor-pointer),
+  label {
+    cursor: default;
+  }
+
+  /* Clickable elements and ALL their contents (icons, spans, labels) MUST display hand (pointer) cursor */
+  a,
+  a *,
   button:not(:disabled),
+  button:not(:disabled) *,
   [role="button"]:not([aria-disabled="true"]):not([disabled]),
+  [role="button"]:not([aria-disabled="true"]):not([disabled]) *,
+  [role="menuitem"],
+  [role="menuitem"] *,
+  [role="tab"],
+  [role="tab"] *,
+  [role="option"],
+  [role="option"] *,
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-item"] *,
+  [data-slot="dropdown-menu-trigger"],
+  [data-slot="dropdown-menu-trigger"] *,
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="dropdown-menu-sub-trigger"] *,
+  [data-slot="dropdown-menu-checkbox-item"],
+  [data-slot="dropdown-menu-checkbox-item"] *,
+  [data-slot="dropdown-menu-radio-item"],
+  [data-slot="dropdown-menu-radio-item"] *,
+  [data-slot="select-trigger"],
+  [data-slot="select-trigger"] *,
+  [data-slot="select-item"],
+  [data-slot="select-item"] *,
+  [data-slot="select-scroll-up-button"],
+  [data-slot="select-scroll-up-button"] *,
+  [data-slot="select-scroll-down-button"],
+  [data-slot="select-scroll-down-button"] *,
+  [data-slot="command-item"],
+  [data-slot="command-item"] *,
+  [data-slot="checkbox"],
+  [data-slot="checkbox"] *,
+  [data-slot="dialog-trigger"],
+  [data-slot="dialog-trigger"] *,
+  [data-slot="dialog-close"],
+  [data-slot="dialog-close"] *,
+  [data-slot="sheet-trigger"],
+  [data-slot="sheet-trigger"] *,
+  [data-slot="sheet-close"],
+  [data-slot="sheet-close"] *,
+  [data-slot="sidebar-trigger"],
+  [data-slot="sidebar-trigger"] *,
+  [data-slot="sidebar-menu-button"],
+  [data-slot="sidebar-menu-button"] *,
+  [data-slot="sidebar-menu-action"],
+  [data-slot="sidebar-menu-action"] *,
+  [data-slot="sidebar-menu-sub-button"],
+  [data-slot="sidebar-menu-sub-button"] *,
   select:not(:disabled),
+  select:not(:disabled) *,
   summary,
+  summary *,
+  .cursor-pointer,
+  .cursor-pointer * {
+    cursor: pointer;
+  }
+
+  /* Checkbox, radio, submit buttons & date pickers */
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled),
   input[type="submit"]:not(:disabled),
   input[type="button"]:not(:disabled),
   input[type="reset"]:not(:disabled),
   input[type="date"],
+  input[type="date"] *,
   input[type="time"],
+  input[type="time"] *,
   input[type="datetime-local"],
+  input[type="datetime-local"] *,
   input[type="month"],
+  input[type="month"] *,
   input[type="week"],
+  input[type="week"] *,
   input[type="date"]::-webkit-calendar-picker-indicator,
   input[type="time"]::-webkit-calendar-picker-indicator,
   input[type="datetime-local"]::-webkit-calendar-picker-indicator,
@@ -753,7 +821,7 @@
     cursor: pointer;
   }
 
-  /* Editable text inputs & textareas get I-beam (text) cursor */
+  /* Editable text inputs & textareas exclusively get the text I-beam */
   input[type="text"],
   input[type="search"],
   input[type="email"],
@@ -767,13 +835,15 @@
     cursor: text;
   }
 
-  /* Disabled elements get not-allowed cursor */
-  button:disabled,
-  [role="button"][aria-disabled="true"],
-  [role="button"]:disabled,
-  input:disabled,
-  select:disabled,
-  textarea:disabled {
+  /* Disabled elements display not-allowed cursor */
+  :disabled,
+  :disabled *,
+  [aria-disabled="true"],
+  [aria-disabled="true"] *,
+  [data-disabled="true"],
+  [data-disabled="true"] *,
+  .cursor-not-allowed,
+  .cursor-not-allowed * {
     cursor: not-allowed;
   }
 }
