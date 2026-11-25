@@ -53,8 +53,8 @@ export function Popover({
     const viewportHeight = window.innerHeight;
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
-    // If space below is constrained (< 320px) and there's more room above, flip to top
-    if (spaceBelow < 320 && spaceAbove > spaceBelow) {
+    // If space below is constrained (< 200px) and there's more room above, flip to top
+    if (spaceBelow < 200 && spaceAbove > spaceBelow) {
       setPlacement("top");
     } else {
       setPlacement("bottom");

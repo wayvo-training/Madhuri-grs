@@ -402,7 +402,7 @@ export function AdvancedTableSearch({
           <div className="relative w-full">
             <Input
               placeholder={placeholder}
-              className="w-full h-9 pl-3 pr-9 rounded-lg border-slate-200 bg-white shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500 cursor-pointer"
+              className="w-full h-8 sm:h-8.5 pl-3 pr-9 rounded-lg border-slate-200 bg-white shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-emerald-500 cursor-pointer text-xs sm:text-sm"
               value={quickSearch}
               onClick={() => setPopoverOpen(true)}
               onFocus={() => setPopoverOpen(true)}
@@ -435,7 +435,7 @@ export function AdvancedTableSearch({
             placeholder="Search for a field..."
             className="text-xs"
           />
-          <CommandList>
+          <CommandList className="max-h-[210px]">
             <CommandEmpty className="text-xs p-4 text-center">
               No fields found.
             </CommandEmpty>
@@ -531,7 +531,7 @@ export function AdvancedTableSearch({
             placeholder="Search for a field..."
             className="text-xs"
           />
-          <CommandList>
+          <CommandList className="max-h-[210px]">
             <CommandEmpty className="text-xs p-4 text-center">
               No fields found.
             </CommandEmpty>

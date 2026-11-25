@@ -19,6 +19,7 @@ export default async function StaffLayout({
       permissions={user.permissions}
       designation="Grievance Staff"
       departmentName={deptName}
+      mainClassName="pb-2.5 sm:pb-3 flex-1 min-h-0 flex flex-col"
     >
       {children}
     </DashboardShell>

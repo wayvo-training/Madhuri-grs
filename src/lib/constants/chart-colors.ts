@@ -6,6 +6,8 @@ export const STATUS_COLORS: Record<string, string> = {
   UNASSIGNED: "#9333EA",
   CLOSED: "#64748B",
   RESOLVED: "#059669",
+  AWAITING_INFO: "#D97706",
+  ESCALATED: "#B45309",
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {

@@ -18,6 +18,7 @@ export default async function EndUserLayout({
       permissions={user.permissions}
       designation="Employee"
       departmentName={user.departments?.department_name || "Employee"}
+      mainClassName="pb-2.5 sm:pb-3 flex-1 min-h-0 flex flex-col"
     >
       {children}
     </DashboardShell>

@@ -192,9 +192,18 @@ export function DashboardPieChartCard({
           </div>
         )}
 
-        <div className="flex flex-col gap-1 w-full sm:w-auto sm:flex-1 justify-center max-w-[220px]">
+        <div
+          className={cn(
+            "w-full sm:w-auto sm:flex-1 justify-center",
+            legendData.length > 4
+              ? "grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 max-w-[340px]"
+              : "flex flex-col gap-1 max-w-[220px]",
+          )}
+        >
           {isLoading
-            ? Array.from({ length: 4 }).map((_, i) => (
+            ? Array.from({
+                length: legendData.length > 4 ? legendData.length : 4,
+              }).map((_, i) => (
                 <div
                   key={`legend-skeleton-${
                     // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
@@ -214,27 +223,31 @@ export function DashboardPieChartCard({
               ))
             : legendData.map((item) => {
                 const isClickable = Boolean(onItemClick);
+                const isMultiCol = legendData.length > 4;
                 const content = (
                   <>
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="flex items-center gap-2 min-w-0"
+                      title={item.description}
+                    >
                       <span
                         className={cn(
-                          "h-2.5 w-2.5 rounded-full shrink-0 transition-transform",
+                          "h-2 w-2 rounded-full shrink-0 transition-transform",
                           isClickable && "group-hover:scale-110",
                         )}
                         style={{ backgroundColor: item.fill }}
                       />
-                      <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col min-w-0 py-0.5">
                         <span
                           className={cn(
-                            "font-semibold text-slate-800 dark:text-slate-200 text-xs leading-none transition-colors",
+                            "font-semibold text-slate-800 dark:text-slate-200 text-xs leading-normal transition-colors truncate",
                             isClickable &&
                               "group-hover:text-teal-700 dark:group-hover:text-teal-300",
                           )}
                         >
                           {item.name}
                         </span>
-                        {item.description && (
+                        {item.description && !isMultiCol && (
                           <span className="text-[10.5px] font-normal text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
                             {item.description}
                           </span>
@@ -243,7 +256,7 @@ export function DashboardPieChartCard({
                     </div>
                     <span
                       className={cn(
-                        "font-bold text-slate-800 dark:text-slate-200 text-xs leading-none tabular-nums shrink-0 px-1.5 py-0.5 rounded transition-colors",
+                        "font-bold text-slate-800 dark:text-slate-200 text-xs leading-normal tabular-nums shrink-0 px-1 py-0.5 rounded transition-colors ml-1.5",
                         isClickable &&
                           "group-hover:bg-teal-50 group-hover:text-teal-800 dark:group-hover:bg-teal-950/50 dark:group-hover:text-teal-300",
                       )}
