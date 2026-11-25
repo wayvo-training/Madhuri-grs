@@ -30,7 +30,7 @@ export function ThemeToggle() {
       type="button"
       title="Toggle Theme"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground cursor-pointer"
+      className="relative rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
     >
       {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>

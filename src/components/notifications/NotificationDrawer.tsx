@@ -286,7 +286,7 @@ export function NotificationDrawer({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className="relative rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground cursor-pointer"
+        className="relative rounded-lg border border-border p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
