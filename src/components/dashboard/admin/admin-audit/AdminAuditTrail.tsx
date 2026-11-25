@@ -7,7 +7,6 @@ import type { AdminAuditTrailProps, TabCategory } from "@/types/admin/audit";
 import { AuditCategoryTabs } from "./components/AuditCategoryTabs";
 import { AuditLogTable } from "./components/AuditLogTable";
 import { AuditMetricCards } from "./components/AuditMetricCards";
-import { AuditPayloadDrawer } from "./components/AuditPayloadDrawer";
 
 export function AdminAuditTrail({
   initialLogs,
@@ -28,9 +27,6 @@ export function AdminAuditTrail({
     searchQuery,
     setSearchQuery,
     handleResetFilters,
-    expandedLogId,
-    setExpandedLogId,
-    toggleExpandLog,
   } = useAdminAudit(initialLogs, initialTotalCount);
 
   return (
@@ -81,22 +77,13 @@ export function AdminAuditTrail({
           isLoading={isLoading}
           searchQuery={searchQuery}
           activeTab={activeTab}
-          expandedLogId={expandedLogId}
           onResetFilters={handleResetFilters}
-          onToggleExpand={toggleExpandLog}
           totalCount={totalCount}
           currentPage={currentPage}
           pageSize={pageSize}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
-        />
-
-        {/* Expanded Payload Inspector Drawer */}
-        <AuditPayloadDrawer
-          expandedLogId={expandedLogId}
-          logs={logs}
-          onClose={() => setExpandedLogId(null)}
         />
       </div>
     </div>

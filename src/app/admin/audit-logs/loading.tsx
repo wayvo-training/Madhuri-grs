@@ -32,15 +32,12 @@ export default function AdminAuditLogsLoading() {
         <div className="pt-5 sm:pt-6 px-5 sm:px-6">
           <Skeleton className="h-6 w-64" />
 
-          {/* 6 Category Tabs Skeleton */}
+          {/* 3 Category Tabs Skeleton */}
           <div className="flex items-center gap-6 mt-2 border-b border-slate-100 dark:border-slate-800 overflow-x-auto no-scrollbar pb-1">
             {[
-              { label: "All Events", active: true },
-              { label: "Access & Auth", active: false },
-              { label: "Grievance Ops", active: false },
-              { label: "System Config", active: false },
-              { label: "Admin Actions", active: false },
-              { label: "System Errors", active: false },
+              { label: "All Activity", active: true },
+              { label: "Errors & Failures", active: false },
+              { label: "Governance & Config", active: false },
             ].map((tab) => (
               <div
                 key={tab.label}
@@ -60,7 +57,7 @@ export default function AdminAuditLogsLoading() {
           </div>
         </div>
 
-        {/* Audit Log Table (6 Columns matching AuditLogTable) */}
+        {/* Audit Log Table (5 Columns matching AuditLogTable) */}
         <div className="p-5 sm:p-6">
           <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="h-11 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 px-6 flex items-center justify-between">
@@ -68,8 +65,7 @@ export default function AdminAuditLogsLoading() {
               <Skeleton className="h-3.5 w-36" />
               <Skeleton className="h-3.5 w-28" />
               <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-3.5 w-24 text-right" />
             </div>
 
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -101,13 +97,10 @@ export default function AdminAuditLogsLoading() {
                   <Skeleton className="h-3.5 w-24" />
 
                   {/* Source IP / Device */}
-                  <div className="space-y-1 w-28 shrink-0">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-2 w-16" />
+                  <div className="space-y-1 w-28 shrink-0 text-right">
+                    <Skeleton className="h-3 w-20 ml-auto" />
+                    <Skeleton className="h-2 w-16 ml-auto" />
                   </div>
-
-                  {/* Payload */}
-                  <Skeleton className="h-6 w-16 rounded-md ml-auto" />
                 </div>
               ))}
             </div>

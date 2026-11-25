@@ -3,7 +3,6 @@
 import {
   Activity,
   CheckCircle2,
-  FileCode2,
   Globe,
   RotateCcw,
   XCircle,
@@ -21,9 +20,7 @@ interface AuditLogTableProps {
   isLoading: boolean;
   searchQuery: string;
   activeTab: string;
-  expandedLogId: string | null;
   onResetFilters: () => void;
-  onToggleExpand: (id: string) => void;
   totalCount: number;
   currentPage: number;
   pageSize: number;
@@ -37,9 +34,7 @@ export function AuditLogTable({
   isLoading,
   searchQuery,
   activeTab,
-  expandedLogId,
   onResetFilters,
-  onToggleExpand,
   totalCount,
   currentPage,
   pageSize,
@@ -54,12 +49,11 @@ export function AuditLogTable({
 
   const colGroup = (
     <colgroup>
+      <col className="w-[18%]" />
+      <col className="w-[28%]" />
+      <col className="w-[22%]" />
+      <col className="w-[17%]" />
       <col className="w-[15%]" />
-      <col className="w-[25%]" />
-      <col className="w-[20%]" />
-      <col className="w-[15%]" />
-      <col className="w-[13%]" />
-      <col className="w-[12%]" />
     </colgroup>
   );
 
@@ -106,11 +100,10 @@ export function AuditLogTable({
               field="ip_address"
               currentSort={sortState}
               onSort={handleSort}
-              className="px-3 py-3.5"
+              className="py-3.5 pl-3 pr-6 text-right"
             >
               Source IP / Device
             </SortableTh>
-            <th className="py-3.5 pl-3 pr-6 text-right">Payload</th>
           </tr>
         </thead>
       </table>
@@ -150,17 +143,14 @@ export function AuditLogTable({
                   <td className="px-3 py-3.5">
                     <div className="h-5 w-20 rounded-md bg-slate-100" />
                   </td>
-                  <td className="px-3 py-3.5">
-                    <div className="h-3 w-20 rounded bg-slate-200" />
-                  </td>
                   <td className="py-3.5 pl-3 pr-6 text-right">
-                    <div className="h-5 w-12 ml-auto rounded bg-slate-100" />
+                    <div className="h-3 w-20 ml-auto rounded bg-slate-200" />
                   </td>
                 </tr>
               ))
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-14 text-center">
+                <td colSpan={5} className="py-14 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0FDFA] text-[#0F766E] ring-8 ring-teal-50/50">
                       <Activity className="h-6 w-6" />
@@ -191,7 +181,6 @@ export function AuditLogTable({
                   log.action.includes("ERROR") ||
                   log.action.includes("FAILED") ||
                   log.entity_type === "ERROR";
-                const isExpanded = expandedLogId === log.audit_log_id;
                 const _rolePill =
                   ROLE_BADGE_STYLES[log.role_name || ""] ||
                   "bg-slate-100 text-slate-600 border-slate-200";
@@ -286,30 +275,11 @@ export function AuditLogTable({
                       )}
                     </td>
 
-                    <td className="whitespace-nowrap px-3 py-3.5 font-mono text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5">
+                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right font-mono text-xs text-slate-500">
+                      <div className="flex items-center justify-end gap-1.5">
                         <Globe className="h-3 w-3 text-slate-400" />
                         <span>{log.ip_address}</span>
                       </div>
-                    </td>
-
-                    <td className="whitespace-nowrap py-3.5 pl-3 pr-6 text-right">
-                      {log.new_value || log.old_value ? (
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() => onToggleExpand(log.audit_log_id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
-                          >
-                            <FileCode2 className="h-3 w-3 text-emerald-700" />
-                            <span>{isExpanded ? "Hide Data" : "Inspect"}</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">
-                          None
-                        </span>
-                      )}
                     </td>
                   </tr>
                 );

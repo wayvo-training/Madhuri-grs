@@ -1,18 +1,8 @@
-import {
-  Activity,
-  AlertCircle,
-  Compass,
-  LogIn,
-  Server,
-  ShieldCheck,
-} from "lucide-react";
+import { Activity, AlertCircle, ShieldCheck } from "lucide-react";
 import type { CategoryTabItem } from "@/types/admin/audit";
 
 export const CATEGORY_TABS: CategoryTabItem[] = [
   { id: "ALL", label: "All Activity", icon: Activity },
-  { id: "SESSION", label: "Sessions", icon: LogIn },
-  { id: "API", label: "API Calls & Requests", icon: Server },
-  { id: "NAVIGATION", label: "Navigation", icon: Compass },
   { id: "ERROR", label: "Errors & Failures", icon: AlertCircle },
   { id: "CONFIG", label: "Governance & Config", icon: ShieldCheck },
 ];
