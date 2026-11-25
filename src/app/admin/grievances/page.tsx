@@ -60,10 +60,7 @@ export default async function AdminGrievancesPage(props: {
     });
   } else if (rawTab === "REOPENED") {
     conditions.push({
-      OR: [
-        { reopen_count: { gt: 0 } },
-        { status: { in: ["REOPENED", "REOPEN_REVIEW"] } },
-      ],
+      status: "REOPENED",
     });
   } else if (rawTab === "ESCALATED") {
     conditions.push({
@@ -82,15 +79,15 @@ export default async function AdminGrievancesPage(props: {
     if (stats.includes("UNASSIGNED")) {
       stats = stats
         .filter((s) => s !== "UNASSIGNED")
-        .concat(["SUBMITTED", "ROUTED"]);
+        .concat([
+          "SUBMITTED",
+          "AWAITING_ROUTING",
+          "AWAITING_ASSIGNMENT",
+          "ROUTED",
+        ]);
     }
-    if (stats.includes("IN_PROGRESS")) {
-      if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
-      if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
-    }
-    if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
-      stats.push("REOPEN_REVIEW");
-    }
+    // Reopened considers strictly REOPENED (never resolution pending approval or rework)
+    // In Progress and Assigned remain exact status matches
     parsedStatuses = stats;
     conditions.push({ status: { in: stats } });
   }
@@ -261,7 +258,7 @@ export default async function AdminGrievancesPage(props: {
             WHERE sla_status = 'BREACHED' OR status = 'ESCALATED'
           )::int AS sla_critical_count,
           COUNT(*) FILTER (
-            WHERE reopen_count > 0 OR status IN ('REOPENED', 'REOPEN_REVIEW')
+            WHERE status = 'REOPENED'
           )::int AS reopened_count,
           COUNT(*) FILTER (
             WHERE status = 'ESCALATED'

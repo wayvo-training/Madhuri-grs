@@ -46,19 +46,7 @@ export async function GET(request: Request) {
       });
     } else if (tab === "REOPENED") {
       conditions.push({
-        OR: [
-          { reopen_count: { gt: 0 } },
-          {
-            status: {
-              in: [
-                "REOPENED",
-                "RESOLUTION_PENDING_APPROVAL",
-                "REWORK",
-                "REOPEN_REVIEW",
-              ],
-            },
-          },
-        ],
+        status: "REOPENED",
       });
     } else if (tab === "ESCALATED") {
       conditions.push({
@@ -205,22 +193,8 @@ export async function GET(request: Request) {
             "ROUTED",
           ]);
       }
-      // Expand IN_PROGRESS to include AWAITING_INFORMATION, REWORK, RESOLUTION_PENDING_APPROVAL
-      if (pos.includes("IN_PROGRESS")) {
-        if (!pos.includes("AWAITING_INFORMATION"))
-          pos.push("AWAITING_INFORMATION");
-        if (!pos.includes("REWORK")) pos.push("REWORK");
-        if (!pos.includes("RESOLUTION_PENDING_APPROVAL"))
-          pos.push("RESOLUTION_PENDING_APPROVAL");
-        if (!pos.includes("UNDER_REVIEW")) pos.push("UNDER_REVIEW");
-      }
-      // Expand REOPENED to include RESOLUTION_PENDING_APPROVAL and REWORK
-      if (pos.includes("REOPENED")) {
-        if (!pos.includes("REWORK")) pos.push("REWORK");
-        if (!pos.includes("RESOLUTION_PENDING_APPROVAL"))
-          pos.push("RESOLUTION_PENDING_APPROVAL");
-        if (!pos.includes("REOPEN_REVIEW")) pos.push("REOPEN_REVIEW");
-      }
+      // Reopened considers strictly REOPENED (never resolution pending approval or rework)
+      // In Progress and Assigned remain exact status matches
 
       if (pos.length > 0) {
         conditions.push({ status: { in: pos } });
@@ -292,7 +266,7 @@ export async function GET(request: Request) {
             WHERE sla_status = 'BREACHED' OR status = 'ESCALATED'
           )::int AS sla_critical_count,
           COUNT(*) FILTER (
-            WHERE reopen_count > 0 OR status IN ('REOPENED', 'RESOLUTION_PENDING_APPROVAL', 'REWORK', 'REOPEN_REVIEW')
+            WHERE status = 'REOPENED'
           )::int AS reopened_count,
           COUNT(*) FILTER (
             WHERE sla_status = 'BREACHED' OR status = 'ESCALATED' OR EXISTS (SELECT 1 FROM escalations e WHERE e.grievance_id = grievances.grievance_id AND e.status = 'OPEN')

@@ -89,15 +89,15 @@ export function useAdminGrievances(
       if (stats.includes("UNASSIGNED")) {
         stats = stats
           .filter((s) => s !== "UNASSIGNED")
-          .concat(["SUBMITTED", "ROUTED"]);
+          .concat([
+            "SUBMITTED",
+            "AWAITING_ROUTING",
+            "AWAITING_ASSIGNMENT",
+            "ROUTED",
+          ]);
       }
-      if (stats.includes("IN_PROGRESS")) {
-        if (!stats.includes("UNDER_REVIEW")) stats.push("UNDER_REVIEW");
-        if (!stats.includes("ESCALATED")) stats.push("ESCALATED");
-      }
-      if (stats.includes("REOPENED") && !stats.includes("REOPEN_REVIEW")) {
-        stats.push("REOPEN_REVIEW");
-      }
+      // Reopened considers strictly REOPENED (never resolution pending approval or rework)
+      // In Progress and Assigned remain exact status matches
       parsedStatus = stats;
     }
     const priorityParam = searchParams.get("priority");

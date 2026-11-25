@@ -104,12 +104,16 @@ export default async function AdminDashboardPage() {
     reopened = 0;
   for (const sg of statusGroups) {
     const count = sg._count._all;
-    if (sg.status === "SUBMITTED" || sg.status === "ROUTED")
+    if (
+      sg.status === "SUBMITTED" ||
+      sg.status === "ROUTED" ||
+      sg.status === "AWAITING_ROUTING" ||
+      sg.status === "AWAITING_ASSIGNMENT"
+    )
       unassigned += count;
     else if (sg.status === "ASSIGNED") assigned += count;
-    else if (sg.status === "REOPENED" || sg.status === "REOPEN_REVIEW")
-      reopened += count;
-    else inProgress += count;
+    else if (sg.status === "REOPENED") reopened += count;
+    else if (sg.status === "IN_PROGRESS") inProgress += count;
   }
 
   let critical = 0,

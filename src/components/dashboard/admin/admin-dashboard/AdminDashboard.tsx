@@ -13,7 +13,7 @@ export function AdminDashboard({
   pieCharts,
 }: AdminDashboardProps) {
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden">
+    <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 overflow-hidden">
       {/* 3. EXECUTIVE WORKSPACE: Pie Charts */}
       <AdminAnalyticsGrid pieCharts={pieCharts} />
 
