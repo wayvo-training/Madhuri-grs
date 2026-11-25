@@ -11,9 +11,10 @@ export type StandardRoleDisplay =
   | "Grievance Admin"
   | "Grievance Staff"
   | "Employee"
-  | "Department Head";
+  | "Department Head"
+  | (string & {});
 
-export const STANDARD_ROLES: readonly StandardRoleDisplay[] = [
+export const STANDARD_ROLES: readonly string[] = [
   "Grievance Admin",
   "Grievance Staff",
   "Employee",
@@ -22,10 +23,9 @@ export const STANDARD_ROLES: readonly StandardRoleDisplay[] = [
 
 /**
  * Normalizes any internal role string or legacy designation to the approved standard UI role name.
+ * For custom roles created by administrators, preserves the custom role name.
  */
-export function getStandardRoleDisplayName(
-  role?: string | null,
-): StandardRoleDisplay {
+export function getStandardRoleDisplayName(role?: string | null): string {
   if (!role) return "Employee";
   const normalized = role.trim().toUpperCase();
 
@@ -55,7 +55,13 @@ export function getStandardRoleDisplayName(
     case "DEPARTMENT HEAD":
       return "Department Head";
 
-    default:
+    case "END_USER":
+    case "CITIZEN":
+    case "EMPLOYEE":
+    case "USER":
       return "Employee";
+
+    default:
+      return role;
   }
 }

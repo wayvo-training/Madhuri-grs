@@ -98,19 +98,26 @@ export function useRoleActions(
           user_count: 0,
           permissions: assignedPerms,
         };
-        setRoles((prev) => [...prev, newlyAddedRole]);
+        setRoles((prev) => {
+          if (prev.some((r) => r.role_id === newlyAddedRole.role_id)) {
+            return prev.map((r) =>
+              r.role_id === newlyAddedRole.role_id
+                ? { ...r, ...newlyAddedRole }
+                : r,
+            );
+          }
+          return [...prev, newlyAddedRole];
+        });
       }
 
       toast.success(data.message || "Role created successfully.");
 
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setNewRoleName("");
-        setNewRoleDescription("");
-        setNewRoleStatus("ACTIVE");
-        setSelectedPermissionIds([]);
-        router.refresh();
-      }, 1200);
+      setIsModalOpen(false);
+      setNewRoleName("");
+      setNewRoleDescription("");
+      setNewRoleStatus("ACTIVE");
+      setSelectedPermissionIds([]);
+      router.refresh();
     } catch (err: unknown) {
       console.error("Failed to create role:", err);
       const msg =

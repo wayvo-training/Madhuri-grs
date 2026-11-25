@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   SerializedPermission,
   SerializedRole,
@@ -15,6 +15,14 @@ export function useAdminRoles(
   const [roles, setRoles] = useState<SerializedRole[]>(initialRoles);
   const [permissionsList, setPermissionsList] =
     useState<SerializedPermission[]>(availablePermissions);
+
+  useEffect(() => {
+    setRoles(initialRoles);
+  }, [initialRoles]);
+
+  useEffect(() => {
+    setPermissionsList(availablePermissions);
+  }, [availablePermissions]);
 
   const [togglingRoleId, setTogglingRoleId] = useState<string | null>(null);
   const [togglingPermId, setTogglingPermId] = useState<string | null>(null);
