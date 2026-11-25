@@ -9,6 +9,7 @@ import {
   type SearchFieldDef,
 } from "@/components/ui/advanced-table-search";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import type {
   ResolutionAnalyticsFilterOptions,
   ResolutionAnalyticsFilters,
@@ -278,17 +279,15 @@ export function ResolutionFilterBar({
             >
               From:
             </label>
-            <input
+            <DatePicker
               id="res-start-date"
-              type="date"
               value={
                 localFilters.startDate
                   ? localFilters.startDate.split("T")[0]
                   : ""
               }
-              onChange={(e) => handleDateChange("startDate", e.target.value)}
-              onClick={(e) => e.currentTarget.showPicker?.()}
-              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
+              onChange={(value) => handleDateChange("startDate", value)}
+              placeholder="DD-MM-YYYY"
             />
           </div>
           <div className="flex items-center gap-1.5">
@@ -298,15 +297,13 @@ export function ResolutionFilterBar({
             >
               To:
             </label>
-            <input
+            <DatePicker
               id="res-end-date"
-              type="date"
               value={
                 localFilters.endDate ? localFilters.endDate.split("T")[0] : ""
               }
-              onChange={(e) => handleDateChange("endDate", e.target.value)}
-              onClick={(e) => e.currentTarget.showPicker?.()}
-              className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-900 shadow-2xs focus:border-blue-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 cursor-pointer"
+              onChange={(value) => handleDateChange("endDate", value)}
+              placeholder="DD-MM-YYYY"
             />
           </div>
           <Button
