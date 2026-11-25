@@ -72,7 +72,24 @@ export function useDepartmentHeadNavigation(
       const urlParams = querySearch
         ? new URLSearchParams(querySearch)
         : searchParams;
-      const tabParam = urlParams.get("tab") || urlParams.get("view");
+      const viewParam = urlParams.get("view");
+      const tabParam = urlParams.get("tab");
+
+      if (viewParam) {
+        const lower = viewParam.toLowerCase();
+        if (
+          lower === "queue" ||
+          lower === "staff" ||
+          lower === "activity" ||
+          lower === "knowledge" ||
+          lower === "notifications" ||
+          lower === "overview"
+        ) {
+          setActiveView(lower as DepartmentHeadView);
+          return;
+        }
+      }
+
       if (tabParam) {
         const lower = tabParam.toLowerCase();
         if (
@@ -85,6 +102,35 @@ export function useDepartmentHeadNavigation(
           setActiveView(lower as DepartmentHeadView);
           return;
         }
+        const queueFilterTabs = [
+          "all",
+          "closed",
+          "resolved",
+          "escalated",
+          "unassigned",
+          "in_progress",
+          "exceptions",
+          "sla_risk",
+          "sla_critical",
+          "reopened",
+          "high_critical",
+          "at_risk",
+          "cross_dept",
+          "resolution_review",
+        ];
+        if (queueFilterTabs.includes(lower)) {
+          setActiveView("queue");
+          return;
+        }
+      }
+
+      if (
+        urlParams.get("status") ||
+        urlParams.get("priority") ||
+        urlParams.get("staff")
+      ) {
+        setActiveView("queue");
+        return;
       }
 
       setActiveView(initialView || "overview");
@@ -107,7 +153,10 @@ export function useDepartmentHeadNavigation(
 
     const params = new URLSearchParams(query);
     if (view !== "overview") {
-      params.set("tab", view);
+      params.set("view", view);
+      if (!params.has("tab")) {
+        params.set("tab", view);
+      }
     }
     const queryString = params.toString() ? `?${params.toString()}` : "";
 

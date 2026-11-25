@@ -134,7 +134,7 @@ export function StaffView({
   }, [sortedStaff, currentPage, pageSize]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-3">
+    <div className="flex-1 h-full flex flex-col min-h-0 gap-3">
       {/* Team Capacity Metrics Banner */}
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 shrink-0">
         <AdminMetricCard

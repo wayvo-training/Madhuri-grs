@@ -34,10 +34,53 @@ export default async function DepartmentHeadDashboardPage({
     "notifications",
   ];
 
+  const queueTabs = [
+    "all",
+    "closed",
+    "resolved",
+    "escalated",
+    "unassigned",
+    "in_progress",
+    "exceptions",
+    "sla_risk",
+    "sla_critical",
+    "reopened",
+    "high_critical",
+    "at_risk",
+    "cross_dept",
+    "resolution_review",
+  ];
+
   const initialView: DepartmentHeadView =
     rawTab && validViews.includes(rawTab as DepartmentHeadView)
       ? (rawTab as DepartmentHeadView)
-      : "overview";
+      : rawTab && queueTabs.includes(rawTab)
+        ? "queue"
+        : resolvedParams.status ||
+            resolvedParams.priority ||
+            resolvedParams.staff
+          ? "queue"
+          : "overview";
+
+  const rawStatus =
+    typeof resolvedParams.status === "string"
+      ? resolvedParams.status.toUpperCase()
+      : undefined;
+
+  const rawPriority =
+    typeof resolvedParams.priority === "string"
+      ? resolvedParams.priority.toUpperCase()
+      : undefined;
+
+  const rawStaff =
+    typeof resolvedParams.staff === "string" ? resolvedParams.staff : undefined;
+
+  const initialQueueTab =
+    rawTab && queueTabs.includes(rawTab)
+      ? (rawTab.toUpperCase() as import("@/types/department-head").DepartmentHeadTab)
+      : rawStatus === "CLOSED"
+        ? "CLOSED"
+        : undefined;
 
   const {
     finalDeptName,
@@ -57,6 +100,10 @@ export default async function DepartmentHeadDashboardPage({
       employeeCode={employeeCode}
       isAdminPreview={isAdmin}
       initialView={initialView}
+      initialStatusFilter={rawStatus}
+      initialPriorityFilter={rawPriority}
+      initialStaffFilter={rawStaff}
+      initialTab={initialQueueTab}
     />
   );
 }

@@ -4,6 +4,10 @@ import * as React from "react";
 import type { ChartConfig } from "@/components/ui/chart";
 import { DashboardPieChartCard } from "@/components/ui/dashboard-pie-chart";
 import { PRIORITY_COLORS, STATUS_COLORS } from "@/lib/constants/chart-colors";
+import {
+  canHeadSubmitResolution,
+  isResolutionSubmittedByHead,
+} from "@/lib/department-head/filters";
 import type { GrievanceItem } from "@/types/department-head";
 
 export function GrievancePieCharts({
@@ -19,21 +23,49 @@ export function GrievancePieCharts({
     let unassigned = 0;
     let inProgress = 0;
     let underReview = 0;
+    let awaitingInfo = 0;
+    let escalated = 0;
+    let resolved = 0;
+    let closed = 0;
     let reopened = 0;
 
     grievances.forEach((g) => {
-      if (g.status === "CLOSED" || g.status === "RESOLVED") return;
-      if (g.status === "REOPENED") reopened++;
-      else if (g.status === "UNDER_REVIEW") underReview++;
-      else if (
+      const s = (g.status || "").toUpperCase();
+      const myDeptStatus = (g.myDepartmentStatus || "").toUpperCase();
+      const overallStatus = (g.overallStatus || "").toUpperCase();
+
+      if (s === "CLOSED" || overallStatus === "CLOSED") {
+        closed++;
+      } else if (s === "RESOLVED" || s === "COMPLETED") {
+        resolved++;
+      } else if (s === "REOPENED" || s === "REWORK") {
+        reopened++;
+      } else if (s === "ESCALATED") {
+        escalated++;
+      } else if (
+        (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
+        (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))
+      ) {
+        underReview++;
+      } else if (
+        s === "AWAITING_INFORMATION" ||
+        s === "WAITING_ON_USER" ||
+        s === "BLOCKED" ||
+        s === "PENDING_INFO"
+      ) {
+        awaitingInfo++;
+      } else if (
         !g.assignedStaffId ||
-        g.status === "SUBMITTED" ||
-        g.status === "ROUTED" ||
-        g.status === "PENDING_ASSIGNMENT" ||
-        g.myDepartmentStatus === "PENDING_ASSIGNMENT"
-      )
+        s === "SUBMITTED" ||
+        s === "ROUTED" ||
+        s === "PENDING_ASSIGNMENT" ||
+        s === "AWAITING_ASSIGNMENT" ||
+        myDeptStatus === "PENDING_ASSIGNMENT"
+      ) {
         unassigned++;
-      else inProgress++;
+      } else {
+        inProgress++;
+      }
     });
 
     return [
@@ -56,6 +88,30 @@ export function GrievancePieCharts({
         description: "Needs assignment",
       },
       {
+        name: "Awaiting Info",
+        value: awaitingInfo,
+        fill: STATUS_COLORS.AWAITING_INFO || "#D97706",
+        description: "Waiting on user",
+      },
+      {
+        name: "Escalated",
+        value: escalated,
+        fill: STATUS_COLORS.ESCALATED || "#B45309",
+        description: "SLA escalation",
+      },
+      {
+        name: "Resolved",
+        value: resolved,
+        fill: STATUS_COLORS.RESOLVED,
+        description: "Resolution proposed",
+      },
+      {
+        name: "Closed",
+        value: closed,
+        fill: STATUS_COLORS.CLOSED,
+        description: "Case completed",
+      },
+      {
         name: "Reopened",
         value: reopened,
         fill: STATUS_COLORS.REOPENED,
@@ -64,7 +120,7 @@ export function GrievancePieCharts({
     ];
   }, [grievances]);
 
-  const totalActive = React.useMemo(
+  const totalStatus = React.useMemo(
     () => statusDataRaw.reduce((acc, curr) => acc + curr.value, 0),
     [statusDataRaw],
   );
@@ -119,6 +175,16 @@ export function GrievancePieCharts({
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
     underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
     unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
+    awaitingInfo: {
+      label: "Awaiting Info",
+      color: STATUS_COLORS.AWAITING_INFO || "#D97706",
+    },
+    escalated: {
+      label: "Escalated",
+      color: STATUS_COLORS.ESCALATED || "#B45309",
+    },
+    resolved: { label: "Resolved", color: STATUS_COLORS.RESOLVED },
+    closed: { label: "Closed", color: STATUS_COLORS.CLOSED },
     reopened: { label: "Reopened", color: STATUS_COLORS.REOPENED },
   } satisfies ChartConfig;
 
@@ -134,6 +200,10 @@ export function GrievancePieCharts({
       "In Progress": "IN_PROGRESS",
       "Under Review": "UNDER_REVIEW",
       Unassigned: "UNASSIGNED",
+      "Awaiting Info": "AWAITING_INFORMATION",
+      Escalated: "ESCALATED",
+      Resolved: "RESOLVED",
+      Closed: "CLOSED",
       Reopened: "REOPENED",
     };
     const targetStatus = statusMap[item.name];
@@ -159,10 +229,12 @@ export function GrievancePieCharts({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
       <DashboardPieChartCard
         title="Grievance Status Breakdown"
-        description="Active grievances by current status"
+        description="Grievances by current status"
         data={statusDataRaw}
         config={statusConfig}
-        centerValue={totalActive}
+        centerValue={totalStatus}
+        centerLabelTop="TOTAL"
+        centerLabelBottom="GRIEVANCES"
         isLoading={isLoading}
         onItemClick={onFilterQueue ? handleStatusItemClick : undefined}
       />

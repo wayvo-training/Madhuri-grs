@@ -37,7 +37,28 @@ export function useQueueFilters({
   const urlStatus = searchParams?.get("status");
   const urlPriority = searchParams?.get("priority");
   const urlStaff = searchParams?.get("staff");
-  const urlTab = searchParams?.get("tab") as DepartmentHeadTab | null;
+
+  const validQueueTabs: DepartmentHeadTab[] = [
+    "ALL",
+    "EXCEPTIONS",
+    "IN_PROGRESS",
+    "SLA_RISK",
+    "SLA_CRITICAL",
+    "REOPENED",
+    "ESCALATED",
+    "CLOSED",
+    "UNASSIGNED",
+    "HIGH_CRITICAL",
+    "AT_RISK",
+    "CROSS_DEPT",
+    "RESOLUTION_REVIEW",
+  ];
+
+  const rawUrlTab = searchParams?.get("tab")?.toUpperCase();
+  const urlTab =
+    rawUrlTab && validQueueTabs.includes(rawUrlTab as DepartmentHeadTab)
+      ? (rawUrlTab as DepartmentHeadTab)
+      : null;
 
   const [selectedTab, setSelectedTab] = useState<DepartmentHeadTab>(
     urlTab || initialTab || "ALL",
@@ -60,8 +81,17 @@ export function useQueueFilters({
   useEffect(() => {
     if (urlStatus && urlStatus !== "ALL") {
       setStatusFilter(urlStatus);
+      if (urlStatus === "CLOSED" || urlStatus === "RESOLVED") {
+        setSelectedTab("CLOSED");
+      }
     } else if (initialStatusFilter && initialStatusFilter !== "ALL") {
       setStatusFilter(initialStatusFilter);
+      if (
+        initialStatusFilter === "CLOSED" ||
+        initialStatusFilter === "RESOLVED"
+      ) {
+        setSelectedTab("CLOSED");
+      }
     }
 
     if (urlPriority && urlPriority !== "ALL") {

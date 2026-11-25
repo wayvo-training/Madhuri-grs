@@ -121,7 +121,7 @@ export function ActivityView({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 h-full flex flex-col min-h-0">
       <div className="flex-1 flex flex-col min-h-0 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 sm:p-5 shadow-xs overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-3 shrink-0">
           <div className="shrink-0">

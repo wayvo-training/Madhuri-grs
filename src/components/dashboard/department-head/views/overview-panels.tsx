@@ -209,10 +209,10 @@ export function AttentionRequiredPanel({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs">
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs justify-between">
       <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 gap-2 shrink-0">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm sm:text-sm font-semibold text-slate-900">
+          <h3 className="text-sm sm:text-sm font-semibold text-slate-900 leading-normal py-0.5">
             Recent Grievances
           </h3>
           <span className="text-slate-300 hidden sm:inline">&bull;</span>
@@ -275,7 +275,7 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={`att-skel-${
@@ -353,7 +353,7 @@ export function AttentionRequiredPanel({
               </span>
             </div>
           </div>
-          <div className="flex-1 min-h-0 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60">
             {sortedList
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((item) => {

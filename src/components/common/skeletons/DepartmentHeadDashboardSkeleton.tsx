@@ -45,17 +45,17 @@ export function DepartmentHeadDashboardSkeleton() {
               <div className="absolute inset-0 rounded-full border-[18px] border-slate-100 dark:border-slate-800 animate-pulse" />
               <div className="absolute inset-0 rounded-full border-[18px] border-t-teal-300 border-r-teal-200 border-b-transparent border-l-transparent animate-spin opacity-40" />
             </div>
-            <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-1 justify-center max-w-[220px]">
-              {[1, 2, 3, 4].map((i) => (
+            <div className="w-full sm:w-auto sm:flex-1 justify-center grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 max-w-[340px]">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between gap-2"
+                  className="flex items-center justify-between gap-2 py-0.5"
                 >
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-2.5 w-2.5 rounded-full shrink-0" />
-                    <Skeleton className="h-3 w-20" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                  <Skeleton className="h-3 w-6" />
+                  <Skeleton className="h-3 w-4" />
                 </div>
               ))}
             </div>

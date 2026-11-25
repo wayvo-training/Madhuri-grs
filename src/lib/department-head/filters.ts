@@ -364,9 +364,29 @@ export function filterDepartmentGrievances(
 ): GrievanceItem[] {
   return grievances.filter((g) => {
     if (selectedTab === "CLOSED") {
-      if (!["CLOSED", "RESOLVED"].includes(g.status)) return false;
+      const s = (g.status || "").toUpperCase();
+      const overallStatus = (g.overallStatus || "").toUpperCase();
+      if (statusFilter === "CLOSED") {
+        if (s !== "CLOSED" && overallStatus !== "CLOSED") return false;
+      } else if (statusFilter === "RESOLVED") {
+        if (s === "CLOSED" || overallStatus === "CLOSED") return false;
+        if (s !== "RESOLVED" && s !== "COMPLETED") return false;
+      } else {
+        if (
+          s !== "CLOSED" &&
+          overallStatus !== "CLOSED" &&
+          s !== "RESOLVED" &&
+          s !== "COMPLETED"
+        )
+          return false;
+      }
     } else {
-      if (selectedTab !== "ALL" && ["CLOSED", "RESOLVED"].includes(g.status)) {
+      if (
+        statusFilter !== "CLOSED" &&
+        statusFilter !== "RESOLVED" &&
+        selectedTab !== "ALL" &&
+        ["CLOSED", "RESOLVED"].includes(g.status)
+      ) {
         return false;
       }
     }
@@ -454,58 +474,106 @@ export function filterDepartmentGrievances(
     }
 
     if (statusFilter && statusFilter !== "ALL") {
-      if (statusFilter === "RESOLVED") {
-        if (!["RESOLVED", "CLOSED"].includes(g.status)) return false;
-      } else if (statusFilter === "IN_PROGRESS") {
-        if (
-          [
-            "CLOSED",
-            "RESOLVED",
-            "UNDER_REVIEW",
-            "RESOLUTION_PENDING_APPROVAL",
-          ].includes(g.status)
-        )
-          return false;
-        if (g.isReopened || g.status === "REOPENED") return false;
-        const isUnassigned =
-          !g.assignedStaffId ||
-          !g.assignedStaffName ||
-          g.assignedStaffName === "Unassigned" ||
-          g.status === "SUBMITTED" ||
-          g.status === "AWAITING_ROUTING" ||
-          g.status === "AWAITING_ASSIGNMENT" ||
-          g.status === "ROUTED" ||
-          g.status === "PENDING_ASSIGNMENT" ||
-          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
-        if (isUnassigned) return false;
+      const s = (g.status || "").toUpperCase();
+      const myDeptStatus = (g.myDepartmentStatus || "").toUpperCase();
+      const overallStatus = (g.overallStatus || "").toUpperCase();
+
+      if (statusFilter === "CLOSED") {
+        if (s !== "CLOSED" && overallStatus !== "CLOSED") return false;
+      } else if (statusFilter === "RESOLVED") {
+        if (s === "CLOSED" || overallStatus === "CLOSED") return false;
+        if (s !== "RESOLVED" && s !== "COMPLETED") return false;
+      } else if (statusFilter === "REOPENED") {
+        if (s !== "REOPENED" && s !== "REWORK") return false;
+      } else if (statusFilter === "ESCALATED") {
+        if (s !== "ESCALATED") return false;
       } else if (
         statusFilter === "UNDER_REVIEW" ||
         statusFilter === "RESOLUTION_PENDING_APPROVAL"
       ) {
+        if (s === "CLOSED" || overallStatus === "CLOSED") return false;
+        const isPendingEmployeeApproval =
+          (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
+          (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g));
+        if (!isPendingEmployeeApproval) return false;
+      } else if (
+        statusFilter === "AWAITING_INFORMATION" ||
+        statusFilter === "AWAITING_INFO"
+      ) {
         if (
-          g.status !== "UNDER_REVIEW" &&
-          g.status !== "RESOLUTION_PENDING_APPROVAL"
+          ![
+            "AWAITING_INFORMATION",
+            "WAITING_ON_USER",
+            "BLOCKED",
+            "PENDING_INFO",
+          ].includes(s)
         )
           return false;
-      } else if (statusFilter === "ASSIGNED") {
-        if (g.status !== "ASSIGNED" && g.myDepartmentStatus !== "ASSIGNED")
-          return false;
       } else if (statusFilter === "UNASSIGNED") {
+        if (
+          s === "CLOSED" ||
+          overallStatus === "CLOSED" ||
+          s === "RESOLVED" ||
+          s === "COMPLETED" ||
+          s === "REOPENED" ||
+          s === "REWORK" ||
+          s === "ESCALATED" ||
+          ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
+            (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))) ||
+          [
+            "AWAITING_INFORMATION",
+            "WAITING_ON_USER",
+            "BLOCKED",
+            "PENDING_INFO",
+          ].includes(s)
+        )
+          return false;
+
         const isUnassigned =
           !g.assignedStaffId ||
           !g.assignedStaffName ||
           g.assignedStaffName === "Unassigned" ||
-          g.status === "SUBMITTED" ||
-          g.status === "AWAITING_ROUTING" ||
-          g.status === "AWAITING_ASSIGNMENT" ||
-          g.status === "ROUTED" ||
-          g.status === "PENDING_ASSIGNMENT" ||
-          g.myDepartmentStatus === "PENDING_ASSIGNMENT";
+          s === "SUBMITTED" ||
+          s === "AWAITING_ROUTING" ||
+          s === "AWAITING_ASSIGNMENT" ||
+          s === "ROUTED" ||
+          s === "PENDING_ASSIGNMENT" ||
+          myDeptStatus === "PENDING_ASSIGNMENT";
         if (!isUnassigned) return false;
-      } else if (statusFilter === "REOPENED") {
-        if (!g.isReopened && g.status !== "REOPENED" && g.status !== "REWORK")
+      } else if (statusFilter === "IN_PROGRESS") {
+        if (
+          s === "CLOSED" ||
+          overallStatus === "CLOSED" ||
+          s === "RESOLVED" ||
+          s === "COMPLETED" ||
+          s === "REOPENED" ||
+          s === "REWORK" ||
+          s === "ESCALATED" ||
+          ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
+            (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))) ||
+          [
+            "AWAITING_INFORMATION",
+            "WAITING_ON_USER",
+            "BLOCKED",
+            "PENDING_INFO",
+          ].includes(s)
+        )
           return false;
-      } else if (g.status !== statusFilter) {
+
+        const isUnassigned =
+          !g.assignedStaffId ||
+          !g.assignedStaffName ||
+          g.assignedStaffName === "Unassigned" ||
+          s === "SUBMITTED" ||
+          s === "AWAITING_ROUTING" ||
+          s === "AWAITING_ASSIGNMENT" ||
+          s === "ROUTED" ||
+          s === "PENDING_ASSIGNMENT" ||
+          myDeptStatus === "PENDING_ASSIGNMENT";
+        if (isUnassigned) return false;
+      } else if (statusFilter === "ASSIGNED") {
+        if (s !== "ASSIGNED" && myDeptStatus !== "ASSIGNED") return false;
+      } else if (s !== statusFilter) {
         return false;
       }
     }

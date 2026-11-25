@@ -546,7 +546,7 @@ export function DepartmentHeadOverviewInner({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
+    <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3">
       {/* Top View Navigation & Global Controls */}
       <DepartmentHeadViewSwitcher
         activeView={activeView}
@@ -585,13 +585,29 @@ export function DepartmentHeadOverviewInner({
           onInspectGrievance={handleInspectCase}
           onAssignGrievance={handleOpenAssignModal}
           onFilterQueue={(filterType, value) => {
-            resetFilters();
+            setSearchQuery("");
+            setStaffFilter("ALL");
+            setDepartmentFilter("ALL");
             if (filterType === "status") {
-              setStatusFilter(value);
-              switchView("queue", { status: value });
+              setPriorityFilter("ALL");
+              if (value === "CLOSED" || value === "RESOLVED") {
+                setSelectedTab("CLOSED");
+                setStatusFilter(value);
+                switchView("queue", {
+                  view: "queue",
+                  tab: "CLOSED",
+                  status: value,
+                });
+              } else {
+                setSelectedTab("ALL");
+                setStatusFilter(value);
+                switchView("queue", { view: "queue", status: value });
+              }
             } else if (filterType === "priority") {
+              setStatusFilter("ALL");
+              setSelectedTab("ALL");
               setPriorityFilter(value);
-              switchView("queue", { priority: value });
+              switchView("queue", { view: "queue", priority: value });
             }
           }}
         />
@@ -645,9 +661,13 @@ export function DepartmentHeadOverviewInner({
           onInspect={handleInspectCase}
           onReassign={(item, staffId) => handleOpenAssignModal(item, staffId)}
           onFilterStaffInQueue={(staffId) => {
-            resetFilters();
+            setSearchQuery("");
+            setPriorityFilter("ALL");
+            setStatusFilter("ALL");
+            setSelectedTab("ALL");
+            setDepartmentFilter("ALL");
             setStaffFilter(staffId);
-            switchView("queue", { staff: staffId });
+            switchView("queue", { view: "queue", staff: staffId });
           }}
         />
       )}

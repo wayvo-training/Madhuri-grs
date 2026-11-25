@@ -250,7 +250,22 @@ export async function fetchDepartmentHeadGrievances(
     });
   } else if (tab === "CLOSED") {
     conditions.push({
-      status: { in: ["CLOSED", "RESOLVED"] },
+      status: "CLOSED",
+    });
+  } else if (tab === "RESOLVED") {
+    conditions.push({
+      status: "RESOLVED",
+    });
+  } else if (tab === "AWAITING_INFO" || tab === "AWAITING_INFORMATION") {
+    conditions.push({
+      status: {
+        in: [
+          "AWAITING_INFORMATION",
+          "WAITING_ON_USER",
+          "BLOCKED",
+          "PENDING_INFO",
+        ],
+      },
     });
   }
 

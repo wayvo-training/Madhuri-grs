@@ -173,7 +173,7 @@ export function KnowledgeView() {
   });
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-3">
+    <div className="flex-1 h-full flex flex-col min-h-0 gap-3">
       {/* Header & Filter Controls */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">

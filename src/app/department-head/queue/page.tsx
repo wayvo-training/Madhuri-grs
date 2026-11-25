@@ -16,6 +16,26 @@ export default async function DepartmentHeadQueuePage({
   const page = resolvedParams.page ? Number(resolvedParams.page) : undefined;
   const limit = resolvedParams.limit ? Number(resolvedParams.limit) : undefined;
 
+  const rawStatus =
+    typeof resolvedParams.status === "string"
+      ? resolvedParams.status.toUpperCase()
+      : undefined;
+
+  const rawPriority =
+    typeof resolvedParams.priority === "string"
+      ? resolvedParams.priority.toUpperCase()
+      : undefined;
+
+  const rawStaff =
+    typeof resolvedParams.staff === "string" ? resolvedParams.staff : undefined;
+
+  const rawTab =
+    typeof resolvedParams.tab === "string"
+      ? (resolvedParams.tab.toUpperCase() as import("@/types/department-head").DepartmentHeadTab)
+      : rawStatus === "CLOSED"
+        ? "CLOSED"
+        : undefined;
+
   const {
     finalDeptName,
     hodName,
@@ -23,7 +43,14 @@ export default async function DepartmentHeadQueuePage({
     employeeCode,
     isAdmin,
     initialData,
-  } = await getDepartmentHeadPageData({ deptId, page, limit });
+  } = await getDepartmentHeadPageData({
+    deptId,
+    page,
+    limit,
+    tab: rawTab,
+    priority: rawPriority,
+    staffId: rawStaff,
+  });
 
   return (
     <DepartmentHeadOverview
@@ -34,6 +61,10 @@ export default async function DepartmentHeadQueuePage({
       employeeCode={employeeCode}
       isAdminPreview={isAdmin}
       initialView="queue"
+      initialStatusFilter={rawStatus}
+      initialPriorityFilter={rawPriority}
+      initialStaffFilter={rawStaff}
+      initialTab={rawTab}
     />
   );
 }

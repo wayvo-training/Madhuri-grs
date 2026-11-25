@@ -51,7 +51,7 @@ export function OverviewView({
   onFilterQueue,
 }: OverviewViewProps) {
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2.5 sm:gap-3">
+    <div className="flex-1 h-full min-h-0 flex flex-col gap-2.5 sm:gap-3 justify-between">
       {/* 1. Department Header Banner */}
       <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white px-4 py-2 sm:px-5 sm:py-2.5 shadow-xs shrink-0">
         <div className="relative z-10 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
