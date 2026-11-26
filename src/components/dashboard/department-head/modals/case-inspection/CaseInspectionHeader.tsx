@@ -49,7 +49,8 @@ export function CaseInspectionHeader({
   departmentsInvolved,
   onClose,
 }: CaseInspectionHeaderProps) {
-  const isClosedOrResolved = status === "CLOSED" || status === "RESOLVED";
+  const isClosedOrResolved =
+    status === "CLOSED" || status === "RESOLVED" || status === "COMPLETED";
   const isBreached = slaState === "BREACHED";
   const isSlaExtended =
     !isClosedOrResolved &&
@@ -219,7 +220,7 @@ export function CaseInspectionHeader({
         <div>
           {isClosedOrResolved ? (
             <StatusBadge
-              status={status ?? "RESOLVED"}
+              status={status === "CLOSED" ? "CLOSED" : "RESOLVED"}
               className="text-xs px-3 py-1 font-bold uppercase tracking-wider"
             />
           ) : isBreached ? (

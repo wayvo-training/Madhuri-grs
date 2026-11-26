@@ -797,7 +797,7 @@ export async function GET(request: Request) {
                 : g.status === "REWORK"
                   ? "REWORK"
                   : isMyDeptCompleted
-                    ? "COMPLETED"
+                    ? "RESOLVED"
                     : a.grievance_departments?.status === "ASSIGNED"
                       ? "ASSIGNED"
                       : a.grievance_departments?.status === "IN_PROGRESS"

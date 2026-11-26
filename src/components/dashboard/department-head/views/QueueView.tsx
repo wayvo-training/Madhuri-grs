@@ -867,7 +867,14 @@ export function QueueView({
                         {/* 4. Status */}
                         <TableCell className="py-3 px-3 align-top">
                           <div className="flex flex-col items-start gap-1">
-                            <StatusBadge status={item.status} />
+                            <StatusBadge
+                              status={
+                                item.status === "COMPLETED" ||
+                                item.myDepartmentStatus === "COMPLETED"
+                                  ? "RESOLVED"
+                                  : item.status
+                              }
+                            />
                             {isItemBlocked && (
                               <span
                                 title="Department findings paused waiting for prerequisite department"

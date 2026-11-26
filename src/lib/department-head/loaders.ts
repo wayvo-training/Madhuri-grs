@@ -1348,7 +1348,7 @@ export async function fetchDepartmentHeadGrievances(
       ) {
         resolvedStatus = g.status as GrievanceItem["status"];
       } else if (myDeptRecord.status === "COMPLETED") {
-        resolvedStatus = "COMPLETED";
+        resolvedStatus = "RESOLVED";
       } else if (myDeptRecord.status === "BLOCKED") {
         resolvedStatus = "BLOCKED";
       } else if (g.status === "ESCALATED") {

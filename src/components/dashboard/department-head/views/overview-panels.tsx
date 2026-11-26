@@ -409,7 +409,14 @@ export function AttentionRequiredPanel({
                       <PriorityBadge priority={item.priority} />
                     </div>
                     <div className="w-32 sm:w-36 shrink-0">
-                      <StatusBadge status={item.status} />
+                      <StatusBadge
+                        status={
+                          item.status === "COMPLETED" ||
+                          item.myDepartmentStatus === "COMPLETED"
+                            ? "RESOLVED"
+                            : item.status
+                        }
+                      />
                     </div>
                     <div className="w-26 sm:w-30 shrink-0 text-center">
                       {isItemBlocked ? (
