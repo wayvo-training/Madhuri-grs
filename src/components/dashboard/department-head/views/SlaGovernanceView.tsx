@@ -565,14 +565,7 @@ export function SlaGovernanceView({
                           </td>
 
                           <td className="py-2.5 px-3 align-middle whitespace-nowrap">
-                            <StatusBadge
-                              status={
-                                item.status === "COMPLETED" ||
-                                item.myDepartmentStatus === "COMPLETED"
-                                  ? "RESOLVED"
-                                  : item.status
-                              }
-                            />
+                            <StatusBadge status={item.status} />
                           </td>
 
                           <td className="py-2.5 pl-3 pr-4 text-right align-middle whitespace-nowrap">

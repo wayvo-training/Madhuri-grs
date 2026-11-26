@@ -23,7 +23,7 @@ export function GrievancePieCharts({
     let unassigned = 0;
     let assigned = 0;
     let inProgress = 0;
-    let underReview = 0;
+    let pendingApproval = 0;
     let awaitingInfo = 0;
     let resolved = 0;
     let closed = 0;
@@ -40,15 +40,11 @@ export function GrievancePieCharts({
         resolved++;
       } else if (s === "REOPENED" || s === "REWORK") {
         reopened++;
-      } else if (
-        (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
-        (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))
-      ) {
-        underReview++;
+      } else if (s === "RESOLUTION_PENDING_APPROVAL" || s === "UNDER_REVIEW") {
+        pendingApproval++;
       } else if (
         s === "AWAITING_INFORMATION" ||
         s === "WAITING_ON_USER" ||
-        s === "BLOCKED" ||
         s === "PENDING_INFO"
       ) {
         awaitingInfo++;
@@ -82,10 +78,10 @@ export function GrievancePieCharts({
         description: "Assigned to staff",
       },
       {
-        name: "Under Review",
-        value: underReview,
-        fill: STATUS_COLORS.UNDER_REVIEW,
-        description: "Awaiting review",
+        name: "Pending Approval",
+        value: pendingApproval,
+        fill: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
+        description: "Awaiting approval",
       },
       {
         name: "Unassigned",
@@ -174,7 +170,10 @@ export function GrievancePieCharts({
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
     assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED },
-    underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
+    pendingApproval: {
+      label: "Pending Approval",
+      color: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
+    },
     unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
     awaitingInfo: {
       label: "Awaiting Info",
@@ -196,7 +195,9 @@ export function GrievancePieCharts({
     const statusMap: Record<string, string> = {
       "In Progress": "IN_PROGRESS",
       Assigned: "ASSIGNED",
-      "Under Review": "UNDER_REVIEW",
+      "Pending Approval": "RESOLUTION_PENDING_APPROVAL",
+      "Resolution Pending Approval": "RESOLUTION_PENDING_APPROVAL",
+      "Under Review": "RESOLUTION_PENDING_APPROVAL",
       Unassigned: "UNASSIGNED",
       "Awaiting Info": "AWAITING_INFORMATION",
       Resolved: "RESOLVED",

@@ -19,7 +19,7 @@ export function StaffPieCharts({
 }: StaffPieChartsProps) {
   const statusDataRaw = React.useMemo(() => {
     let inProgress = 0;
-    let underReview = 0;
+    let pendingApproval = 0;
     let awaitingInfo = 0;
     let escalated = 0;
     let resolved = 0;
@@ -54,11 +54,10 @@ export function StaffPieCharts({
         s === "REOPEN_REVIEW" ||
         s === "RESOLUTION_PENDING_APPROVAL"
       ) {
-        underReview++;
+        pendingApproval++;
       } else if (
         s === "AWAITING_INFORMATION" ||
         s === "WAITING_ON_USER" ||
-        s === "BLOCKED" ||
         s === "PENDING_INFO"
       ) {
         awaitingInfo++;
@@ -75,10 +74,10 @@ export function StaffPieCharts({
         description: "Investigation active",
       },
       {
-        name: "Under Review",
-        value: underReview,
-        fill: STATUS_COLORS.UNDER_REVIEW,
-        description: "Awaiting review",
+        name: "Pending Approval",
+        value: pendingApproval,
+        fill: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
+        description: "Awaiting approval",
       },
       {
         name: "Awaiting Info",
@@ -171,7 +170,10 @@ export function StaffPieCharts({
 
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
-    underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
+    pendingApproval: {
+      label: "Pending Approval",
+      color: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
+    },
     awaitingInfo: {
       label: "Awaiting Info",
       color: STATUS_COLORS.AWAITING_INFO || "#D97706",
@@ -195,7 +197,10 @@ export function StaffPieCharts({
     if (!onFilterQueue) return;
     if (item.name === "In Progress") {
       onFilterQueue("in_progress");
-    } else if (item.name === "Under Review") {
+    } else if (
+      item.name === "Pending Approval" ||
+      item.name === "Under Review"
+    ) {
       onFilterQueue("under_review");
     } else if (item.name === "Awaiting Info") {
       onFilterQueue("awaiting_info");

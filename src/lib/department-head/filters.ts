@@ -489,24 +489,24 @@ export function filterDepartmentGrievances(
         if (s !== "ESCALATED") return false;
       } else if (
         statusFilter === "UNDER_REVIEW" ||
-        statusFilter === "RESOLUTION_PENDING_APPROVAL"
+        statusFilter === "RESOLUTION_PENDING_APPROVAL" ||
+        statusFilter === "PENDING_APPROVAL"
       ) {
-        if (s === "CLOSED" || overallStatus === "CLOSED") return false;
-        const isPendingEmployeeApproval =
-          (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
-          (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g));
-        if (!isPendingEmployeeApproval) return false;
+        if (
+          s !== "UNDER_REVIEW" &&
+          s !== "RESOLUTION_PENDING_APPROVAL" &&
+          s !== "PENDING_APPROVAL"
+        )
+          return false;
+        if (overallStatus === "CLOSED") return false;
       } else if (
         statusFilter === "AWAITING_INFORMATION" ||
         statusFilter === "AWAITING_INFO"
       ) {
         if (
-          ![
-            "AWAITING_INFORMATION",
-            "WAITING_ON_USER",
-            "BLOCKED",
-            "PENDING_INFO",
-          ].includes(s)
+          !["AWAITING_INFORMATION", "WAITING_ON_USER", "PENDING_INFO"].includes(
+            s,
+          )
         )
           return false;
       } else if (statusFilter === "UNASSIGNED") {
@@ -520,12 +520,9 @@ export function filterDepartmentGrievances(
           s === "ESCALATED" ||
           ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
             (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))) ||
-          [
-            "AWAITING_INFORMATION",
-            "WAITING_ON_USER",
-            "BLOCKED",
-            "PENDING_INFO",
-          ].includes(s)
+          ["AWAITING_INFORMATION", "WAITING_ON_USER", "PENDING_INFO"].includes(
+            s,
+          )
         )
           return false;
 
@@ -553,12 +550,9 @@ export function filterDepartmentGrievances(
           s === "ESCALATED" ||
           ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
             (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))) ||
-          [
-            "AWAITING_INFORMATION",
-            "WAITING_ON_USER",
-            "BLOCKED",
-            "PENDING_INFO",
-          ].includes(s)
+          ["AWAITING_INFORMATION", "WAITING_ON_USER", "PENDING_INFO"].includes(
+            s,
+          )
         )
           return false;
 

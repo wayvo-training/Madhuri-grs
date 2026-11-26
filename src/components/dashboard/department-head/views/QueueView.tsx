@@ -251,15 +251,16 @@ export function QueueView({
           if (s !== "ESCALATED") return false;
         } else if (
           statusFilter === "UNDER_REVIEW" ||
-          statusFilter === "RESOLUTION_PENDING_APPROVAL"
+          statusFilter === "RESOLUTION_PENDING_APPROVAL" ||
+          statusFilter === "PENDING_APPROVAL"
         ) {
-          if (s !== "UNDER_REVIEW" && s !== "RESOLUTION_PENDING_APPROVAL")
+          if (
+            s !== "UNDER_REVIEW" &&
+            s !== "RESOLUTION_PENDING_APPROVAL" &&
+            s !== "PENDING_APPROVAL"
+          )
             return false;
           if (overallStatus === "CLOSED") return false;
-          const isPendingEmployeeApproval =
-            (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
-            (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g));
-          if (!isPendingEmployeeApproval) return false;
         } else if (
           statusFilter === "AWAITING_INFORMATION" ||
           statusFilter === "AWAITING_INFO"
@@ -268,7 +269,6 @@ export function QueueView({
             ![
               "AWAITING_INFORMATION",
               "WAITING_ON_USER",
-              "BLOCKED",
               "PENDING_INFO",
             ].includes(s)
           )
@@ -867,14 +867,7 @@ export function QueueView({
                         {/* 4. Status */}
                         <TableCell className="py-3 px-3 align-top">
                           <div className="flex flex-col items-start gap-1">
-                            <StatusBadge
-                              status={
-                                item.status === "COMPLETED" ||
-                                item.myDepartmentStatus === "COMPLETED"
-                                  ? "RESOLVED"
-                                  : item.status
-                              }
-                            />
+                            <StatusBadge status={item.status} />
                             {isItemBlocked && (
                               <span
                                 title="Department findings paused waiting for prerequisite department"
