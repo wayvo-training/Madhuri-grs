@@ -32,6 +32,7 @@ export function GrievanceStatusCard({
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
     assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED },
     unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
+    underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
     reopened: { label: "Reopened", color: STATUS_COLORS.REOPENED },
   } satisfies ChartConfig;
 
@@ -39,6 +40,12 @@ export function GrievanceStatusCard({
   const hasData = pieData.length > 0;
 
   const handleStatusClick = (statusName: string) => {
+    if (statusName === "Under Review") {
+      router.push(
+        "/admin/grievances?tab=ACTIVE&status=UNDER_REVIEW,RESOLUTION_PENDING_APPROVAL",
+      );
+      return;
+    }
     const statusParam = statusName.toUpperCase().replace(/\s+/g, "_");
     router.push(`/admin/grievances?tab=ACTIVE&status=${statusParam}`);
   };

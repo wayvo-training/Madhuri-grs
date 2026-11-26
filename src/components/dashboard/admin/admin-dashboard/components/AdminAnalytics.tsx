@@ -64,7 +64,7 @@ export function DepartmentWorkloadCard({
               Department Workload
             </h3>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Active grievances by department
+              Active assignments by department
             </p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export function DepartmentWorkloadCard({
           <span className="font-bold text-slate-900 dark:text-white tabular-nums">
             {totalGrievances}
           </span>{" "}
-          active
+          active assignments
         </div>
       </div>
     </div>

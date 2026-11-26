@@ -37,13 +37,22 @@ export default async function AdminDashboardPage() {
         department_name: true,
         status: true,
         _count: {
-          select: { grievance_departments: true, users: true },
+          select: {
+            grievance_departments: {
+              where: {
+                grievances: {
+                  status: { notIn: ["CLOSED", "RESOLVED"] },
+                },
+              },
+            },
+            users: true,
+          },
         },
       },
       orderBy: { department_name: "asc" },
     }),
     prisma.grievances.findMany({
-      take: 50,
+      take: 100,
       orderBy: { created_at: "desc" },
       select: {
         grievance_id: true,
@@ -101,6 +110,7 @@ export default async function AdminDashboardPage() {
   let inProgress = 0,
     assigned = 0,
     unassigned = 0,
+    underReview = 0,
     reopened = 0;
   for (const sg of statusGroups) {
     const count = sg._count._all;
@@ -108,12 +118,22 @@ export default async function AdminDashboardPage() {
       sg.status === "SUBMITTED" ||
       sg.status === "ROUTED" ||
       sg.status === "AWAITING_ROUTING" ||
-      sg.status === "AWAITING_ASSIGNMENT"
-    )
+      sg.status === "AWAITING_ASSIGNMENT" ||
+      sg.status === "PENDING_ASSIGNMENT"
+    ) {
       unassigned += count;
-    else if (sg.status === "ASSIGNED") assigned += count;
-    else if (sg.status === "REOPENED") reopened += count;
-    else if (sg.status === "IN_PROGRESS") inProgress += count;
+    } else if (sg.status === "ASSIGNED") {
+      assigned += count;
+    } else if (
+      sg.status === "UNDER_REVIEW" ||
+      sg.status === "RESOLUTION_PENDING_APPROVAL"
+    ) {
+      underReview += count;
+    } else if (sg.status === "REOPENED" || sg.status === "REWORK") {
+      reopened += count;
+    } else {
+      inProgress += count;
+    }
   }
 
   let critical = 0,
@@ -157,6 +177,12 @@ export default async function AdminDashboardPage() {
         value: unassigned,
         fill: STATUS_COLORS.UNASSIGNED,
         description: "Awaiting assignment",
+      },
+      {
+        name: "Under Review",
+        value: underReview,
+        fill: STATUS_COLORS.UNDER_REVIEW,
+        description: "Pending review / approval",
       },
       {
         name: "Reopened",
@@ -211,7 +237,7 @@ export default async function AdminDashboardPage() {
         description: "Exceeded SLA limit",
       },
     ],
-    totalActive: inProgress + assigned + unassigned + reopened,
+    totalActive: inProgress + assigned + unassigned + underReview + reopened,
     totalPriority: critical + high + medium + low,
     totalSla: onTrack + atRisk + breached,
   };

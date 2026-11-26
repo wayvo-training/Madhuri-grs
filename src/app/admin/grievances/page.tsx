@@ -86,6 +86,11 @@ export default async function AdminGrievancesPage(props: {
           "ROUTED",
         ]);
     }
+    if (stats.includes("UNDER_REVIEW")) {
+      stats = stats
+        .filter((s) => s !== "UNDER_REVIEW")
+        .concat(["UNDER_REVIEW", "RESOLUTION_PENDING_APPROVAL"]);
+    }
     // Reopened considers strictly REOPENED (never resolution pending approval or rework)
     // In Progress and Assigned remain exact status matches
     parsedStatuses = stats;
