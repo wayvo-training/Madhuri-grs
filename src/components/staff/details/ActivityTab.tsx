@@ -1,5 +1,6 @@
 "use client";
 
+import { Activity } from "lucide-react";
 import type { StaffGrievanceItem } from "@/types/staff";
 
 interface ActivityTabProps {
@@ -13,10 +14,17 @@ export function ActivityTab({ grievance }: ActivityTabProps) {
   });
 
   return (
-    <div className="space-y-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-        Activity Log
-      </h4>
+    <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs min-h-[360px] flex flex-col">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 shrink-0">
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+          Activity Log
+        </h4>
+        <span className="text-[11px] text-slate-400 font-medium">
+          {sortedActivities.length} event
+          {sortedActivities.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
       {sortedActivities.length > 0 ? (
         <div className="relative pl-6 space-y-4 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
           {sortedActivities.map((ev, idx) => (
@@ -48,9 +56,20 @@ export function ActivityTab({ grievance }: ActivityTabProps) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-slate-400 italic">
-          No activity logs recorded yet.
-        </p>
+        <div className="flex-1 flex flex-col items-center justify-center py-10 text-center space-y-2.5">
+          <div className="h-10 w-10 rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400">
+            <Activity className="h-5 w-5" />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold text-slate-700">
+              No Activity Logged Yet
+            </p>
+            <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+              Investigation steps, internal notes, and status updates will
+              appear here chronologically.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1861,8 +1861,8 @@ export function EndUserCaseHub({
 
         {/* TAB 3: TRACKING */}
         {activeTab === "tracking" && (
-          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex-1 min-h-[320px] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6 animate-in fade-in duration-150 flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
               <div>
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                   Case Lifecycle & Investigation Milestones
@@ -1881,155 +1881,171 @@ export function EndUserCaseHub({
             </div>
 
             {/* Vertical Stepper List */}
-            <div className="space-y-0 pt-1">
-              {timelineNodes.map((node, index) => {
-                const IconComponent = node.icon;
-                const isLast = index === timelineNodes.length - 1;
+            {timelineNodes.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center space-y-2">
+                <Clock className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Timeline Initializing
+                </p>
+                <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                  Lifecycle milestones will be logged as the department begins
+                  processing your grievance.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-0 pt-1">
+                {timelineNodes.map((node, index) => {
+                  const IconComponent = node.icon;
+                  const isLast = index === timelineNodes.length - 1;
 
-                return (
-                  <div key={node.id} className="flex items-stretch gap-4">
-                    {/* Stepper Column (Bullet + Vertical Centered Line) */}
-                    <div className="flex flex-col items-center shrink-0 w-6">
-                      {/* Stepper Bullet */}
-                      <div className="flex items-center justify-center shrink-0">
-                        {node.isCompleted ? (
-                          <div
-                            className={cn(
-                              "h-6 w-6 rounded-full text-white flex items-center justify-center shadow-xs",
-                              IconComponent === AlertCircle
-                                ? "bg-rose-600"
-                                : "bg-emerald-600",
-                            )}
-                          >
-                            {IconComponent === AlertCircle ? (
-                              <AlertCircle className="h-3.5 w-3.5 stroke-[2.5]" />
-                            ) : (
-                              <Check className="h-3.5 w-3.5 stroke-[2.5]" />
-                            )}
-                          </div>
-                        ) : node.isCurrent ? (
-                          <div
-                            className={cn(
-                              "h-6 w-6 rounded-full ring-4 text-white flex items-center justify-center shadow-xs animate-pulse",
-                              node.isReworkStage
-                                ? "bg-amber-600 ring-amber-100 dark:ring-amber-950"
-                                : node.isReopenedStage
-                                  ? "bg-purple-600 ring-purple-100 dark:ring-purple-950"
-                                  : "bg-teal-600 ring-teal-100 dark:ring-teal-950",
-                            )}
-                          >
-                            <IconComponent className="h-3.5 w-3.5" />
-                          </div>
-                        ) : (
-                          <div className="h-6 w-6 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-300 flex items-center justify-center">
-                            <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Line to next node - perfectly centered */}
-                      {!isLast && (
-                        <div className="w-0.5 flex-1 bg-slate-200 dark:bg-slate-800 my-1" />
-                      )}
-                    </div>
-
-                    {/* Step Content */}
-                    <div
-                      className={cn(
-                        "min-w-0 flex-1 flex items-start justify-between gap-4",
-                        !isLast && "pb-7",
-                      )}
-                    >
-                      <div className="min-w-0">
-                        <div
-                          className={`text-sm font-bold leading-tight ${
-                            node.isCurrent
-                              ? node.isReworkStage
-                                ? "text-amber-700 dark:text-amber-400 font-extrabold"
-                                : node.isReopenedStage
-                                  ? "text-purple-700 dark:text-purple-400 font-extrabold"
-                                  : "text-[#0F766E] dark:text-teal-400 font-extrabold"
-                              : node.isCompleted
-                                ? "text-slate-800 dark:text-slate-200"
-                                : "text-slate-400 dark:text-slate-500"
-                          }`}
-                        >
-                          {node.title}
-                        </div>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            node.isCurrent
-                              ? "text-slate-700 dark:text-slate-300 font-medium"
-                              : "text-slate-500 dark:text-slate-400"
-                          }`}
-                        >
-                          {node.description}
-                        </p>
-                      </div>
-
-                      {/* Date / Timestamp */}
-                      <div className="text-right shrink-0">
-                        {node.isCurrent ? (
-                          <span
-                            className={cn(
-                              "text-[11px] font-bold animate-pulse",
-                              node.isReworkStage
-                                ? "text-amber-600 dark:text-amber-400"
-                                : node.isReopenedStage
-                                  ? "text-purple-600 dark:text-purple-400"
-                                  : "text-teal-600 dark:text-teal-400",
-                            )}
-                          >
-                            In Progress
-                          </span>
-                        ) : node.isCompleted ? (
-                          node.date ? (
-                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                              {new Date(node.date).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                              <span className="block text-[11px] font-normal text-slate-400">
-                                {new Date(node.date).toLocaleTimeString(
-                                  "en-IN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </span>
+                  return (
+                    <div key={node.id} className="flex items-stretch gap-4">
+                      {/* Stepper Column (Bullet + Vertical Centered Line) */}
+                      <div className="flex flex-col items-center shrink-0 w-6">
+                        {/* Stepper Bullet */}
+                        <div className="flex items-center justify-center shrink-0">
+                          {node.isCompleted ? (
+                            <div
+                              className={cn(
+                                "h-6 w-6 rounded-full text-white flex items-center justify-center shadow-xs",
+                                IconComponent === AlertCircle
+                                  ? "bg-rose-600"
+                                  : "bg-emerald-600",
+                              )}
+                            >
+                              {IconComponent === AlertCircle ? (
+                                <AlertCircle className="h-3.5 w-3.5 stroke-[2.5]" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                              )}
+                            </div>
+                          ) : node.isCurrent ? (
+                            <div
+                              className={cn(
+                                "h-6 w-6 rounded-full ring-4 text-white flex items-center justify-center shadow-xs animate-pulse",
+                                node.isReworkStage
+                                  ? "bg-amber-600 ring-amber-100 dark:ring-amber-950"
+                                  : node.isReopenedStage
+                                    ? "bg-purple-600 ring-purple-100 dark:ring-purple-950"
+                                    : "bg-teal-600 ring-teal-100 dark:ring-teal-950",
+                              )}
+                            >
+                              <IconComponent className="h-3.5 w-3.5" />
                             </div>
                           ) : (
-                            <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                              {new Date(
-                                grievance.updatedAt || grievance.createdAt,
-                              ).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                              <span className="block text-[11px] font-normal text-slate-400">
-                                {new Date(
-                                  grievance.updatedAt || grievance.createdAt,
-                                ).toLocaleTimeString("en-IN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </span>
+                            <div className="h-6 w-6 rounded-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-300 flex items-center justify-center">
+                              <div className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
                             </div>
-                          )
-                        ) : (
-                          <span className="text-[11px] text-slate-400 italic">
-                            Pending
-                          </span>
+                          )}
+                        </div>
+
+                        {/* Line to next node - perfectly centered */}
+                        {!isLast && (
+                          <div className="w-0.5 flex-1 bg-slate-200 dark:bg-slate-800 my-1" />
                         )}
                       </div>
+
+                      {/* Step Content */}
+                      <div
+                        className={cn(
+                          "min-w-0 flex-1 flex items-start justify-between gap-4",
+                          !isLast && "pb-7",
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <div
+                            className={`text-sm font-bold leading-tight ${
+                              node.isCurrent
+                                ? node.isReworkStage
+                                  ? "text-amber-700 dark:text-amber-400 font-extrabold"
+                                  : node.isReopenedStage
+                                    ? "text-purple-700 dark:text-purple-400 font-extrabold"
+                                    : "text-[#0F766E] dark:text-teal-400 font-extrabold"
+                                : node.isCompleted
+                                  ? "text-slate-800 dark:text-slate-200"
+                                  : "text-slate-400 dark:text-slate-500"
+                            }`}
+                          >
+                            {node.title}
+                          </div>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              node.isCurrent
+                                ? "text-slate-700 dark:text-slate-300 font-medium"
+                                : "text-slate-500 dark:text-slate-400"
+                            }`}
+                          >
+                            {node.description}
+                          </p>
+                        </div>
+
+                        {/* Date / Timestamp */}
+                        <div className="text-right shrink-0">
+                          {node.isCurrent ? (
+                            <span
+                              className={cn(
+                                "text-[11px] font-bold animate-pulse",
+                                node.isReworkStage
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : node.isReopenedStage
+                                    ? "text-purple-600 dark:text-purple-400"
+                                    : "text-teal-600 dark:text-teal-400",
+                              )}
+                            >
+                              In Progress
+                            </span>
+                          ) : node.isCompleted ? (
+                            node.date ? (
+                              <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                {new Date(node.date).toLocaleDateString(
+                                  "en-IN",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  },
+                                )}
+                                <span className="block text-[11px] font-normal text-slate-400">
+                                  {new Date(node.date).toLocaleTimeString(
+                                    "en-IN",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                {new Date(
+                                  grievance.updatedAt || grievance.createdAt,
+                                ).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                                <span className="block text-[11px] font-normal text-slate-400">
+                                  {new Date(
+                                    grievance.updatedAt || grievance.createdAt,
+                                  ).toLocaleTimeString("en-IN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Pending
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

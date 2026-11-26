@@ -285,7 +285,7 @@ export function CaseFileInspectionModal({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 flex flex-col w-full max-w-5xl max-h-[92vh] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="relative z-10 flex flex-col w-full max-w-5xl h-[90vh] max-h-[92vh] min-h-[580px] rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
         <CaseInspectionHeader
           ticketCode={currentGrievance.ticketCode}

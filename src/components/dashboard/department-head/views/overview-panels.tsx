@@ -611,8 +611,8 @@ export function RecentActivityPanel({
   onViewFullActivity: () => void;
 }) {
   return (
-    <div className="lg:col-span-7 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-2.5 h-auto">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+    <div className="lg:col-span-7 rounded-xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-2xs space-y-2.5 min-h-[220px] flex flex-col justify-between">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 shrink-0">
         <div className="flex items-center gap-1.5">
           <ShieldCheck className="h-4 w-4 text-emerald-700" />
           <h3 className="text-sm sm:text-sm font-semibold text-slate-900">
@@ -632,10 +632,16 @@ export function RecentActivityPanel({
         </button>
       </div>
 
-      <div className="max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-1.5 divide-y divide-slate-100">
+      <div className="flex-1 max-h-21.25 overflow-y-scroll custom-scrollbar pr-1.5 space-y-1.5 divide-y divide-slate-100 flex flex-col justify-center">
         {governanceAuditFeed.length === 0 ? (
-          <div className="py-4 text-center text-slate-400 text-sm font-normal">
-            No governance audit events recorded yet.
+          <div className="py-6 text-center text-slate-400 text-sm font-normal flex flex-col items-center justify-center space-y-1">
+            <ShieldCheck className="h-6 w-6 text-slate-300" />
+            <span className="text-xs font-semibold text-slate-600">
+              No Governance Events
+            </span>
+            <span className="text-[11px] text-slate-400">
+              No governance audit events recorded yet for this department.
+            </span>
           </div>
         ) : (
           governanceAuditFeed.map((feed) => {

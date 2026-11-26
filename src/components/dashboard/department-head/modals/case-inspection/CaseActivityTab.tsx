@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp } from "lucide-react";
+import { Activity, ArrowDownUp } from "lucide-react";
 import { useState } from "react";
 import {
   formatAuditActionTitle,
@@ -41,8 +41,8 @@ export function CaseActivityTab({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200/90 bg-white p-3 space-y-2 shadow-2xs">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+    <div className="rounded-xl border border-slate-200/90 bg-white p-4 space-y-3 shadow-2xs min-h-[360px] flex flex-col">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 shrink-0">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Activity Timeline
         </span>
@@ -63,9 +63,20 @@ export function CaseActivityTab({
       </div>
 
       {timelineEvents.length === 0 ? (
-        <p className="text-xs text-slate-400 italic py-2">
-          No activity records logged for this case.
-        </p>
+        <div className="flex-1 flex flex-col items-center justify-center py-10 text-center space-y-2.5">
+          <div className="h-10 w-10 rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center text-slate-400">
+            <Activity className="h-5 w-5" />
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-xs font-semibold text-slate-700">
+              No Activity Logged Yet
+            </p>
+            <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+              Investigation steps, status updates, and milestone events will
+              appear here chronologically.
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="relative pl-6 space-y-4 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
           {timelineEvents.map((ev, idx) => (
