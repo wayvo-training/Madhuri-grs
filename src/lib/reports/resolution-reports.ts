@@ -117,7 +117,7 @@ export async function generateResolutionAnalytics(
     scopedDepartmentName = matchedDept?.department_name || null;
   }
 
-  // 4. Construct Where Clause (Grievances received or closed within the reporting period)
+  // 4. Construct Where Clause (Grievances received, closed, or with resolution activity in the reporting period)
   const andConditions: Prisma.grievancesWhereInput[] = [
     {
       OR: [
@@ -131,6 +131,16 @@ export async function generateResolutionAnalytics(
           closed_at: {
             gte: startDate,
             lte: endDate,
+          },
+        },
+        {
+          resolutions: {
+            some: {
+              submitted_at: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
           },
         },
       ],
@@ -184,11 +194,14 @@ export async function generateResolutionAnalytics(
     AND: andConditions,
   };
 
-  // Pending cases backlog where clause (active unresolved backlog up to endDate)
+  // Pending cases backlog where clause (active unresolved backlog within the period)
   const pendingWhereConditions: Prisma.grievancesWhereInput = {
     AND: [
       {
-        created_at: { lte: endDate },
+        created_at: {
+          gte: startDate,
+          lte: endDate,
+        },
         status: { not: "CLOSED" },
         closed_at: null,
       },
@@ -223,6 +236,32 @@ export async function generateResolutionAnalytics(
         : []),
       ...(filters.priority && filters.priority.toUpperCase() !== "ALL"
         ? [{ priority: filters.priority.toUpperCase() }]
+        : []),
+      ...(filters.search
+        ? [
+            {
+              OR: [
+                {
+                  grievance_number: {
+                    contains: filters.search.trim(),
+                    mode: "insensitive" as Prisma.QueryMode,
+                  },
+                },
+                {
+                  title: {
+                    contains: filters.search.trim(),
+                    mode: "insensitive" as Prisma.QueryMode,
+                  },
+                },
+                {
+                  description: {
+                    contains: filters.search.trim(),
+                    mode: "insensitive" as Prisma.QueryMode,
+                  },
+                },
+              ],
+            },
+          ]
         : []),
     ],
   };
@@ -851,7 +890,7 @@ export async function generateResolutionAnalytics(
     avgDaysOpen: calculateAverage(pendingAgesDays),
     maxDaysOpen: pendingAgesDays.length > 0 ? Math.max(...pendingAgesDays) : 0,
     ageBuckets,
-    recentPendingCases: recentPendingItems.slice(0, 10),
+    recentPendingCases: recentPendingItems,
   };
 
   // =================================================================
