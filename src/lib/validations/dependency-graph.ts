@@ -218,8 +218,12 @@ export function deriveTopologicalOrder(
   // 7. Assemble final derived order
   const derivedOrder: DerivedOrderNode[] = sortedOrderLower.map(
     (lower, index) => {
-      const deptInfo = allDeptsMap.get(lower)!;
       const custom = depMap.get(lower);
+      const deptInfo = allDeptsMap.get(lower) || {
+        name: custom?.department_name || lower,
+        id: custom?.department_id,
+        isPrimary: false,
+      };
       const stage = stageMap.get(lower) ?? 1;
       const prereqs = prereqMap.get(lower) || [];
 

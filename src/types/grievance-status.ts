@@ -24,6 +24,7 @@ export type GrievanceLifecycleStatus =
   | "ASSIGNED"
   | "IN_PROGRESS"
   | "AWAITING_INFORMATION"
+  | "ESCALATED"
   | "RESOLVED"
   | "REWORK"
   | "RESOLUTION_PENDING_APPROVAL"
@@ -38,6 +39,7 @@ export const GRIEVANCE_LIFECYCLE_STATUSES: readonly GrievanceLifecycleStatus[] =
     "ASSIGNED",
     "IN_PROGRESS",
     "AWAITING_INFORMATION",
+    "ESCALATED",
     "RESOLVED",
     "REWORK",
     "RESOLUTION_PENDING_APPROVAL",
@@ -71,7 +73,7 @@ export function normalizeGrievanceStatus(
     case "REOPEN_REVIEW":
       return "RESOLUTION_PENDING_APPROVAL";
     case "ESCALATED":
-      return "IN_PROGRESS";
+      return "ESCALATED";
     case "SUBMITTED":
     case "AWAITING_ROUTING":
     case "AWAITING_ASSIGNMENT":

@@ -163,10 +163,10 @@ export async function calculateStaffRecommendations(
 
   // Filter: Prefer STAFF role members over DEPARTMENT_HEAD unless no staff members exist
   const hasDedicatedStaff = eligibleStaff.some(
-    (u) => u.roles.role_name === "STAFF",
+    (u) => u.roles?.role_name === "STAFF",
   );
   const candidates = hasDedicatedStaff
-    ? eligibleStaff.filter((u) => u.roles.role_name === "STAFF")
+    ? eligibleStaff.filter((u) => u.roles?.role_name === "STAFF")
     : eligibleStaff;
 
   const maxCapacity = DEFAULT_ASSIGNMENT_CONFIG.MAX_STAFF_CAPACITY;
@@ -209,7 +209,7 @@ export async function calculateStaffRecommendations(
     const grievanceTokens =
       `${catLower} ${subcatLower} ${grievanceTitleLower} ${grievanceDescLower}`
         .split(/[\s/&,-]+/)
-        .filter((w) => w.length > 2);
+        .filter((w) => w.length >= 2);
     const tokenSet = new Set(grievanceTokens);
 
     for (const us of staff.user_skills) {
@@ -236,7 +236,7 @@ export async function calculateStaffRecommendations(
       // 2. Token overlap with grievance content
       const skillWords = skillNameLower
         .split(/[\s/&,-]+/)
-        .filter((w) => w.length > 2);
+        .filter((w) => w.length >= 2);
       const matchedTokensCount = skillWords.filter((w) =>
         tokenSet.has(w),
       ).length;

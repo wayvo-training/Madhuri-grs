@@ -19,5 +19,6 @@ export const DEFAULT_ASSIGNMENT_CONFIG = {
     "RESOLVED",
     "UNDER_REVIEW",
     "RESOLUTION_PENDING_APPROVAL",
+    "COMPLETED",
   ] as const,
 };

@@ -86,7 +86,7 @@ export async function POST(
     }
 
     const user = await getCurrentUser();
-    if (!user || user.roles?.role_name !== "END_USER") {
+    if (user?.roles?.role_name !== "END_USER") {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 },
