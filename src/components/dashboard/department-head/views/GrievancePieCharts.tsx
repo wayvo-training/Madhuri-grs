@@ -23,6 +23,7 @@ export function GrievancePieCharts({
     let unassigned = 0;
     let assigned = 0;
     let inProgress = 0;
+    let blocked = 0;
     let pendingApproval = 0;
     let awaitingInfo = 0;
     let resolved = 0;
@@ -33,6 +34,11 @@ export function GrievancePieCharts({
       const s = (g.status || "").toUpperCase();
       const myDeptStatus = (g.myDepartmentStatus || "").toUpperCase();
       const overallStatus = (g.overallStatus || "").toUpperCase();
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        s === "BLOCKED" ||
+        myDeptStatus === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
 
       if (s === "CLOSED" || overallStatus === "CLOSED") {
         closed++;
@@ -48,16 +54,23 @@ export function GrievancePieCharts({
         s === "PENDING_INFO"
       ) {
         awaitingInfo++;
+      } else if (isBlocked) {
+        blocked++;
       } else if (
-        !g.assignedStaffId ||
-        s === "SUBMITTED" ||
-        s === "ROUTED" ||
-        s === "PENDING_ASSIGNMENT" ||
-        s === "AWAITING_ASSIGNMENT" ||
-        myDeptStatus === "PENDING_ASSIGNMENT"
+        !isBlocked &&
+        (!g.assignedStaffId ||
+          s === "SUBMITTED" ||
+          s === "ROUTED" ||
+          s === "PENDING_ASSIGNMENT" ||
+          s === "AWAITING_ASSIGNMENT" ||
+          myDeptStatus === "PENDING_ASSIGNMENT" ||
+          g.assignedStaffName === "Unassigned")
       ) {
         unassigned++;
-      } else if (s === "ASSIGNED" || myDeptStatus === "ASSIGNED") {
+      } else if (
+        !isBlocked &&
+        (s === "ASSIGNED" || myDeptStatus === "ASSIGNED")
+      ) {
         assigned++;
       } else {
         inProgress++;
@@ -88,6 +101,12 @@ export function GrievancePieCharts({
         value: unassigned,
         fill: STATUS_COLORS.UNASSIGNED,
         description: "Needs assignment",
+      },
+      {
+        name: "Blocked",
+        value: blocked,
+        fill: STATUS_COLORS.BLOCKED || "#F59E0B",
+        description: "Waiting for prerequisite",
       },
       {
         name: "Awaiting Info",
@@ -175,6 +194,7 @@ export function GrievancePieCharts({
       color: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
     },
     unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
+    blocked: { label: "Blocked", color: STATUS_COLORS.BLOCKED || "#F59E0B" },
     awaitingInfo: {
       label: "Awaiting Info",
       color: STATUS_COLORS.AWAITING_INFO || "#D97706",
@@ -199,6 +219,7 @@ export function GrievancePieCharts({
       "Resolution Pending Approval": "RESOLUTION_PENDING_APPROVAL",
       "Under Review": "RESOLUTION_PENDING_APPROVAL",
       Unassigned: "UNASSIGNED",
+      Blocked: "BLOCKED",
       "Awaiting Info": "AWAITING_INFORMATION",
       Resolved: "RESOLVED",
       Closed: "CLOSED",

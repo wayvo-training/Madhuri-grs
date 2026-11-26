@@ -4,6 +4,7 @@ export const STATUS_COLORS: Record<string, string> = {
   UNDER_REVIEW: "#7C3AED",
   REOPENED: "#E11D48",
   UNASSIGNED: "#9333EA",
+  BLOCKED: "#F59E0B",
   CLOSED: "#64748B",
   RESOLVED: "#059669",
   AWAITING_INFO: "#D97706",

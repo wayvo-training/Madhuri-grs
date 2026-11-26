@@ -273,7 +273,23 @@ export function QueueView({
             ].includes(s)
           )
             return false;
+        } else if (statusFilter === "BLOCKED") {
+          const isBlocked =
+            Boolean(g.isBlocked) ||
+            s === "BLOCKED" ||
+            myDeptStatus === "BLOCKED" ||
+            g.assignedStaffName === "Blocked";
+          if (!isBlocked) return false;
+          if (s === "CLOSED" || overallStatus === "CLOSED" || s === "RESOLVED")
+            return false;
         } else if (statusFilter === "UNASSIGNED") {
+          const isBlocked =
+            Boolean(g.isBlocked) ||
+            s === "BLOCKED" ||
+            myDeptStatus === "BLOCKED" ||
+            g.assignedStaffName === "Blocked";
+          if (isBlocked) return false;
+
           if (
             s === "CLOSED" ||
             overallStatus === "CLOSED" ||
@@ -309,6 +325,13 @@ export function QueueView({
             myDeptStatus === "PENDING_ASSIGNMENT";
           if (!isUnassigned) return false;
         } else if (statusFilter === "IN_PROGRESS") {
+          const isBlocked =
+            Boolean(g.isBlocked) ||
+            s === "BLOCKED" ||
+            myDeptStatus === "BLOCKED" ||
+            g.assignedStaffName === "Blocked";
+          if (isBlocked) return false;
+
           if (
             s === "ASSIGNED" ||
             myDeptStatus === "ASSIGNED" ||
@@ -328,22 +351,22 @@ export function QueueView({
             [
               "AWAITING_INFORMATION",
               "WAITING_ON_USER",
-              "BLOCKED",
               "PENDING_INFO",
             ].includes(s)
           )
             return false;
 
           const isUnassigned =
-            !g.assignedStaffId ||
-            !g.assignedStaffName ||
-            g.assignedStaffName === "Unassigned" ||
-            s === "SUBMITTED" ||
-            s === "AWAITING_ROUTING" ||
-            s === "AWAITING_ASSIGNMENT" ||
-            s === "ROUTED" ||
-            s === "PENDING_ASSIGNMENT" ||
-            myDeptStatus === "PENDING_ASSIGNMENT";
+            !isBlocked &&
+            (!g.assignedStaffId ||
+              !g.assignedStaffName ||
+              g.assignedStaffName === "Unassigned" ||
+              s === "SUBMITTED" ||
+              s === "AWAITING_ROUTING" ||
+              s === "AWAITING_ASSIGNMENT" ||
+              s === "ROUTED" ||
+              s === "PENDING_ASSIGNMENT" ||
+              myDeptStatus === "PENDING_ASSIGNMENT");
           if (isUnassigned) return false;
         } else if (statusFilter === "ASSIGNED") {
           if (s !== "ASSIGNED" && myDeptStatus !== "ASSIGNED") return false;
@@ -360,6 +383,12 @@ export function QueueView({
       // 3. Staff Filter from parent
       if (staffFilter && staffFilter !== "ALL") {
         if (staffFilter === "UNASSIGNED") {
+          const isBlocked =
+            Boolean(g.isBlocked) ||
+            (g.status || "").toUpperCase() === "BLOCKED" ||
+            (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+            g.assignedStaffName === "Blocked";
+          if (isBlocked) return false;
           if (["CLOSED", "RESOLVED"].includes(g.status)) return false;
           if (g.assignedStaffId) return false;
         } else if (g.assignedStaffId !== staffFilter) {
@@ -384,7 +413,19 @@ export function QueueView({
     if (!sortState.field || !sortState.direction) {
       // Default Sort: Unassigned grievances first (excluding closed/resolved), then sorted by newest first
       return list.sort((a, b) => {
+        const isBlockedA =
+          Boolean(a.isBlocked) ||
+          (a.status || "").toUpperCase() === "BLOCKED" ||
+          (a.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+          a.assignedStaffName === "Blocked";
+        const isBlockedB =
+          Boolean(b.isBlocked) ||
+          (b.status || "").toUpperCase() === "BLOCKED" ||
+          (b.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+          b.assignedStaffName === "Blocked";
+
         const isUnassignedA =
+          !isBlockedA &&
           !["CLOSED", "RESOLVED"].includes(a.status) &&
           (!a.assignedStaffId ||
             !a.assignedStaffName ||
@@ -392,6 +433,7 @@ export function QueueView({
             a.status === "SUBMITTED" ||
             a.status === "ROUTED");
         const isUnassignedB =
+          !isBlockedB &&
           !["CLOSED", "RESOLVED"].includes(b.status) &&
           (!b.assignedStaffId ||
             !b.assignedStaffName ||
@@ -497,6 +539,8 @@ export function QueueView({
         { label: "Routed", value: "ROUTED" },
         { label: "Assigned", value: "ASSIGNED" },
         { label: "In Progress", value: "IN_PROGRESS" },
+        { label: "Blocked (Waiting for Prerequisite)", value: "BLOCKED" },
+        { label: "Pending Approval", value: "RESOLUTION_PENDING_APPROVAL" },
         { label: "Under Review", value: "UNDER_REVIEW" },
         { label: "Reopened", value: "REOPENED" },
         { label: "Escalated", value: "ESCALATED" },

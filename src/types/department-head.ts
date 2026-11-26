@@ -270,6 +270,7 @@ export type DepartmentHeadTab =
   | "ESCALATED"
   | "CLOSED"
   | "UNASSIGNED"
+  | "BLOCKED"
   | "HIGH_CRITICAL"
   | "AT_RISK"
   | "CROSS_DEPT"
@@ -417,6 +418,7 @@ export interface CaseProgressData {
 
 export interface DepartmentMetricsSummary {
   unassignedCount: number;
+  blockedCount?: number;
   inProgressCount: number;
   slaAtRiskCount: number;
   escalatedCount: number;

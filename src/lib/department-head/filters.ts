@@ -146,21 +146,51 @@ export function computeDepartmentMetrics(
   grievances: GrievanceItem[],
   staffList: StaffMember[],
 ): DepartmentMetricsSummary {
+  const isGrievanceBlocked = (g: GrievanceItem) =>
+    Boolean(
+      g.isBlocked ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked",
+    );
+
+  const blockedCount = grievances.filter(
+    (g) =>
+      isGrievanceBlocked(g) &&
+      g.status !== "CLOSED" &&
+      g.status !== "RESOLVED" &&
+      g.status !== "COMPLETED" &&
+      g.myDepartmentStatus !== "COMPLETED" &&
+      g.overallStatus !== "CLOSED" &&
+      g.overallStatus !== "RESOLVED",
+  ).length;
+
   const unassignedCount = grievances.filter(
     (g) =>
+      !isGrievanceBlocked(g) &&
       (!g.assignedStaffId ||
         g.status === "SUBMITTED" ||
         g.status === "AWAITING_ROUTING" ||
         g.status === "AWAITING_ASSIGNMENT" ||
-        g.status === "ROUTED") &&
+        g.status === "ROUTED" ||
+        g.status === "PENDING_ASSIGNMENT" ||
+        g.myDepartmentStatus === "PENDING_ASSIGNMENT" ||
+        g.assignedStaffName === "Unassigned") &&
       g.status !== "CLOSED" &&
-      g.status !== "RESOLVED",
+      g.status !== "RESOLVED" &&
+      g.status !== "COMPLETED" &&
+      g.myDepartmentStatus !== "COMPLETED" &&
+      g.overallStatus !== "CLOSED" &&
+      g.overallStatus !== "RESOLVED",
   ).length;
 
   const inProgressCount = grievances.filter(
     (g) =>
+      !isGrievanceBlocked(g) &&
       g.status !== "CLOSED" &&
       g.status !== "RESOLVED" &&
+      g.overallStatus !== "CLOSED" &&
+      g.overallStatus !== "RESOLVED" &&
       (g.status === "IN_PROGRESS" ||
         g.status === "ASSIGNED" ||
         g.status === "AWAITING_INFORMATION" ||
@@ -261,6 +291,7 @@ export function computeDepartmentMetrics(
 
   return {
     unassignedCount,
+    blockedCount,
     inProgressCount,
     slaAtRiskCount,
     escalatedCount,
@@ -285,6 +316,11 @@ export function computeAttentionRequiredList(
   return grievances
     .filter((g) => {
       if (g.status === "CLOSED" || g.status === "RESOLVED") return false;
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
       const isStaffInactive = Boolean(g.isAssignedStaffInactive);
       const isBreached =
         g.slaStatus === "BREACHED" ||
@@ -292,11 +328,15 @@ export function computeAttentionRequiredList(
         Boolean(g.escalationReason || g.hodIntervention);
       const isAtRisk = g.slaStatus === "AT_RISK";
       const isUnassigned =
-        !g.assignedStaffId ||
-        g.status === "SUBMITTED" ||
-        g.status === "AWAITING_ROUTING" ||
-        g.status === "AWAITING_ASSIGNMENT" ||
-        g.status === "ROUTED";
+        !isBlocked &&
+        (!g.assignedStaffId ||
+          g.status === "SUBMITTED" ||
+          g.status === "AWAITING_ROUTING" ||
+          g.status === "AWAITING_ASSIGNMENT" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT" ||
+          g.assignedStaffName === "Unassigned");
       const isPendingReview = requiresHeadResolutionReview(g);
       const isPendingGracePeriod = Boolean(
         g.hasPendingExtension || g.latestExtension?.status === "PENDING",
@@ -318,6 +358,11 @@ export function computeAttentionRequiredList(
     })
     .sort((a, b) => {
       const getPriorityRank = (g: GrievanceItem) => {
+        const isBlocked =
+          Boolean(g.isBlocked) ||
+          (g.status || "").toUpperCase() === "BLOCKED" ||
+          (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+          g.assignedStaffName === "Blocked";
         if (g.isAssignedStaffInactive) return 5;
         if (g.hasPendingExtension || g.latestExtension?.status === "PENDING")
           return 4.5;
@@ -329,7 +374,7 @@ export function computeAttentionRequiredList(
         )
           return 4;
         if (g.slaStatus === "AT_RISK") return 3;
-        if (!g.assignedStaffId) return 2;
+        if (!isBlocked && !g.assignedStaffId) return 2;
         return 1;
       };
       return getPriorityRank(b) - getPriorityRank(a);
@@ -407,16 +452,51 @@ export function filterDepartmentGrievances(
       if (!isException) return false;
     }
     if (selectedTab === "UNASSIGNED") {
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
+      if (isBlocked) return false;
       const isUnassigned =
-        !g.assignedStaffId ||
-        g.status === "SUBMITTED" ||
-        g.status === "AWAITING_ROUTING" ||
-        g.status === "AWAITING_ASSIGNMENT" ||
-        g.status === "ROUTED" ||
-        g.status === "PENDING_ASSIGNMENT";
+        (!g.assignedStaffId ||
+          g.status === "SUBMITTED" ||
+          g.status === "AWAITING_ROUTING" ||
+          g.status === "AWAITING_ASSIGNMENT" ||
+          g.status === "ROUTED" ||
+          g.status === "PENDING_ASSIGNMENT" ||
+          g.myDepartmentStatus === "PENDING_ASSIGNMENT" ||
+          g.assignedStaffName === "Unassigned") &&
+        g.status !== "CLOSED" &&
+        g.status !== "RESOLVED" &&
+        g.status !== "COMPLETED" &&
+        g.myDepartmentStatus !== "COMPLETED" &&
+        g.overallStatus !== "CLOSED" &&
+        g.overallStatus !== "RESOLVED";
       if (!isUnassigned) return false;
     }
+    if (selectedTab === "BLOCKED") {
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
+      if (!isBlocked) return false;
+      if (
+        g.status === "CLOSED" ||
+        g.status === "RESOLVED" ||
+        g.overallStatus === "CLOSED" ||
+        g.overallStatus === "RESOLVED"
+      )
+        return false;
+    }
     if (selectedTab === "IN_PROGRESS") {
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
+      if (isBlocked) return false;
       const isInProgress =
         !["CLOSED", "RESOLVED"].includes(g.status) &&
         (g.status === "IN_PROGRESS" ||
@@ -509,15 +589,34 @@ export function filterDepartmentGrievances(
           )
         )
           return false;
+      } else if (statusFilter === "BLOCKED") {
+        const isBlocked =
+          Boolean(g.isBlocked) ||
+          s === "BLOCKED" ||
+          myDeptStatus === "BLOCKED" ||
+          g.assignedStaffName === "Blocked";
+        if (!isBlocked) return false;
+        if (s === "CLOSED" || overallStatus === "CLOSED" || s === "RESOLVED")
+          return false;
       } else if (statusFilter === "UNASSIGNED") {
+        const isBlocked =
+          Boolean(g.isBlocked) ||
+          s === "BLOCKED" ||
+          myDeptStatus === "BLOCKED" ||
+          g.assignedStaffName === "Blocked";
+        if (isBlocked) return false;
+
         if (
           s === "CLOSED" ||
           overallStatus === "CLOSED" ||
           s === "RESOLVED" ||
           s === "COMPLETED" ||
+          myDeptStatus === "COMPLETED" ||
           s === "REOPENED" ||
           s === "REWORK" ||
           s === "ESCALATED" ||
+          s === "UNDER_REVIEW" ||
+          s === "RESOLUTION_PENDING_APPROVAL" ||
           ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
             (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))) ||
           ["AWAITING_INFORMATION", "WAITING_ON_USER", "PENDING_INFO"].includes(
@@ -538,6 +637,12 @@ export function filterDepartmentGrievances(
           myDeptStatus === "PENDING_ASSIGNMENT";
         if (!isUnassigned) return false;
       } else if (statusFilter === "IN_PROGRESS") {
+        const isBlocked =
+          Boolean(g.isBlocked) ||
+          s === "BLOCKED" ||
+          myDeptStatus === "BLOCKED" ||
+          g.assignedStaffName === "Blocked";
+
         if (
           s === "ASSIGNED" ||
           myDeptStatus === "ASSIGNED" ||
@@ -545,6 +650,7 @@ export function filterDepartmentGrievances(
           overallStatus === "CLOSED" ||
           s === "RESOLVED" ||
           s === "COMPLETED" ||
+          myDeptStatus === "COMPLETED" ||
           s === "REOPENED" ||
           s === "REWORK" ||
           s === "ESCALATED" ||
@@ -557,15 +663,16 @@ export function filterDepartmentGrievances(
           return false;
 
         const isUnassigned =
-          !g.assignedStaffId ||
-          !g.assignedStaffName ||
-          g.assignedStaffName === "Unassigned" ||
-          s === "SUBMITTED" ||
-          s === "AWAITING_ROUTING" ||
-          s === "AWAITING_ASSIGNMENT" ||
-          s === "ROUTED" ||
-          s === "PENDING_ASSIGNMENT" ||
-          myDeptStatus === "PENDING_ASSIGNMENT";
+          !isBlocked &&
+          (!g.assignedStaffId ||
+            !g.assignedStaffName ||
+            g.assignedStaffName === "Unassigned" ||
+            s === "SUBMITTED" ||
+            s === "AWAITING_ROUTING" ||
+            s === "AWAITING_ASSIGNMENT" ||
+            s === "ROUTED" ||
+            s === "PENDING_ASSIGNMENT" ||
+            myDeptStatus === "PENDING_ASSIGNMENT");
         if (isUnassigned) return false;
       } else if (statusFilter === "ASSIGNED") {
         if (s !== "ASSIGNED" && myDeptStatus !== "ASSIGNED") return false;
@@ -613,7 +720,15 @@ export function filterDepartmentGrievances(
 
     if (priorityFilter !== "ALL" && g.priority !== priorityFilter) return false;
 
-    if (staffFilter === "UNASSIGNED" && g.assignedStaffId) return false;
+    if (staffFilter === "UNASSIGNED") {
+      const isBlocked =
+        Boolean(g.isBlocked) ||
+        (g.status || "").toUpperCase() === "BLOCKED" ||
+        (g.myDepartmentStatus || "").toUpperCase() === "BLOCKED" ||
+        g.assignedStaffName === "Blocked";
+      if (isBlocked) return false;
+      if (g.assignedStaffId) return false;
+    }
     if (
       staffFilter !== "ALL" &&
       staffFilter !== "UNASSIGNED" &&

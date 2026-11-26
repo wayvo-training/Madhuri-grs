@@ -1855,6 +1855,7 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
 
   const totalGrievances = uniqueGrievancesMap.size;
   let unassignedCount = 0;
+  let blockedCount = 0;
   let inProgressCount = 0;
   let atRiskCount = 0;
   let escalatedCount = 0;
@@ -1886,13 +1887,15 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
     const isDeptPending =
       dg.status === "PENDING_ASSIGNMENT" || !hasActiveAssignment;
 
-    if (
-      !isDeptBlocked &&
-      (isDeptPending || g.status === "SUBMITTED" || g.status === "ROUTED")
+    if (isDeptBlocked) {
+      blockedCount++;
+    } else if (
+      isDeptPending ||
+      g.status === "SUBMITTED" ||
+      g.status === "ROUTED"
     ) {
       unassignedCount++;
     } else if (
-      !isDeptBlocked &&
       hasActiveAssignment &&
       (dg.status === "IN_PROGRESS" ||
         dg.status === "ASSIGNED" ||
@@ -2265,6 +2268,7 @@ export async function fetchDepartmentHeadOverview(departmentId: bigint) {
     metrics: {
       totalGrievances,
       unassignedCount,
+      blockedCount,
       inProgressCount,
       atRiskCount,
       escalatedCount,
