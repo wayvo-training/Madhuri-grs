@@ -13,7 +13,11 @@ export function filterStaffGrievances(
     const isClosed = s === "CLOSED" || overallS === "CLOSED";
 
     // 1. Tab filter
-    if (filters.tab === "in_progress") {
+    if (filters.tab === "assigned") {
+      if (isClosed || s !== "ASSIGNED") {
+        return false;
+      }
+    } else if (filters.tab === "in_progress") {
       if (
         item.isMyDepartmentCompleted ||
         s === "COMPLETED" ||
@@ -28,7 +32,8 @@ export function filterStaffGrievances(
         s === "REOPEN_REVIEW" ||
         s === "RESOLUTION_PENDING_APPROVAL" ||
         s === "AWAITING_INFORMATION" ||
-        s === "WAITING_ON_USER"
+        s === "WAITING_ON_USER" ||
+        s === "ASSIGNED"
       ) {
         return false;
       }

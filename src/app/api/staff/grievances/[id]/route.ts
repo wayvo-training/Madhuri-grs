@@ -908,27 +908,40 @@ export async function GET(
     );
     const activeDepartmentName = activeDept?.departmentName;
 
+    const isEscalatedByThreshold =
+      (slaCalc.consumptionPercent >= resolvedEscalationPercent ||
+        slaCalc.state === "BREACHED" ||
+        grievance.status === "ESCALATED") &&
+      grievance.status !== "CLOSED" &&
+      grievance.status !== "RESOLVED" &&
+      grievance.status !== "AWAITING_INFORMATION" &&
+      grievance.status !== "WAITING_ON_USER" &&
+      grievance.status !== "WAITING_ON_EMPLOYEE" &&
+      !isMyDeptCompleted;
+
     const effectiveStatus = (
-      grievance.status === "CLOSED"
-        ? "CLOSED"
-        : grievance.status === "RESOLVED"
-          ? "RESOLVED"
-          : grievance.status === "AWAITING_INFORMATION" ||
-              grievance.status === "WAITING_ON_USER" ||
-              grievance.status === "WAITING_ON_EMPLOYEE"
-            ? "AWAITING_INFORMATION"
-            : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
-                grievance.status === "UNDER_REVIEW"
-              ? "RESOLUTION_PENDING_APPROVAL"
-              : grievance.status === "REWORK"
-                ? "REWORK"
-                : isMyDeptCompleted
-                  ? "COMPLETED"
-                  : myDept?.status === "ASSIGNED"
-                    ? "ASSIGNED"
-                    : myDept?.status === "IN_PROGRESS"
-                      ? "IN_PROGRESS"
-                      : grievance.status
+      isEscalatedByThreshold
+        ? "ESCALATED"
+        : grievance.status === "CLOSED"
+          ? "CLOSED"
+          : grievance.status === "RESOLVED"
+            ? "RESOLVED"
+            : grievance.status === "AWAITING_INFORMATION" ||
+                grievance.status === "WAITING_ON_USER" ||
+                grievance.status === "WAITING_ON_EMPLOYEE"
+              ? "AWAITING_INFORMATION"
+              : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  grievance.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : grievance.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : myDept?.status === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : myDept?.status === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : grievance.status
     ) as StaffGrievanceItem["status"];
 
     const targetDeptId =

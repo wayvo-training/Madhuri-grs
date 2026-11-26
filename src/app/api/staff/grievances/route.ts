@@ -160,6 +160,18 @@ export async function GET(req: NextRequest) {
         a.completed_at ||
         (isMyDeptCompleted ? new Date() : null);
 
+      const activeSla = g.sla_tracking?.[0];
+      const policyTc =
+        (activeSla?.sla_policies?.trigger_condition as Record<
+          string,
+          unknown
+        >) || {};
+      const policyAtRisk = Number(
+        policyTc.at_risk_threshold_percent ||
+          activeSla?.sla_policies?.escalation_threshold_percent ||
+          75,
+      );
+
       let slaCalc: ReturnType<typeof calculateSlaStatus>;
       if (a.grievance_departments?.status === "BLOCKED") {
         slaCalc = {
@@ -169,7 +181,6 @@ export async function GET(req: NextRequest) {
           stateLabel: "Blocked",
         };
       } else {
-        const activeSla = g.sla_tracking?.[0];
         const deptStart =
           a.grievance_departments?.activated_at ||
           a.grievance_departments?.assigned_at ||
@@ -179,16 +190,6 @@ export async function GET(req: NextRequest) {
           a.grievance_departments?.due_at || activeSla?.due_at || g.due_at;
         const deptSlaStatus =
           a.grievance_departments?.sla_status || g.sla_status;
-        const policyTc =
-          (activeSla?.sla_policies?.trigger_condition as Record<
-            string,
-            unknown
-          >) || {};
-        const policyAtRisk = Number(
-          policyTc.at_risk_threshold_percent ||
-            activeSla?.sla_policies?.escalation_threshold_percent ||
-            75,
-        );
         slaCalc = calculateSlaStatus(
           deptStart,
           deptDue,
@@ -210,26 +211,38 @@ export async function GET(req: NextRequest) {
       const activeDepartmentName =
         activeDept?.departments?.department_name || undefined;
 
+      const isEscalatedByThreshold =
+        (slaCalc.consumptionPercent >= policyAtRisk ||
+          slaCalc.state === "BREACHED" ||
+          g.status === "ESCALATED") &&
+        g.status !== "CLOSED" &&
+        g.status !== "RESOLVED" &&
+        g.status !== "AWAITING_INFORMATION" &&
+        g.status !== "WAITING_ON_USER" &&
+        !isMyDeptCompleted;
+
       const effectiveStatus = (
-        g.status === "CLOSED"
-          ? "CLOSED"
-          : g.status === "RESOLVED"
-            ? "RESOLVED"
-            : g.status === "AWAITING_INFORMATION" ||
-                g.status === "WAITING_ON_USER"
-              ? "AWAITING_INFORMATION"
-              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
-                  g.status === "UNDER_REVIEW"
-                ? "RESOLUTION_PENDING_APPROVAL"
-                : g.status === "REWORK"
-                  ? "REWORK"
-                  : isMyDeptCompleted
-                    ? "COMPLETED"
-                    : myDeptStatus === "ASSIGNED"
-                      ? "ASSIGNED"
-                      : myDeptStatus === "IN_PROGRESS"
-                        ? "IN_PROGRESS"
-                        : g.status
+        isEscalatedByThreshold
+          ? "ESCALATED"
+          : g.status === "CLOSED"
+            ? "CLOSED"
+            : g.status === "RESOLVED"
+              ? "RESOLVED"
+              : g.status === "AWAITING_INFORMATION" ||
+                  g.status === "WAITING_ON_USER"
+                ? "AWAITING_INFORMATION"
+                : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                    g.status === "UNDER_REVIEW"
+                  ? "RESOLUTION_PENDING_APPROVAL"
+                  : g.status === "REWORK"
+                    ? "REWORK"
+                    : isMyDeptCompleted
+                      ? "COMPLETED"
+                      : myDeptStatus === "ASSIGNED"
+                        ? "ASSIGNED"
+                        : myDeptStatus === "IN_PROGRESS"
+                          ? "IN_PROGRESS"
+                          : g.status
       ) as StaffGrievanceItem["status"];
 
       const rawDepts = g.grievance_departments || [];

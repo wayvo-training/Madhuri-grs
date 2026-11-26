@@ -19,6 +19,7 @@ export function StaffPieCharts({
 }: StaffPieChartsProps) {
   const statusDataRaw = React.useMemo(() => {
     let inProgress = 0;
+    let assigned = 0;
     let pendingApproval = 0;
     let awaitingInfo = 0;
     let escalated = 0;
@@ -61,6 +62,8 @@ export function StaffPieCharts({
         s === "PENDING_INFO"
       ) {
         awaitingInfo++;
+      } else if (s === "ASSIGNED") {
+        assigned++;
       } else {
         inProgress++;
       }
@@ -72,6 +75,12 @@ export function StaffPieCharts({
         value: inProgress,
         fill: STATUS_COLORS.IN_PROGRESS,
         description: "Investigation active",
+      },
+      {
+        name: "Assigned",
+        value: assigned,
+        fill: STATUS_COLORS.ASSIGNED || "#10B981",
+        description: "Assigned to staff",
       },
       {
         name: "Pending Approval",
@@ -170,6 +179,7 @@ export function StaffPieCharts({
 
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
+    assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED || "#10B981" },
     pendingApproval: {
       label: "Pending Approval",
       color: STATUS_COLORS.UNDER_REVIEW || "#8B5CF6",
@@ -195,7 +205,9 @@ export function StaffPieCharts({
 
   const handleStatusItemClick = (item: { name: string }) => {
     if (!onFilterQueue) return;
-    if (item.name === "In Progress") {
+    if (item.name === "Assigned") {
+      onFilterQueue("assigned");
+    } else if (item.name === "In Progress") {
       onFilterQueue("in_progress");
     } else if (
       item.name === "Pending Approval" ||

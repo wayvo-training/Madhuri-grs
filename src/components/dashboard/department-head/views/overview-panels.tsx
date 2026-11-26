@@ -119,14 +119,16 @@ export function AttentionRequiredPanel({
   // Pick recent grievances by submitted/created date
   const displayList = useMemo(() => {
     const source = grievances.length > 0 ? grievances : attentionRequiredList;
-    return [...source].sort((a, b) => {
-      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
-        return timeB - timeA;
-      }
-      return Number(b.id) - Number(a.id);
-    });
+    return [...source]
+      .sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (!Number.isNaN(timeA) && !Number.isNaN(timeB) && timeA !== timeB) {
+          return timeB - timeA;
+        }
+        return Number(b.id) - Number(a.id);
+      })
+      .slice(0, 5);
   }, [grievances, attentionRequiredList]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -417,8 +419,20 @@ export function AttentionRequiredPanel({
                           Paused
                         </span>
                       ) : isItemClosed ? (
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                          Completed
+                        <span
+                          className={`text-xs font-semibold w-full whitespace-nowrap ${
+                            item.slaStatus === "BREACHED"
+                              ? "text-rose-600 font-bold dark:text-rose-400"
+                              : item.slaStatus === "AT_RISK"
+                                ? "text-amber-700 dark:text-amber-400"
+                                : "text-emerald-700 dark:text-emerald-400"
+                          }`}
+                        >
+                          {item.slaStatus === "BREACHED"
+                            ? "SLA Breached"
+                            : item.slaStatus === "AT_RISK"
+                              ? "SLA At Risk"
+                              : "Within SLA"}
                         </span>
                       ) : (
                         <span

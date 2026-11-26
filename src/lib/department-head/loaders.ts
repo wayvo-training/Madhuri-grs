@@ -1524,8 +1524,23 @@ export async function fetchDepartmentHeadGrievances(
         effectiveStart,
         isPaused,
         pausedAt,
+        g.closed_at,
       );
     }
+
+    const isEscalatedByThreshold =
+      (resolvedSlaConsumptionPercent >= 75 ||
+        resolvedSlaStatus === "BREACHED" ||
+        g.status === "ESCALATED") &&
+      resolvedStatus !== "CLOSED" &&
+      resolvedStatus !== "RESOLVED" &&
+      resolvedStatus !== "BLOCKED" &&
+      resolvedStatus !== "AWAITING_INFORMATION";
+
+    if (isEscalatedByThreshold) {
+      resolvedStatus = "ESCALATED";
+    }
+
     const submitterFullName =
       `${g.users?.first_name || "Unknown"} ${g.users?.last_name || ""}`.trim();
 

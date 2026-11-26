@@ -78,14 +78,13 @@ export function EndUserPortal({
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Pagination for Recent Grievances
+  // Recent Grievances - Limit to 5 most recent across the organization/department
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const paginatedRecentGrievances = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return grievances.slice(start, start + pageSize);
-  }, [grievances, currentPage, pageSize]);
-  const totalPages = Math.ceil(grievances.length / pageSize) || 1;
+    return grievances.slice(0, 5);
+  }, [grievances]);
+  const totalPages = Math.ceil(Math.min(grievances.length, 5) / pageSize) || 1;
 
   // Stats
   const totalCases = grievances.length;
@@ -569,7 +568,7 @@ export function EndUserPortal({
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalCount={grievances.length}
+              totalCount={Math.min(grievances.length, 5)}
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               onPageSizeChange={setPageSize}

@@ -80,14 +80,16 @@ export function OverviewView({
   const displayList = useMemo(() => {
     const source =
       assignedGrievances.length > 0 ? assignedGrievances : attentionItems;
-    return [...source].sort((a, b) => {
-      const timeB = new Date(b.assignedAt || b.submittedAt).getTime();
-      const timeA = new Date(a.assignedAt || a.submittedAt).getTime();
-      if (!Number.isNaN(timeB) && !Number.isNaN(timeA) && timeB !== timeA) {
-        return timeB - timeA;
-      }
-      return Number(b.id) - Number(a.id);
-    });
+    return [...source]
+      .sort((a, b) => {
+        const timeB = new Date(b.assignedAt || b.submittedAt).getTime();
+        const timeA = new Date(a.assignedAt || a.submittedAt).getTime();
+        if (!Number.isNaN(timeB) && !Number.isNaN(timeA) && timeB !== timeA) {
+          return timeB - timeA;
+        }
+        return Number(b.id) - Number(a.id);
+      })
+      .slice(0, 5);
   }, [assignedGrievances, attentionItems]);
 
   const totalCount = displayList.length;
@@ -318,28 +320,24 @@ export function OverviewView({
 
                         {/* SLA */}
                         <td className="py-2.5 px-3 whitespace-nowrap align-middle">
-                          {isItemClosed ? (
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                              Completed
-                            </span>
-                          ) : (
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap ${
-                                isBreached
-                                  ? "text-rose-600 font-bold dark:text-rose-400"
-                                  : isAtRisk
-                                    ? "text-amber-800 font-semibold dark:text-amber-400"
-                                    : "text-slate-600 dark:text-slate-300"
-                              }`}
-                            >
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              {isBreached
-                                ? "SLA Breached"
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-semibold whitespace-nowrap ${
+                              isBreached
+                                ? "text-rose-600 font-bold dark:text-rose-400"
                                 : isAtRisk
-                                  ? "SLA At Risk"
+                                  ? "text-amber-700 dark:text-amber-400"
+                                  : "text-emerald-700 dark:text-emerald-400"
+                            }`}
+                          >
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {isBreached
+                              ? "SLA Breached"
+                              : isAtRisk
+                                ? "SLA At Risk"
+                                : isItemClosed
+                                  ? "Within SLA"
                                   : item.slaTimeLeft || "Within SLA"}
-                            </span>
-                          )}
+                          </span>
                         </td>
 
                         {/* Last Updated */}

@@ -162,7 +162,9 @@ export function GrievanceDetails({
     grievance.status === "AWAITING_INFORMATION" ||
     grievance.status === "WAITING_ON_USER";
   const isInProgress =
-    grievance.status === "IN_PROGRESS" || grievance.status === "REWORK";
+    grievance.status === "IN_PROGRESS" ||
+    grievance.status === "REWORK" ||
+    grievance.status === "ESCALATED";
 
   const inquiryUrl = buildGmailComposeUrl(
     buildStaffComplainantInquiryEmail({

@@ -807,6 +807,18 @@ export async function evaluateGrievanceSla(
         didEscalate = true;
       }
 
+      if (
+        grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        grievance.status !== "AWAITING_INFORMATION" &&
+        grievance.status !== "WAITING_ON_USER"
+      ) {
+        await prisma.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { status: "ESCALATED" },
+        });
+      }
+
       const notifType = `DEPT_SLA_${atRiskThreshold}_${deptRec.department_id}`;
       const targetUsers = await resolveDesignatedUsers(
         atRiskDesignations,
@@ -936,6 +948,18 @@ export async function evaluateGrievanceSla(
           },
         });
         didEscalate = true;
+      }
+
+      if (
+        grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        grievance.status !== "AWAITING_INFORMATION" &&
+        grievance.status !== "WAITING_ON_USER"
+      ) {
+        await prisma.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { status: "ESCALATED" },
+        });
       }
 
       const notifType = `DEPT_SLA_BREACH_${deptRec.department_id}`;
@@ -1382,6 +1406,18 @@ export async function evaluateGrievanceSla(
         didEscalate = true;
       }
 
+      if (
+        grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        grievance.status !== "AWAITING_INFORMATION" &&
+        grievance.status !== "WAITING_ON_USER"
+      ) {
+        await tx.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { status: "ESCALATED" },
+        });
+      }
+
       if (unnotifiedUsers.length > 0) {
         for (const u of unnotifiedUsers) {
           existingNotifications.push({
@@ -1504,6 +1540,18 @@ export async function evaluateGrievanceSla(
           },
         });
         didEscalate = true;
+      }
+
+      if (
+        grievance.status !== "CLOSED" &&
+        grievance.status !== "RESOLVED" &&
+        grievance.status !== "AWAITING_INFORMATION" &&
+        grievance.status !== "WAITING_ON_USER"
+      ) {
+        await tx.grievances.update({
+          where: { grievance_id: grievanceId },
+          data: { status: "ESCALATED" },
+        });
       }
 
       // 4. Send Breach Notification to designated escalation recipients
@@ -3212,6 +3260,17 @@ export async function reviewSlaExtension(
     where: { grievance_id: extension.grievance_id, status: "OPEN" },
     data: { status: "RESOLVED", resolved_at: now },
   });
+
+  const extGrievance = await client.grievances.findUnique({
+    where: { grievance_id: extension.grievance_id },
+    select: { status: true },
+  });
+  if (extGrievance?.status === "ESCALATED") {
+    await client.grievances.update({
+      where: { grievance_id: extension.grievance_id },
+      data: { status: "IN_PROGRESS" },
+    });
+  }
 
   await client.audit_logs.create({
     data: {

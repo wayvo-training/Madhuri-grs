@@ -480,7 +480,11 @@ export function SlaGovernanceView({
                               {isItemBlocked
                                 ? "Paused (Blocked)"
                                 : isClosedOrResolved
-                                  ? "Completed"
+                                  ? item.slaStatus === "BREACHED"
+                                    ? "SLA Breached"
+                                    : item.slaStatus === "AT_RISK"
+                                      ? "SLA At Risk"
+                                      : "Within SLA"
                                   : item.slaTimeLeft}
                             </span>
                           </td>

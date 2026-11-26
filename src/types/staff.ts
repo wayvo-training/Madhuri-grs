@@ -239,6 +239,7 @@ export interface StaffDashboardData {
 
 export type StaffQueueTab =
   | "all"
+  | "assigned"
   | "in_progress"
   | "under_review"
   | "at_risk"

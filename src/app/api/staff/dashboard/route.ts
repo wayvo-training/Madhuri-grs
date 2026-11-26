@@ -783,26 +783,47 @@ export async function GET(request: Request) {
         category: g.categories?.category_name || "General",
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
-        status: (g.status === "CLOSED"
-          ? "CLOSED"
-          : g.status === "RESOLVED"
-            ? "RESOLVED"
-            : g.status === "AWAITING_INFORMATION" ||
-                g.status === "WAITING_ON_USER" ||
-                g.status === "WAITING_ON_EMPLOYEE"
-              ? "AWAITING_INFORMATION"
-              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
-                  g.status === "UNDER_REVIEW"
-                ? "RESOLUTION_PENDING_APPROVAL"
-                : g.status === "REWORK"
-                  ? "REWORK"
-                  : isMyDeptCompleted
-                    ? "RESOLVED"
-                    : a.grievance_departments?.status === "ASSIGNED"
-                      ? "ASSIGNED"
-                      : a.grievance_departments?.status === "IN_PROGRESS"
-                        ? "IN_PROGRESS"
-                        : g.status) as StaffGrievanceItem["status"],
+        status: (() => {
+          const escThreshold = Number(
+            g.sla_tracking?.[0]?.sla_policies?.escalation_threshold_percent ||
+              75,
+          );
+          const isEscalatedByThreshold =
+            (slaCalc.consumptionPercent >= escThreshold ||
+              slaCalc.state === "BREACHED" ||
+              g.status === "ESCALATED") &&
+            g.status !== "CLOSED" &&
+            g.status !== "RESOLVED" &&
+            g.status !== "AWAITING_INFORMATION" &&
+            g.status !== "WAITING_ON_USER" &&
+            g.status !== "WAITING_ON_EMPLOYEE" &&
+            !isMyDeptCompleted;
+
+          if (isEscalatedByThreshold) {
+            return "ESCALATED";
+          }
+          if (g.status === "CLOSED") return "CLOSED";
+          if (g.status === "RESOLVED") return "RESOLVED";
+          if (
+            g.status === "AWAITING_INFORMATION" ||
+            g.status === "WAITING_ON_USER" ||
+            g.status === "WAITING_ON_EMPLOYEE"
+          ) {
+            return "AWAITING_INFORMATION";
+          }
+          if (
+            g.status === "RESOLUTION_PENDING_APPROVAL" ||
+            g.status === "UNDER_REVIEW"
+          ) {
+            return "RESOLUTION_PENDING_APPROVAL";
+          }
+          if (g.status === "REWORK") return "REWORK";
+          if (isMyDeptCompleted) return "RESOLVED";
+          if (a.grievance_departments?.status === "ASSIGNED") return "ASSIGNED";
+          if (a.grievance_departments?.status === "IN_PROGRESS")
+            return "IN_PROGRESS";
+          return g.status;
+        })() as StaffGrievanceItem["status"],
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,

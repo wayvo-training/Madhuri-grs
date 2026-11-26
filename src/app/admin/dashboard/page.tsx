@@ -52,7 +52,7 @@ export default async function AdminDashboardPage() {
       orderBy: { department_name: "asc" },
     }),
     prisma.grievances.findMany({
-      take: 100,
+      take: 5,
       orderBy: { created_at: "desc" },
       select: {
         grievance_id: true,

@@ -26,10 +26,15 @@ export function RecentGrievancesTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const { sortState, handleSort, sortedItems } = useTableSort(
-    recentGrievances,
-    { field: "grievance_number", direction: "desc" },
+  const recentList = useMemo(
+    () => recentGrievances.slice(0, 5),
+    [recentGrievances],
   );
+
+  const { sortState, handleSort, sortedItems } = useTableSort(recentList, {
+    field: "grievance_number",
+    direction: "desc",
+  });
 
   const paginatedGrievances = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -153,8 +158,8 @@ export function RecentGrievancesTable({
         <div className="shrink-0 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
           <Pagination
             currentPage={currentPage}
-            totalPages={Math.ceil(recentGrievances.length / pageSize) || 1}
-            totalCount={recentGrievances.length}
+            totalPages={Math.ceil(recentList.length / pageSize) || 1}
+            totalCount={recentList.length}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}

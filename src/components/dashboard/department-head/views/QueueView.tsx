@@ -931,9 +931,26 @@ export function QueueView({
                                 Paused (Blocked)
                               </span>
                             ) : isItemClosed ? (
-                              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                Completed
-                              </span>
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span
+                                  className={`text-sm font-semibold whitespace-nowrap ${
+                                    item.slaStatus === "BREACHED"
+                                      ? "text-rose-600 dark:text-rose-400 font-bold"
+                                      : item.slaStatus === "AT_RISK"
+                                        ? "text-amber-700 dark:text-amber-400"
+                                        : "text-emerald-700 dark:text-emerald-400"
+                                  }`}
+                                >
+                                  {item.slaStatus === "BREACHED"
+                                    ? "SLA Breached"
+                                    : item.slaStatus === "AT_RISK"
+                                      ? "SLA At Risk"
+                                      : "Within SLA"}
+                                </span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500">
+                                  {item.slaTimeLeft || "Preserved"}
+                                </span>
+                              </div>
                             ) : (
                               <>
                                 <span

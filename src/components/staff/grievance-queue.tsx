@@ -225,7 +225,11 @@ export function GrievanceQueue({
       const overallS = (item.overallStatus || "").toUpperCase();
       const isClosed = s === "CLOSED" || overallS === "CLOSED";
 
-      if (activeTab === "in_progress") {
+      if (activeTab === "assigned") {
+        if (isClosed || s !== "ASSIGNED") {
+          return false;
+        }
+      } else if (activeTab === "in_progress") {
         if (
           item.isMyDepartmentCompleted ||
           s === "COMPLETED" ||
@@ -240,7 +244,8 @@ export function GrievanceQueue({
           s === "REOPEN_REVIEW" ||
           s === "RESOLUTION_PENDING_APPROVAL" ||
           s === "AWAITING_INFORMATION" ||
-          s === "WAITING_ON_USER"
+          s === "WAITING_ON_USER" ||
+          s === "ASSIGNED"
         ) {
           return false;
         }
@@ -450,6 +455,8 @@ export function GrievanceQueue({
 
   const getTabLabel = (tab: StaffQueueTab) => {
     switch (tab) {
+      case "assigned":
+        return "Assigned";
       case "in_progress":
         return "In Progress";
       case "under_review":
