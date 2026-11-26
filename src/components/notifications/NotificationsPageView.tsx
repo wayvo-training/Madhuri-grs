@@ -447,33 +447,40 @@ export function NotificationsPageView({
     return notifications.map((n) => {
       const isAction =
         n.category === "ACTION_REQUIRED" ||
-        (!n.isRead &&
-          (n.type.includes("INFO_REQUESTED") ||
-            n.type === "REWORK_REQUIRED" ||
-            n.type === "REWORK_REQUESTED" ||
-            n.type === "REOPENED" ||
-            n.type === "REOPEN_REQUESTED" ||
-            n.type === "GRIEVANCE_REOPENED" ||
-            n.type === "ROUTING_EXCEPTION" ||
-            n.type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||
-            (userRole === "STAFF" &&
-              (n.type === "ASSIGNMENT" || n.type === "NEW_ASSIGNMENT")) ||
-            (userRole === "END_USER" && n.type === "RESOLUTION_SUBMITTED") ||
-            (userRole === "DEPARTMENT_HEAD" &&
-              (n.type === "SLA_BREACHED" ||
-                n.type === "SLA_AT_RISK" ||
-                n.type === "RESOLUTION_SUBMITTED")) ||
-            n.title.toLowerCase().includes("action required") ||
-            n.title.toLowerCase().includes("review required") ||
-            n.title.toLowerCase().includes("priority nudge")));
+        n.type.includes("INFO_REQUESTED") ||
+        n.type === "REWORK_REQUIRED" ||
+        n.type === "REWORK_REQUESTED" ||
+        n.type === "REOPENED" ||
+        n.type === "REOPEN_REQUESTED" ||
+        n.type === "GRIEVANCE_REOPENED" ||
+        n.type === "ROUTING_EXCEPTION" ||
+        n.type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||
+        (userRole === "STAFF" &&
+          (n.type === "ASSIGNMENT" ||
+            n.type === "NEW_ASSIGNMENT" ||
+            n.type === "REASSIGNMENT" ||
+            n.type === "HOD_DIRECTIVE_REMINDER")) ||
+        (userRole === "END_USER" && n.type === "RESOLUTION_SUBMITTED") ||
+        (userRole === "DEPARTMENT_HEAD" &&
+          (n.type === "SLA_BREACHED" ||
+            n.type === "SLA_AT_RISK" ||
+            n.type.startsWith("SLA_CRITICAL") ||
+            n.type.startsWith("SLA_RISK") ||
+            n.type.startsWith("DEPT_SLA_") ||
+            n.type === "RESOLUTION_SUBMITTED")) ||
+        n.title.toLowerCase().includes("action required") ||
+        n.title.toLowerCase().includes("review required") ||
+        n.title.toLowerCase().includes("priority nudge");
 
       const isSla =
-        n.category === "SLA_ESCALATION" ||
-        n.type.startsWith("SLA_") ||
-        n.type === "GRIEVANCE_ESCALATED" ||
-        n.title.toLowerCase().includes("sla") ||
-        n.title.toLowerCase().includes("breach") ||
-        n.title.toLowerCase().includes("escalat");
+        !isAction &&
+        (n.category === "SLA_ESCALATION" ||
+          n.type.startsWith("SLA_") ||
+          n.type.startsWith("DEPT_SLA_") ||
+          n.type === "GRIEVANCE_ESCALATED" ||
+          n.title.toLowerCase().includes("sla") ||
+          n.title.toLowerCase().includes("breach") ||
+          n.title.toLowerCase().includes("escalat"));
 
       const isUpdate = !isAction && !isSla;
 
@@ -485,21 +492,6 @@ export function NotificationsPageView({
       };
     });
   }, [notifications, userRole]);
-
-  // Summary counts
-  const summaryCounts = useMemo(() => {
-    const total = classifiedNotifications.length;
-    const actionRequired = classifiedNotifications.filter(
-      (n) => n.isActionRequiredComputed,
-    ).length;
-    const sla = classifiedNotifications.filter((n) => n.isSlaComputed).length;
-    const updates = classifiedNotifications.filter(
-      (n) => n.isUpdateComputed,
-    ).length;
-    const unread = classifiedNotifications.filter((n) => !n.isRead).length;
-
-    return { total, actionRequired, sla, updates, unread };
-  }, [classifiedNotifications]);
 
   // Role-relevant notification types for the dropdown filter (without Reopen)
   const availableTypes = useMemo(() => {
@@ -581,17 +573,10 @@ export function NotificationsPageView({
     setAdvancedMode(mode);
   };
 
-  // Filtered list evaluated through AdvancedTableSearch conditions & active grievance filter
-  const filteredNotifications = useMemo(() => {
+  // Notifications matching search / advanced conditions (without active tab filter)
+  const searchFilteredNotifications = useMemo(() => {
     return classifiedNotifications.filter((n) => {
-      // 1. Primary Tab filter
-      if (activeTab === "UNREAD" && n.isRead) return false;
-      if (activeTab === "ACTION_REQUIRED" && !n.isActionRequiredComputed)
-        return false;
-      if (activeTab === "SLA" && !n.isSlaComputed) return false;
-      if (activeTab === "UPDATES" && !n.isUpdateComputed) return false;
-
-      // 2. Specific Grievance filter (when clicking grievance in notification)
+      // 1. Specific Grievance filter (when clicking grievance or search input)
       if (selectedGrievanceNumber.trim()) {
         const q = selectedGrievanceNumber.trim().toLowerCase();
         const matchesGrievance =
@@ -602,7 +587,7 @@ export function NotificationsPageView({
         if (!matchesGrievance) return false;
       }
 
-      // 3. Evaluate Advanced Search conditions
+      // 2. Evaluate Advanced Search conditions
       if (advancedConditions.length > 0) {
         if (advancedMode === "AND") {
           const pass = advancedConditions.every((c) =>
@@ -626,11 +611,39 @@ export function NotificationsPageView({
     });
   }, [
     classifiedNotifications,
-    activeTab,
     selectedGrievanceNumber,
     advancedConditions,
     advancedMode,
   ]);
+
+  // Summary counts dynamically derived from searchFilteredNotifications
+  const summaryCounts = useMemo(() => {
+    const total = searchFilteredNotifications.length;
+    const actionRequired = searchFilteredNotifications.filter(
+      (n) => n.isActionRequiredComputed,
+    ).length;
+    const sla = searchFilteredNotifications.filter(
+      (n) => n.isSlaComputed,
+    ).length;
+    const updates = searchFilteredNotifications.filter(
+      (n) => n.isUpdateComputed,
+    ).length;
+    const unread = searchFilteredNotifications.filter((n) => !n.isRead).length;
+
+    return { total, actionRequired, sla, updates, unread };
+  }, [searchFilteredNotifications]);
+
+  // Filtered list evaluated through active tab filter on top of searchFilteredNotifications
+  const filteredNotifications = useMemo(() => {
+    return searchFilteredNotifications.filter((n) => {
+      if (activeTab === "UNREAD" && n.isRead) return false;
+      if (activeTab === "ACTION_REQUIRED" && !n.isActionRequiredComputed)
+        return false;
+      if (activeTab === "SLA" && !n.isSlaComputed) return false;
+      if (activeTab === "UPDATES" && !n.isUpdateComputed) return false;
+      return true;
+    });
+  }, [searchFilteredNotifications, activeTab]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-3">

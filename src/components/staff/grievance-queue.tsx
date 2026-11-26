@@ -263,36 +263,15 @@ export function GrievanceQueue({
           return false;
         }
       } else if (activeTab === "on_track") {
-        if (
-          item.slaStatus !== "ON_TRACK" ||
-          isClosed ||
-          s === "COMPLETED" ||
-          s === "RESOLVED" ||
-          overallS === "RESOLVED" ||
-          item.isMyDepartmentCompleted
-        ) {
+        if (item.slaStatus !== "ON_TRACK") {
           return false;
         }
       } else if (activeTab === "at_risk") {
-        if (
-          item.slaStatus !== "AT_RISK" ||
-          isClosed ||
-          s === "COMPLETED" ||
-          s === "RESOLVED" ||
-          overallS === "RESOLVED" ||
-          item.isMyDepartmentCompleted
-        ) {
+        if (item.slaStatus !== "AT_RISK") {
           return false;
         }
       } else if (activeTab === "breached") {
-        if (
-          item.slaStatus !== "BREACHED" ||
-          isClosed ||
-          s === "COMPLETED" ||
-          s === "RESOLVED" ||
-          overallS === "RESOLVED" ||
-          item.isMyDepartmentCompleted
-        ) {
+        if (item.slaStatus !== "BREACHED") {
           return false;
         }
       } else if (activeTab === "reopened") {

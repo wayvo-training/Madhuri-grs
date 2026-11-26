@@ -22,10 +22,11 @@ export function NotificationsSkeleton() {
 
       {/* 2. Tabs Row */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 shrink-0">
-        <Skeleton className="h-8 w-28 rounded-lg" />
         <Skeleton className="h-8 w-24 rounded-lg" />
         <Skeleton className="h-8 w-28 rounded-lg" />
+        <Skeleton className="h-8 w-32 rounded-lg" />
         <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-16 rounded-lg" />
       </div>
 
       {/* 3. Search Bar */}

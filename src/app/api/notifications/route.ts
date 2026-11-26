@@ -79,7 +79,6 @@ export async function GET() {
         },
       },
       orderBy: { created_at: "desc" },
-      take: 100,
     });
 
     const serializedNotifications = notifications
@@ -173,33 +172,32 @@ export async function GET() {
 
         // Determine semantic category
         const isActionRequired =
-          !n.read_at &&
-          (n.notification_type.includes("INFO_REQUESTED") ||
-            n.notification_type.includes("ACTION_REQUIRED") ||
-            n.notification_type === "REWORK_REQUIRED" ||
-            n.notification_type === "REWORK_REQUESTED" ||
-            n.notification_type === "REOPENED" ||
-            n.notification_type === "REOPEN_REQUESTED" ||
-            n.notification_type === "GRIEVANCE_REOPENED" ||
-            n.notification_type === "ROUTING_EXCEPTION" ||
-            n.notification_type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||
-            (userRole === "STAFF" &&
-              (n.notification_type === "ASSIGNMENT" ||
-                n.notification_type === "NEW_ASSIGNMENT" ||
-                n.notification_type === "REASSIGNMENT" ||
-                n.notification_type === "HOD_DIRECTIVE_REMINDER")) ||
-            (userRole === "END_USER" &&
-              n.notification_type === "RESOLUTION_SUBMITTED") ||
-            (userRole === "DEPARTMENT_HEAD" &&
-              (n.notification_type === "SLA_BREACHED" ||
-                n.notification_type === "SLA_AT_RISK" ||
-                n.notification_type.startsWith("SLA_CRITICAL") ||
-                n.notification_type.startsWith("SLA_RISK") ||
-                n.notification_type.startsWith("DEPT_SLA_") ||
-                n.notification_type === "RESOLUTION_SUBMITTED")) ||
-            title.toLowerCase().includes("action required") ||
-            title.toLowerCase().includes("review required") ||
-            title.toLowerCase().includes("priority nudge"));
+          n.notification_type.includes("INFO_REQUESTED") ||
+          n.notification_type.includes("ACTION_REQUIRED") ||
+          n.notification_type === "REWORK_REQUIRED" ||
+          n.notification_type === "REWORK_REQUESTED" ||
+          n.notification_type === "REOPENED" ||
+          n.notification_type === "REOPEN_REQUESTED" ||
+          n.notification_type === "GRIEVANCE_REOPENED" ||
+          n.notification_type === "ROUTING_EXCEPTION" ||
+          n.notification_type === "KNOWLEDGE_ARTICLE_SUBMITTED" ||
+          (userRole === "STAFF" &&
+            (n.notification_type === "ASSIGNMENT" ||
+              n.notification_type === "NEW_ASSIGNMENT" ||
+              n.notification_type === "REASSIGNMENT" ||
+              n.notification_type === "HOD_DIRECTIVE_REMINDER")) ||
+          (userRole === "END_USER" &&
+            n.notification_type === "RESOLUTION_SUBMITTED") ||
+          (userRole === "DEPARTMENT_HEAD" &&
+            (n.notification_type === "SLA_BREACHED" ||
+              n.notification_type === "SLA_AT_RISK" ||
+              n.notification_type.startsWith("SLA_CRITICAL") ||
+              n.notification_type.startsWith("SLA_RISK") ||
+              n.notification_type.startsWith("DEPT_SLA_") ||
+              n.notification_type === "RESOLUTION_SUBMITTED")) ||
+          title.toLowerCase().includes("action required") ||
+          title.toLowerCase().includes("review required") ||
+          title.toLowerCase().includes("priority nudge");
 
         const isSla =
           n.notification_type.startsWith("SLA_") ||

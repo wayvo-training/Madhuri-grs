@@ -132,15 +132,6 @@ export function StaffPieCharts({
     let breached = 0;
 
     grievances.forEach((g) => {
-      if (
-        g.status === "CLOSED" ||
-        g.status === "RESOLVED" ||
-        g.status === "COMPLETED" ||
-        g.isMyDepartmentCompleted
-      ) {
-        return;
-      }
-
       if (g.slaStatus === "BREACHED") {
         breached++;
       } else if (g.slaStatus === "AT_RISK") {
@@ -254,11 +245,11 @@ export function StaffPieCharts({
       />
       <DashboardPieChartCard
         title="My SLA Overview"
-        description="My active grievances by SLA status"
+        description="My grievances by SLA status"
         data={slaDataRaw}
         config={slaConfig}
         centerValue={totalActiveSla}
-        centerLabelTop="ACTIVE"
+        centerLabelTop="TOTAL"
         centerLabelBottom="GRIEVANCES"
         onItemClick={onFilterQueue ? handleSlaItemClick : undefined}
       />

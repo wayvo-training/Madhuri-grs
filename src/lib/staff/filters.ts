@@ -38,25 +38,15 @@ export function filterStaffGrievances(
         return false;
       }
     } else if (filters.tab === "at_risk") {
-      if (
-        item.slaStatus !== "AT_RISK" ||
-        isClosed ||
-        s === "COMPLETED" ||
-        s === "RESOLVED" ||
-        overallS === "RESOLVED" ||
-        item.isMyDepartmentCompleted
-      ) {
+      if (item.slaStatus !== "AT_RISK") {
         return false;
       }
     } else if (filters.tab === "breached") {
-      if (
-        item.slaStatus !== "BREACHED" ||
-        isClosed ||
-        s === "COMPLETED" ||
-        s === "RESOLVED" ||
-        overallS === "RESOLVED" ||
-        item.isMyDepartmentCompleted
-      ) {
+      if (item.slaStatus !== "BREACHED") {
+        return false;
+      }
+    } else if (filters.tab === "on_track") {
+      if (item.slaStatus !== "ON_TRACK") {
         return false;
       }
     } else if (filters.tab === "reopened") {

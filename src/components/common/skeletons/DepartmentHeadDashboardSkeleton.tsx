@@ -46,7 +46,7 @@ export function DepartmentHeadDashboardSkeleton() {
               <div className="absolute inset-0 rounded-full border-[18px] border-t-teal-300 border-r-teal-200 border-b-transparent border-l-transparent animate-spin opacity-40" />
             </div>
             <div className="w-full sm:w-auto sm:flex-1 justify-center grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 max-w-[340px]">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between gap-2 py-0.5"

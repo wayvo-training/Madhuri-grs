@@ -38,7 +38,7 @@ export function StaffDashboardSkeleton() {
 
             {/* Legend Skeleton */}
             <div className="w-full sm:w-auto sm:flex-1 justify-center grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 max-w-[340px]">
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between gap-2 py-0.5"
@@ -122,7 +122,7 @@ export function StaffDashboardSkeleton() {
 
           {/* Table Rows Skeleton */}
           <div className="flex-1 divide-y divide-slate-100 dark:divide-slate-800/60 overflow-hidden">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 5 }).map((_, i) => (
               <div
                 // biome-ignore lint/suspicious/noArrayIndexKey: skeleton
                 key={i}
