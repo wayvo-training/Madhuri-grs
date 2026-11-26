@@ -239,7 +239,7 @@ export async function POST(
           type: "ADDITIONAL_INFO_SUBMITTED",
           channel: "EMAIL",
           title: `Clarification Received: ${grievance.grievance_number}`,
-          message: `Hello ${assignedStaff.first_name},\n\nComplainant ${complainantName} has submitted response details and documentation for grievance #${grievance.grievance_number}.\n\nResponse Statement:\n"${responseMessage}"\n\nAttached Documents: ${incomingFiles.map((f) => f.fileName).join(", ") || "None"}\n\nThe grievance status has been transitioned back to In Progress so you can continue your investigation.\n\nRegards,\nGRS Resolution Desk`,
+          message: `Hello ${assignedStaff.first_name},\n\nComplainant ${complainantName} has submitted response details and documentation for grievance ${grievance.grievance_number}.\n\nResponse Statement:\n"${responseMessage}"\n\nAttached Documents: ${incomingFiles.map((f) => f.fileName).join(", ") || "None"}\n\nThe grievance status has been transitioned back to In Progress so you can continue your investigation.\n\nRegards,\nGRS Resolution Desk`,
         });
       }
     }

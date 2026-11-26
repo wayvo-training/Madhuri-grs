@@ -540,7 +540,7 @@ export function NotificationsPageView({
   const searchFields: SearchFieldDef[] = useMemo(
     () => [
       { id: "search", label: "Search Keyword", type: "text" },
-      { id: "grievanceNumber", label: "Grievance ID", type: "text" },
+      { id: "grievanceNumber", label: "Grievance Number", type: "text" },
       { id: "title", label: "Title", type: "text" },
       { id: "message", label: "Message Content", type: "text" },
       {

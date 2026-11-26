@@ -104,6 +104,19 @@ export async function GET() {
           .replace(/\bticket\b/gi, "grievance")
           .replace(/\bTicket\b/g, "Grievance");
 
+        // Normalize any internal ID references (#41, #216, or #GRS-...) to canonical grievance number
+        if (n.grievances?.grievance_number) {
+          const canonicalNumber = n.grievances.grievance_number;
+          if (n.grievance_id) {
+            const rawIdRegex = new RegExp(`#${n.grievance_id}\\b`, "g");
+            title = title.replace(rawIdRegex, canonicalNumber);
+            message = message.replace(rawIdRegex, canonicalNumber);
+          }
+          const doubleHashRegex = new RegExp(`#${canonicalNumber}\\b`, "g");
+          title = title.replace(doubleHashRegex, canonicalNumber);
+          message = message.replace(doubleHashRegex, canonicalNumber);
+        }
+
         // Role-aware SLA message adjustment for END_USER (no internal percentages)
         if (
           userRole === "END_USER" &&
@@ -129,18 +142,19 @@ export async function GET() {
         if (n.grievance_id) {
           actionLabel = "View Grievance →";
           const gId = n.grievance_id.toString();
+          const targetCode = n.grievances?.grievance_number || gId;
           switch (userRole) {
             case "ADMIN":
               actionUrl =
                 n.notification_type === "ROUTING_EXCEPTION"
-                  ? `/admin/grievances?tab=EXCEPTIONS&id=${gId}`
-                  : `/admin/grievances?id=${gId}`;
+                  ? `/admin/grievances?tab=EXCEPTIONS&id=${targetCode}`
+                  : `/admin/grievances?id=${targetCode}`;
               break;
             case "DEPARTMENT_HEAD":
-              actionUrl = `/department-head/dashboard?grievance=${gId}`;
+              actionUrl = `/department-head/dashboard?grievance=${targetCode}`;
               break;
             case "STAFF":
-              actionUrl = `/staff/dashboard?grievance=${gId}`;
+              actionUrl = `/staff/dashboard?grievance=${targetCode}`;
               break;
             default:
               actionUrl = `/end-user/grievances/${gId}`;

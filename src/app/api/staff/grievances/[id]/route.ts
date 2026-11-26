@@ -1379,7 +1379,7 @@ export async function PATCH(
           type: "ADDITIONAL_INFO_REQUESTED",
           channel: "EMAIL",
           title: `GRS Action Required: Additional Details for ${grievance.grievance_number}`,
-          message: `Dear ${complainantName},\n\nThe investigating officer for your grievance #${grievance.grievance_number} (${grievance.title}) has requested additional information:\n\n${message}${docsSummary}\n\nPlease visit your GRS portal or track page to submit the required details and upload documents.\n\nRegards,\nGRS Resolution Desk`,
+          message: `Dear ${complainantName},\n\nThe investigating officer for your grievance ${grievance.grievance_number} (${grievance.title}) has requested additional information:\n\n${message}${docsSummary}\n\nPlease visit your GRS portal or track page to submit the required details and upload documents.\n\nRegards,\nGRS Resolution Desk`,
         });
       }
 

@@ -92,6 +92,23 @@ export class NotificationService {
   }
 
   /**
+   * Resolves canonical grievance number for display in notifications
+   */
+  private static async getCanonicalGrievanceNumber(
+    grievanceId: bigint,
+    providedNumber?: string,
+  ): Promise<string> {
+    if (providedNumber && providedNumber.trim().length > 0) {
+      return providedNumber;
+    }
+    const g = await prisma.grievances.findUnique({
+      where: { grievance_id: grievanceId },
+      select: { grievance_number: true },
+    });
+    return g?.grievance_number || `GRS-${grievanceId}`;
+  }
+
+  /**
    * Automatically triggers SLA notifications based on elapsed percentage.
    */
   static async handleSlaThreshold(
@@ -104,11 +121,16 @@ export class NotificationService {
       atRisk?: number;
       breach?: number;
     } = {},
+    grievanceNumber?: string,
   ) {
     const warning =
       thresholds.warning ?? DEFAULT_SLA_THRESHOLDS.WARNING_PERCENT;
     const atRisk = thresholds.atRisk ?? DEFAULT_SLA_THRESHOLDS.AT_RISK_PERCENT;
     const breach = thresholds.breach ?? DEFAULT_SLA_THRESHOLDS.BREACH_PERCENT;
+    const caseNumber = await NotificationService.getCanonicalGrievanceNumber(
+      grievanceId,
+      grievanceNumber,
+    );
 
     if (slaPercentage >= warning) {
       await NotificationService.send({
@@ -116,7 +138,7 @@ export class NotificationService {
         grievanceId,
         type: "SLA_HALF_TIME",
         title: `SLA Warning: ${warning}% Department SLA Consumed`,
-        message: `Grievance #${grievanceId} has consumed ${warning}% of its allocated SLA. Please review the grievance progress and ensure timely completion within the remaining SLA duration.`,
+        message: `Grievance ${caseNumber} has consumed ${warning}% of its allocated SLA. Please review the grievance progress and ensure timely completion within the remaining SLA duration.`,
       });
     }
 
@@ -127,7 +149,7 @@ export class NotificationService {
         grievanceId,
         type: "SLA_AT_RISK",
         title: `SLA Escalated: ${atRisk}% Department SLA Consumed`,
-        message: `Grievance #${grievanceId} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
+        message: `Grievance ${caseNumber} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
       });
       if (departmentHeadId !== staffId) {
         await NotificationService.send({
@@ -135,7 +157,7 @@ export class NotificationService {
           grievanceId,
           type: "SLA_AT_RISK",
           title: `SLA Escalated: ${atRisk}% Department SLA Consumed`,
-          message: `Grievance #${grievanceId} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
+          message: `Grievance ${caseNumber} has reached ${atRisk}% of its allocated SLA. The grievance requires immediate attention. Please review the current progress and take necessary action to prevent an SLA breach.`,
         });
       }
     }
@@ -147,7 +169,7 @@ export class NotificationService {
         grievanceId,
         type: "SLA_BREACHED",
         title: "SLA Breached: 100% Department SLA Consumed",
-        message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
+        message: `Grievance ${caseNumber} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
       });
 
       if (staffId && staffId !== departmentHeadId) {
@@ -156,7 +178,7 @@ export class NotificationService {
           grievanceId,
           type: "SLA_BREACHED",
           title: "SLA Breached: 100% Department SLA Consumed",
-          message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
+          message: `Grievance ${caseNumber} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
         });
       }
 
@@ -172,7 +194,7 @@ export class NotificationService {
             grievanceId,
             type: "SLA_BREACHED",
             title: "SLA Breached: 100% Department SLA Consumed",
-            message: `Grievance #${grievanceId} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
+            message: `Grievance ${caseNumber} has reached 100% or more of its allocated SLA limit. The department SLA has been breached. Immediate intervention is required to address the delay and expedite grievance resolution.`,
           });
         }
       }
@@ -182,26 +204,42 @@ export class NotificationService {
   /**
    * Helper for internal note notification
    */
-  static async notifyInternalNote(grievanceId: bigint, staffId: bigint) {
+  static async notifyInternalNote(
+    grievanceId: bigint,
+    staffId: bigint,
+    grievanceNumber?: string,
+  ) {
+    const caseNumber = await NotificationService.getCanonicalGrievanceNumber(
+      grievanceId,
+      grievanceNumber,
+    );
     await NotificationService.send({
       userId: staffId,
       grievanceId,
       type: "HEAD_INTERNAL_NOTE",
       title: "New Internal Note",
-      message: `Your Department Head added an internal note to grievance #${grievanceId}.`,
+      message: `Your Department Head added an internal note to grievance ${caseNumber}.`,
     });
   }
 
   /**
    * Helper for reassignment
    */
-  static async notifyReassignment(grievanceId: bigint, newStaffId: bigint) {
+  static async notifyReassignment(
+    grievanceId: bigint,
+    newStaffId: bigint,
+    grievanceNumber?: string,
+  ) {
+    const caseNumber = await NotificationService.getCanonicalGrievanceNumber(
+      grievanceId,
+      grievanceNumber,
+    );
     await NotificationService.send({
       userId: newStaffId,
       grievanceId,
       type: "REASSIGNMENT",
       title: "Case Reassigned",
-      message: `You have been newly assigned to Grievance #${grievanceId}.`,
+      message: `You have been newly assigned to Grievance ${caseNumber}.`,
     });
   }
 }

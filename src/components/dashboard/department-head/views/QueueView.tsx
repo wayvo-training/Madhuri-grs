@@ -205,17 +205,24 @@ export function QueueView({
       } else if (selectedTab === "CLOSED") {
         const s = (g.status || "").toUpperCase();
         const overallStatus = (g.overallStatus || "").toUpperCase();
+        const myDeptStatus = (g.myDepartmentStatus || "").toUpperCase();
         if (statusFilter === "CLOSED") {
           if (s !== "CLOSED" && overallStatus !== "CLOSED") return false;
         } else if (statusFilter === "RESOLVED") {
           if (s === "CLOSED" || overallStatus === "CLOSED") return false;
-          if (s !== "RESOLVED" && s !== "COMPLETED") return false;
+          if (
+            s !== "RESOLVED" &&
+            s !== "COMPLETED" &&
+            myDeptStatus !== "COMPLETED"
+          )
+            return false;
         } else {
           if (
             s !== "CLOSED" &&
             overallStatus !== "CLOSED" &&
             s !== "RESOLVED" &&
-            s !== "COMPLETED"
+            s !== "COMPLETED" &&
+            myDeptStatus !== "COMPLETED"
           )
             return false;
         }
@@ -230,6 +237,12 @@ export function QueueView({
         if (statusFilter === "CLOSED") {
           if (s !== "CLOSED" && overallStatus !== "CLOSED") return false;
         } else if (statusFilter === "RESOLVED") {
+          if (
+            s !== "RESOLVED" &&
+            s !== "COMPLETED" &&
+            myDeptStatus !== "COMPLETED"
+          )
+            return false;
           if (s === "CLOSED" || overallStatus === "CLOSED") return false;
           if (s !== "RESOLVED" && s !== "COMPLETED") return false;
         } else if (statusFilter === "REOPENED") {
@@ -240,7 +253,9 @@ export function QueueView({
           statusFilter === "UNDER_REVIEW" ||
           statusFilter === "RESOLUTION_PENDING_APPROVAL"
         ) {
-          if (s === "CLOSED" || overallStatus === "CLOSED") return false;
+          if (s !== "UNDER_REVIEW" && s !== "RESOLUTION_PENDING_APPROVAL")
+            return false;
+          if (overallStatus === "CLOSED") return false;
           const isPendingEmployeeApproval =
             (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
             (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g));
@@ -264,9 +279,12 @@ export function QueueView({
             overallStatus === "CLOSED" ||
             s === "RESOLVED" ||
             s === "COMPLETED" ||
+            myDeptStatus === "COMPLETED" ||
             s === "REOPENED" ||
             s === "REWORK" ||
             s === "ESCALATED" ||
+            s === "UNDER_REVIEW" ||
+            s === "RESOLUTION_PENDING_APPROVAL" ||
             ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
               (isResolutionSubmittedByHead(g) ||
                 !canHeadSubmitResolution(g))) ||
@@ -296,9 +314,12 @@ export function QueueView({
             overallStatus === "CLOSED" ||
             s === "RESOLVED" ||
             s === "COMPLETED" ||
+            myDeptStatus === "COMPLETED" ||
             s === "REOPENED" ||
             s === "REWORK" ||
             s === "ESCALATED" ||
+            s === "UNDER_REVIEW" ||
+            s === "RESOLUTION_PENDING_APPROVAL" ||
             ((s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
               (isResolutionSubmittedByHead(g) ||
                 !canHeadSubmitResolution(g))) ||
@@ -441,7 +462,7 @@ export function QueueView({
   }, [grievances]);
 
   const filterFields: SearchFieldDef[] = [
-    { id: "ticketCode", label: "Grievance ID", type: "text" },
+    { id: "ticketCode", label: "Grievance Number", type: "text" },
     {
       id: "category",
       label: "Category",
@@ -604,7 +625,7 @@ export function QueueView({
                   onSort={handleSort}
                   className="py-3 pl-4 pr-3"
                 >
-                  Grievance ID
+                  Grievance Number
                 </SortableTableHead>
                 <SortableTableHead
                   field="title"
@@ -1123,6 +1144,8 @@ export function QueueView({
                                 item.status !== "COMPLETED" &&
                                 item.status !== "UNDER_REVIEW" &&
                                 item.myDepartmentStatus !== "COMPLETED" &&
+                                item.status !== "ESCALATED" &&
+                                item.slaStatus !== "BREACHED" &&
                                 (!hasAssignedStaff ||
                                   item.myDepartmentStatus ===
                                     "PENDING_ASSIGNMENT")
@@ -1162,6 +1185,8 @@ export function QueueView({
                                 item.status !== "COMPLETED" &&
                                 item.status !== "UNDER_REVIEW" &&
                                 item.myDepartmentStatus !== "COMPLETED" &&
+                                item.status !== "ESCALATED" &&
+                                item.slaStatus !== "BREACHED" &&
                                 hasAssignedStaff &&
                                 item.myDepartmentStatus !== "PENDING_ASSIGNMENT"
                                   ? [

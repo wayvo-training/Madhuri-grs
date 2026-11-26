@@ -124,7 +124,7 @@ export function SlaGovernanceView({
 
   const filterFields: SearchFieldDef[] = useMemo(
     () => [
-      { id: "ticketCode", label: "Grievance ID", type: "text" },
+      { id: "ticketCode", label: "Grievance Number", type: "text" },
       {
         id: "category",
         label: "Category",
@@ -303,7 +303,7 @@ export function SlaGovernanceView({
                     onSort={handleSort}
                     className="py-2.5 pl-4 pr-3 whitespace-nowrap"
                   >
-                    Grievance ID
+                    Grievance Number
                   </SortableTh>
                   <SortableTh
                     field="title"

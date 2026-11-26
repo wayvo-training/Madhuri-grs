@@ -18,6 +18,7 @@ export interface Notification {
   userId: string;
   grievanceId?: string | null;
   grievanceNumber?: string | null;
+  actionUrl?: string | null;
   type: string;
   channel: string;
   title: string;
@@ -149,6 +150,10 @@ export function NotificationDrawer({
       markAsRead(notification.id);
     }
     setIsOpen(false);
+    if (notification.actionUrl) {
+      router.push(notification.actionUrl);
+      return;
+    }
     const baseUrl = getNotificationsUrl();
     const params = new URLSearchParams();
     params.set("id", notification.id);
