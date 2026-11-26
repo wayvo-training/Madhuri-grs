@@ -8,36 +8,118 @@ export function filterStaffGrievances(
   filters: StaffQueueFilterState,
 ): StaffGrievanceItem[] {
   return items.filter((item) => {
+    const s = (item.status || "").toUpperCase();
+    const overallS = (item.overallStatus || "").toUpperCase();
+    const isClosed = s === "CLOSED" || overallS === "CLOSED";
+
     // 1. Tab filter
     if (filters.tab === "in_progress") {
       if (
-        item.status !== "IN_PROGRESS" &&
-        item.status !== "ASSIGNED" &&
-        item.status !== "AWAITING_INFORMATION" &&
-        item.status !== "REWORK"
+        item.isMyDepartmentCompleted ||
+        s === "COMPLETED" ||
+        isClosed ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        s === "REOPENED" ||
+        s === "REWORK" ||
+        (item.reopenCount || 0) > 0 ||
+        s === "ESCALATED" ||
+        s === "UNDER_REVIEW" ||
+        s === "REOPEN_REVIEW" ||
+        s === "RESOLUTION_PENDING_APPROVAL" ||
+        s === "AWAITING_INFORMATION" ||
+        s === "WAITING_ON_USER"
       ) {
         return false;
       }
     } else if (filters.tab === "at_risk") {
-      if (item.slaStatus !== "AT_RISK") return false;
+      if (
+        item.slaStatus !== "AT_RISK" ||
+        isClosed ||
+        s === "COMPLETED" ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        item.isMyDepartmentCompleted
+      ) {
+        return false;
+      }
     } else if (filters.tab === "breached") {
-      if (item.slaStatus !== "BREACHED" && item.status !== "ESCALATED") {
+      if (
+        item.slaStatus !== "BREACHED" ||
+        isClosed ||
+        s === "COMPLETED" ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        item.isMyDepartmentCompleted
+      ) {
         return false;
       }
     } else if (filters.tab === "reopened") {
       if (
-        item.reopenCount <= 0 &&
-        item.status !== "REOPENED" &&
-        item.status !== "REWORK"
+        isClosed ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        s === "COMPLETED" ||
+        item.isMyDepartmentCompleted
       ) {
+        return false;
+      }
+      if ((item.reopenCount || 0) <= 0 && s !== "REOPENED" && s !== "REWORK") {
         return false;
       }
     } else if (filters.tab === "completed") {
       if (
-        item.status !== "CLOSED" &&
-        item.status !== "RESOLVED" &&
-        item.status !== "RESOLUTION_PENDING_APPROVAL" &&
-        item.status !== "UNDER_REVIEW"
+        isClosed ||
+        (s !== "RESOLVED" &&
+          overallS !== "RESOLVED" &&
+          s !== "UNDER_REVIEW" &&
+          s !== "COMPLETED" &&
+          !item.isMyDepartmentCompleted)
+      ) {
+        return false;
+      }
+    } else if (filters.tab === "closed") {
+      if (!isClosed) return false;
+    } else if (filters.tab === "resolved") {
+      if (isClosed) return false;
+      const isStaffResolved =
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        s === "COMPLETED" ||
+        Boolean(item.isMyDepartmentCompleted);
+      if (!isStaffResolved) return false;
+    } else if (filters.tab === "under_review") {
+      if (
+        item.isMyDepartmentCompleted ||
+        s === "COMPLETED" ||
+        isClosed ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        (s !== "UNDER_REVIEW" &&
+          s !== "REOPEN_REVIEW" &&
+          s !== "RESOLUTION_PENDING_APPROVAL")
+      ) {
+        return false;
+      }
+    } else if (filters.tab === "awaiting_info") {
+      if (
+        isClosed ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        item.isMyDepartmentCompleted ||
+        (s !== "AWAITING_INFORMATION" &&
+          s !== "WAITING_ON_USER" &&
+          s !== "PENDING_INFO")
+      ) {
+        return false;
+      }
+    } else if (filters.tab === "escalated") {
+      if (
+        isClosed ||
+        s === "RESOLVED" ||
+        overallS === "RESOLVED" ||
+        item.isMyDepartmentCompleted ||
+        s !== "ESCALATED"
       ) {
         return false;
       }
@@ -45,7 +127,18 @@ export function filterStaffGrievances(
 
     // 2. Status filter dropdown
     if (filters.status && filters.status !== "ALL") {
-      if (item.status.toUpperCase() !== filters.status.toUpperCase()) {
+      const target = filters.status.toUpperCase();
+      if (target === "RESOLVED") {
+        if (isClosed) return false;
+        const isStaffResolved =
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          s === "COMPLETED" ||
+          Boolean(item.isMyDepartmentCompleted);
+        if (!isStaffResolved) return false;
+      } else if (target === "CLOSED") {
+        if (!isClosed) return false;
+      } else if (s !== target) {
         return false;
       }
     }

@@ -221,41 +221,49 @@ export function GrievanceQueue({
   // Filtered grievances
   const filteredGrievances = useMemo(() => {
     return grievances.filter((item) => {
+      const s = (item.status || "").toUpperCase();
+      const overallS = (item.overallStatus || "").toUpperCase();
+      const isClosed = s === "CLOSED" || overallS === "CLOSED";
+
       if (activeTab === "in_progress") {
         if (
           item.isMyDepartmentCompleted ||
-          item.status === "COMPLETED" ||
-          item.status === "CLOSED" ||
-          item.status === "RESOLVED" ||
-          item.status === "REOPENED" ||
-          item.status === "REWORK" ||
+          s === "COMPLETED" ||
+          isClosed ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          s === "REOPENED" ||
+          s === "REWORK" ||
           (item.reopenCount || 0) > 0 ||
-          item.status === "ESCALATED" ||
-          item.status === "UNDER_REVIEW" ||
-          item.status === "REOPEN_REVIEW" ||
-          item.status === "RESOLUTION_PENDING_APPROVAL" ||
-          item.status === "AWAITING_INFORMATION" ||
-          item.status === "WAITING_ON_USER"
+          s === "ESCALATED" ||
+          s === "UNDER_REVIEW" ||
+          s === "REOPEN_REVIEW" ||
+          s === "RESOLUTION_PENDING_APPROVAL" ||
+          s === "AWAITING_INFORMATION" ||
+          s === "WAITING_ON_USER"
         ) {
           return false;
         }
       } else if (activeTab === "under_review") {
         if (
           item.isMyDepartmentCompleted ||
-          item.status === "COMPLETED" ||
-          item.status === "CLOSED" ||
-          item.status === "RESOLVED" ||
-          (item.status !== "UNDER_REVIEW" &&
-            item.status !== "REOPEN_REVIEW" &&
-            item.status !== "RESOLUTION_PENDING_APPROVAL")
+          s === "COMPLETED" ||
+          isClosed ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          (s !== "UNDER_REVIEW" &&
+            s !== "REOPEN_REVIEW" &&
+            s !== "RESOLUTION_PENDING_APPROVAL")
         ) {
           return false;
         }
       } else if (activeTab === "on_track") {
         if (
           item.slaStatus !== "ON_TRACK" ||
-          item.status === "CLOSED" ||
-          item.status === "COMPLETED" ||
+          isClosed ||
+          s === "COMPLETED" ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
           item.isMyDepartmentCompleted
         ) {
           return false;
@@ -263,8 +271,10 @@ export function GrievanceQueue({
       } else if (activeTab === "at_risk") {
         if (
           item.slaStatus !== "AT_RISK" ||
-          item.status === "CLOSED" ||
-          item.status === "COMPLETED" ||
+          isClosed ||
+          s === "COMPLETED" ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
           item.isMyDepartmentCompleted
         ) {
           return false;
@@ -272,58 +282,76 @@ export function GrievanceQueue({
       } else if (activeTab === "breached") {
         if (
           item.slaStatus !== "BREACHED" ||
-          item.status === "CLOSED" ||
-          item.status === "COMPLETED" ||
+          isClosed ||
+          s === "COMPLETED" ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
           item.isMyDepartmentCompleted
         ) {
           return false;
         }
       } else if (activeTab === "reopened") {
         if (
-          item.status === "CLOSED" ||
-          item.status === "RESOLVED" ||
-          item.status === "COMPLETED" ||
+          isClosed ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          s === "COMPLETED" ||
           item.isMyDepartmentCompleted
         ) {
           return false;
         }
         if (
-          item.reopenCount === 0 &&
-          item.status !== "REOPENED" &&
-          item.status !== "REWORK"
+          (item.reopenCount || 0) === 0 &&
+          s !== "REOPENED" &&
+          s !== "REWORK"
         ) {
           return false;
         }
       } else if (activeTab === "completed") {
         if (
-          item.status === "CLOSED" ||
-          item.overallStatus === "CLOSED" ||
-          (item.status !== "RESOLVED" &&
-            item.status !== "UNDER_REVIEW" &&
-            item.status !== "COMPLETED" &&
+          isClosed ||
+          (s !== "RESOLVED" &&
+            overallS !== "RESOLVED" &&
+            s !== "UNDER_REVIEW" &&
+            s !== "COMPLETED" &&
             !item.isMyDepartmentCompleted)
         ) {
           return false;
         }
       } else if (activeTab === "closed") {
-        if (item.status !== "CLOSED" && item.overallStatus !== "CLOSED") {
+        if (!isClosed) {
           return false;
         }
       } else if (activeTab === "resolved") {
+        if (isClosed) {
+          return false;
+        }
         const isStaffResolved =
-          item.status === "RESOLVED" ||
-          item.status === "COMPLETED" ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          s === "COMPLETED" ||
           Boolean(item.isMyDepartmentCompleted);
         if (!isStaffResolved) return false;
       } else if (activeTab === "awaiting_info") {
         if (
-          item.status !== "AWAITING_INFORMATION" &&
-          item.status !== "WAITING_ON_USER"
+          isClosed ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          item.isMyDepartmentCompleted ||
+          (s !== "AWAITING_INFORMATION" &&
+            s !== "WAITING_ON_USER" &&
+            s !== "PENDING_INFO")
         ) {
           return false;
         }
       } else if (activeTab === "escalated") {
-        if (item.status !== "ESCALATED") {
+        if (
+          isClosed ||
+          s === "RESOLVED" ||
+          overallS === "RESOLVED" ||
+          item.isMyDepartmentCompleted ||
+          s !== "ESCALATED"
+        ) {
           return false;
         }
       }
@@ -425,7 +453,7 @@ export function GrievanceQueue({
       case "in_progress":
         return "In Progress";
       case "under_review":
-        return "Under Review";
+        return "Pending Approval";
       case "reopened":
         return "Reopened";
       case "on_track":
