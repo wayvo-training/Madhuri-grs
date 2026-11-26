@@ -24,7 +24,6 @@ export function GrievancePieCharts({
     let inProgress = 0;
     let underReview = 0;
     let awaitingInfo = 0;
-    let escalated = 0;
     let resolved = 0;
     let closed = 0;
     let reopened = 0;
@@ -40,8 +39,6 @@ export function GrievancePieCharts({
         resolved++;
       } else if (s === "REOPENED" || s === "REWORK") {
         reopened++;
-      } else if (s === "ESCALATED") {
-        escalated++;
       } else if (
         (s === "UNDER_REVIEW" || s === "RESOLUTION_PENDING_APPROVAL") &&
         (isResolutionSubmittedByHead(g) || !canHeadSubmitResolution(g))
@@ -92,12 +89,6 @@ export function GrievancePieCharts({
         value: awaitingInfo,
         fill: STATUS_COLORS.AWAITING_INFO || "#D97706",
         description: "Waiting on user",
-      },
-      {
-        name: "Escalated",
-        value: escalated,
-        fill: STATUS_COLORS.ESCALATED || "#B45309",
-        description: "SLA escalation",
       },
       {
         name: "Resolved",
@@ -179,10 +170,6 @@ export function GrievancePieCharts({
       label: "Awaiting Info",
       color: STATUS_COLORS.AWAITING_INFO || "#D97706",
     },
-    escalated: {
-      label: "Escalated",
-      color: STATUS_COLORS.ESCALATED || "#B45309",
-    },
     resolved: { label: "Resolved", color: STATUS_COLORS.RESOLVED },
     closed: { label: "Closed", color: STATUS_COLORS.CLOSED },
     reopened: { label: "Reopened", color: STATUS_COLORS.REOPENED },
@@ -201,7 +188,6 @@ export function GrievancePieCharts({
       "Under Review": "UNDER_REVIEW",
       Unassigned: "UNASSIGNED",
       "Awaiting Info": "AWAITING_INFORMATION",
-      Escalated: "ESCALATED",
       Resolved: "RESOLVED",
       Closed: "CLOSED",
       Reopened: "REOPENED",

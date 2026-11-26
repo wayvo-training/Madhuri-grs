@@ -21,11 +21,17 @@ export function useAdminAudit(
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const isFirstMount = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
 
   // Fetch paginated logs from server
   const fetchLogs = useCallback(
-    async (page: number, category: TabCategory, search: string) => {
+    async (
+      page: number,
+      category: TabCategory,
+      search: string,
+      signal?: AbortSignal,
+    ) => {
       try {
         setIsLoading(true);
         const params = new URLSearchParams({
@@ -35,16 +41,31 @@ export function useAdminAudit(
         if (category !== "ALL") params.set("category", category);
         if (search.trim()) params.set("search", search.trim());
 
-        const res = await fetch(`/api/admin/audit-logs?${params.toString()}`);
+        const res = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
+          signal,
+        });
+
+        if (!res.ok) {
+          console.warn(`Audit logs API responded with status ${res.status}`);
+          return;
+        }
+
         const data = await res.json();
-        if (res.ok && data.success) {
+        if (data.success) {
           setLogs(data.logs || []);
           if (data.pagination) {
             setTotalCount(data.pagination.total);
           }
         }
-      } catch (err) {
-        console.error("Failed to fetch audit logs:", err);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          // Request was deliberately cancelled due to new query or component unmount; ignore safely
+          return;
+        }
+        console.warn(
+          "Could not retrieve audit logs (server may be offline or restarting):",
+          err,
+        );
       } finally {
         setIsLoading(false);
       }
@@ -59,11 +80,20 @@ export function useAdminAudit(
       return;
     }
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const timer = setTimeout(() => {
-      fetchLogs(currentPage, activeTab, searchQuery);
+      fetchLogs(currentPage, activeTab, searchQuery, controller.signal);
     }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [currentPage, activeTab, searchQuery, fetchLogs]);
 
   const handleTabChange = (category: TabCategory) => {
