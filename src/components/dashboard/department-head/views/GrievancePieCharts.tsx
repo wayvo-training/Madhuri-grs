@@ -21,6 +21,7 @@ export function GrievancePieCharts({
 }) {
   const statusDataRaw = React.useMemo(() => {
     let unassigned = 0;
+    let assigned = 0;
     let inProgress = 0;
     let underReview = 0;
     let awaitingInfo = 0;
@@ -60,6 +61,8 @@ export function GrievancePieCharts({
         myDeptStatus === "PENDING_ASSIGNMENT"
       ) {
         unassigned++;
+      } else if (s === "ASSIGNED" || myDeptStatus === "ASSIGNED") {
+        assigned++;
       } else {
         inProgress++;
       }
@@ -71,6 +74,12 @@ export function GrievancePieCharts({
         value: inProgress,
         fill: STATUS_COLORS.IN_PROGRESS,
         description: "Investigation active",
+      },
+      {
+        name: "Assigned",
+        value: assigned,
+        fill: STATUS_COLORS.ASSIGNED,
+        description: "Assigned to staff",
       },
       {
         name: "Under Review",
@@ -164,6 +173,7 @@ export function GrievancePieCharts({
 
   const statusConfig = {
     inProgress: { label: "In Progress", color: STATUS_COLORS.IN_PROGRESS },
+    assigned: { label: "Assigned", color: STATUS_COLORS.ASSIGNED },
     underReview: { label: "Under Review", color: STATUS_COLORS.UNDER_REVIEW },
     unassigned: { label: "Unassigned", color: STATUS_COLORS.UNASSIGNED },
     awaitingInfo: {
@@ -185,6 +195,7 @@ export function GrievancePieCharts({
   const handleStatusItemClick = (item: { name: string }) => {
     const statusMap: Record<string, string> = {
       "In Progress": "IN_PROGRESS",
+      Assigned: "ASSIGNED",
       "Under Review": "UNDER_REVIEW",
       Unassigned: "UNASSIGNED",
       "Awaiting Info": "AWAITING_INFORMATION",

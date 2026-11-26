@@ -310,6 +310,8 @@ export function QueueView({
           if (!isUnassigned) return false;
         } else if (statusFilter === "IN_PROGRESS") {
           if (
+            s === "ASSIGNED" ||
+            myDeptStatus === "ASSIGNED" ||
             s === "CLOSED" ||
             overallStatus === "CLOSED" ||
             s === "RESOLVED" ||
