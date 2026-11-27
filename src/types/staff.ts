@@ -142,6 +142,7 @@ export interface StaffGrievanceItem {
   subcategoryId?: string;
   priority: StaffPriority;
   status: StaffGrievanceStatus;
+  isEscalated?: boolean;
   reopenCount: number;
   manualReviewCount: number;
   slaStatus: StaffSlaState;

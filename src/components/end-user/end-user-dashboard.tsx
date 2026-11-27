@@ -89,11 +89,10 @@ export function EndUserPortal({
   // Stats
   const totalCases = grievances.length;
   const waitingOnUserCases = grievances.filter(
-    (g) => g.status === "WAITING_ON_USER",
+    (g) =>
+      g.status === "WAITING_ON_USER" || g.status === "AWAITING_INFORMATION",
   );
-  const inProgressCases = grievances.filter(
-    (g) => g.status === "IN_PROGRESS" || g.status === "ASSIGNED",
-  );
+  const inProgressCases = grievances.filter((g) => g.status === "IN_PROGRESS");
   const closedCases = grievances.filter(
     (g) => g.status === "CLOSED" || g.status === "RESOLVED",
   );
@@ -261,7 +260,7 @@ export function EndUserPortal({
         <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 sm:py-3 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Resolved
+              Resolved & Closed
             </span>
             <div className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
               <CheckCircle2 className="w-3.5 h-3.5" />

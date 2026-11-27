@@ -222,27 +222,25 @@ export async function GET(req: NextRequest) {
         !isMyDeptCompleted;
 
       const effectiveStatus = (
-        isEscalatedByThreshold
-          ? "ESCALATED"
-          : g.status === "CLOSED"
-            ? "CLOSED"
-            : g.status === "RESOLVED"
-              ? "RESOLVED"
-              : g.status === "AWAITING_INFORMATION" ||
-                  g.status === "WAITING_ON_USER"
-                ? "AWAITING_INFORMATION"
-                : g.status === "RESOLUTION_PENDING_APPROVAL" ||
-                    g.status === "UNDER_REVIEW"
-                  ? "RESOLUTION_PENDING_APPROVAL"
-                  : g.status === "REWORK"
-                    ? "REWORK"
-                    : isMyDeptCompleted
-                      ? "COMPLETED"
-                      : myDeptStatus === "ASSIGNED"
-                        ? "ASSIGNED"
-                        : myDeptStatus === "IN_PROGRESS"
-                          ? "IN_PROGRESS"
-                          : g.status
+        g.status === "CLOSED"
+          ? "CLOSED"
+          : g.status === "RESOLVED"
+            ? "RESOLVED"
+            : g.status === "AWAITING_INFORMATION" ||
+                g.status === "WAITING_ON_USER"
+              ? "AWAITING_INFORMATION"
+              : g.status === "RESOLUTION_PENDING_APPROVAL" ||
+                  g.status === "UNDER_REVIEW"
+                ? "RESOLUTION_PENDING_APPROVAL"
+                : g.status === "REWORK"
+                  ? "REWORK"
+                  : isMyDeptCompleted
+                    ? "COMPLETED"
+                    : myDeptStatus === "ASSIGNED"
+                      ? "ASSIGNED"
+                      : myDeptStatus === "IN_PROGRESS"
+                        ? "IN_PROGRESS"
+                        : g.status
       ) as StaffGrievanceItem["status"];
 
       const rawDepts = g.grievance_departments || [];
@@ -321,6 +319,7 @@ export async function GET(req: NextRequest) {
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: g.priority as StaffPriority,
         status: effectiveStatus,
+        isEscalated: isEscalatedByThreshold,
         reopenCount: g.reopen_count,
         manualReviewCount: g.manual_review_count,
         slaStatus: slaCalc.state as StaffSlaState,

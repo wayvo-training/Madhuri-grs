@@ -334,7 +334,10 @@ export function GrievanceQueue({
           s === "RESOLVED" ||
           overallS === "RESOLVED" ||
           item.isMyDepartmentCompleted ||
-          s !== "ESCALATED"
+          (s !== "ESCALATED" &&
+            !item.isEscalated &&
+            item.slaStatus !== "BREACHED" &&
+            item.slaStatus !== "AT_RISK")
         ) {
           return false;
         }

@@ -920,28 +920,26 @@ export async function GET(
       !isMyDeptCompleted;
 
     const effectiveStatus = (
-      isEscalatedByThreshold
-        ? "ESCALATED"
-        : grievance.status === "CLOSED"
-          ? "CLOSED"
-          : grievance.status === "RESOLVED"
-            ? "RESOLVED"
-            : grievance.status === "AWAITING_INFORMATION" ||
-                grievance.status === "WAITING_ON_USER" ||
-                grievance.status === "WAITING_ON_EMPLOYEE"
-              ? "AWAITING_INFORMATION"
-              : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
-                  grievance.status === "UNDER_REVIEW"
-                ? "RESOLUTION_PENDING_APPROVAL"
-                : grievance.status === "REWORK"
-                  ? "REWORK"
-                  : isMyDeptCompleted
-                    ? "COMPLETED"
-                    : myDept?.status === "ASSIGNED"
-                      ? "ASSIGNED"
-                      : myDept?.status === "IN_PROGRESS"
-                        ? "IN_PROGRESS"
-                        : grievance.status
+      grievance.status === "CLOSED"
+        ? "CLOSED"
+        : grievance.status === "RESOLVED"
+          ? "RESOLVED"
+          : grievance.status === "AWAITING_INFORMATION" ||
+              grievance.status === "WAITING_ON_USER" ||
+              grievance.status === "WAITING_ON_EMPLOYEE"
+            ? "AWAITING_INFORMATION"
+            : grievance.status === "RESOLUTION_PENDING_APPROVAL" ||
+                grievance.status === "UNDER_REVIEW"
+              ? "RESOLUTION_PENDING_APPROVAL"
+              : grievance.status === "REWORK"
+                ? "REWORK"
+                : isMyDeptCompleted
+                  ? "COMPLETED"
+                  : myDept?.status === "ASSIGNED"
+                    ? "ASSIGNED"
+                    : myDept?.status === "IN_PROGRESS"
+                      ? "IN_PROGRESS"
+                      : grievance.status
     ) as StaffGrievanceItem["status"];
 
     const targetDeptId =
@@ -1054,6 +1052,7 @@ export async function GET(
       priority:
         (grievance.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
       status: effectiveStatus,
+      isEscalated: isEscalatedByThreshold,
       reopenCount: grievance.reopen_count || 0,
       manualReviewCount: grievance.manual_review_count || 0,
       slaStatus: slaCalc.state,

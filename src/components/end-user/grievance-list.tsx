@@ -20,6 +20,23 @@ import { useTableSort } from "@/hooks/useTableSort";
 import { evaluateSearchConditions } from "@/lib/search-evaluator";
 import type { EndUserGrievance } from "@/types/end-user";
 
+const STATUS_DISPLAY_LABELS: Record<string, string> = {
+  SUBMITTED: "Submitted",
+  AWAITING_ROUTING: "Awaiting Routing",
+  AWAITING_ASSIGNMENT: "Awaiting Assignment",
+  ASSIGNED: "Assigned",
+  IN_PROGRESS: "In Progress",
+  WAITING_ON_USER: "Action Required",
+  AWAITING_INFORMATION: "Awaiting Information",
+  RESOLUTION_PENDING_APPROVAL: "Resolution Pending Approval",
+  UNDER_REVIEW: "Under Review",
+  REWORK: "Rework",
+  REOPENED: "Reopened",
+  RESOLVED: "Resolved",
+  CLOSED: "Closed",
+  ESCALATED: "Escalated",
+};
+
 interface GrievanceListProps {
   initialGrievances: EndUserGrievance[];
 }
@@ -55,10 +72,12 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
         key: "priority",
         label: "Priority",
         type: "select",
-        options: ["LOW", "MEDIUM", "HIGH", "URGENT"].map((p) => ({
-          value: p,
-          label: p,
-        })),
+        options: [
+          { value: "CRITICAL", label: "Critical" },
+          { value: "HIGH", label: "High" },
+          { value: "MEDIUM", label: "Medium" },
+          { value: "LOW", label: "Low" },
+        ],
       },
       {
         id: "status",
@@ -66,7 +85,7 @@ export function GrievanceList({ initialGrievances }: GrievanceListProps) {
         label: "Status",
         type: "select",
         options: Array.from(new Set(grievances.map((g) => g.status))).map(
-          (s) => ({ value: s, label: s }),
+          (s) => ({ value: s, label: STATUS_DISPLAY_LABELS[s] || s }),
         ),
       },
     ],

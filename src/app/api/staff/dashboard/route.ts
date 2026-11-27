@@ -775,6 +775,20 @@ export async function GET(request: Request) {
           }
         : null;
 
+      const escThreshold = Number(
+        g.sla_tracking?.[0]?.sla_policies?.escalation_threshold_percent || 75,
+      );
+      const isEscalatedByThreshold =
+        (slaCalc.consumptionPercent >= escThreshold ||
+          slaCalc.state === "BREACHED" ||
+          g.status === "ESCALATED") &&
+        g.status !== "CLOSED" &&
+        g.status !== "RESOLVED" &&
+        g.status !== "AWAITING_INFORMATION" &&
+        g.status !== "WAITING_ON_USER" &&
+        g.status !== "WAITING_ON_EMPLOYEE" &&
+        !isMyDeptCompleted;
+
       return {
         id: g.grievance_id.toString(),
         grievanceNumber: g.grievance_number,
@@ -784,24 +798,6 @@ export async function GET(request: Request) {
         subcategory: g.subcategories?.subcategory_name || "General",
         priority: (g.priority?.toUpperCase() as StaffPriority) || "MEDIUM",
         status: (() => {
-          const escThreshold = Number(
-            g.sla_tracking?.[0]?.sla_policies?.escalation_threshold_percent ||
-              75,
-          );
-          const isEscalatedByThreshold =
-            (slaCalc.consumptionPercent >= escThreshold ||
-              slaCalc.state === "BREACHED" ||
-              g.status === "ESCALATED") &&
-            g.status !== "CLOSED" &&
-            g.status !== "RESOLVED" &&
-            g.status !== "AWAITING_INFORMATION" &&
-            g.status !== "WAITING_ON_USER" &&
-            g.status !== "WAITING_ON_EMPLOYEE" &&
-            !isMyDeptCompleted;
-
-          if (isEscalatedByThreshold) {
-            return "ESCALATED";
-          }
           if (g.status === "CLOSED") return "CLOSED";
           if (g.status === "RESOLVED") return "RESOLVED";
           if (
@@ -824,6 +820,7 @@ export async function GET(request: Request) {
             return "IN_PROGRESS";
           return g.status;
         })() as StaffGrievanceItem["status"],
+        isEscalated: isEscalatedByThreshold,
         reopenCount: g.reopen_count || 0,
         manualReviewCount: g.manual_review_count || 0,
         slaStatus: slaCalc.state,
